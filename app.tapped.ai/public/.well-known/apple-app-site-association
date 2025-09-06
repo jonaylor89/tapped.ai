@@ -1,0 +1,55 @@
+{
+   "applinks":{
+     "apps":[
+
+     ],
+     "details":[
+       {
+         "appIDs":[
+           "9HNXYM86C6.com.intheloopstudio"
+         ],
+         "components":[
+           {
+             "/":"/*",
+             "comment":"Matches any URL"
+           },
+           {
+            "/":"/spotify",
+            "exclude": true,
+            "comment": "Matches URL with a path /spotify and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/venue",
+             "exclude":true,
+             "comment":"Matches URL with a path /venue and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/about",
+             "exclude":true,
+             "comment":"Matches URL with a path /about and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/terms",
+             "exclude":true,
+             "comment":"Matches URL with a path /terms and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/privacy",
+             "exclude":true,
+             "comment":"Matches URL with a path /privacy and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/team",
+             "exclude":true,
+             "comment":"Matches URL with a path /about and instructs the system not to open it as a universal link."
+           },
+           {
+             "/":"/subscribe",
+             "exclude":true,
+             "comment":"Matches URL with a path /about and instructs the system not to open it as a universal link."
+           }
+         ]
+       }
+     ]
+   }
+ }

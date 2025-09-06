@@ -1,0 +1,323 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Tapped API swagger docs",
+    "description": "Tapped API swagger docs",
+    "version": "0.1.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKey": { "type": "apiKey", "name": "apiKey", "in": "header" }
+    },
+    "schemas": {
+      "def-0": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "description": { "type": "string" },
+          "bookerId": { "type": "string" },
+          "performerId": { "type": "string" },
+          "rate": { "type": "number" },
+          "location": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          },
+          "startTime": { "type": "string", "format": "date-time" },
+          "endTime": { "type": "string", "format": "date-time" },
+          "flierUrl": { "type": "string" },
+          "eventUrl": { "type": "string" },
+          "venueId": { "type": "string" },
+          "referenceEventId": { "type": "string" }
+        },
+        "title": "bookingSchema"
+      },
+      "def-1": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "bookerId": { "type": "string" },
+          "performerId": { "type": "string" },
+          "bookingId": { "type": "string" },
+          "timestamp": { "type": "string", "format": "date-time" },
+          "overallRating": { "type": "number" },
+          "overallReview": { "type": "string" },
+          "type": { "type": "string", "enum": ["performer", "booker"] }
+        },
+        "title": "reviewSchema"
+      },
+      "def-2": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "bio": { "type": "string" },
+          "profilePictureUrl": { "type": "string" },
+          "location": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          },
+          "socialFollowing": {
+            "type": "object",
+            "properties": {
+              "youtubeChannelId": { "type": "string" },
+              "tiktokHandle": { "type": "string" },
+              "tiktokFollowers": { "type": "number" },
+              "instagramHandle": { "type": "string" },
+              "instagramFollowers": { "type": "number" },
+              "twitterHandle": { "type": "string" },
+              "twitterFollowers": { "type": "number" },
+              "facebookHandle": { "type": "string" },
+              "facebookFollowers": { "type": "number" },
+              "spotifyUrl": { "type": "string" },
+              "soundcloudHandle": { "type": "string" },
+              "soundcloudFollowers": { "type": "number" },
+              "audiusHandle": { "type": "string" },
+              "audiusFollowers": { "type": "number" },
+              "twitchHandle": { "type": "string" },
+              "twitchFollowers": { "type": "number" }
+            }
+          },
+          "averageTicketRange": {
+            "type": "object",
+            "properties": {
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            }
+          },
+          "averageAttendance": { "type": "number" },
+          "category": {
+            "type": "string",
+            "enum": [
+              "undiscovered",
+              "emerging",
+              "hometownHero",
+              "mainstream",
+              "legendary"
+            ]
+          },
+          "pressKitUrl": { "type": "string" },
+          "genres": { "type": "array", "items": { "type": "string" } },
+          "spotifyId": { "type": "string" },
+          "bookings": {
+            "type": "object",
+            "properties": {
+              "count": { "type": "number" },
+              "items": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/def-0" }
+              }
+            }
+          },
+          "reviews": {
+            "type": "object",
+            "properties": {
+              "count": { "type": "number" },
+              "rating": { "type": "number" },
+              "items": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/def-1" }
+              }
+            }
+          }
+        },
+        "title": "performerSchema"
+      },
+      "def-3": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "username": { "type": "string" },
+          "displayName": { "type": "string" },
+          "bio": { "type": "string" },
+          "profilePictureUrl": { "type": "string" },
+          "location": {
+            "type": "object",
+            "properties": {
+              "lat": { "type": "number" },
+              "lng": { "type": "number" }
+            }
+          },
+          "genres": { "type": "array", "items": { "type": "string" } },
+          "bookingEmail": { "type": "string" },
+          "capacity": { "type": "number" },
+          "idealPerformerProfile": { "type": "string" },
+          "productionInfo": { "type": "string" },
+          "frontOfHouse": { "type": "string" },
+          "monitors": { "type": "string" },
+          "microphones": { "type": "string" },
+          "lights": { "type": "string" },
+          "topPerformerIds": { "type": "array", "items": { "type": "string" } },
+          "bookings": {
+            "type": "object",
+            "properties": {
+              "count": { "type": "number" },
+              "items": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/def-0" }
+              }
+            }
+          },
+          "reviews": {
+            "type": "object",
+            "properties": {
+              "count": { "type": "number" },
+              "rating": { "type": "number" },
+              "items": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/def-1" }
+              }
+            }
+          }
+        },
+        "title": "venueSchema"
+      }
+    }
+  },
+  "paths": {
+    "/": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/health": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/version": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/v1/performer/search": {
+      "get": { "responses": { "200": { "description": "Default Response" } } }
+    },
+    "/v1/performer/{performerId}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "header",
+            "name": "tapped-api-key",
+            "required": true
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "performerId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Successful response",
+                  "$ref": "#/components/schemas/def-2"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/performer/username/{username}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "header",
+            "name": "tapped-api-key",
+            "required": true
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "username",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Successful response",
+                  "$ref": "#/components/schemas/def-2"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/location/{lat},{lng}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": { "type": "string" },
+            "in": "header",
+            "name": "tapped-api-key",
+            "required": true
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "lat",
+            "required": true
+          },
+          {
+            "schema": { "type": "string" },
+            "in": "path",
+            "name": "lng",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "Successful response",
+                  "properties": {
+                    "venues": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "$ref": "#/components/schemas/def-3"
+                      }
+                    },
+                    "topPerformers": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "$ref": "#/components/schemas/def-2"
+                      }
+                    },
+                    "genres": { "type": "object" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "servers": [
+    { "url": "https://api.tapped.ai", "description": "Production server" }
+  ],
+  "externalDocs": {
+    "url": "https://api.tapped.ai/docs",
+    "description": "Find more info here"
+  }
+}

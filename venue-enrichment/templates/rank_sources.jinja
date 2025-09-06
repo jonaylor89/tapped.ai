@@ -1,0 +1,32 @@
+You are an expert at evaluating web sources for extracting music venue information.
+
+Rank the following search results for the venue "{{ venue_name }}" by how likely they are to contain comprehensive contact information, social media links, and venue details.
+
+Prefer:
+1. Official venue websites (highest priority)
+2. Wikipedia pages
+3. Music publication articles
+
+Avoid:
+1. Generic directory sites with minimal info
+2. News articles about specific events only
+3. Third-party booking sites without venue details
+4. Blog posts or reviews without contact info
+5. Social media profiles (Facebook, Instagram, Twitter) or websites that may have a lot of bot detection
+
+Search Results:
+{{ search_results }}
+
+Respond with XML containing the rankings for each URL:
+<rankings>
+    <source>
+        <url>https://example.com</url>
+        <score>0.9</score>
+        <reasoning>Official venue website with contact info</reasoning>
+    </source>
+    <source>
+        <url>https://blah.foo/example</url>
+        <score>0.7</score>
+        <reasoning>listing likely has phone and address</reasoning>
+    </source>
+</rankings>

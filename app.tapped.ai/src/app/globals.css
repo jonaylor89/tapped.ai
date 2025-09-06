@@ -1,0 +1,600 @@
+@import "styles/overrides/index.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@supports (font: -apple-system-body) and (-webkit-appearance: none) {
+  img[loading="lazy"] {
+    clip-path: inset(0.6px);
+  }
+}
+
+.mapboxgl-map {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.button-container {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  gap: 10px;
+  cursor: pointer;
+
+  border: 2px solid var(--primary-color);
+  border-radius: 10px;
+}
+
+.button-container-dark {
+  background-color: #202020;
+  color: #fff;
+}
+
+.button-text-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.button-store-name {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.button-title {
+  font-size: 12px;
+}
+
+.google_btn {
+  @apply mb-2 mr-2 inline-flex w-full items-center rounded-full bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-black/90 hover:text-white focus:outline-none focus:ring-4 focus:ring-[#4285F4]/50;
+}
+
+.tapped_btn {
+  margin: 1rem;
+  @apply mb-2 mr-2 min-w-[30%] items-center rounded-lg bg-[#42A5F5] px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-[#42A5F5]/90 focus:outline-none focus:ring-4 focus:ring-[#4285F4]/50;
+}
+
+.tapped_btn_rounded {
+  margin: 1rem;
+  @apply mb-2 mr-2 min-w-[35%] items-center rounded-full bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-white/90 focus:outline-none focus:ring-4 focus:ring-[#42a5f5]/50;
+}
+
+.tapped_btn_rounded_black {
+  margin: 1rem;
+  @apply mb-2 mr-2 min-w-[35%] items-center rounded-full bg-black px-5 py-2.5 text-center text-sm font-medium text-white hover:bg-black/90 focus:outline-none focus:ring-4 focus:ring-[#42a5f5]/50;
+}
+
+.tapped_signup_btn {
+  @apply mb-2 mr-2 items-center whitespace-nowrap rounded-lg bg-transparent px-5 py-2.5 text-center text-sm font-medium text-[#42A5F5] hover:text-[#42A5F5]/90 focus:outline-none focus:ring-4 focus:ring-[#4285F4]/50;
+}
+
+.base-input {
+  width: 100%;
+  appearance: none;
+  border-radius: 0.25rem;
+  border: 2px solid #63b2fd;
+  background-color: #63b2fd;
+  padding: 0.5rem 1rem;
+  line-height: 1.5;
+  color: white;
+}
+
+.base-input:focus {
+  background-color: #63b2fd;
+  outline: none;
+}
+
+.input-error {
+  border-color: #f87171;
+}
+
+.error-text {
+  margin-top: 0.5rem;
+  color: #f87171;
+}
+
+.white_placeholder::placeholder {
+  color: white;
+  font-weight: semibold;
+  opacity: 1;
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+
+  --secondary-glow: conic-gradient(
+    from 10deg at 50% 50%,
+    #0073ff 0deg,
+    #00bcd4 55deg,
+    #81c0ee 120deg,
+    #0099ca 160deg,
+    transparent 360deg
+  );
+}
+
+/* body {
+  color: #fff;
+  background-color: #010f16;
+} */
+
+.control-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  max-width: 320px;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  padding: 12px 24px;
+  margin: 20px;
+  font-size: 13px;
+  line-height: 2;
+  color: #6b6b76;
+  text-transform: uppercase;
+  outline: none;
+}
+
+.landing::before,
+.landing::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  opacity: 0.8;
+}
+
+@media only screen and (max-width: 498px) {
+  .landing::before {
+    background: var(--secondary-glow);
+    background-size: cover;
+    border-radius: 50%;
+    width: 50vw;
+    height: 50vw;
+    margin-left: -200px;
+    filter: blur(90px);
+    top: calc(50vh - 50vw / 2);
+    left: calc(50vw);
+  }
+
+  .landing::after {
+    background: var(--secondary-glow);
+    background-size: cover;
+    border-radius: 50%;
+    width: 250px;
+    height: 350px;
+    filter: blur(90px);
+    top: calc(50vh - 50vw / 2);
+    left: calc(20vh - 50vw / 2);
+  }
+}
+
+@media only screen and (min-width: 498px) {
+  .landing::before {
+    background: var(--secondary-glow);
+    background-size: cover;
+    border-radius: 50%;
+    width: 50vw;
+    height: 50vw;
+    margin-left: -200px;
+    filter: blur(90px);
+    top: calc(50vh - 50vw / 2);
+    left: calc(50vw);
+  }
+
+  .landing::after {
+    background: var(--secondary-glow);
+    background-size: cover;
+    border-radius: 50%;
+    width: 500px;
+    height: 700px;
+    filter: blur(90px);
+    top: calc(50vh - 50vw / 2);
+    left: calc(20vh - 50vw / 2);
+  }
+
+  .landing::before {
+    /*...previous props*/
+    animation: animateBefore 7s cubic-bezier(0.47, 0, 0.745, 0.715) infinite;
+  }
+
+  .landing::after {
+    /*...previous props*/
+    animation: animateAfter 7s cubic-bezier(0.47, 0, 0.745, 0.715) infinite;
+  }
+}
+
+@keyframes animateBefore {
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(200px) scale(0.8);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes animateAfter {
+  0% {
+    transform: translateX(0);
+  }
+
+  50% {
+    transform: translateX(-250px) scale(1.2);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+/*
+    https://github.com/tailwindlabs/tailwindcss/discussions/2394
+    https://github.com/tailwindlabs/tailwindcss/pull/5732
+*/
+@layer utilities {
+  /* Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 195, 91%, 4%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+/* @layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 221.2 83.2% 53.3%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 217.2 91.2% 59.8%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 224.3 76.3% 48%;
+  }
+} */
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+#root {
+  display: grid;
+  grid-template-columns: 40% 1fr;
+  gap: 0;
+}
+
+.profile-row {
+  justify-content: space-between;
+  background: var(--background-header);
+}
+
+.profile-row > div {
+  gap: 1rem;
+}
+
+.profile-row button {
+  width: 1.5rem;
+  height: 1.5rem;
+  color: var(--icons-color);
+}
+
+.profile-row img {
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+
+[data-theme="light"] .react-modal-sheet-container {
+  background-color: #fff !important;
+}
+
+[data-theme="dark"] .react-modal-sheet-container {
+  background-color: #010f16ff !important;
+}
+
+.react-modal-sheet-backdrop {
+  background-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+.react-modal-sheet-drag-indicator {
+  background-color: #666 !important;
+}
+
+.str-chat__channel-list {
+  width: 100%;
+}
+.str-chat__channel {
+  width: 100%;
+}
+.str-chat__thread {
+  width: 45%;
+}
+.channel-list-container {
+  overflow-y: scroll;
+}
+
+.messaging__sidebar {
+  width: var(--min-workspace-width);
+}
+
+.str-chat__channel {
+  flex: 1;
+  min-width: 0;
+}
+
+.str-chat__main-panel {
+  flex: 1;
+  min-width: 0;
+}
+
+.str-chat__main-panel--thread-open {
+  display: none;
+}
+
+.str-chat__thread {
+  flex: 0 1 var(--min-workspace-width);
+  max-width: 45%;
+}
+
+/* Mobile View */
+@media screen and (max-width: 640px) {
+  /*
+   * This is to prevent the browser navigation bars from hiding the app
+   * on some mobile browsers. The app-height variable is set dynamically
+   * using javascript.
+   */
+  .str-chat__channel {
+    height: var(--app-height);
+  }
+
+  #mobile-channel-list {
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translate3d(-100vw, 0, 0);
+    transition: transform 0.3s cubic-bezier(0, 0.52, 0, 1);
+  }
+
+  #mobile-channel-list.show {
+    transform: translate3d(0vw, 0, 0);
+    z-index: 1000;
+  }
+}
+
+/* To fix inherited styles (as per Team and Customer Support apps */
+@media screen and (max-width: 960px) {
+  .str-chat__channel-list {
+    position: unset;
+    left: unset;
+    top: unset;
+    z-index: unset;
+    min-height: unset;
+    overflow-y: unset;
+    transition: unset;
+  }
+
+  .str-chat__thread {
+    flex: 1;
+    position: absolute;
+    z-index: 1;
+    left: 0;
+    right: 0;
+    max-width: 100%;
+  }
+}
+
+.str-chat-channel-list {
+  position: fixed;
+  z-index: 1;
+  width: 0;
+
+  &--open {
+    width: 100%;
+  }
+}
+
+.str-chat-channel {
+  width: 100%;
+}
+
+.str-chat__thread {
+  width: 100%;
+  height: 100%;
+  position: fixed;
+  z-index: 1;
+}
+
+@media screen and (min-width: 768px) {
+  .str-chat-channel-list {
+    width: 100%;
+    max-width: 420px;
+    position: initial;
+    z-index: 0;
+  }
+
+  .str-chat__thread {
+    position: initial;
+    z-index: 0;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .str-chat__thread {
+    width: 45%;
+  }
+
+  .str-chat__channel-header .str-chat__header-hamburger {
+    display: none;
+  }
+}
+
+.messaging__channel-list__header__button {
+  border: 0;
+  cursor: pointer;
+  background: #fafafa;
+  border-radius: 20px;
+  box-shadow: var(--str-chat__channel-box-shadow);
+}
+
+.str-chat .str-chat {
+  --str-chat__primary-color: #005fff;
+  --str-chat__background-color: #fff;
+  --str-chat__secondary-background-color: rgba(255, 255, 255, 0.9);
+  --str-chat__thread-background-color: var(--str-chat__background-color);
+  --str-chat__notification-list-background-color: var(--str-chat__background-color);
+  --str-chat__message-list-background-color: var(--str-chat__background-color);
+
+  --messaging__header-shadow: 0 7px 9px rgba(0, 0, 0, 0.03), 0 1px 0 rgba(0, 0, 0, 0.03);
+}
+
+.str-chat .avatar-subgroup.avatar-subgroup--split {
+  --str-chat__avatar-size: 20px;
+}
+
+.str-chat .str-chat__message {
+  --str-chat__avatar-size: 32px;
+}
+
+.str-chat {
+  --str-chat__avatar-size: 40px;
+}
+
+.str-chat.str-chat__theme-dark {
+  --str-chat__background-color: #282a2d;
+  --str-chat__secondary-background-color: #212326;
+  --str-chat__primary-surface-color: #18191b;
+  --str-chat__secondary-surface-color: #343434;
+}

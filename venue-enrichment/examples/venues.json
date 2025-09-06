@@ -1,0 +1,42 @@
+[
+  {
+    "name": "The Anthem",
+    "context": "Washington DC"
+  },
+  {
+    "name": "Madison Square Garden",
+    "context": "New York City"
+  },
+  {
+    "name": "Red Rocks Amphitheatre", 
+    "context": "Morrison Colorado"
+  },
+  {
+    "name": "The Fillmore",
+    "context": "San Francisco"
+  },
+  {
+    "name": "Troubadour",
+    "context": "West Hollywood California"
+  },
+  {
+    "name": "The Blue Note",
+    "context": "New York City"
+  },
+  {
+    "name": "The Ryman Auditorium",
+    "context": "Nashville Tennessee"
+  },
+  {
+    "name": "The Greek Theatre",
+    "context": "Berkeley California"
+  },
+  {
+    "name": "Terminal 5",
+    "context": "New York City"
+  },
+  {
+    "name": "The Observatory",
+    "context": "Santa Ana California"
+  }
+]

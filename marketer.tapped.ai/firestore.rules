@@ -1,0 +1,251 @@
+rules_version = '2';
+service cloud.firestore {
+	match /databases/{database}/documents {
+		// ---------------------------------------------------------
+		// Rowy rules start
+		// ---------------------------------------------------------
+		// Automatically generated and managed by Rowy
+		// ⚠️ Do not edit this block directly, as it will be overwritten
+		// To edit the security rules, please do it on different block or manage from rowy settings
+		// initialized on 6/25/2023
+		match /{collectionId}/{docId} {
+			allow read: if colRule(["loops","bookings","users"], ["ADMIN","EDITOR","VIEWER","OWNER"]);
+			allow create: if colRule(["loops","users"], ["ADMIN","OWNER"]);
+			allow create: if colRule(["bookings"], ["ADMIN","EDITOR","OWNER"]);
+			allow update: if colRule(["loops","bookings","users"], ["ADMIN","EDITOR","OWNER"]);
+			allow delete: if colRule(["loops","bookings","users"], ["ADMIN","OWNER"]);
+			
+			function colRule(collections, roles){
+				return collectionId in collections && hasAnyRole(roles);
+			}
+			
+		}
+		// ---------------------------------------------------------
+		// Rowy rules end
+		// ---------------------------------------------------------
+		// Allow admins to read and write all documents
+		match /{document=**} {
+			allow read, write: if hasAnyRole(["ADMIN", "OWNER"]);
+		}
+		
+		// Rowy: Allow signed in users to read Rowy configuration and admins to write
+		match /_rowy_/{docId} {
+			allow read: if request.auth.token.roles.size() > 0;
+			allow write: if hasAnyRole(["ADMIN", "OWNER"]);
+			match /{document=**} {
+				allow read: if request.auth.token.roles.size() > 0;
+				allow write: if hasAnyRole(["ADMIN", "OWNER"]);
+			}
+			match /schema/{tableId} {
+				allow update: if canModify(tableId,'pc')
+			match /{document=**} {allow read,write: if canModify(tableId,'pc')}
+      }
+      match /groupSchema/{tableId} {
+        allow update: if canModify(tableId,'cg')
+        match /{document=**} {allow read,write: if canModify(tableId,'cg')}
+      }
+      function canModify(tableId,tableType) {
+        return hasAnyRole(get(/databases/$(database)/documents/_rowy_/settings)
+        .data.tablesSettings[tableType][tableId].modifiableBy)
+      }
+		}	
+    // Rowy: Allow users to edit their settings
+    match /_rowy_/userManagement/users/{userId} {
+      allow get, update, delete: if isDocOwner(userId);
+      allow create: if request.auth.token.roles.size() > 0;
+    }
+    // Rowy: Allow public to read public Rowy configuration
+    match /_rowy_/publicSettings {
+      allow get: if true;
+    }
+
+    // Rowy: Utility functions
+    function isDocOwner(docId) {
+      return request.auth != null && (request.auth.uid == resource.id || request.auth.uid == docId);
+    }
+    function hasAnyRole(roles) {
+      return request.auth != null && request.auth.token.roles.hasAny(roles);
+    }
+        
+    // Stripe Extension Rules
+    match /customers/{uid} {
+      allow read: if request.auth.uid == uid;
+
+      match /checkout_sessions/{id} {
+        allow read, write: if request.auth.uid == uid;
+      }
+      match /subscriptions/{id} {
+        allow read: if request.auth.uid == uid;
+      }
+      match /payments/{id} {
+        allow read: if request.auth.uid == uid;
+      }
+    }
+
+    match /products/{id} {
+      allow read: if true;
+
+      match /prices/{id} {
+        allow read: if true;
+      }
+
+      match /tax_rates/{id} {
+        allow read: if true;
+      }
+    }
+    
+//     function hasStaterSubs() {
+//       return request.auth.token.stripeRole == "starter";
+//     }
+
+//     function hasPremiumSubs() {
+//       return request.auth.token.stripeRole == "premium";
+//     }
+    
+//     function hasBusinessSubs() {
+//       return request.auth.token.stripeRole == "business";
+//     }
+    
+    // Tapped Specific Rules
+    function isOwner() {
+      return request.auth != null && request.resource.data.userId == request.auth.uid;
+    }
+
+    function isBookingRequester() {
+      return request.auth != null && request.resource.data.requesterId == request.auth.uid;
+    }
+
+    function isBookingRequestee() {
+      return request.auth != null && request.resource.data.requesteeId == request.auth.uid;
+    }
+
+    function isActivitySender() {
+      return request.auth != null && request.resource.data.fromUserId == request.auth.uid;
+    }
+
+    function isActivityReceiver() {
+      return request.auth != null && request.resource.data.toUserId == request.auth.uid;
+    }
+    
+    function isBooker() {
+    	return request.auth != null && request.resource.data.bookerId == request.auth.uid;
+    }
+    
+    function isPerformer() {
+    	return request.auth != null && request.resource.data.performerId == request.auth.uid;
+    }
+
+    function loopDescriptionIsSmall() {
+      return request.resource.data.description.size() <= 512;
+    }
+
+    function commentContentIsSmall() {
+      return request.resource.data.content.size() <= 512;
+    }
+
+    function titleIsSmall() {
+      return request.resource.data.title.size() <= 56;
+    }
+
+    match /users/{userId} {
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+    }
+    match /loops/{loopId} {
+      allow create, update: if isOwner() && loopDescriptionIsSmall() && titleIsSmall();
+      allow read: if request.auth != null;
+    }
+    match /feeds/{userId}/{document=**} {
+      allow read: if request.auth != null;
+    }
+    match /likes/{loopId}/loopLikes/{userId} {
+      allow create, update, delete: if request.auth != null && userId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /following/{followerId}/Following/{followeeId} {
+      allow create, update, delete: if request.auth != null && followerId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /followers/{followeeId}/Followers/{followerId} {
+      allow create, update, delete: if request.auth != null && followerId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /device_tokens/{userId}/tokens/{tokenId} {
+      allow create, update, delete: if request.auth != null && userId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /comments/{loopId}/loopComments/{commentId} {
+      allow create, update, delete: if isOwner() && commentContentIsSmall();
+      allow read: if request.auth != null;
+    }
+    match /comments/{loopId}/loopComments/{commentId}/commentLikes/{likerId} {
+      allow create, delete: if request.auth != null && request.auth.uid == likerId;
+      allow read: if request.auth != null;
+    }
+    match /bookings/{bookingId} {
+      allow create: if isBookingRequester();
+      allow update: if isBookingRequester() || isBookingRequestee();
+      allow read: if request.auth != null;
+    }
+    match /badges/{badgesId} {
+      allow read: if request.auth != null;
+    }
+    match /badgesSent/{userId}/{document=**} {
+      allow read: if request.auth != null;
+    }
+    match /activities/{activityId} {
+      allow create, delete: if isActivitySender();
+      allow update: if isActivityReceiver() || isActivitySender();
+      allow read: if request.auth != null;
+    }
+    match /services/{userId}/userServices/{serviceId} {
+      allow create, update: if isOwner();
+      allow read: if request.auth != null;
+    }
+    match /mail/{mailId} {
+      allow create, read: if request.auth != null;
+    }
+    match /leaderboard/leaders {
+      allow read: if request.auth != null;
+    }
+    match /opportunities/{loopId}/interestedUsers/{userId} {
+      allow create, read, delete: if request.auth != null;
+    }
+    match /blockers/{blockerId}/blockedUsers/{blockeeId} {
+      allow create, update, delete: if request.auth != null && blockerId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /blockees/{blockeeId}/blockedByUsers/{blockerId} {
+      allow create, update, delete: if request.auth != null && blockerId == request.auth.uid;
+      allow read: if request.auth != null;
+    }
+    match /reviews/{userId}/bookerReviews/{reviewId} {
+    	allow create, update: if isPerformer();
+      allow read: if request.auth != null;
+    }
+    match /reviews/{userId}/performerReviews/{reviewId} {
+    	allow create, update: if isBooker();
+      allow read: if request.auth != null;
+    }
+    match /aiModels/{userId}/imageModels/{modelId} {
+    	allow create, update: if isOwner();
+      allow read: if request.auth != null;
+    }
+    match /avatars/{userId}/userAvatars/{avatarId} {
+    	allow create, update: if isOwner();
+      allow read: if request.auth != null;
+    }
+		match /label_applications/{applicationId} {
+    	allow create, update: if isOwner();
+      allow read: if request.auth != null;
+    }
+    match /referenceImages/{userId}/userSamples/{sampleId} {
+    	allow create, update, delete: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+    }
+    match /marketingPlans/{userId}/userMarketingPlans/{marketingPlanId} {
+    	allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null;
+    }
+	}
+}

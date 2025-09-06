@@ -1,0 +1,29 @@
+Extract venue information from this HTML for "{{ venue_name }}".
+
+Target fields: {{ target_fields | join(", ") }}
+Source URL: {{ source_url }}
+
+HTML Content:
+{{ html_preview }}
+
+Extract the following information if available:
+- description: Venue description or about text
+- email: Contact email address
+- phone: Phone number (format as found)
+- website: Official website URL
+- facebook_url: Facebook page URL
+- twitter_url: Twitter profile URL
+- instagram_url: Instagram profile URL
+- logo_url: Logo image URL (full URL)
+- ideal_performer_profile: Information about what types of performers they book
+
+Respond with XML containing only the fields you can confidently extract:
+<venue_data>
+    <email>contact@venue.com</email>
+    <phone>(555) 123-4567</phone>
+    <description>Premier music venue in downtown...</description>
+    <website>https://venue.com</website>
+</venue_data>
+
+If you cannot find reliable information for a field, omit it from the response.
+Ensure all URLs are complete (include http:// or https://).

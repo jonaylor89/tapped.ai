@@ -1,0 +1,18 @@
+Select the best 2-3 sources to scrape for comprehensive venue information for "{{ venue_name }}".
+
+Missing fields to find: {{ missing_fields | join(", ") }}
+
+Available sources (ranked by relevance):
+{{ sources_info }}
+
+Consider:
+1. Official websites are usually best for comprehensive info
+2. Avoid redundant sources (e.g., multiple social media platforms)
+3. Prioritize sources likely to have the missing fields
+4. Avoid websites that may have aggressive bot detection
+
+Respond with XML containing the URLs to scrape, ordered by priority:
+<sources>
+    <source>https://example.com/venue</source>
+    <source>https://blah.foo/venue</source>
+</sources>

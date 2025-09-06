@@ -1,0 +1,313 @@
+import { useAuth } from "@/context/auth";
+import { useSearchToggle } from "@/context/use-search-toggle";
+import { useStore } from "@/context/use-store";
+import { useRouter } from "next/navigation";
+import {
+  DropdownMenu,
+  DropdownMenuItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "../ui/card";
+import NumberFlow from "@number-flow/react";
+import Link from "next/link";
+import {
+  Bug,
+  Download,
+  Gem,
+  Home,
+  LogOut,
+  MessageCircle,
+  Play,
+  Search,
+  Settings,
+  Theater,
+  User,
+  User2,
+} from "lucide-react";
+import { logout } from "@/data/auth";
+import { cn } from "@/lib/utils";
+import { trackEvent } from "@/utils/tracking";
+import { useMemo, useEffect, useState, type JSX } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "../ui/tooltip";
+
+export default function BottomNavBar({
+  onVenueCountClick,
+  queryLimit,
+  cachedMarkers,
+  markers,
+  isFetching,
+}: {
+  onVenueCountClick: () => void;
+  queryLimit: number;
+  cachedMarkers: React.MutableRefObject<JSX.Element[]>;
+  markers: JSX.Element[];
+  isFetching: boolean;
+}) {
+  const searchBar = useStore(useSearchToggle, (state) => state);
+  const {
+    state: { currentUser, authUser },
+  } = useAuth();
+  const isLoggedIn = authUser !== null;
+  const displayName = currentUser?.artistName ?? currentUser?.username ?? "use";
+  const email = currentUser?.email ?? authUser?.email ?? "user@tapped.ai";
+  const router = useRouter();
+
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  // Check if user should see tutorial
+  useEffect(() => {
+    if (!isLoggedIn) {
+      // Always show for logged out users
+      setShowTutorial(true);
+      return;
+    }
+
+    // Check if user has already seen tutorial
+    const hasSeenTutorial = localStorage.getItem("tapped-tutorial-seen");
+    if (hasSeenTutorial) {
+      setShowTutorial(false);
+      return;
+    }
+
+    // Check if user is "new" (created account within last 7 days)
+    if (currentUser?.timestamp) {
+      const accountAge = Date.now() - currentUser.timestamp.toDate().getTime();
+      const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+
+      if (accountAge <= sevenDaysMs) {
+        setShowTutorial(true);
+      } else {
+        setShowTutorial(false);
+      }
+    }
+  }, [isLoggedIn, currentUser]);
+
+  const handleTutorialClick = () => {
+    // Mark tutorial as seen
+    localStorage.setItem("tapped-tutorial-seen", "true");
+    setShowTutorial(false);
+
+    // Track the event
+    trackEvent("tutorial_click", {
+      user_id: currentUser?.id,
+      user_type: isLoggedIn ? "logged_in" : "logged_out",
+    });
+  };
+
+  const markersCount = useMemo(() => {
+    if (isFetching) {
+      return cachedMarkers.current.length;
+    }
+
+    return markers.length;
+  }, [isFetching, markers, cachedMarkers]);
+
+  return (
+    <TooltipProvider>
+      <div className="absolute bottom-0 z-40 flex w-full flex-row items-center justify-center">
+        {showTutorial && (
+          <Card className="m-1 flex gap-3 p-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href="https://www.youtube.com/watch?v=DPiogp-D4ig">
+                  <Button
+                    variant="secondary"
+                    size="icon"
+                    className={cn("flex gap-1")}
+                    onClick={handleTutorialClick}
+                  >
+                    <Play className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent>learn how to best use Tapped Ai</TooltipContent>
+            </Tooltip>
+          </Card>
+        )}
+        <Card className="m-3 flex gap-3 p-1">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("flex gap-1")}
+                onClick={() => {
+                  trackEvent("menu_click");
+                  onVenueCountClick?.();
+                }}
+              >
+                <span>
+                  {markersCount === queryLimit && "+"}
+                  <NumberFlow value={markersCount} />
+                </span>
+                venues
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              click to learn more about the venues on the map
+            </TooltipContent>
+          </Tooltip>
+          <Link href="/venue_outreach" className="hidden lg:block">
+            <Button variant="secondary">apply to perform</Button>
+          </Link>
+
+          <div className="flex gap-1">
+            <Tooltip>
+              <Link href="/venue_outreach" className="lg:hidden">
+                <TooltipTrigger asChild>
+                  <Button
+                    size="icon"
+                    variant="secondary"
+                    title="apply to perform"
+                  >
+                    <Theater className="size-3" />
+                  </Button>
+                </TooltipTrigger>
+              </Link>
+              <TooltipContent>apply to perform</TooltipContent>
+            </Tooltip>
+            {isLoggedIn && (
+              <Tooltip>
+                <Link href="/messages">
+                  <TooltipTrigger asChild>
+                    <Button size="icon" variant="secondary">
+                      <MessageCircle className="size-3" />
+                    </Button>
+                  </TooltipTrigger>
+                </Link>
+                <TooltipContent>
+                  see your messages from venues you&apos;ve contacted or other
+                  performers on the app
+                </TooltipContent>
+              </Tooltip>
+            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="secondary"
+                  title="search"
+                  disabled={!isLoggedIn}
+                  onClick={() => searchBar?.setIsOpen()}
+                >
+                  <Search className="size-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                search through the biggest live music database for venues,
+                performers, and bookings, in the world
+              </TooltipContent>
+            </Tooltip>
+            <Link href="/download" className="lg:hidden">
+              <Button size="icon" variant="secondary" title="get the app">
+                <Download className="size-3" />
+              </Button>
+            </Link>
+            {isLoggedIn ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="icon" variant="ghost">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage
+                        src={currentUser?.profilePicture ?? undefined}
+                        alt="Avatar"
+                      />
+                      <AvatarFallback className="bg-transparent">
+                        {currentUser?.username.slice(0, 2) ?? "JD"}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">
+                        {displayName}
+                      </p>
+                      <p className="text-muted-foreground text-xs leading-none">
+                        {email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    {currentUser?.username !== undefined && (
+                      <>
+                        <DropdownMenuItem
+                          className="hover:cursor-pointer"
+                          asChild
+                        >
+                          <Link
+                            href={`/u/${currentUser?.username ?? ""}`}
+                            className="flex items-center"
+                          >
+                            <User className="text-muted-foreground mr-3 h-4 w-4" />
+                            public profile
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
+                    <DropdownMenuItem className="hover:cursor-pointer" asChild>
+                      <Link href="/billing" className="flex items-center">
+                        <Gem className="text-muted-foreground mr-3 h-4 w-4" />
+                        billing
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="hover:cursor-pointer" asChild>
+                      <Link
+                        href="https://tapped.canny.io/ideas-bugs"
+                        className="flex items-center"
+                      >
+                        <Bug className="text-muted-foreground mr-3 h-4 w-4" />
+                        report bugs
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="hover:cursor-pointer" asChild>
+                      <Link href="/settings" className="flex items-center">
+                        <Settings className="text-muted-foreground mr-3 h-4 w-4" />
+                        settings
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="hover:cursor-pointer" asChild>
+                    <Link href="/download" className="flex items-center">
+                      <Download className="text-muted-foreground mr-3 h-4 w-4" />
+                      get the app
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="hover:cursor-pointer"
+                    onClick={() => {
+                      logout();
+                      router.push("/");
+                    }}
+                  >
+                    <LogOut className="text-muted-foreground mr-3 h-4 w-4" />
+                    sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href={`/signup?return_url=${encodeURIComponent("/map")}`}>
+                <Button size="icon">
+                  <User2 className="size-3" />
+                </Button>
+              </Link>
+            )}
+          </div>
+        </Card>
+      </div>
+    </TooltipProvider>
+  );
+}

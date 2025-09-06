@@ -1,0 +1,88 @@
+{
+  "project_info": {
+    "project_number": "269420857313",
+    "project_id": "in-the-loop-306520",
+    "storage_bucket": "in-the-loop-306520.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:269420857313:android:48c1ec29913d8073f7f4a0",
+        "android_client_info": {
+          "package_name": "com.intheloopstudio"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "269420857313-6ajuiqa48fc06b7adnafdoavuntkd3li.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intheloopstudio",
+            "certificate_hash": "2a7378f5db4883a4d2b70c8fd1f1b7b6d1b70e0a"
+          }
+        },
+        {
+          "client_id": "269420857313-cpond9ljad490hk0e9a12drsq4djfnop.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intheloopstudio",
+            "certificate_hash": "478faf7b6c167dab534384716101dc46dd50461c"
+          }
+        },
+        {
+          "client_id": "269420857313-fboj9errf7akpthhvt21dk6uelldrb2h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intheloopstudio",
+            "certificate_hash": "f0d47be467abef8d4f1750e227fc54f24bf46534"
+          }
+        },
+        {
+          "client_id": "269420857313-iu0c8s1bg6f3846eh6k23gj87fdvflgq.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intheloopstudio",
+            "certificate_hash": "d63982bf2ccabc50329c90727222ae58f9206b1b"
+          }
+        },
+        {
+          "client_id": "269420857313-nata1skq9ma5122b8gqqhdk3p30hrd49.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.intheloopstudio",
+            "certificate_hash": "6e89371fec403b45f80619044c4f1e902cdaeedc"
+          }
+        },
+        {
+          "client_id": "269420857313-9k720efafsn1p8j96ddc3khu40tj8o4f.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBh3y9V9FhKJDbJOhqJTj14JoUQiewmkgI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "269420857313-9k720efafsn1p8j96ddc3khu40tj8o4f.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "269420857313-1bqljp8o95hfqt9un7u43qht55bden0s.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.intheloopstudio",
+                "app_store_id": "1574937614"
+              }
+            }
+          ]
+        }
+      },
+      "admob_app_id": "ca-app-pub-6625115032398761~4858971980"
+    }
+  ],
+  "configuration_version": "1"
+}

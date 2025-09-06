@@ -1,0 +1,6 @@
+
+dist/
+credentials.json
+.env.local
+.env*
+node_modules/

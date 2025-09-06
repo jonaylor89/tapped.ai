@@ -1,0 +1,40 @@
+You are an expert web scraper. Generate specific extraction instructions for the venue "{{ venue_name }}" from the URL: {{ source_url }}
+
+{% if content_preview %}
+Content preview:
+{{ content_preview }}
+
+{% endif %}
+Missing fields to extract: {{ missing_fields | join(", ") }}
+
+{% if extraction_methods %}
+For each missing field, provide extraction instructions. Consider these methods:
+{% for method in extraction_methods %}
+{{ loop.index }}. "{{ method.name }}" - {{ method.description }}
+{% endfor %}
+{% endif %}
+
+{% if common_patterns %}
+Common patterns:
+{% for pattern in common_patterns %}
+- {{ pattern.field }}: {{ pattern.method }} pattern `{{ pattern.pattern }}` ({{ pattern.description }})
+{% endfor %}
+{% endif %}
+
+Respond with JSON array of extraction instructions:
+[
+  {
+    "field": "email",
+    "method": "regex",
+    "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}",
+    "priority": 1,
+    "reasoning": "Standard email regex pattern"
+  },
+  {
+    "field": "description",
+    "method": "meta_tag",
+    "pattern": "og:description",
+    "priority": 1,
+    "reasoning": "OpenGraph description tag usually contains venue description"
+  }
+]

@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+body {
+  color: #fff;
+  background-color: #010F16;
+}
+
+.tapped_btn {
+  margin: 1rem;
+  @apply text-black min-w-[30%] bg-[#42A5F5] hover:bg-[#42A5F5]/90 focus:ring-4 focus:outline-none focus:ring-[#4285F4]/50 font-medium rounded-lg text-sm px-5 py-2.5 text-center items-center mr-2 mb-2;
+}
+
+.tapped_btn_rounded {
+  margin: 1rem;
+  @apply text-black min-w-[35%] bg-white hover:bg-white/90 focus:ring-4 focus:outline-none focus:ring-[#42a5f5]/50 font-medium rounded-full text-sm px-5 py-2.5 text-center items-center mr-2 mb-2;
+}
+
+.tapped_btn_rounded_black {
+  margin: 1rem;
+  @apply text-white min-w-[35%] bg-black hover:bg-black/90 focus:ring-4 focus:outline-none focus:ring-[#42a5f5]/50 font-medium rounded-full text-sm px-5 py-2.5 text-center items-center mr-2 mb-2;
+}
+
+.tapped_btn_rounded_blue {
+  margin: 1rem;
+  @apply text-white min-w-[15%] bg-[#63b2fd] hover:bg-black/90 focus:ring-4 focus:outline-none focus:ring-[#42a5f5]/50 font-medium rounded-full text-sm px-5 py-2.5 text-center items-center mr-2 mb-2;
+}
+
+.base-input {
+  width: 100%;
+  appearance: none;
+  border-radius: 0.25rem;
+  border: 2px solid #63b2fd;
+  background-color: #63b2fd;
+  padding: 0.5rem 1rem;
+  line-height: 1.5;
+  color: white;
+}
+
+.base-input:focus {
+  background-color: #63b2fd;
+  outline: none;
+}
+
+.input-error {
+  border-color: #f87171;
+}
+
+.error-text {
+  margin-top: 0.5rem;
+  color: #f87171;
+}
+
+.white_placeholder::placeholder {
+  color: white;
+  font-weight: semibold;
+  opacity: 1;
+}
+
+.blueShapesBackground .thirdCircle,
+.blueShapesBackground .firstCircle,
+.blueShapesBackground .secondCircle {
+  content: '';
+  position: absolute;
+  background-color: #63b2fd;
+  border-radius: 50%;
+  filter: blur(100px);
+  z-index: -1;
+}
+
+.blueShapesBackground .thirdCircle {
+  top: 10%;
+  left: -10%;
+  width: 400px;
+  height: 400px;
+}
+
+.blueShapesBackground .firstCircle {
+  top: 40%;
+  right: 10%;
+  width: 175px;
+  height: 175px;
+}
+
+.blueShapesBackground .secondCircle {
+  bottom: 20%;
+  left: 50%;
+  width: 250px;
+  height: 250px;
+  transform: translateX(-50%);
+}
+
+.markdown-content p, 
+.markdown-content blockquote, 
+.markdown-content pre {
+   page-break-inside: avoid;
+}
+
+.markdown-content ol, 
+.markdown-content ul {
+   page-break-inside: auto;
+}
+
+.markdown-content li {
+   page-break-inside: avoid;
+}
+
+.markdown-content h1:first-child, 
+.markdown-content h2:first-child {
+   page-break-before: auto;
+}
+
+.markdown-content h1, 
+.markdown-content h2 {
+   page-break-before: always;
+   page-break-after: avoid;
+}
+
+.markdown-content p {
+   orphans: 3;
+   widows: 3;
+}

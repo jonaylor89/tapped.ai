@@ -1,0 +1,58 @@
+{
+  "name": "functions",
+  "scripts": {
+    "lint": "eslint --format stylish --ext .js,.ts .",
+    "lint:fix": "npm run lint -- --fix",
+    "build": "tsc",
+    "serve": "npm run build && firebase emulators:start --only functions",
+    "shell": "npm run build && firebase functions:shell",
+    "start": "npm run shell",
+    "deploy": "npm run lint:fix && firebase deploy --only functions",
+    "logs": "firebase functions:log"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "main": "lib/index.js",
+  "dependencies": {
+    "@google-cloud/secret-manager": "^5.0.1",
+    "@langchain/openai": "^0.0.15",
+    "@leap-ai/sdk": "^0.0.130",
+    "@mailchimp/mailchimp_marketing": "^3.0.80",
+    "@sendgrid/inbound-mail-parser": "^8.0.0",
+    "@sendgrid/mail": "^8.1.0",
+    "@types/mailchimp__mailchimp_marketing": "^3.0.20",
+    "cookie-parser": "^1.4.6",
+    "firebase-admin": "^11.2.1",
+    "firebase-functions": "^5.0.1",
+    "geohashing": "^1.1.3",
+    "langchain": "^0.1.1",
+    "lru-cache": "^10.1.0",
+    "mailparser": "^3.6.7",
+    "marked": "^9.1.0",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^6.6.3",
+    "postmark": "^4.0.2",
+    "resend": "^1.1.0",
+    "spotify-web-api-node": "^5.0.2",
+    "stream-chat": "^4.1.0",
+    "stripe": "^11.15.0",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.7",
+    "@types/mailparser": "^3.4.4",
+    "@types/react": "^18.2.24",
+    "@types/spotify-web-api-node": "^5.0.11",
+    "@types/uuid": "^9.0.1",
+    "@typescript-eslint/eslint-plugin": "^3.9.1",
+    "@typescript-eslint/parser": "^3.8.0",
+    "@typescript-eslint/typescript-estree": "^6.19.0",
+    "eslint": "^7.6.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-import": "^2.22.0",
+    "firebase-functions-test": "^0.2.0",
+    "typescript": "^4.5.4"
+  },
+  "private": true
+}

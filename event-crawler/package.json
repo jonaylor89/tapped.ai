@@ -1,0 +1,46 @@
+{
+  "name": "node-webcrawler",
+  "version": "0.0.1",
+  "description": "This is an example of a Crawlee project.",
+  "main": "src/main.js",
+  "dependencies": {
+    "@langchain/openai": "^0.0.28",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "crawlee": "^3.0.0",
+    "dotenv": "^16.4.5",
+    "firebase-admin": "^12.1.0",
+    "geohashing": "^2.0.1",
+    "hpagent": "^1.2.0",
+    "langchain": "^0.1.36",
+    "node-schedule": "^2.1.1",
+    "puppeteer": "^19.11.1",
+    "sitemapper": "^4.0.2",
+    "uuid": "^9.0.1"
+  },
+  "devDependencies": {
+    "@apify/tsconfig": "^0.1.0",
+    "@types/node": "^20.0.0",
+    "@types/node-schedule": "^2.1.7",
+    "eslint-plugin-import": "^2.29.1",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "tsx": "^4.4.0",
+    "typescript": "~5.4.0"
+  },
+  "scripts": {
+    "prepare": "husky",
+    "start": "npm run start:dev",
+    "start:prod": "node dist/main.js",
+    "start:dev": "tsx src/main.ts",
+    "migrate:dry-run": "tsx src/migration/migrate-legacy-scrapers.ts --dry-run",
+    "migrate:run": "tsx src/migration/migrate-legacy-scrapers.ts --force",
+    "migrate:specific-runs": "tsx src/migration/migrate-specific-runs.ts --force",
+    "verify-venues": "tsx src/migration/verify-venues.ts",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "type-check": "tsc --noEmit",
+    "test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
+  },
+  "author": "It's not you it's me",
+  "license": "ISC"
+}
