@@ -21,7 +21,7 @@ export 'package:linkify/linkify.dart'
 /// Callback clicked link
 typedef LinkCallback = void Function(LinkableElement link);
 
-const _defaultLinkifiers = [
+const List<Linkifier> _defaultLinkifiers = [
   EmailLinkifier(),
   UrlLinkifier(),
   UserTagLinkifier(),

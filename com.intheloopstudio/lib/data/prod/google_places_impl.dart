@@ -17,9 +17,9 @@ const _placesIosKey = 'AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY';
 // android only, restricted
 const _placesAndroidKey = 'AIzaSyCD1NeNSfMRVOJz40P2v44aY-kj2pnHr14';
 
-final _placesKey = Platform.isIOS ? _placesIosKey : _placesAndroidKey;
+final String _placesKey = Platform.isIOS ? _placesIosKey : _placesAndroidKey;
 final _places = FlutterGooglePlacesSdk(_placesKey);
-final _functions = FirebaseFunctions.instance;
+final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
 class GooglePlacesImpl implements PlacesRepository {
   @override

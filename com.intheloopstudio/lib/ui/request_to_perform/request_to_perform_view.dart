@@ -223,7 +223,7 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
                     height: 50,
                     child: WidgetStack(
                       positions: RestrictedPositions(
-                        infoItem: InfoItem(indent: 5),
+                        infoItem: const InfoItem(indent: 5),
                       ),
                       stackedWidgets: _venues
                           .map(

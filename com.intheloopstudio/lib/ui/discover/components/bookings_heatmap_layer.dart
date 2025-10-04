@@ -8,7 +8,7 @@ class BookingsHeatmapLayer extends StatelessWidget {
     super.key,
   });
 
-  final gradients = [
+  final List<Map<double, MaterialColor>> gradients = [
     // HeatMapOptions.defaultGradient,
     {
       0.25: Colors.blue,

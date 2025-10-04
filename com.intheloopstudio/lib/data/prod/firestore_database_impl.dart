@@ -23,25 +23,25 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rxdart/rxdart.dart';
 
 // final _storage = FirebaseStorage.instance.ref();
-final _firestore = FirebaseFirestore.instance;
-final _analytics = FirebaseAnalytics.instance;
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
-final _usersRef = _firestore.collection('users');
-final _activitiesRef = _firestore.collection('activities');
-final _badgesSentRef = _firestore.collection('badgesSent');
-final _bookingsRef = _firestore.collection('bookings');
-final _servicesRef = _firestore.collection('services');
-final _mailRef = _firestore.collection('mail');
-final _leadersRef = _firestore.collection('leaderboard');
-final _blockerRef = _firestore.collection('blockers');
+final CollectionReference<Map<String, dynamic>> _usersRef = _firestore.collection('users');
+final CollectionReference<Map<String, dynamic>> _activitiesRef = _firestore.collection('activities');
+final CollectionReference<Map<String, dynamic>> _badgesSentRef = _firestore.collection('badgesSent');
+final CollectionReference<Map<String, dynamic>> _bookingsRef = _firestore.collection('bookings');
+final CollectionReference<Map<String, dynamic>> _servicesRef = _firestore.collection('services');
+final CollectionReference<Map<String, dynamic>> _mailRef = _firestore.collection('mail');
+final CollectionReference<Map<String, dynamic>> _leadersRef = _firestore.collection('leaderboard');
+final CollectionReference<Map<String, dynamic>> _blockerRef = _firestore.collection('blockers');
 // final _blockeeRef = _firestore.collection('blockees');
-final _reviewsRef = _firestore.collection('reviews');
-final _opportunitiesRef = _firestore.collection('opportunities');
-final _opportunityFeedsRef = _firestore.collection('opportunityFeeds');
-final _creditsRef = _firestore.collection('credits');
-final _premiumWailistRef = _firestore.collection('premiumWaitlist');
-final _userFeedbackRef = _firestore.collection('userFeedback');
-final _contactVenuesRef = _firestore.collection('contactVenues');
+final CollectionReference<Map<String, dynamic>> _reviewsRef = _firestore.collection('reviews');
+final CollectionReference<Map<String, dynamic>> _opportunitiesRef = _firestore.collection('opportunities');
+final CollectionReference<Map<String, dynamic>> _opportunityFeedsRef = _firestore.collection('opportunityFeeds');
+final CollectionReference<Map<String, dynamic>> _creditsRef = _firestore.collection('credits');
+final CollectionReference<Map<String, dynamic>> _premiumWailistRef = _firestore.collection('premiumWaitlist');
+final CollectionReference<Map<String, dynamic>> _userFeedbackRef = _firestore.collection('userFeedback');
+final CollectionReference<Map<String, dynamic>> _contactVenuesRef = _firestore.collection('contactVenues');
 
 const verifiedBadgeId = '0aa46576-1fbe-4312-8b69-e2fef3269083';
 

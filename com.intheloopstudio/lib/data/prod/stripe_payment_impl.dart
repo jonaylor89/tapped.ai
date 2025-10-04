@@ -5,15 +5,13 @@ import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/data/payment_repository.dart';
 import 'package:intheloopapp/domains/models/payment_user.dart';
 
-final _functions = FirebaseFunctions.instance;
-final _stripe = Stripe.instance;
-final _analytics = FirebaseAnalytics.instance;
+final FirebaseFunctions _functions = FirebaseFunctions.instance;
+final Stripe _stripe = Stripe.instance;
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 
-// ignore: lines_longer_than_80_chars
 // const _publishedableTestKey = 
   // 'pk_test_51O7KGuDYybu1wznEDQXsjWySgLSKjuCoHpA8Di5xBMZzYRf1FPm9yHNRPaZVAZzKn8k37TMW10fODaO8sERwqapM00oDOAOTIl';
 
-// ignore: lines_longer_than_80_chars
 const _publishableKey =
     'pk_live_51O7KGuDYybu1wznED6nNmA0HNrCxwycnz5cw7akKUDBKaNmqdMYkOY3vGKFQF8iFfPGHrjPmGRMNxf9iX120sxV8003rBfQKil';
 

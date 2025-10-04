@@ -6,11 +6,11 @@ import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 // import 'package:stream_video_flutter/stream_video_flutter.dart' as video;
 
-final _functions = FirebaseFunctions.instance;
-final _fireStore = firestore.FirebaseFirestore.instance;
+final FirebaseFunctions _functions = FirebaseFunctions.instance;
+final firestore.FirebaseFirestore _fireStore = firestore.FirebaseFirestore.instance;
 // final streamVideo = video.StreamVideo.instance;
 
-final _usersRef = _fireStore.collection('users');
+final firestore.CollectionReference<Map<String, dynamic>> _usersRef = _fireStore.collection('users');
 
 /// Stream implementation using the stream api
 class StreamImpl extends StreamRepository {

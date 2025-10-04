@@ -18,8 +18,8 @@ part 'opportunity_event.dart';
 
 part 'opportunity_state.dart';
 
-final _analytics = FirebaseAnalytics.instance;
-final _functions = FirebaseFunctions.instance;
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
 class OpportunityBloc extends Bloc<OpportunityEvent, OpportunityState> {
   OpportunityBloc({

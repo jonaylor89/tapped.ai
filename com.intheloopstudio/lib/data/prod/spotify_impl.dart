@@ -7,7 +7,7 @@ import 'package:intheloopapp/domains/models/spotify_artist.dart';
 import 'package:intheloopapp/domains/models/spotify_track.dart';
 import 'package:intheloopapp/utils/map_tools.dart';
 
-final _functions = FirebaseFunctions.instance;
+final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
 class SpotifyImpl extends SpotifyRepository {
   @override

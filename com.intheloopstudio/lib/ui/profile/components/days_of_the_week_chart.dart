@@ -160,7 +160,6 @@ class DaysOfTheWeekChart extends StatelessWidget {
         text = const Text('s', style: style);
       default:
         text = const Text('', style: style);
-        break;
     }
     return SideTitleWidget(
       meta: meta,

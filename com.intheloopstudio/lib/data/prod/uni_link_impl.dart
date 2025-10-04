@@ -8,10 +8,10 @@ import 'package:intheloopapp/data/deep_link_repository.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 
-final _analytics = FirebaseAnalytics.instance;
-final _firestore = FirebaseFirestore.instance;
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-final _usersRef = _firestore.collection('users');
+final CollectionReference<Map<String, dynamic>> _usersRef = _firestore.collection('users');
 final _appLinks = AppLinks(); // AppLinks is singleton
 
 /// The unilink link implementation for Deep Link
