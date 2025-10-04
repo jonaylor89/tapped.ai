@@ -10,8 +10,8 @@ import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/ui/admin/create_opportunity_cubit.dart';
 import 'package:intheloopapp/ui/common/form_item.dart';
 import 'package:intheloopapp/ui/common/venue_search_bar.dart';
-import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/ui/forms/location_text_field.dart';
+import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/utils/default_image.dart';
 
 class CreateOpportunityForm extends StatelessWidget {
@@ -46,7 +46,6 @@ class CreateOpportunityForm extends StatelessWidget {
       Some(:final value) => FileImage(value),
       None() => switch (currentProfileImage) {
         Some(:final value) => CachedNetworkImageProvider(value),
-        // ignore: unnecessary_cast
         None() => getDefaultImage(const None()),
       },
     };
@@ -162,9 +161,7 @@ class CreateOpportunityForm extends StatelessWidget {
                     const SizedBox(height: 32),
                     LocationTextField(
                       initialPlace: state.placeData,
-                      onChanged: (place, placeId) {
-                        cubit.onLocationChanged(place, placeId);
-                      },
+                      onChanged: cubit.onLocationChanged,
                     ),
                   ],
                 ),

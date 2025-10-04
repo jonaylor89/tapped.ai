@@ -51,7 +51,7 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
               final place = await switch (currentUser.location) {
                 None() => Future<Option<PlaceData>>.value(const None()),
                 Some(:final value) => (() async {
-                    return await places.getPlaceById(value.placeId);
+                    return places.getPlaceById(value.placeId);
                   })(),
               };
 

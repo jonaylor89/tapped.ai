@@ -11,7 +11,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:uuid/uuid.dart';
 
-final storageRef = FirebaseStorage.instance.ref();
+final Reference storageRef = FirebaseStorage.instance.ref();
 
 class FirebaseStorageImpl extends StorageRepository {
   @override

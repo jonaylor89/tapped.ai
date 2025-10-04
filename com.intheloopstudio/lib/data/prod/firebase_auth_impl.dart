@@ -12,10 +12,10 @@ import 'package:intheloopapp/data/auth_repository.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
-final _auth = FirebaseAuth.instance;
-final _fireStore = FirebaseFirestore.instance;
-final _analytics = FirebaseAnalytics.instance;
-final usersRef = _fireStore.collection('users');
+final FirebaseAuth _auth = FirebaseAuth.instance;
+final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+final CollectionReference<Map<String, dynamic>> usersRef = _fireStore.collection('users');
 
 String _generateNonce([int length = 32]) {
   const charset =
@@ -248,10 +248,6 @@ class FirebaseAuthImpl extends AuthRepository {
     try {
       // Trigger the authentication flow
       final googleUser = await GoogleSignIn.instance.authenticate();
-
-      if (googleUser == null) {
-        throw Exception('Google sign in failed: user is null');
-      }
 
       // Obtain the auth details from the request
       final googleAuth = googleUser.authentication;

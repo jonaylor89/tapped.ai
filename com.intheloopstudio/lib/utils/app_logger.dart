@@ -7,7 +7,7 @@ import 'package:logging/logging.dart';
 import 'package:posthog_flutter/posthog_flutter.dart';
 
 final logger = AppLogger();
-final analytics = FirebaseAnalytics.instance;
+final FirebaseAnalytics analytics = FirebaseAnalytics.instance;
 
 class AppLogger {
   AppLogger() {

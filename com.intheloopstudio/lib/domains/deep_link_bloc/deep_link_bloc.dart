@@ -24,7 +24,7 @@ class DeepLinkBloc extends Bloc<DeepLinkEvent, DeepLinkState> {
     on<MonitorDeepLinks>((event, emit) {
       logger.debug('monitoring deep links');
       streamSub ??= deepLinks.getDeepLinks().listen(
-            (event) async => await _linkHandler(event, emit),
+            (event) async => _linkHandler(event, emit),
           );
     });
   }

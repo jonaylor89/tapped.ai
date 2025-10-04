@@ -15,7 +15,6 @@ class SearchView extends StatefulWidget {
   late final FocusNode searchFocusNode;
 
   @override
-  // ignore: library_private_types_in_public_api
   State<SearchView> createState() => _SearchViewState();
 }
 

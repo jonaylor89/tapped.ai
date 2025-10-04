@@ -9,11 +9,11 @@ import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/typesense_config.dart';
 import 'package:typesense/typesense.dart';
 
-final _analytics = FirebaseAnalytics.instance;
-final _fireStore = FirebaseFirestore.instance;
-final usersRef = _fireStore.collection('users');
-final bookingsRef = _fireStore.collection('bookings');
-final opportunitiesRef = _fireStore.collection('opportunities');
+final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
+final CollectionReference<Map<String, dynamic>> usersRef = _fireStore.collection('users');
+final CollectionReference<Map<String, dynamic>> bookingsRef = _fireStore.collection('bookings');
+final CollectionReference<Map<String, dynamic>> opportunitiesRef = _fireStore.collection('opportunities');
 
 class TypesenseSearchImpl extends SearchRepository {
   TypesenseSearchImpl() {
@@ -30,7 +30,6 @@ class TypesenseSearchImpl extends SearchRepository {
             port: int.parse(TypesenseConfig.port),
           ),
         },
-        connectionTimeout: const Duration(seconds: 10),
       ),
     );
   }

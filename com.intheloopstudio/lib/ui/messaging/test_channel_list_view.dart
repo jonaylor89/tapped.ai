@@ -297,7 +297,7 @@ class _ChannelList extends State<ChannelList> {
                                   color: chatTheme.colorTheme.accentError,
                                 ),
                               );
-                              if (res == true) {
+                              if (res ?? false) {
                                 await _channelListController.deleteChannel(channel);
                               }
                             },

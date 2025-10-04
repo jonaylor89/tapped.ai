@@ -40,7 +40,7 @@ class App extends StatelessWidget {
   final StreamChatClient streamClient;
   final GlobalKey<NavigatorState> navigatorKey;
 
-  static final _analytics = FirebaseAnalytics.instance;
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   static final _observer = FirebaseAnalyticsObserver(analytics: _analytics);
 
   Widget _authenticated(

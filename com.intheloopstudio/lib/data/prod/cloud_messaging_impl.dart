@@ -8,9 +8,9 @@ import 'package:intheloopapp/data/notification_repository.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 
-final fcm = FirebaseMessaging.instance;
-final _fireStore = FirebaseFirestore.instance;
-final tokensRef = _fireStore.collection('device_tokens');
+final FirebaseMessaging fcm = FirebaseMessaging.instance;
+final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
+final CollectionReference<Map<String, dynamic>> tokensRef = _fireStore.collection('device_tokens');
 
 class CloudMessagingImpl extends NotificationRepository {
   CloudMessagingImpl(this._client);

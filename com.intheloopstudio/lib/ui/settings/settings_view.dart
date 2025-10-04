@@ -5,7 +5,6 @@ import 'package:intheloopapp/ui/settings/components/change_profile_image.dart';
 import 'package:intheloopapp/ui/settings/components/delete_account_button.dart';
 import 'package:intheloopapp/ui/settings/components/dev_information.dart';
 import 'package:intheloopapp/ui/settings/components/notification_settings_form.dart';
-import 'package:intheloopapp/ui/settings/components/payment_settings_form.dart';
 import 'package:intheloopapp/ui/settings/components/save_button.dart';
 import 'package:intheloopapp/ui/settings/components/settings_form.dart';
 import 'package:intheloopapp/ui/settings/settings_cubit.dart';

@@ -37,7 +37,7 @@ class TasksBanner extends StatelessWidget {
                   bookings.isNotEmpty,
                   contactedVenuesCount > 0,
                 ];
-                final incompleteTasks = tasks.where((t) => t != true);
+                final incompleteTasks = tasks.where((t) => !t);
 
                 if (incompleteTasks.isEmpty) {
                   return const SizedBox.shrink();

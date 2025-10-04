@@ -20,7 +20,6 @@ class ProfilePictureUploader extends StatelessWidget {
       Some(:final value) => FileImage(value),
       None() => switch (currentProfileImage) {
           Some(:final value) => CachedNetworkImageProvider(value),
-          // ignore: unnecessary_cast
           None() => getDefaultImage(const None()),
         },
     };
