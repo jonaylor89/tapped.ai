@@ -1,7 +1,6 @@
 import 'package:feedback/feedback.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/activity.dart';
-import 'package:intheloopapp/domains/models/badge.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
@@ -65,21 +64,8 @@ abstract class DatabaseRepository {
 
   Future<void> markActivityAsRead(Activity activity);
 
-  // Badge related stuff
+  // Badge related stuff that's not hardcoded
   Future<bool> isVerified(String userId);
-
-  Future<void> verifyUser(String userId);
-
-  Stream<Badge> userBadgesObserver(
-    String userId, {
-    int limit = 100,
-  });
-
-  Future<List<Badge>> getUserBadges(
-    String userId, {
-    int limit = 100,
-    String? lastBadgeId,
-  });
 
   // Booking related stuff
   Future<void> createBooking(

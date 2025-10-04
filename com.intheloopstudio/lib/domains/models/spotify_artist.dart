@@ -5,9 +5,9 @@ part 'spotify_artist.freezed.dart';
 
 part 'spotify_artist.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class SpotifyArtist with _$SpotifyArtist {
-  @JsonSerializable(explicitToJson: true)
   const factory SpotifyArtist({
     required String id,
     required String uri,

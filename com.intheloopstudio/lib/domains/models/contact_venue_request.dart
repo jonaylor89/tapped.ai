@@ -7,9 +7,9 @@ import 'package:intheloopapp/domains/models/user_model.dart';
 part 'contact_venue_request.freezed.dart';
 part 'contact_venue_request.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class ContactVenueRequest with _$ContactVenueRequest {
-  @JsonSerializable(explicitToJson: true)
   const factory ContactVenueRequest({
     required UserModel venue,
     required UserModel user,

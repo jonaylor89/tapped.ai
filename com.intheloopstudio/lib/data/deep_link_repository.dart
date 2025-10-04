@@ -2,6 +2,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 
+// ignore: one_member_abstracts
 abstract class DeepLinkRepository {
   Stream<DeepLinkRedirect> getDeepLinks();
 }
@@ -50,10 +51,9 @@ final class SettingsDeepLink extends DeepLinkRedirect {
 final class ConnectStripeRedirectDeepLink extends DeepLinkRedirect {
   const ConnectStripeRedirectDeepLink({
     required this.id,
-  })
-      : super(
+  }) : super(
           type: DeepLinkType.connectStripeRedirect,
         );
-      
+
   final String id;
 }

@@ -8,7 +8,6 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:georange/georange.dart';
 import 'package:intheloopapp/data/database_repository.dart';
 import 'package:intheloopapp/domains/models/activity.dart';
-import 'package:intheloopapp/domains/models/badge.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
@@ -29,7 +28,6 @@ final _analytics = FirebaseAnalytics.instance;
 
 final _usersRef = _firestore.collection('users');
 final _activitiesRef = _firestore.collection('activities');
-final _badgesRef = _firestore.collection('badges');
 final _badgesSentRef = _firestore.collection('badgesSent');
 final _bookingsRef = _firestore.collection('bookings');
 final _servicesRef = _firestore.collection('services');
@@ -216,6 +214,11 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       );
       return const None();
     }
+  }
+
+  @override
+  Future<bool> isVerified(String userId) async {
+    return Future.value(false);
   }
 
   @override
@@ -622,130 +625,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
     await _activitiesRef.doc(activity.id).update({
       'markedRead': true,
     });
-  }
-
-  @override
-  @Cached(where: _asyncShouldCache)
-  Future<bool> isVerified(String userId) async {
-    try {
-      final verifiedBadgeSentDoc = await _badgesSentRef
-          .doc(userId)
-          .collection('badges')
-          .doc(verifiedBadgeId)
-          .get();
-
-      final isVerified = verifiedBadgeSentDoc.exists;
-
-      return isVerified;
-    } on FirebaseException {
-      return false;
-    }
-  }
-
-  @override
-  Future<void> verifyUser(String userId) async {
-    try {
-      await _analytics.logEvent(
-        name: 'user_verified',
-        parameters: {
-          'user_id': userId,
-        },
-      );
-
-      await _badgesSentRef
-          .doc(userId)
-          .collection('badges')
-          .doc(verifiedBadgeId)
-          .set({
-        'badgeId': verifiedBadgeId,
-        'timestamp': Timestamp.now(),
-      });
-    } catch (e, s) {
-      logger.error('verifyUser', error: e, stackTrace: s);
-    }
-  }
-
-  @override
-  Stream<Badge> userBadgesObserver(
-    String userId, {
-    int limit = 30,
-  }) async* {
-    final userBadgesSnapshotObserver = _badgesSentRef
-        .doc(userId)
-        .collection('badges')
-        .orderBy('timestamp', descending: true)
-        .limit(limit)
-        .snapshots();
-
-    final userBadgesObserver = userBadgesSnapshotObserver.map((event) {
-      return event.docChanges
-          .where(
-        (DocumentChange<Map<String, dynamic>> element) =>
-            element.type == DocumentChangeType.added,
-      )
-          .map((DocumentChange<Map<String, dynamic>> element) async {
-        final badgeId = element.doc.id;
-        // print('BADGE ID { $badgeId }');
-        final badgeSnapshot = await _badgesRef.doc(badgeId).get();
-        return Badge.fromDoc(badgeSnapshot);
-      });
-    }).flatMap(Stream.fromIterable);
-
-    await for (final badge in userBadgesObserver) {
-      try {
-        yield await badge;
-      } catch (error, stack) {
-        yield* Stream.error(error, stack);
-      }
-    }
-  }
-
-  @override
-  Future<List<Badge>> getUserBadges(
-    String userId, {
-    int limit = 30,
-    String? lastBadgeId,
-  }) async {
-    if (lastBadgeId != null) {
-      final documentSnapshot = await _badgesSentRef
-          .doc(userId)
-          .collection('badges')
-          .doc(lastBadgeId)
-          .get();
-
-      final userBadgesSnapshot = await _badgesSentRef
-          .doc(userId)
-          .collection('badges')
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .startAfterDocument(documentSnapshot)
-          .get();
-
-      final userBadges = Future.wait(
-        userBadgesSnapshot.docs.map((doc) async {
-          final badgeId = doc.getOrElse('badgeId', '');
-          final badgeSnapshot = await _badgesRef.doc(badgeId).get();
-          return Badge.fromDoc(badgeSnapshot);
-        }).toList(),
-      );
-      return userBadges;
-    } else {
-      final userBadgesSnapshot = await _badgesSentRef
-          .doc(userId)
-          .collection('badges')
-          .orderBy('timestamp', descending: true)
-          .limit(limit)
-          .get();
-
-      final userBadges = Future.wait(
-        userBadgesSnapshot.docs.map((doc) async {
-          final badgeId = doc.id;
-          final badgeSnapshot = await _badgesRef.doc(badgeId).get();
-          return Badge.fromDoc(badgeSnapshot);
-        }).toList(),
-      );
-      return userBadges;
-    }
   }
 
   @override
@@ -1650,9 +1529,9 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       },
     );
     final reportHtml = '''
-        <p>Report from:</p> 
-        <p>${reporter.toJson()}<p> 
-        <p>User:</p> 
+        <p>Report from:</p>
+        <p>${reporter.toJson()}<p>
+        <p>User:</p>
         <p>${reported.toJson()}</p>
     ''';
 

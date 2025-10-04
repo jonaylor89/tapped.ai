@@ -28,7 +28,6 @@ class ShellView extends StatelessWidget {
   }) async {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final subscriptions = context.subscriptions;
-    final nav = context.nav;
 
     await HapticFeedback.lightImpact();
     await EasyLoading.show(
@@ -36,16 +35,16 @@ class ShellView extends StatelessWidget {
       maskType: EasyLoadingMaskType.black,
     );
     try {
-      final customerInfo = await Purchases.purchasePackage(
+      final purchaseResult = await Purchases.purchasePackage(
         package,
       );
       subscriptions.add(
         UpdateSubscription(
-          customerInfo: customerInfo,
+          customerInfo: purchaseResult.customerInfo,
         ),
       );
 
-      logger.info(customerInfo.toString());
+      logger.info(purchaseResult.customerInfo.toString());
     } catch (error, s) {
       logger.error('error purchasing package', error: error, stackTrace: s);
       scaffoldMessenger.showSnackBar(

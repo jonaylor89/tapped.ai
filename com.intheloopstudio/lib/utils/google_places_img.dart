@@ -3,13 +3,13 @@ import 'package:flutter_google_places_sdk/flutter_google_places_sdk.dart';
 
 /// Widget used to display google place image. Used in non-web platforms
 class GooglePlacesImg extends StatelessWidget {
-
   /// Construct a google place img using metadata and response object
   const GooglePlacesImg({
     required this.photoMetadata,
     required this.placePhotoResponse,
     super.key,
   });
+
   /// The photo metadata
   final PhotoMetadata photoMetadata;
 
@@ -18,9 +18,11 @@ class GooglePlacesImg extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return placePhotoResponse.maybeWhen(
-      image: (image) => image,
-      orElse: () => const Text('Invalid image'),
-    );
+    return switch (placePhotoResponse) {
+      FetchPlacePhotoResponseImage(:final image) => image,
+      FetchPlacePhotoResponseImageUrl(:final imageUrl) =>
+        Image.network(imageUrl),
+      _ => const Text('Invalid image'),
+    };
   }
 }

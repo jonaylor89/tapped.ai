@@ -7,9 +7,9 @@ import 'package:intheloopapp/domains/models/location.dart';
 part 'opportunity.freezed.dart';
 part 'opportunity.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class Opportunity with _$Opportunity {
-  @JsonSerializable(explicitToJson: true)
   const factory Opportunity({
     required String id,
     required String userId,
@@ -26,7 +26,7 @@ class Opportunity with _$Opportunity {
     @Default(false) bool deleted,
     @Default([]) List<String> genres,
     @Default(None()) Option<String> venueId,
-    @Default(None())  Option<String> referenceEventId,
+    @Default(None()) Option<String> referenceEventId,
   }) = _Opportunity;
 
   factory Opportunity.fromJson(Map<String, dynamic> json) =>

@@ -98,27 +98,6 @@ class MoreOptionsButton extends StatelessWidget {
                   },
                   child: Text('userId ${user.id}'),
                 ),
-              if (isAdmin)
-                switch (isVerified) {
-                  true => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: const Text('✅ verified'),
-                    ),
-                  false => CupertinoActionSheetAction(
-                      onPressed: () {
-                        database.verifyUser(user.id).then((value) {
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: tappedAccent,
-                              content: Text('user verified'),
-                            ),
-                          );
-                        });
-                      },
-                      child: Text('verify ${user.username}'),
-                    ),
-                },
               CupertinoActionSheetAction(
                 onPressed: () {
                   FirebaseAnalytics.instance.logEvent(
@@ -133,8 +112,7 @@ class MoreOptionsButton extends StatelessWidget {
                   Share.share('https://app.tapped.ai/u/${user.username}')
                       .then((results) {
                     logger.info('Shared profile');
-                  })
-                      .onError((error, stackTrace) {
+                  }).onError((error, stackTrace) {
                     logger.error(
                       'Error sharing profile',
                       error: error,
@@ -176,10 +154,7 @@ class MoreOptionsButton extends StatelessWidget {
                 CupertinoActionSheetAction(
                   onPressed: () {
                     nav.pop();
-                    context
-                        .read<ProfileCubit>()
-                        .deleteUser()
-                        .then((value) {
+                    context.read<ProfileCubit>().deleteUser().then((value) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           behavior: SnackBarBehavior.floating,

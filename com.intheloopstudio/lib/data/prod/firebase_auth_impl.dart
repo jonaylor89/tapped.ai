@@ -191,22 +191,22 @@ class FirebaseAuthImpl extends AuthRepository {
   Future<Option<SignInPayload>> signInWithGoogle() async {
     try {
       // Trigger the authentication flow
-      final googleUser = await GoogleSignIn().signIn();
-
-      if (googleUser == null) {
-        throw Exception('Google sign in failed');
-      }
+      final googleUser = await GoogleSignIn.instance.authenticate();
 
       // Obtain the auth details from the request
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
 
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw Exception('Google sign in failed: accessToken or idToken null');
+      if (googleAuth.idToken == null) {
+        throw Exception('Google sign in failed: idToken null');
       }
+
+      // Get authorization for access token
+      final authorization = await googleUser.authorizationClient
+          .authorizationForScopes(['email']);
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
+        accessToken: authorization?.accessToken,
         idToken: googleAuth.idToken,
       );
 
@@ -247,22 +247,26 @@ class FirebaseAuthImpl extends AuthRepository {
   Future<void> reauthenticateWithGoogle() async {
     try {
       // Trigger the authentication flow
-      final googleUser = await GoogleSignIn().signIn();
+      final googleUser = await GoogleSignIn.instance.authenticate();
 
       if (googleUser == null) {
-        throw Exception('Google sign in failed');
+        throw Exception('Google sign in failed: user is null');
       }
 
       // Obtain the auth details from the request
-      final googleAuth = await googleUser.authentication;
+      final googleAuth = googleUser.authentication;
 
-      if (googleAuth.accessToken == null || googleAuth.idToken == null) {
-        throw Exception('Google sign in failed: accessToken or idToken null');
+      if (googleAuth.idToken == null) {
+        throw Exception('Google sign in failed: idToken null');
       }
+
+      // Get authorization for access token
+      final authorization = await googleUser.authorizationClient
+          .authorizationForScopes(['email']);
 
       // Create a new credential
       final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
+        accessToken: authorization?.accessToken,
         idToken: googleAuth.idToken,
       );
 

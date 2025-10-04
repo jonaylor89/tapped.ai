@@ -18,9 +18,9 @@ part 'user_model.freezed.dart';
 
 part 'user_model.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class UserModel with _$UserModel {
-  @JsonSerializable(explicitToJson: true)
   const factory UserModel({
     required String id,
     @OptionalDateTimeConverter() required Option<DateTime> timestamp,

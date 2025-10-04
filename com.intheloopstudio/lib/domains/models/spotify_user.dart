@@ -3,9 +3,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'spotify_user.freezed.dart';
 part 'spotify_user.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class SpotifyUser with _$SpotifyUser {
-  @JsonSerializable(explicitToJson: true)
   const factory SpotifyUser({
     required String? country,
     required String? display_name,

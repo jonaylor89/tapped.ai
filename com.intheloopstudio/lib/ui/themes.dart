@@ -51,7 +51,7 @@ ThemeData buildLightTheme({
       foregroundColor: Colors.black,
     ),
 
-    tabBarTheme: const TabBarTheme(
+    tabBarTheme: const TabBarThemeData(
       labelColor: Colors.black,
       unselectedLabelColor: Colors.black,
       indicatorColor: tappedAccent,
@@ -112,7 +112,7 @@ ThemeData buildDarkTheme({
       backgroundColor: navigationBarDarkColor,
     ),
 
-    tabBarTheme: const TabBarTheme(
+    tabBarTheme: const TabBarThemeData(
       indicatorColor: tappedAccent,
       labelColor: Colors.white,
       unselectedLabelColor: Colors.white,

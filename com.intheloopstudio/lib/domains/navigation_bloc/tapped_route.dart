@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/data/places_repository.dart';
-import 'package:intheloopapp/domains/models/badge.dart' as badge_model;
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/models/service.dart';
@@ -10,8 +9,6 @@ import 'package:intheloopapp/ui/activity/activity_view.dart';
 import 'package:intheloopapp/ui/add_past_booking/add_past_booking_view.dart';
 import 'package:intheloopapp/ui/admin/admin_view.dart';
 import 'package:intheloopapp/ui/advanced_search/advanced_search_view.dart';
-import 'package:intheloopapp/ui/badge/badge_view.dart';
-import 'package:intheloopapp/ui/badge/badges_view.dart';
 import 'package:intheloopapp/ui/booking/booking_view.dart';
 import 'package:intheloopapp/ui/booking_history/booking_history_view.dart';
 import 'package:intheloopapp/ui/bookings/user_bookings_feed.dart';
@@ -80,28 +77,6 @@ final class SettingsPage extends TappedRoute {
           routeName: '/settings',
           view: const SettingsView(),
         );
-}
-
-final class BadgePage extends TappedRoute {
-  BadgePage({
-    required badge_model.Badge badge,
-  }) : super(
-          routeName: '/badge/${badge.id}',
-          view: BadgeView(
-            badge: badge,
-          ),
-        );
-}
-
-final class BadgesPage extends TappedRoute {
-  BadgesPage({
-    required this.badges,
-  }) : super(
-          routeName: '/badges',
-          view: BadgesView(badges: badges),
-        );
-
-  final List<badge_model.Badge> badges;
 }
 
 final class CreateBookingPage extends TappedRoute {

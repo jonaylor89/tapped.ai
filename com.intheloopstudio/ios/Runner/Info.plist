@@ -102,5 +102,7 @@
     <true/>
     <key>com.posthog.posthog.DEBUG</key>
     <true/>
+    <key>GIDClientID</key>
+    <string>269420857313-3eku1pig1svbojpqgknaj79hm3kjrqgk.apps.googleusercontent.com</string>
 </dict>
 </plist>

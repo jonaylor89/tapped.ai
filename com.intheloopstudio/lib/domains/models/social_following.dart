@@ -5,9 +5,9 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'social_following.freezed.dart';
 part 'social_following.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class SocialFollowing with _$SocialFollowing {
-  @JsonSerializable(explicitToJson: true)
   const factory SocialFollowing({
     @Default(None()) Option<String> youtubeChannelId,
     @Default(None()) Option<String> youtubeHandle,
@@ -50,5 +50,8 @@ class SocialFollowing with _$SocialFollowing {
 
 extension SocialFollowingHelper on SocialFollowing {
   int get audienceSize =>
-      tiktokFollowers + instagramFollowers + twitterFollowers + facebookFollowers;
+      tiktokFollowers +
+      instagramFollowers +
+      twitterFollowers +
+      facebookFollowers;
 }

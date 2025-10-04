@@ -12,14 +12,17 @@ part 'booking.freezed.dart';
 
 part 'booking.g.dart';
 
-@freezed
+@Freezed(makeCollectionsUnmodifiable: false)
+@JsonSerializable(explicitToJson: true)
 class Booking with _$Booking {
-  @JsonSerializable(explicitToJson: true)
   const factory Booking({
     required String id,
     required String requesteeId,
     required BookingStatus status,
-    @DateTimeConverter() required DateTime startTime, @DateTimeConverter() required DateTime endTime, @DateTimeConverter() required DateTime timestamp, @Default(false) bool verified,
+    @DateTimeConverter() required DateTime startTime,
+    @DateTimeConverter() required DateTime endTime,
+    @DateTimeConverter() required DateTime timestamp,
+    @Default(false) bool verified,
     @Default(None()) Option<String> requesterId,
     @Default(None()) Option<String> name,
     @Default('') String note,
@@ -63,9 +66,9 @@ extension BookingHelpers on Booking {
 
   ImageProvider getBookingImage(Option<UserModel> user) {
     return flierUrl.fold(
-          () => user.flatMap((t) => t.profilePicture).fold(
-            () => getDefaultImage(Option.of(id)),
-            (t) {
+      () => user.flatMap((t) => t.profilePicture).fold(
+        () => getDefaultImage(Option.of(id)),
+        (t) {
           if (t.isNotEmpty) {
             return CachedNetworkImageProvider(t);
           }

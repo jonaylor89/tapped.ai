@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide RadioGroup;
 import 'package:group_radio_button/group_radio_button.dart';
 import 'package:intheloopapp/domains/models/label.dart';
 
