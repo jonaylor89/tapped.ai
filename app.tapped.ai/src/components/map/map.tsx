@@ -11,7 +11,15 @@ import classNames from "classnames";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type JSX } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type JSX,
+} from "react";
 import {
   FullscreenControl,
   GeolocateControl,
@@ -151,7 +159,7 @@ function _VenueMap({
               })
             : false;
         const hasBookingData = venue.venueInfo?.bookingsByDayOfWeek?.some(
-          (val) => val !== 0
+          (val) => val !== 0,
         );
         return (
           <Marker
@@ -172,7 +180,7 @@ function _VenueMap({
                 "bg-background flex transform flex-row items-center justify-center rounded-xl px-1 py-1 shadow-lg transition-all duration-200 ease-in-out hover:scale-105 hover:cursor-pointer",
                 hasBookingData
                   ? "border-2 border-dotted border-yellow-500"
-                  : "border-background border-none"
+                  : "border-background border-none",
               )}
             >
               <div className="relative h-[22px] w-[22px]">
@@ -183,13 +191,14 @@ function _VenueMap({
                   style={{ objectFit: "cover", overflow: "hidden" }}
                   fill
                   sizes="22px"
+                  unoptimized
                 />
               </div>
               {venueCapacity !== 0 && (
                 <p
                   className={classNames(
                     "pl-1 pr-1",
-                    goodFit ? "text-green-500" : ""
+                    goodFit ? "text-green-500" : "",
                   )}
                 >
                   {venueCapacity.toLocaleString()}
