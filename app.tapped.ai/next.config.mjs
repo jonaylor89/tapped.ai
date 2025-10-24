@@ -8,6 +8,8 @@ const nextConfig = {
   reactStrictMode: true,
   images: {
     // formats: ['image/avif', 'image/webp', 'image/png', 'image/jpeg'],
+    loader: 'default', // Prevents Vercel's optimization
+    unoptimized: true, // Disables all image optimizations globally
     dangerouslyAllowSVG: true,
     remotePatterns: [
       {
