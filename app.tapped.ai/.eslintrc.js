@@ -12,7 +12,6 @@ module.exports = {
     "plugin:jsx-a11y/recommended",
     "plugin:sonarjs/recommended",
     "plugin:security/recommended",
-    "plugin:react-hooks/recommended",
     "google",
     "plugin:@typescript-eslint/recommended",
     "next/core-web-vitals",

@@ -28,12 +28,12 @@ import {
   useDateFieldState,
   useDatePickerState,
   useTimeFieldState,
+  CalendarStateOptions,
 } from "react-stately";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
-  CalendarDate,
   createCalendar,
   getLocalTimeZone,
   getWeeksInMonth,
@@ -45,6 +45,11 @@ import {
 } from "@internationalized/date";
 import { DateSegment as IDateSegment } from "@react-stately/datepicker";
 
+type CalendarCellDate = Parameters<typeof useCalendarCell>[0]["date"];
+type WeeksInMonthDate = Parameters<typeof getWeeksInMonth>[0];
+type IsTodayDate = Parameters<typeof _isToday>[0];
+const calendarFactory = createCalendar as unknown as CalendarStateOptions["createCalendar"];
+
 function Calendar(props: CalendarProps<DateValue>) {
   const prevButtonRef = React.useRef<HTMLButtonElement | null>(null);
   const nextButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -53,7 +58,7 @@ function Calendar(props: CalendarProps<DateValue>) {
   const state = useCalendarState({
     ...props,
     locale,
-    createCalendar,
+    createCalendar: calendarFactory,
   });
   const {
     calendarProps,
@@ -99,7 +104,7 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
   const { gridProps, headerProps, weekDays } = useCalendarGrid(props, state);
 
   // Get the number of weeks in the month so we can render the proper number of rows.
-  const weeksInMonth = getWeeksInMonth(state.visibleRange.start, locale);
+  const weeksInMonth = getWeeksInMonth(state.visibleRange.start as unknown as WeeksInMonthDate, locale);
 
   return (
     <table {...gridProps} className={cn(gridProps.className, "w-full border-collapse space-y-1")}>
@@ -119,7 +124,7 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
           <tr className="mt-2 flex w-full" key={weekIndex}>
             {state
               .getDatesInWeek(weekIndex)
-              .map((date, i) => (date ? <CalendarCell key={i} state={state} date={date} /> : <td key={i} />))}
+              .map((date, i) => (date ? <CalendarCell key={i} state={state} date={date as CalendarCellDate} /> : <td key={i} />))}
           </tr>
         ))}
       </tbody>
@@ -129,7 +134,7 @@ function CalendarGrid({ state, ...props }: CalendarGridProps) {
 
 interface CalendarCellProps {
   state: CalendarState;
-  date: CalendarDate;
+  date: CalendarCellDate;
 }
 
 function CalendarCell({ state, date }: CalendarCellProps) {
@@ -142,7 +147,7 @@ function CalendarCell({ state, date }: CalendarCellProps) {
 
   const isToday = useMemo(() => {
     const timezone = getLocalTimeZone();
-    return _isToday(date, timezone);
+    return _isToday(date as unknown as IsTodayDate, timezone);
   }, [date]);
 
   return (
@@ -208,7 +213,7 @@ function DateField(props: AriaDatePickerProps<DateValue>) {
   const state = useDateFieldState({
     ...props,
     locale,
-    createCalendar,
+    createCalendar: calendarFactory,
   });
   const { fieldProps } = useDateField({ ...props, "aria-label": "date-field" }, state, ref);
 
@@ -360,7 +365,7 @@ const DateTimePicker = React.forwardRef<
           </div>
         </PopoverContent>
       </Popover>
-      <DateField {...fieldProps} value={currentValue()} />
+      <DateField {...fieldProps} value={currentValue() as unknown as DateValue} />
       <div className={cn("-ml-2 mr-2 h-5 w-5", !showClearButton && "hidden")}>
         <X
           className={cn("text-primary/30 h-5 w-5 cursor-pointer", !jsDatetime && "hidden")}
