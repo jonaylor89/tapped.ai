@@ -27,28 +27,28 @@ export async function POST(request: NextRequest) {
 
     let results;
     switch (type) {
-      case "users":
-        if (typeof query !== "string") {
-          return NextResponse.json(
-            { error: "Query string is required for user search" },
-            { status: 400 }
-          );
-        }
-        results = await queryUsers(query, options as UserSearchOptions);
-        break;
-
-      case "venues":
-        results = await queryVenuesInBoundedBox(
-          boundingBox as BoundingBox | null,
-          options as UserSearchOptions
-        );
-        break;
-
-      default:
+    case "users":
+      if (typeof query !== "string") {
         return NextResponse.json(
-          { error: "Invalid search type. Use 'users' or 'venues'" },
+          { error: "Query string is required for user search" },
           { status: 400 }
         );
+      }
+      results = await queryUsers(query, options as UserSearchOptions);
+      break;
+
+    case "venues":
+      results = await queryVenuesInBoundedBox(
+          boundingBox as BoundingBox | null,
+          options as UserSearchOptions
+      );
+      break;
+
+    default:
+      return NextResponse.json(
+        { error: "Invalid search type. Use 'users' or 'venues'" },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({ results });

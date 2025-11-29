@@ -64,22 +64,22 @@ export function initAuthListener(state: State, dispatch: Dispatch) {
 
 function authReducer(state: State, action: Action): State {
   switch (action.type) {
-    case "ONBOARD": {
-      if (!state.authUser && !action.authUser) {
-        console.error("cannot onboard without an authUser");
-        return state;
-      }
-      return {
-        authUser: action.authUser ?? state.authUser,
-        currentUser: action.currentUser,
-      };
+  case "ONBOARD": {
+    if (!state.authUser && !action.authUser) {
+      console.error("cannot onboard without an authUser");
+      return state;
     }
-    case "LOGIN": {
-      return { authUser: action.authUser, currentUser: null };
-    }
-    case "LOGOUT": {
-      return { authUser: null, currentUser: null };
-    }
+    return {
+      authUser: action.authUser ?? state.authUser,
+      currentUser: action.currentUser,
+    };
+  }
+  case "LOGIN": {
+    return { authUser: action.authUser, currentUser: null };
+  }
+  case "LOGOUT": {
+    return { authUser: null, currentUser: null };
+  }
   }
 }
 
