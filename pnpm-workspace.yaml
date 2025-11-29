@@ -1,12 +1,24 @@
 packages:
-  - "app.tapped.ai"
-  - "getmusicart.com"
-  - "getmusicepk.com"
-  - "getmusicviralchecker.com"
-  - "linktree.tapped.ai"
-  - "marketer.tapped.ai"
-  - "event-crawler"
-  - "ticket-crawler"
-  - "viralsocialmediaideas.com"
-  - "com.intheloopstudio/functions"
-  - "packages/*"
+  - app.tapped.ai
+  - getmusicart.com
+  - getmusicepk.com
+  - getmusicviralchecker.com
+  - linktree.tapped.ai
+  - marketer.tapped.ai
+  - event-crawler
+  - ticket-crawler
+  - viralsocialmediaideas.com
+  - com.intheloopstudio/functions
+  - packages/*
+
+ignoredBuiltDependencies:
+  - jpegtran-bin
+  - nodemailer
+
+onlyBuiltDependencies:
+  - '@firebase/util'
+  - core-js
+  - esbuild
+  - protobufjs
+  - puppeteer
+  - sharp

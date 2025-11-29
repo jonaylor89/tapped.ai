@@ -9,6 +9,8 @@
 		"lint:fix": "biome check --write ."
 	},
 	"dependencies": {
+		"@firebase/firestore": "^4.11.0",
+		"@firebase/functions": "^0.13.1",
 		"@heroicons/react": "^2.0.13",
 		"@hookform/resolvers": "^3.3.4",
 		"@number-flow/react": "^0.4.1",
