@@ -1,7 +1,7 @@
-import type { Page } from "puppeteer";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 
 export function getEventNameFromUrl(url: string) {
   const pathname = new URL(url).pathname;
@@ -29,7 +29,7 @@ export function parseTicketPrice(priceText: string) {
   const priceRegex = /\$\d+/g;
   const prices = priceText.match(priceRegex) ? priceText.match(priceRegex) : [];
   if (prices && prices.length !== 0) {
-    if (prices.length == 1) {
+    if (prices.length === 1) {
       ticketPrice = Number(prices[0].trim().slice(1));
       doorPrice = ticketPrice;
     } else {
@@ -91,9 +91,7 @@ export async function parseDates(page: Page) {
       return text;
     }
 
-    const container = document.querySelector(
-      ".eventitem-meta.event-meta.event-meta-date-time-container",
-    );
+    const container = document.querySelector(".eventitem-meta.event-meta.event-meta-date-time-container");
 
     if (!container) {
       return "";
@@ -115,17 +113,13 @@ export async function parseDates(page: Page) {
   while ((match = dateTimeRegex.exec(dateText)) !== null) {
     if (match[7]) {
       matches.push({
-        startDateTime:
-          match[2] + " " + match[3] + " " + match[4] + " " + match[5],
-        endDateTime:
-          match[8] + " " + match[9] + " " + match[10] + " " + match[11],
+        startDateTime: `${match[2]} ${match[3]} ${match[4]} ${match[5]}`,
+        endDateTime: `${match[8]} ${match[9]} ${match[10]} ${match[11]}`,
       });
     } else {
       matches.push({
-        startDateTime:
-          match[2] + " " + match[3] + " " + match[4] + " " + match[5],
-        endDateTime:
-          match[2] + " " + match[3] + " " + match[4] + " " + match[6],
+        startDateTime: `${match[2]} ${match[3]} ${match[4]} ${match[5]}`,
+        endDateTime: `${match[2]} ${match[3]} ${match[4]} ${match[6]}`,
       });
     }
   }
@@ -155,8 +149,7 @@ export async function parseArtists(
           items: {
             type: "string",
           },
-          description:
-            "The performers for this event or an empty array if there aren't any",
+          description: "The performers for this event or an empty array if there aren't any",
         },
         isMusicEvent: {
           type: "boolean",

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 const TiktokField = ({ formData, updateFormData, onValidation, user }) => {
   const [error, setError] = useState(null);
@@ -10,11 +10,11 @@ const TiktokField = ({ formData, updateFormData, onValidation, user }) => {
         tiktokHandle: user.tiktokHandle,
       });
     }
-  }, [user]);  
+  }, [user]);
 
   const validateForUI = (value) => {
-    if (value.trim() === '') {
-      setError('tiktok handle cannot be empty');
+    if (value.trim() === "") {
+      setError("tiktok handle cannot be empty");
       onValidation(false);
     } else {
       setError(null);
@@ -24,13 +24,13 @@ const TiktokField = ({ formData, updateFormData, onValidation, user }) => {
 
   useEffect(() => {
     const justValidate = (value) => {
-      if (value.trim() === '') {
+      if (value.trim() === "") {
         onValidation(false);
       } else {
         onValidation(true);
       }
     };
-    justValidate(formData['tiktokHandle'] || '');
+    justValidate(formData["tiktokHandle"] || "");
   }, [formData, onValidation]);
 
   const handleInputChange = (e) => {
@@ -45,18 +45,17 @@ const TiktokField = ({ formData, updateFormData, onValidation, user }) => {
   return (
     <div className="page flex h-full flex-col items-center justify-center">
       <div className="flex w-full flex-col items-start">
-        <h1 className="mb-2 text-2xl font-bold text-white">
-          what is your tiktok handle?
-        </h1>
+        <h1 className="mb-2 text-2xl font-bold text-white">what is your tiktok handle?</h1>
         <div className="flex h-full w-full items-center justify-center">
           <input
             type="text"
             name="tiktokHandle"
             placeholder="type here..."
-            value={formData['tiktokHandle'] || ''}
+            value={formData["tiktokHandle"] || ""}
             onChange={handleInputChange}
-            className={`white_placeholder w-full appearance-none rounded ${error ? 'border-2 border-red-500' : ''
-              } bg-[#63b2fd] px-4 py-2 leading-tight text-white focus:bg-white focus:text-black font-semibold focus:outline-none`}
+            className={`white_placeholder w-full appearance-none rounded ${
+              error ? "border-2 border-red-500" : ""
+            } bg-[#63b2fd] px-4 py-2 leading-tight text-white focus:bg-white focus:text-black font-semibold focus:outline-none`}
           />
         </div>
         {error && <p className="mt-2 text-red-500">{error}</p>}

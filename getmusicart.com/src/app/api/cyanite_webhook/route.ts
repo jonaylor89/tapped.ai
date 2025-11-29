@@ -1,4 +1,3 @@
-
 export async function POST(req: Request) {
   const url = new URL(req.url);
   console.log({ url });
@@ -9,5 +8,5 @@ export async function POST(req: Request) {
   const body = await req.json();
   console.log({ body });
 
-  return new Response('OK', { status: 200 });
+  return new Response("OK", { status: 200 });
 }

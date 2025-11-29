@@ -1,6 +1,6 @@
 import { encodeBase32 } from "geohashing";
-import { googlePlacesApiKey } from "../firebase";
 import fetch from "node-fetch";
+import { googlePlacesApiKey } from "../firebase";
 
 const geohashForLocation = ([lat, lng]: [number, number]) => {
   const hash = encodeBase32(lat, lng);
@@ -19,21 +19,17 @@ export const searchPlaces = async (
     geohash: string;
   }[]
 > => {
-  const res = await fetch(
-    "https://places.googleapis.com/v1/places:searchText",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": googlePlacesApiKey,
-        "X-Goog-FieldMask":
-          "places.id,places.displayName,places.formattedAddress,places.location",
-      },
-      body: JSON.stringify({
-        textQuery: q,
-      }),
+  const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Goog-Api-Key": googlePlacesApiKey,
+      "X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
     },
-  );
+    body: JSON.stringify({
+      textQuery: q,
+    }),
+  });
 
   const json = (await res.json()) as {
     places?: {

@@ -3,9 +3,9 @@
 import { Dices } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import UserChip from "@/components/user/UserChip";
 import type { UserModel } from "@/domain/types/user_model";
 import { trackEvent } from "@/utils/tracking";
-import UserChip from "@/components/user/UserChip";
 import { Button } from "./ui/button";
 
 function samplePerformers(performers: UserModel[], count = 10): UserModel[] {

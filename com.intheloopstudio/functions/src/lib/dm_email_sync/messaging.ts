@@ -1,4 +1,4 @@
-import { Channel, StreamChat } from "stream-chat";
+import type { Channel, StreamChat } from "stream-chat";
 
 export async function dmAutoReply({
   streamClient,
@@ -13,7 +13,7 @@ export async function dmAutoReply({
 }): Promise<void> {
   const defaultReply = `
   Hey! Thanks for reaching out. We'll reach back out to you soon
-`
+`;
   const text = autoReply ?? defaultReply;
 
   await sendStreamMessage({
@@ -38,10 +38,9 @@ export async function sendStreamMessage({
   message: string;
   freeze?: boolean;
 }): Promise<Channel> {
-
   // join channel
   const channel = streamClient.channel("messaging", {
-    members: [ receiverId, senderId ],
+    members: [receiverId, senderId],
     created_by_id: senderId,
   });
   await channel.create();
@@ -67,4 +66,3 @@ export async function sendStreamMessage({
 
   return channel;
 }
-

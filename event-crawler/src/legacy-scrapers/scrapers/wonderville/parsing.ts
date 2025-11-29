@@ -1,7 +1,7 @@
-import type { Page } from "puppeteer";
-import { JsonOutputFunctionsParser } from "langchain/output_parsers";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
+import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 import { getTextContent } from "../../utils/text_content";
 
 export function getEventNameFromUrl(url: string) {
@@ -19,9 +19,7 @@ export function getEventNameFromUrl(url: string) {
 export async function getFlierUrl(page: Page) {
   try {
     return await page.evaluate(() => {
-      const img = document.querySelector(
-        ".sqs-image-shape-container-element img",
-      );
+      const img = document.querySelector(".sqs-image-shape-container-element img");
       if (!img) {
         return null;
       }
@@ -40,14 +38,8 @@ export async function parsePage(page: Page) {
   const pageContent = await getTextContent(page, ".eventitem");
 
   // pass content to chatgpt
-  const {
-    isMusicEvent,
-    artistNames,
-    eventTitle,
-    eventDescription,
-    startTime,
-    endTime,
-  } = await extractItemsFromPage(pageContent);
+  const { isMusicEvent, artistNames, eventTitle, eventDescription, startTime, endTime } =
+    await extractItemsFromPage(pageContent);
 
   const startDate = new Date(startTime);
   const endDate = new Date(endTime);
@@ -79,8 +71,7 @@ async function extractItemsFromPage(pageContent: string) {
           items: {
             type: "string",
           },
-          description:
-            "the specific names of the musicians/performers/Djs for the event",
+          description: "the specific names of the musicians/performers/Djs for the event",
         },
         eventTitle: {
           type: "string",
@@ -92,23 +83,14 @@ async function extractItemsFromPage(pageContent: string) {
         },
         startTime: {
           type: "string",
-          description:
-            "The start time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The start time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
         endTime: {
           type: "string",
-          description:
-            "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
       },
-      required: [
-        "isMusicEvent",
-        "artistNames",
-        "eventTitle",
-        "eventDescription",
-        "startTime",
-        "endTime",
-      ],
+      required: ["isMusicEvent", "artistNames", "eventTitle", "eventDescription", "startTime", "endTime"],
     },
   };
 

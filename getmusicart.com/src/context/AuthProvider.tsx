@@ -1,17 +1,11 @@
-'use client';
+"use client";
 
-import React, {
-  ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
-import { auth } from '@/utils/firebase';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { getCustomClaims } from '@/utils/auth';
-import { useRouter } from 'next/navigation';
-import Loading from '@/components/Loading';
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import Loading from "@/components/Loading";
+import { getCustomClaims } from "@/utils/auth";
+import { auth } from "@/utils/firebase";
 
 export const AuthContext = createContext<{
   authUser: User | null;
@@ -24,10 +18,8 @@ interface AuthContextProviderProps {
   children: ReactNode;
 }
 
-export function AuthContextProvider({
-  children,
-}: AuthContextProviderProps): JSX.Element {
-  const router = useRouter();
+export function AuthContextProvider({ children }: AuthContextProviderProps): JSX.Element {
+  const _router = useRouter();
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [claim, setClaim] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,13 +39,7 @@ export function AuthContextProvider({
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
-  return (
-    <>
-      <AuthContext.Provider value={{ authUser, claim }}>
-        {loading ? <Loading /> : children}
-      </AuthContext.Provider>
-    </>
-  );
+  return <AuthContext.Provider value={{ authUser, claim }}>{loading ? <Loading /> : children}</AuthContext.Provider>;
 }

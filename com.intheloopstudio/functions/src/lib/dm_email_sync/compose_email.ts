@@ -1,7 +1,7 @@
-import { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
+import type * as postmark from "postmark";
+import type { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
 import { bookingsRef, usersRef } from "../firebase";
 import { chatGpt } from "../openai";
-import * as postmark from "postmark";
 
 export async function writeEmailWithAi({
   performer,
@@ -37,9 +37,7 @@ export async function writeEmailWithAi({
           };
         }
 
-        const bookingsSnap = await bookingsRef
-          .where("referenceEventId", "==", referenceEventId)
-          .get();
+        const bookingsSnap = await bookingsRef.where("referenceEventId", "==", referenceEventId).get();
 
         const otherOpPerformers = await Promise.all(
           bookingsSnap.docs.map(async (doc) => {
@@ -61,9 +59,11 @@ export async function writeEmailWithAi({
       }),
     );
 
-    const opportunitySnippet = shortenedOps.map((o) => {
-      return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
-    }).join("\n");
+    const opportunitySnippet = shortenedOps
+      .map((o) => {
+        return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
+      })
+      .join("\n");
     // write op reply
     const res = await chatGpt(`
   Venue Name: ${venueName}
@@ -144,9 +144,7 @@ export async function writeAiEmailReply({
           };
         }
 
-        const bookingsSnap = await bookingsRef
-          .where("referenceEventId", "==", referenceEventId)
-          .get();
+        const bookingsSnap = await bookingsRef.where("referenceEventId", "==", referenceEventId).get();
 
         const otherOpPerformers = await Promise.all(
           bookingsSnap.docs.map(async (doc) => {
@@ -168,11 +166,11 @@ export async function writeAiEmailReply({
       }),
     );
 
-
-
-    const opportunitySnippet = shortenedOps.map((o) => {
-      return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
-    }).join("\n");
+    const opportunitySnippet = shortenedOps
+      .map((o) => {
+        return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
+      })
+      .join("\n");
 
     // write op reply
     const res = chatGpt(`
@@ -201,7 +199,6 @@ export async function writeAiEmailReply({
     return res;
   }
 
-
   const res = chatGpt(`
   Venue Name: ${venueName}
   Performer Name: ${displayName}
@@ -226,4 +223,3 @@ export async function writeAiEmailReply({
 
   return res;
 }
-

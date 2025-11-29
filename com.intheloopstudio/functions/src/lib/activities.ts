@@ -1,47 +1,46 @@
 /* eslint-disable import/no-unresolved */
-import type { 
-  BookingReminderActivity, 
-  BookingRequestActivity, 
-  BookingUpdateActivity, 
-  FollowActivity, 
-  OpportunityInterest, 
+
+import type { messaging } from "firebase-admin";
+import { Timestamp } from "firebase-admin/firestore";
+import * as functions from "firebase-functions";
+import { debug } from "firebase-functions/logger";
+import { HttpsError } from "firebase-functions/v2/https";
+import type {
+  BookingReminderActivity,
+  BookingRequestActivity,
+  BookingUpdateActivity,
+  FollowActivity,
+  OpportunityInterest,
   SearchAppearanceActivity,
 } from "../types/models";
-import { HttpsError } from "firebase-functions/v2/https";
-import * as functions from "firebase-functions";
 import { activitiesRef, fcm, tokensRef, usersRef } from "./firebase";
-import { Timestamp } from "firebase-admin/firestore";
 import { authenticated } from "./utils";
-import { messaging } from "firebase-admin";
-import { debug } from "firebase-functions/logger";
 
-export const sendToDevice = functions.firestore
-  .document("activities/{activityId}")
-  .onCreate(async (snapshot) => {
-    const activity = snapshot.data();
+export const sendToDevice = functions.firestore.document("activities/{activityId}").onCreate(async (snapshot) => {
+  const activity = snapshot.data();
 
-    const userDoc = await usersRef.doc(activity["toUserId"]).get();
-    const user = userDoc.data();
-    if (user === null || user === undefined) {
-      throw new Error("User not found");
-    }
+  const userDoc = await usersRef.doc(activity.toUserId).get();
+  const user = userDoc.data();
+  if (user === null || user === undefined) {
+    throw new Error("User not found");
+  }
 
-    if (user.email?.endsWith("@tapped.ai")) {
-      debug("Skipping notification for tapped.ai user");
-      return;
-    }
+  if (user.email?.endsWith("@tapped.ai")) {
+    debug("Skipping notification for tapped.ai user");
+    return;
+  }
 
-    const activityType = activity["type"];
+  const activityType = activity.type;
 
-    let payload: messaging.MessagingPayload = {
-      notification: {
-        title: "New Activity",
-        body: "You have new activity on your profile",
-        clickAction: "FLUTTER_NOTIFICATION_CLICK",
-      },
-    };
+  let payload: messaging.MessagingPayload = {
+    notification: {
+      title: "New Activity",
+      body: "You have new activity on your profile",
+      clickAction: "FLUTTER_NOTIFICATION_CLICK",
+    },
+  };
 
-    switch (activityType) {
+  switch (activityType) {
     case "bookingRequest":
       payload = {
         notification: {
@@ -80,28 +79,25 @@ export const sendToDevice = functions.firestore
       break;
     default:
       return;
-    }
+  }
 
-    const querySnapshot = await tokensRef
-      .doc(activity["toUserId"])
-      .collection("tokens")
-      .get();
+  const querySnapshot = await tokensRef.doc(activity.toUserId).collection("tokens").get();
 
-    const tokens: string[] = querySnapshot.docs.map((snap) => snap.id);
-    if (tokens.length == 0) {
-      functions.logger.debug("No tokens to send to");
-    }
+  const tokens: string[] = querySnapshot.docs.map((snap) => snap.id);
+  if (tokens.length === 0) {
+    functions.logger.debug("No tokens to send to");
+  }
 
-    try {
-      const resp = await fcm.sendToDevice(tokens, payload);
-      if (resp.failureCount > 0) {
-        functions.logger.warn(`Failed to send message to some devices: ${resp.failureCount}`);
-      }
-    } catch (e: any) {
-      functions.logger.error(`${user["id"]} : ${e}`);
-      throw new Error(`cannot send notification to device, userId: ${user["id"]}, ${e.message}`);
+  try {
+    const resp = await fcm.sendToDevice(tokens, payload);
+    if (resp.failureCount > 0) {
+      functions.logger.warn(`Failed to send message to some devices: ${resp.failureCount}`);
     }
-  });
+  } catch (e: any) {
+    functions.logger.error(`${user.id} : ${e}`);
+    throw new Error(`cannot send notification to device, userId: ${user.id}, ${e.message}`);
+  }
+});
 
 export const addActivity = functions.https.onCall((data, context) => {
   authenticated(context);
@@ -109,20 +105,18 @@ export const addActivity = functions.https.onCall((data, context) => {
 });
 
 export const createActivity = async (
-  activity: FollowActivity
+  activity:
+    | FollowActivity
     | BookingRequestActivity
     | BookingUpdateActivity
     | OpportunityInterest
     | BookingReminderActivity
-    | SearchAppearanceActivity
+    | SearchAppearanceActivity,
 ): Promise<{ id: string }> => {
   // Checking attribute.A
   if (activity.toUserId.length === 0) {
     // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError(
-      "invalid-argument",
-      "The function argument 'toUserId' cannot be empty"
-    );
+    throw new HttpsError("invalid-argument", "The function argument 'toUserId' cannot be empty");
   }
 
   const allowedActivityTypes = [
@@ -137,8 +131,7 @@ export const createActivity = async (
     // Throwing an HttpsError so that the client gets the error details.
     throw new functions.https.HttpsError(
       "invalid-argument",
-      "The function argument 'type' must be either " +
-      allowedActivityTypes.join(", ")
+      `The function argument 'type' must be either ${allowedActivityTypes.join(", ")}`,
     );
   }
 
@@ -150,4 +143,3 @@ export const createActivity = async (
 
   return { id: docRef.id };
 };
-

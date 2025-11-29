@@ -1,12 +1,9 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-export default function SelectableImage({ prompt, imageUri }: {
-    prompt?: string;
-    imageUri: string;
-}) {
+export default function SelectableImage({ prompt, imageUri }: { prompt?: string; imageUri: string }) {
   const router = useRouter();
 
   const selectImage = () => {
@@ -14,12 +11,10 @@ export default function SelectableImage({ prompt, imageUri }: {
   };
 
   return (
-    <div
-      className="relative sm:w-[400px] h-[400px]"
-    >
+    <div className="relative sm:w-[400px] h-[400px]">
       <Image
-        alt={`representation of: ${prompt ?? 'the prompt'}`}
-        className={'rounded-md shadow-md h-full object-cover'}
+        alt={`representation of: ${prompt ?? "the prompt"}`}
+        className={"rounded-md shadow-md h-full object-cover"}
         onClick={selectImage}
         src={imageUri}
         width={400}

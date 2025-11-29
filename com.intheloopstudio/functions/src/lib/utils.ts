@@ -26,32 +26,24 @@ export const getFileFromURL = (fileURL: string): string => {
 export const getFoundersDeviceTokens = async (): Promise<string[]> => {
   const deviceTokens = (
     await Promise.all(
-      founderIds.map(
-        async (founderId) => {
+      founderIds.map(async (founderId) => {
+        const querySnapshot = await tokensRef.doc(founderId).collection("tokens").get();
 
-          const querySnapshot = await tokensRef
-            .doc(founderId)
-            .collection("tokens")
-            .get();
+        const tokens: string[] = querySnapshot.docs.map((snap) => snap.id);
 
-          const tokens: string[] = querySnapshot.docs.map((snap) => snap.id);
-
-          return tokens;
-        })
+        return tokens;
+      }),
     )
   ).flat();
 
   return deviceTokens;
-}
+};
 
 export const authenticated = (context: CallableContext): void => {
   // Checking that the user is authenticated.
   if (!context.auth) {
     // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError(
-      "failed-precondition",
-      "The function must be called while authenticated."
-    );
+    throw new HttpsError("failed-precondition", "The function must be called while authenticated.");
   }
 };
 
@@ -59,10 +51,7 @@ export const authenticatedRequest = (request: CallableRequest): void => {
   // Checking that the user is authenticated.
   if (!request.auth) {
     // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError(
-      "failed-precondition",
-      "The function must be called while authenticated."
-    );
+    throw new HttpsError("failed-precondition", "The function must be called while authenticated.");
   }
 };
 
@@ -77,24 +66,24 @@ export const sanitizeUsername = (artistName: string): string => {
   username = username.replace(/[^a-z0-9_]/g, "");
 
   return username;
-}
+};
 
 export const imageUrlToBase64 = async (imageUrl: string): Promise<string> => {
   try {
     // Fetch the image
     const response = await fetch(imageUrl);
-      
+
     // Check if the fetch was successful
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-      
+
     // Get the image as a Blob
     const blob = await response.blob();
-      
+
     // Create a FileReader instance
     const reader = new FileReader();
-      
+
     // Create a promise to handle the asynchronous FileReader
     const base64String: string = await new Promise<string>((resolve, reject) => {
       reader.onloadend = () => {
@@ -107,12 +96,11 @@ export const imageUrlToBase64 = async (imageUrl: string): Promise<string> => {
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
-    
-      
+
     // Remove the data URL prefix to get only the base64 string
     return base64String.split(",")[1];
   } catch (error) {
     console.error("Error converting image to base64:", error);
     throw error;
   }
-}
+};

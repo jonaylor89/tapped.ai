@@ -1,9 +1,6 @@
 import { storage } from "../firebase";
 
-export async function uploadImageToFirebase(
-  imageData: Buffer,
-  bookingId: string,
-): Promise<string | null> {
+export async function uploadImageToFirebase(imageData: Buffer, bookingId: string): Promise<string | null> {
   try {
     const filePath = `images/bookings/${bookingId}/${bookingId}.jpeg`;
     const bucket = storage.bucket("in-the-loop-306520.appspot.com");

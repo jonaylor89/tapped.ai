@@ -1,13 +1,13 @@
-import { Page } from "puppeteer";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 
 export function getEventNameFromUrl(url: string) {
   const pathname = new URL(url).pathname;
 
-  // Regular Expression to capture the event name after /events-list/year/month/day         
-  // It will not match if there's only /events-list with nothing after        
+  // Regular Expression to capture the event name after /events-list/year/month/day
+  // It will not match if there's only /events-list with nothing after
   const eventNameRegex = /\/tm-event\/(.+)$/;
 
   // Apply the regex and return the captured group if matched, otherwise null
@@ -20,20 +20,18 @@ export function parseTicketPrice(priceContent: string) {
   let ticketPrice;
   let doorPrice;
   if (priceContent.includes("-")) {
-    const [ticketString, doorString]  = priceContent.split("-");
-    
+    const [ticketString, doorString] = priceContent.split("-");
+
     ticketPrice = Number(ticketString.trim().slice(1));
-    doorPrice = Number(doorString.trim().slice(1))
-    
+    doorPrice = Number(doorString.trim().slice(1));
   } else {
     if (priceContent !== "") {
       ticketPrice = Number(priceContent.trim().slice(1));
 
       doorPrice = ticketPrice;
-
     }
   }
-  return [ticketPrice, doorPrice]
+  return [ticketPrice, doorPrice];
 }
 
 export async function parseDescription(page: Page): Promise<string | null> {
@@ -63,42 +61,39 @@ export async function parseDescription(page: Page): Promise<string | null> {
 }
 
 export function parseTimes(startTimeStr: string[], endTimeStr: string[]) {
-
   const [startTime, endTime] = [startTimeStr, endTimeStr].map((match: string[]) => {
     // Function to convert month name to month index
 
     const monthNameToIndex: {
-            [key: string]: number;
-        } = {
-          Jan: 0,
-          Feb: 1,
-          Mar: 2,
-          Apr: 3,
-          May: 4,
-          Jun: 5,
-          Jul: 6,
-          Aug: 7,
-          Sep: 8,
-          Oct: 9,
-          Nov: 10,
-          Dec: 11,
-        };
+      [key: string]: number;
+    } = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
 
-    const year = parseInt(match[2]);
+    const year = parseInt(match[2], 10);
     const monthStr: string = match[0];
     const month: number = monthNameToIndex[monthStr];
-    const day = parseInt(match[1]);
-    const timeStr = match[3]
+    const day = parseInt(match[1], 10);
+    const timeStr = match[3];
 
     // Convert matches to JavaScript Date objects
     const date = new Date(
       year,
       month,
       day,
-      monthStr.endsWith("PM")
-        ? parseInt(timeStr.split(":")[0]) + 12
-        : parseInt(timeStr.split(":")[0]),
-      parseInt(timeStr.split(":")[1])
+      monthStr.endsWith("PM") ? parseInt(timeStr.split(":")[0], 10) + 12 : parseInt(timeStr.split(":")[0], 10),
+      parseInt(timeStr.split(":")[1], 10),
     );
 
     return date;
@@ -107,7 +102,7 @@ export function parseTimes(startTimeStr: string[], endTimeStr: string[]) {
   return {
     startTime,
     endTime,
-  }
+  };
 }
 
 export async function parseArtists(title: string): Promise<string[]> {
@@ -130,7 +125,7 @@ export async function parseArtists(title: string): Promise<string[]> {
     },
   };
 
-  const llm = new ChatOpenAI({})
+  const llm = new ChatOpenAI({});
   const runnable = llm
     .bind({
       functions: [extractionFunctionSchema],
@@ -147,10 +142,7 @@ export async function parseArtists(title: string): Promise<string[]> {
   const msg = new HumanMessage(`
                     the string: "${title}"
                 `);
-  const res = await runnable.invoke([
-    systemMsg,
-    msg,
-  ]) as { artistNames?: string[] };
+  const res = (await runnable.invoke([systemMsg, msg])) as { artistNames?: string[] };
 
   // console.log({ sum: event.summary, res });
   const artistNames = res.artistNames ?? [];
@@ -158,10 +150,10 @@ export async function parseArtists(title: string): Promise<string[]> {
 }
 
 export const sanitizeUsername = (artistName: string) => {
-  // Convert name to lowercase                                             
+  // Convert name to lowercase
   let username = artistName.toLowerCase();
 
-  // Replace spaces with a hyphen                                          
+  // Replace spaces with a hyphen
   username = username.replace(/\s+/g, "_");
 
   // Remove disallowed characters (only keep letters, numbers, hyphens, and underscores)

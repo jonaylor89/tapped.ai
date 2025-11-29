@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useCredits } from '@/context/CreditsProvider';
-import { useAuth } from '@/context/AuthProvider';
+import { useAuth } from "@/context/AuthProvider";
+import { useCredits } from "@/context/CreditsProvider";
 
 export default function UploadTrack() {
   const { authUser } = useAuth();
@@ -10,19 +10,15 @@ export default function UploadTrack() {
 
   if (authUser === null) {
     return (
-      <>
-        <div className='min-h-screen flex justify-center items-center'>
-          <p>fetching user...</p>
-        </div>
-      </>
+      <div className="min-h-screen flex justify-center items-center">
+        <p>fetching user...</p>
+      </div>
     );
   }
 
   return (
-    <>
-      <form>
-        <input type="file" />
-      </form>
-    </>
+    <form>
+      <input type="file" />
+    </form>
   );
 }

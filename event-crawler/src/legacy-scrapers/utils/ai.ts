@@ -1,5 +1,5 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 
 export const chatGpt = async (
   prompt: string,

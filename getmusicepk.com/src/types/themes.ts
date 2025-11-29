@@ -1,2 +1,1 @@
-
-export type EPKTheme = 'tapped' | 'minimalist' | 'funky'
+export type EPKTheme = "tapped" | "minimalist" | "funky";

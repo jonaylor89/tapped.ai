@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import UserTile from "@/components/user/UserTile";
 import { getUserById } from "@/data/database";
 import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
-import UserTile from "@/components/user/UserTile";
 
 export default function ReviewTile({ review }: { review: Review }) {
 	const [reviewer, setReviewer] = useState<UserModel | null>(null);

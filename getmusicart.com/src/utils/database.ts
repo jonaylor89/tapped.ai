@@ -1,8 +1,8 @@
-import { Unsubscribe } from 'firebase/auth';
-import { collection, doc, onSnapshot, increment, updateDoc } from 'firebase/firestore';
-import { db } from './firebase';
+import type { Unsubscribe } from "firebase/auth";
+import { collection, doc, increment, onSnapshot, updateDoc } from "firebase/firestore";
+import { db } from "./firebase";
 
-const creditsRef = collection(db, 'credits');
+const creditsRef = collection(db, "credits");
 
 export async function decrementUserCredits(userId: string): Promise<void> {
   const docRef = doc(creditsRef, userId);
@@ -12,10 +12,7 @@ export async function decrementUserCredits(userId: string): Promise<void> {
   });
 }
 
-export function userCreditsListener(
-  userId: string,
-  callback: (credits: number) => void,
-): Unsubscribe {
+export function userCreditsListener(userId: string, callback: (credits: number) => void): Unsubscribe {
   const docRef = doc(creditsRef, userId);
 
   return onSnapshot(docRef, (docSnap) => {

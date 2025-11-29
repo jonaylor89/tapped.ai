@@ -1,15 +1,18 @@
-import { MarketingForm } from '@/types/marketing_form';
-import { createEmptyMarketingPlan, saveForm } from '@/utils/database';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { MarketingForm } from "@/types/marketing_form";
+import { createEmptyMarketingPlan, saveForm } from "@/utils/database";
 
-
-const SubmitField = ({ formData, updateFormData, onValidation }: {
+const SubmitField = ({
+  formData,
+  updateFormData,
+  onValidation,
+}: {
   formData: MarketingForm;
   updateFormData: (key: string, value: any) => void;
   onValidation: (isValid: boolean) => void;
 }) => {
-  const [loading, setLoading] = useState(false);
+  const [loading, _setLoading] = useState(false);
   const router = useRouter();
 
   const handleButtonClick = async () => {
@@ -22,12 +25,10 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
     router.push(`/preview?client_reference_id=${id}`);
   };
   return (
-    <div style={{ backgroundColor: '#15242d', height: '100vh' }} className="flex items-center justify-center">
+    <div style={{ backgroundColor: "#15242d", height: "100vh" }} className="flex items-center justify-center">
       <div className="text-center">
         <div>
-          <p className="text-lg font-bold text-white mb-4">
-            let's get you that marketing plan!
-          </p>
+          <p className="text-lg font-bold text-white mb-4">let's get you that marketing plan!</p>
         </div>
         <div className="flex items-center justify-center w-[60%] mx-auto">
           {loading && (
@@ -36,14 +37,10 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
             </div>
           )}
           {!loading && (
-            <button
-              onClick={handleButtonClick}
-              className='tapped_btn_rounded'
-            >
+            <button onClick={handleButtonClick} className="tapped_btn_rounded">
               submit
             </button>
           )}
-
         </div>
       </div>
     </div>

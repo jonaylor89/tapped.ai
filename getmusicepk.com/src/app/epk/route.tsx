@@ -1,15 +1,14 @@
 import { ImageResponse } from "next/og";
-import TappedTheme from "./tapped_theme";
+import type { EPKComponent } from "@/types/epk_component";
+import type { EpkPayload } from "@/types/epk_payload";
 import FunkyTheme from "./funky_theme";
 import MinimalistTheme from "./minimalist_theme";
-import { EPKComponent } from "@/types/epk_component";
-import { EpkPayload } from "@/types/epk_payload";
-
+import TappedTheme from "./tapped_theme";
 
 const width = 900;
 const height = 1200;
 
-export const runtime = 'edge';
+export const runtime = "edge";
 
 const themeComponents: Record<string, EPKComponent> = {
   tapped: TappedTheme,
@@ -19,8 +18,8 @@ const themeComponents: Record<string, EPKComponent> = {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const theme = searchParams.get('theme');
-  const epkString = searchParams.get('epkData') ?? '';
+  const theme = searchParams.get("theme");
+  const epkString = searchParams.get("epkData") ?? "";
   const epkForm = JSON.parse(epkString) as EpkPayload;
 
   const {
@@ -45,7 +44,7 @@ export async function GET(request: Request) {
     instagramHandle,
     twitterHandle,
     phoneNumber,
-  })
+  });
   console.log({ theme });
 
   let chosenFont: string;
@@ -55,34 +54,32 @@ export async function GET(request: Request) {
   let fontDataItalic;
   let fontDataBold;
 
-  const baseUrl = process.env.VERCEL_URL 
-    ? `https://${process.env.VERCEL_URL}` 
-    : 'https://getmusicepk.com';
+  const baseUrl = process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "https://getmusicepk.com";
 
-  if (theme === 'funky'){
-      chosenFont = 'JosefinSans';
-      chosenFontItalic = 'JosefinSansItalic';
-      chosenFontBold = 'JosefinSansBold'
-      fontDataRegular = await fetch(`${baseUrl}/fonts/JosefinSans-Medium.ttf`).then((res) => res.arrayBuffer());
-      fontDataItalic = await fetch(`${baseUrl}/fonts/JosefinSans-Italic.ttf`).then((res) => res.arrayBuffer());
-      fontDataBold = await fetch(`${baseUrl}/fonts/JosefinSans-Bold.ttf`).then((res) => res.arrayBuffer());
-  } else if (theme === 'minimalist'){
-      chosenFont = 'Arimo';
-      chosenFontItalic = 'ArimoItalic';
-      chosenFontBold = 'ArimoBold'
-      fontDataRegular = await fetch(`${baseUrl}/fonts/Arimo-Medium.ttf`).then((res) => res.arrayBuffer());
-      fontDataItalic = await fetch(`${baseUrl}/fonts/Arimo-Italic.ttf`).then((res) => res.arrayBuffer());
-      fontDataBold = await fetch(`${baseUrl}/fonts/Arimo-Bold.ttf`).then((res) => res.arrayBuffer());
+  if (theme === "funky") {
+    chosenFont = "JosefinSans";
+    chosenFontItalic = "JosefinSansItalic";
+    chosenFontBold = "JosefinSansBold";
+    fontDataRegular = await fetch(`${baseUrl}/fonts/JosefinSans-Medium.ttf`).then((res) => res.arrayBuffer());
+    fontDataItalic = await fetch(`${baseUrl}/fonts/JosefinSans-Italic.ttf`).then((res) => res.arrayBuffer());
+    fontDataBold = await fetch(`${baseUrl}/fonts/JosefinSans-Bold.ttf`).then((res) => res.arrayBuffer());
+  } else if (theme === "minimalist") {
+    chosenFont = "Arimo";
+    chosenFontItalic = "ArimoItalic";
+    chosenFontBold = "ArimoBold";
+    fontDataRegular = await fetch(`${baseUrl}/fonts/Arimo-Medium.ttf`).then((res) => res.arrayBuffer());
+    fontDataItalic = await fetch(`${baseUrl}/fonts/Arimo-Italic.ttf`).then((res) => res.arrayBuffer());
+    fontDataBold = await fetch(`${baseUrl}/fonts/Arimo-Bold.ttf`).then((res) => res.arrayBuffer());
   } else {
-      chosenFont = 'Inter';
-      chosenFontItalic = 'InterItalic';
-      chosenFontBold = 'InterBold'
-      fontDataRegular = await fetch(`${baseUrl}/fonts/Inter-Medium.ttf`).then((res) => res.arrayBuffer());
-      fontDataItalic = await fetch(`${baseUrl}/fonts/InterTight-Italic.ttf`).then((res) => res.arrayBuffer());
-      fontDataBold = await fetch(`${baseUrl}/fonts/Inter-Bold.ttf`).then((res) => res.arrayBuffer());
+    chosenFont = "Inter";
+    chosenFontItalic = "InterItalic";
+    chosenFontBold = "InterBold";
+    fontDataRegular = await fetch(`${baseUrl}/fonts/Inter-Medium.ttf`).then((res) => res.arrayBuffer());
+    fontDataItalic = await fetch(`${baseUrl}/fonts/InterTight-Italic.ttf`).then((res) => res.arrayBuffer());
+    fontDataBold = await fetch(`${baseUrl}/fonts/Inter-Bold.ttf`).then((res) => res.arrayBuffer());
   }
 
-  const ThemeComponent: EPKComponent = themeComponents[theme || 'tapped'];
+  const ThemeComponent: EPKComponent = themeComponents[theme || "tapped"];
 
   return new ImageResponse(
     <ThemeComponent
@@ -104,23 +101,24 @@ export async function GET(request: Request) {
       debug: false,
       fonts: [
         {
-            name: chosenFont,
-            data: fontDataRegular,
+          name: chosenFont,
+          data: fontDataRegular,
         },
         {
-            name: chosenFontItalic,
-            data: fontDataItalic,
+          name: chosenFontItalic,
+          data: fontDataItalic,
         },
         {
-            name: chosenFontBold,
-            data: fontDataBold,
+          name: chosenFontBold,
+          data: fontDataBold,
         },
       ],
     },
   );
 }
 
-{/* <div
+{
+  /* <div
           style={{
             display: 'flex',
             flexDirection: 'column',
@@ -148,4 +146,5 @@ export async function GET(request: Request) {
             <path d={bgD} fill='white' />
             <path d={fgD} fill='black' />
           </svg>
-        </div> */}
+        </div> */
+}

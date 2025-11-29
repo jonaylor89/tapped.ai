@@ -1,24 +1,38 @@
 /* eslint-disable import/no-unresolved */
-import { onRequest } from "firebase-functions/v2/https";
-import { POSTMARK_SERVER_ID, RESEND_API_KEY, SLACK_WEBHOOK_URL, contactVenuesRef, orphanEmailsRef, streamKey, streamSecret, usersRef } from "./firebase";
-import { addUserToPremiumChat, removeUserFromPremiumChat } from "./direct_messaging";
+
 import { debug, error, info } from "firebase-functions/logger";
-import { sendEmailSubscriptionExpiration, sendEmailSubscriptionPurchase, sendEmailToPerformerFromStreamMessage } from "./email_triggers";
-import { StreamChat, User, Message } from "stream-chat";
-import { UserModel } from "../types/models";
-import { sendEmailToVenueFromStreamMessage } from "./dm_email_sync/venue_contacting";
+import { onRequest } from "firebase-functions/v2/https";
+import { type Message, StreamChat, type User } from "stream-chat";
+import type { UserModel } from "../types/models";
+import { addUserToPremiumChat, removeUserFromPremiumChat } from "./direct_messaging";
 import { sendStreamMessage } from "./dm_email_sync/messaging";
+import { sendEmailToVenueFromStreamMessage } from "./dm_email_sync/venue_contacting";
+import {
+  sendEmailSubscriptionExpiration,
+  sendEmailSubscriptionPurchase,
+  sendEmailToPerformerFromStreamMessage,
+} from "./email_triggers";
+import {
+  contactVenuesRef,
+  orphanEmailsRef,
+  POSTMARK_SERVER_ID,
+  RESEND_API_KEY,
+  SLACK_WEBHOOK_URL,
+  streamKey,
+  streamSecret,
+  usersRef,
+} from "./firebase";
 import { slackNotification } from "./notifications";
 
 // send email on subscription purchase
 export const sendEmailOnSubscriptionPurchase = onRequest(
-  { secrets: [ RESEND_API_KEY, streamKey, streamSecret ] },
+  { secrets: [RESEND_API_KEY, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionPurchase", req.body);
       const { event } = req.body;
-      const { app_user_id: userId } = event; 
-    
+      const { app_user_id: userId } = event;
+
       await sendEmailSubscriptionPurchase(RESEND_API_KEY.value(), userId);
 
       // add them to group chat
@@ -32,10 +46,11 @@ export const sendEmailOnSubscriptionPurchase = onRequest(
       error(e.message);
       res.status(500);
     }
-  });
+  },
+);
 
 export const sendEmailOnSubscriptionExpiration = onRequest(
-  { secrets: [ RESEND_API_KEY, streamKey, streamSecret ] },
+  { secrets: [RESEND_API_KEY, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionExpiration", req.body);
@@ -49,15 +64,15 @@ export const sendEmailOnSubscriptionExpiration = onRequest(
         streamKey: streamKey.value(),
         streamSecret: streamSecret.value(),
       });
-
     } catch (e: any) {
       error(e.message);
       res.status(500);
     }
-  });
+  },
+);
 
 export const streamBeforeMessageWebhook = onRequest(
-  { secrets: [ streamKey, streamSecret, POSTMARK_SERVER_ID, RESEND_API_KEY ] },
+  { secrets: [streamKey, streamSecret, POSTMARK_SERVER_ID, RESEND_API_KEY] },
   async (req, res) => {
     const client = new StreamChat(streamKey.value(), streamSecret.value());
 
@@ -75,15 +90,13 @@ export const streamBeforeMessageWebhook = onRequest(
 
     const json = req.body as {
       user: User | undefined;
-      message:
-      | Message
-      | undefined;
+      message: Message | undefined;
       members:
-      | {
-        user_id: string;
-        user: User;
-      }[]
-      | undefined;
+        | {
+            user_id: string;
+            user: User;
+          }[]
+        | undefined;
     };
     info({ json });
 
@@ -93,7 +106,7 @@ export const streamBeforeMessageWebhook = onRequest(
 
     // get receiver
     const receiverUser: User | undefined = json.members?.find(
-      (m: { user: User }) => m.user.username !== senderUser?.username
+      (m: { user: User }) => m.user.username !== senderUser?.username,
     )?.user;
     // debug({ receiverUser });
 
@@ -102,9 +115,8 @@ export const streamBeforeMessageWebhook = onRequest(
     // debug({ msg });
     const attachments = json.message?.attachments;
 
-    const imagesAttachments = attachments?.filter(
-      (a) => a.type === "image" && a.image_url
-    ).map((a) => a.image_url as string) ?? [];
+    const imagesAttachments =
+      attachments?.filter((a) => a.type === "image" && a.image_url).map((a) => a.image_url as string) ?? [];
 
     if (!senderUser || !receiverUser || !msg) {
       res.status(400).send("bad request");
@@ -138,36 +150,29 @@ export const streamBeforeMessageWebhook = onRequest(
       });
     }
     res.status(200).send("ok");
-  }
+  },
 );
 
 export const inboundEmailWebhook = onRequest(
-  { secrets: [ POSTMARK_SERVER_ID, streamKey, streamSecret, SLACK_WEBHOOK_URL, ] },
+  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret, SLACK_WEBHOOK_URL] },
   async (req, res) => {
     const body = req.body;
     try {
       const subject = body.Subject;
       const to = body.To;
       const from = body.From;
-      const references = body.Headers.find(
-        (h: { Name: string; Value: string }) => h.Name === "References"
-      )?.Value;
+      const references = body.Headers.find((h: { Name: string; Value: string }) => h.Name === "References")?.Value;
       const replyToMessageId = body.Headers.find(
-        (h: { Name: string; Value: string }) => h.Name === "In-Reply-To"
+        (h: { Name: string; Value: string }) => h.Name === "In-Reply-To",
       )?.Value;
-      const latestMessageId = body.Headers.find(
-        (h: { Name: string; Value: string }) => h.Name === "Message-ID"
-      )?.Value;
+      const latestMessageId = body.Headers.find((h: { Name: string; Value: string }) => h.Name === "Message-ID")?.Value;
 
       if (!subject || !replyToMessageId) {
         throw new Error("no subject or reply-to messageId found");
       }
 
       const username = to.split("@")[0];
-      const userSnap = await usersRef
-        .where("username", "==", username)
-        .limit(1)
-        .get();
+      const userSnap = await usersRef.where("username", "==", username).limit(1).get();
       if (userSnap.empty) {
         debug(`no user found for this username (${username})`);
         throw new Error("no user found for this username");
@@ -182,33 +187,21 @@ export const inboundEmailWebhook = onRequest(
         .limit(1)
         .get();
       if (venueContactsSnap.empty) {
-        debug(
-          `no venue contact found for this user and messageId (${userId},${references})`
-        );
+        debug(`no venue contact found for this user and messageId (${userId},${references})`);
         throw new Error("no venue contact found for this user and messageId");
       }
       const venueContactData = venueContactsSnap.docs[0].data();
       const allEmails = venueContactData.allEmails ?? [];
-      const newAllEmails = allEmails
-        .concat([ from ])
-        .filter((e: string, i: number, a: string[]) => a.indexOf(e) === i);
+      const newAllEmails = allEmails.concat([from]).filter((e: string, i: number, a: string[]) => a.indexOf(e) === i);
 
       const venueId = venueContactsSnap.docs[0].id;
 
       // add email to emails collection
-      await contactVenuesRef
-        .doc(userId)
-        .collection("venuesContacted")
-        .doc(venueId)
-        .collection("emailsSent")
-        .add(body);
+      await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).collection("emailsSent").add(body);
 
       const messageContent = body.StrippedTextReply ?? body.TextBody;
 
-      const streamChat = new StreamChat(
-        streamKey.value(),
-        streamSecret.value()
-      );
+      const streamChat = new StreamChat(streamKey.value(), streamSecret.value());
       await sendStreamMessage({
         streamClient: streamChat,
         receiverId: userId,
@@ -216,14 +209,10 @@ export const inboundEmailWebhook = onRequest(
         message: messageContent,
       });
 
-      await contactVenuesRef
-        .doc(userId)
-        .collection("venuesContacted")
-        .doc(venueId)
-        .update({
-          allEmails: newAllEmails,
-          latestMessageId,
-        });
+      await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).update({
+        allEmails: newAllEmails,
+        latestMessageId,
+      });
 
       slackNotification({
         title: "NEW EMAIL!!!",
@@ -242,6 +231,5 @@ export const inboundEmailWebhook = onRequest(
       });
       res.status(500).send("error");
     }
-  }
+  },
 );
-

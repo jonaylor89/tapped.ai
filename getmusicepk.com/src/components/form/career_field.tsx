@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 export default function CareerField({ formData, updateFormData, onValidation }) {
   const [error, setError] = useState(null);
@@ -8,7 +8,7 @@ export default function CareerField({ formData, updateFormData, onValidation }) 
     setHasInteracted(true);
 
     const { value } = e.target;
-    const updatedValues = formData['jobs'] || [];
+    const updatedValues = formData["jobs"] || [];
 
     if (updatedValues.includes(value)) {
       const index = updatedValues.indexOf(value);
@@ -17,14 +17,14 @@ export default function CareerField({ formData, updateFormData, onValidation }) 
       updatedValues.push(value);
     }
 
-    updateFormData({ ...formData, ['jobs']: updatedValues });
+    updateFormData({ ...formData, ["jobs"]: updatedValues });
     validateForUI(updatedValues);
   };
 
   const validateForUI = (values) => {
     if (hasInteracted) {
       if (!values || values.length === 0) {
-        setError('You must choose at least one option.');
+        setError("You must choose at least one option.");
         onValidation(false);
       } else {
         setError(null);
@@ -44,28 +44,16 @@ export default function CareerField({ formData, updateFormData, onValidation }) 
     }
   };
 
-
   useEffect(() => {
-    justValidate(formData['jobs']);
-  }, [formData['jobs']]);
+    justValidate(formData["jobs"]);
+  }, [formData["jobs"]]);
 
-  const options = [
-    'artist',
-    'songwriter',
-    'producer',
-    'promoter',
-    'dj',
-    'sound eng.',
-    'model',
-    'actor',
-  ];
+  const options = ["artist", "songwriter", "producer", "promoter", "dj", "sound eng.", "model", "actor"];
 
   return (
     <div className="page flex h-full flex-col items-center justify-center">
       <div className="flex w-full flex-col items-start px-6">
-        <h1 className="mb-2 text-2xl font-bold text-white">
-          what&apos;s your professions (can choose multiple)?
-        </h1>
+        <h1 className="mb-2 text-2xl font-bold text-white">what&apos;s your professions (can choose multiple)?</h1>
         <div className="flex flex-wrap w-full justify-between">
           {options.map((option) => (
             <div key={option} className="w-1/2 flex items-center justify-center mb-4 pr-2">
@@ -74,14 +62,14 @@ export default function CareerField({ formData, updateFormData, onValidation }) 
                 id={option}
                 name="jobs"
                 value={option}
-                checked={(formData['jobs'] || []).includes(option)}
+                checked={(formData["jobs"] || []).includes(option)}
                 onChange={handleInputChange}
                 className="sr-only"
               />
               <label
                 htmlFor={option}
                 className={`w-full text-center px-4 py-2 rounded-xl cursor-pointer transition duration-200 ease-in-out 
-                ${(formData['jobs'] || []).includes(option) ? 'bg-white font-bold text-black' : 'bg-[#63b2fd] font-bold text-white'}`}
+                ${(formData["jobs"] || []).includes(option) ? "bg-white font-bold text-black" : "bg-[#63b2fd] font-bold text-white"}`}
               >
                 {option}
               </label>

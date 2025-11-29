@@ -1,24 +1,12 @@
 import { slackWebhookUrl } from "../firebase";
 
-export async function notifyScapeStart({
-  runId,
-  eventCount,
-}: {
-  runId: string;
-  eventCount: number;
-}) {
+export async function notifyScapeStart({ runId, eventCount }: { runId: string; eventCount: number }) {
   await slackNotification({
     text: `scrape run ${runId} started with ${eventCount} events - ${new Date()}`,
   });
 }
 
-export async function notifyOnScrapeSuccess({
-  runId,
-  eventCount,
-}: {
-  runId: string;
-  eventCount: number;
-}) {
+export async function notifyOnScrapeSuccess({ runId, eventCount }: { runId: string; eventCount: number }) {
   if (eventCount === 0) {
     await slackNotification({
       text: `no new events in scrape run ${runId} - ${new Date()}`,
@@ -47,9 +35,7 @@ async function slackNotification(msg: { text: string }) {
     });
 
     if (!response.ok) {
-      console.error(
-        `[!!!] slack notification failed to send - ${response.status}`,
-      );
+      console.error(`[!!!] slack notification failed to send - ${response.status}`);
       return;
     }
 

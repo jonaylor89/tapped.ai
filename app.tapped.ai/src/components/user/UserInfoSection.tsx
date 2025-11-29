@@ -1,11 +1,11 @@
 import { AtSign, Castle, Disc3, Star, Tag, Ticket, UsersRound } from "lucide-react";
+import { Card } from "@/components/ui/card";
 import {
 	suggestTicketPriceRange,
 	type UserModel,
 	userAudienceSize,
 } from "@/domain/types/user_model";
 import { cn } from "@/lib/utils";
-import { Card } from "@/components/ui/card";
 
 export default function UserInfoSection({ user }: { user: UserModel }) {
 	const genres = (user.performerInfo?.genres ?? user.venueInfo?.genres ?? []).map((g) =>

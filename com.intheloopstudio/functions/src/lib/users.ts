@@ -1,31 +1,19 @@
 /* eslint-disable import/no-unresolved */
 import { Timestamp } from "firebase-admin/firestore";
-import type { 
-  Booking, 
-  UserModel,
-} from "../types/models";
-import { 
-  auth,
-  bookingsRef, 
-  opportunitiesRef, 
-  reviewsRef, 
-  usersRef,
-} from "./firebase";
 import { v4 as uuidv4 } from "uuid";
+import type { Booking, UserModel } from "../types/models";
+import { auth, bookingsRef, opportunitiesRef, reviewsRef, usersRef } from "./firebase";
 import { sanitizeUsername } from "./utils";
 
 export async function transferUser({
   origUserId,
   otherUserId,
 }: {
-    origUserId: string;
-    otherUserId: string;
-  }): Promise<void> {
-
+  origUserId: string;
+  otherUserId: string;
+}): Promise<void> {
   // move bookings over as requester
-  const bookingsRequesterSnap = await bookingsRef
-    .where("requesterId", "==", otherUserId)
-    .get();
+  const bookingsRequesterSnap = await bookingsRef.where("requesterId", "==", otherUserId).get();
   await Promise.all(
     bookingsRequesterSnap.docs.map(async (snap) => {
       const booking = snap.data() as Omit<Booking, "id">;
@@ -37,9 +25,7 @@ export async function transferUser({
   );
 
   // move bookings over as requestee
-  const bookingsRequesteeSnap = await bookingsRef
-    .where("requesteeId", "==", otherUserId)
-    .get();
+  const bookingsRequesteeSnap = await bookingsRef.where("requesteeId", "==", otherUserId).get();
   await Promise.all(
     bookingsRequesteeSnap.docs.map(async (snap) => {
       const booking = snap.data() as Omit<Booking, "id">;
@@ -51,10 +37,7 @@ export async function transferUser({
   );
 
   // move performer reviews over
-  const performerReviewsSnap = await reviewsRef
-    .doc(otherUserId)
-    .collection("performerReviews")
-    .get();
+  const performerReviewsSnap = await reviewsRef.doc(otherUserId).collection("performerReviews").get();
   await Promise.all(
     performerReviewsSnap.docs.map(async (snap) => {
       const review = snap.data();
@@ -71,10 +54,7 @@ export async function transferUser({
   );
 
   // move booker reviews over
-  const bookerReviewsSnap = await reviewsRef
-    .doc(otherUserId)
-    .collection("bookerReviews")
-    .get();
+  const bookerReviewsSnap = await reviewsRef.doc(otherUserId).collection("bookerReviews").get();
   await Promise.all(
     bookerReviewsSnap.docs.map(async (snap) => {
       const review = snap.data();
@@ -91,9 +71,7 @@ export async function transferUser({
   );
 
   // move opportunities over
-  const opportunitiesSnap = await opportunitiesRef
-    .where("userId", "==", otherUserId)
-    .get();
+  const opportunitiesSnap = await opportunitiesRef.where("userId", "==", otherUserId).get();
   await Promise.all(
     opportunitiesSnap.docs.map(async (snap) => {
       const opportunity = snap.data();
@@ -113,14 +91,10 @@ export async function transferUser({
   await usersRef.doc(origUserId).set(
     {
       performerInfo: {
-        reviewCount:
-        (origUserData.performerInfo?.reviewCount ?? 0) +
-        (otherUserData.performerInfo?.reviewCount ?? 0),
+        reviewCount: (origUserData.performerInfo?.reviewCount ?? 0) + (otherUserData.performerInfo?.reviewCount ?? 0),
       },
       bookerInfo: {
-        bookingCount:
-        (origUserData.bookerInfo?.reviewCount ?? 0) +
-        (otherUserData.bookerInfo?.reviewCount ?? 0),
+        bookingCount: (origUserData.bookerInfo?.reviewCount ?? 0) + (otherUserData.bookerInfo?.reviewCount ?? 0),
       },
     },
     { merge: true },
@@ -143,7 +117,6 @@ export async function transferUser({
 }
 
 export async function createUnclaimedUser(artistName: string): Promise<string> {
-
   const username = sanitizeUsername(artistName);
 
   const uid = uuidv4();
@@ -156,7 +129,6 @@ export async function createUnclaimedUser(artistName: string): Promise<string> {
     email,
     password,
   });
-
 
   const userObj: {
     id: string;
@@ -192,7 +164,7 @@ export async function createUnclaimedUser(artistName: string): Promise<string> {
     },
     unclaimed: true,
     deleted: false,
-  }
+  };
 
   // create user in firestore
   await usersRef.doc(uid).set(userObj);

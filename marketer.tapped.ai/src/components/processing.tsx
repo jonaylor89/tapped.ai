@@ -1,10 +1,9 @@
-'use client';
-import { useState, useEffect } from 'react';
-
+"use client";
+import { useEffect, useState } from "react";
 
 export default function Processing() {
-  const words = ['...'];
-  const [periods, setPeriods] = useState('...');
+  const words = ["..."];
+  const [periods, setPeriods] = useState("...");
   // eslint-disable-next-line sonarjs/cognitive-complexity
   useEffect(() => {
     const len = words.length;
@@ -56,9 +55,7 @@ export default function Processing() {
             <div className="bg-black p-6 rounded-xl">
               <h1 className="text-4xl">processing{periods}</h1>
               <div className="h-6"></div>
-              <p className="text-white">
-                hang tight while we work our magic
-              </p>
+              <p className="text-white">hang tight while we work our magic</p>
             </div>
           </div>
         </div>

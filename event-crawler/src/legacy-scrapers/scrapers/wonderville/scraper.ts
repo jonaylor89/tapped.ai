@@ -1,22 +1,15 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
-import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-  notifyScapeStart,
-} from "../../utils/notifications";
-import { getEventNameFromUrl, getFlierUrl, parsePage } from "./parsing";
-import { config } from "./config";
-import { configDotenv } from "dotenv";
 import { v4 as uuidv4 } from "uuid";
+import type { ScrapedEventData } from "../../types";
+import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";
 import { initScrape } from "../../utils/startup";
+import { config } from "./config";
+import { getEventNameFromUrl, getFlierUrl, parsePage } from "./parsing";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -31,8 +24,7 @@ async function scrapeEvent(
 
   const id = uuidv4();
   const flierUrl = await getFlierUrl(page);
-  const { isMusicEvent, title, description, startTime, endTime, artists } =
-    await parsePage(page);
+  const { isMusicEvent, title, description, startTime, endTime, artists } = await parsePage(page);
 
   if (!isMusicEvent) {
     console.log("[-] not a music event");
@@ -98,7 +90,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

@@ -1,6 +1,6 @@
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
-import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { Page } from "puppeteer";
 
 export function getEventNameFromUrl(url: string) {
@@ -28,8 +28,7 @@ export async function getEventDetails(page: Page): Promise<{
   const description = await getDescription(page);
   const details = await getDetails(page);
 
-  const { artists, startTime, endTime, doorPrice, ticketPrice } =
-    await parseDetails(title, description, details);
+  const { artists, startTime, endTime, doorPrice, ticketPrice } = await parseDetails(title, description, details);
 
   return {
     artists,
@@ -65,37 +64,26 @@ async function parseDetails(
           items: {
             type: "string",
           },
-          description:
-            "The musicians listed in the title of this event or an empty array if none are found.",
+          description: "The musicians listed in the title of this event or an empty array if none are found.",
         },
         startTime: {
           type: "string",
-          description:
-            "The start time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The start time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
         endTime: {
           type: "string",
-          description:
-            "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
         doorPrice: {
           type: "number",
-          description:
-            "The price of the event at the door or null if not provided. (and 0 if it's free)",
+          description: "The price of the event at the door or null if not provided. (and 0 if it's free)",
         },
         ticketPrice: {
           type: "number",
-          description:
-            "The price of the event for tickets or null if not provided. (and 0 if it's free)",
+          description: "The price of the event for tickets or null if not provided. (and 0 if it's free)",
         },
       },
-      required: [
-        "artistNames",
-        "startTime",
-        "endTime",
-        "doorPrice",
-        "ticketPrice",
-      ],
+      required: ["artistNames", "startTime", "endTime", "doorPrice", "ticketPrice"],
     },
   };
 
@@ -145,12 +133,9 @@ async function parseDetails(
 
 async function getDetails(page: Page): Promise<string | null> {
   try {
-    const details = await page.$eval(
-      ".tribe-events-event-meta",
-      (el) => el.textContent?.trim() ?? "",
-    );
+    const details = await page.$eval(".tribe-events-event-meta", (el) => el.textContent?.trim() ?? "");
     return details;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
@@ -162,54 +147,46 @@ async function getDescription(page: Page): Promise<string | null> {
       (el) => el.textContent?.trim() ?? "",
     );
     return description;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
 
 async function getTitle(page: Page): Promise<string | null> {
   try {
-    const title = await page.$eval(
-      ".tribe-events-single-event-title",
-      (el) => el.textContent?.trim() ?? "",
-    );
+    const title = await page.$eval(".tribe-events-single-event-title", (el) => el.textContent?.trim() ?? "");
     return title;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
 
 export async function getFlierUrl(page: Page) {
   try {
-    const url = await page.$eval(".tribe-events-event-image img", (el) =>
-      el.getAttribute("src"),
-    );
+    const url = await page.$eval(".tribe-events-event-image img", (el) => el.getAttribute("src"));
     return url;
-  } catch (e) {
+  } catch (_e) {
     return null;
   }
 }
 
 export async function getArtists(page: Page): Promise<string[]> {
-  const artistElements = await page.$$eval(
-    ".tribe-events-single-event-title",
-    (elements) => elements.map((el) => el.textContent?.trim() ?? ""),
+  const artistElements = await page.$$eval(".tribe-events-single-event-title", (elements) =>
+    elements.map((el) => el.textContent?.trim() ?? ""),
   );
   return artistElements;
 }
 
 export async function getDate(page: Page): Promise<string[]> {
-  const dateElements = await page.$$eval(
-    ".tribe-event-date-start",
-    (elements) => elements.map((el) => el.textContent?.trim() ?? ""),
+  const dateElements = await page.$$eval(".tribe-event-date-start", (elements) =>
+    elements.map((el) => el.textContent?.trim() ?? ""),
   );
   return dateElements;
 }
 
 export async function getTime(page: Page): Promise<string[]> {
-  const timeElements = await page.$$eval(
-    ".tribe-events-schedule h3",
-    (elements) => elements.map((el) => el.textContent?.trim() ?? ""),
+  const timeElements = await page.$$eval(".tribe-events-schedule h3", (elements) =>
+    elements.map((el) => el.textContent?.trim() ?? ""),
   );
   return timeElements;
 }

@@ -1,7 +1,7 @@
-import { Option, EventData } from "../types.js";
-import { JsonOutputFunctionsParser } from "langchain/output_parsers";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
+import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { EventData, Option } from "../types.js";
 import { addHours, getDateFromStr } from "./date.js";
 
 export async function extractEventDataFromPage(
@@ -36,23 +36,19 @@ export async function extractEventDataFromPage(
         },
         startTime: {
           type: "string",
-          description:
-            "The start time or when the doors open for the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The start time or when the doors open for the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
         endTime: {
           type: "string",
-          description:
-            "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
+          description: "The end time of the event in the format 'YYYY-MM-DDTHH:MM:SS'",
         },
         doorPrice: {
           type: "number",
-          description:
-            "The price of the event at the door or null if not provided. (and 0 if it's free)",
+          description: "The price of the event at the door or null if not provided. (and 0 if it's free)",
         },
         ticketPrice: {
           type: "number",
-          description:
-            "The price of the event for tickets or null if not provided. (and 0 if it's free)",
+          description: "The price of the event for tickets or null if not provided. (and 0 if it's free)",
         },
         flierUrl: {
           type: "string",

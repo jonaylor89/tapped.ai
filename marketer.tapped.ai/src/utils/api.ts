@@ -1,14 +1,16 @@
-
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '@/utils/firebase';
+import { httpsCallable } from "firebase/functions";
+import { functions } from "@/utils/firebase";
 
 export async function checkoutSessionToClientReferenceId(checkoutSessionId: string) {
   try {
-    const func = httpsCallable<{
-            checkoutSessionId: string,
-        }, {
-            clientReferenceId: string,
-        }>(functions, 'checkoutSessionToClientReferenceId');
+    const func = httpsCallable<
+      {
+        checkoutSessionId: string;
+      },
+      {
+        clientReferenceId: string;
+      }
+    >(functions, "checkoutSessionToClientReferenceId");
     const res = await func({
       checkoutSessionId,
     });

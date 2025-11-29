@@ -1,30 +1,19 @@
 /* eslint-disable import/no-unresolved */
-import * as functions from "firebase-functions";
-import {
-  onDocumentCreated,
-  onDocumentUpdated,
-  onDocumentWritten,
-} from "firebase-functions/v2/firestore";
-import {
-  SLACK_WEBHOOK_URL,
-  creditsRef,
-  opportunitiesRef,
-  opportunityFeedsRef,
-  usersRef,
-} from "./firebase";
-import { Opportunity, OpportunityFeedItem, UserModel } from "../types/models";
+
 import { Timestamp } from "firebase-admin/firestore";
-import { HttpsError } from "firebase-functions/v2/https";
+import * as functions from "firebase-functions";
 import { debug } from "firebase-functions/logger";
+import { onDocumentCreated, onDocumentUpdated, onDocumentWritten } from "firebase-functions/v2/firestore";
+import { HttpsError } from "firebase-functions/v2/https";
+import type { Opportunity, OpportunityFeedItem, UserModel } from "../types/models";
+import { creditsRef, opportunitiesRef, opportunityFeedsRef, SLACK_WEBHOOK_URL, usersRef } from "./firebase";
 // import { onSchedule } from "firebase-functions/v2/scheduler";
 import { slackNotification } from "./notifications";
+
 // import { v4 as uuidv4 } from "uuid";
 // import { llm } from "./openai";
 
-const _addOpportunityToUserFeed = async (
-  userId: string,
-  opData: Opportunity,
-) => {
+const _addOpportunityToUserFeed = async (userId: string, opData: Opportunity) => {
   await opportunityFeedsRef
     .doc(userId)
     .collection("opportunities")
@@ -36,18 +25,11 @@ const _addOpportunityToUserFeed = async (
   return;
 };
 
-const _addInterestedUserToOpportunity = async (
-  userId: string,
-  opFeedItem: OpportunityFeedItem,
-) => {
-  await opportunitiesRef
-    .doc(opFeedItem.id)
-    .collection("interestedUsers")
-    .doc(userId)
-    .set({
-      userComment: opFeedItem.userComment,
-      timestamp: Timestamp.now(),
-    });
+const _addInterestedUserToOpportunity = async (userId: string, opFeedItem: OpportunityFeedItem) => {
+  await opportunitiesRef.doc(opFeedItem.id).collection("interestedUsers").doc(userId).set({
+    userComment: opFeedItem.userComment,
+    timestamp: Timestamp.now(),
+  });
 
   return;
 };
@@ -305,7 +287,7 @@ const _addInterestedUserToOpportunity = async (
 // };
 
 export const notifyFoundersOnOpportunityInterest = functions
-  .runWith({ secrets: [ SLACK_WEBHOOK_URL ] })
+  .runWith({ secrets: [SLACK_WEBHOOK_URL] })
   .firestore.document("opportunities/{opportunityId}/interestedUsers/{userId}")
   .onCreate(async (data, context) => {
     const { userComment } = data.data() as {
@@ -313,9 +295,7 @@ export const notifyFoundersOnOpportunityInterest = functions
       timestamp: Timestamp;
     };
 
-    const opSnap = await opportunitiesRef
-      .doc(context.params.opportunityId)
-      .get();
+    const opSnap = await opportunitiesRef.doc(context.params.opportunityId).get();
     const op = opSnap.data() as Opportunity;
 
     const userSnap = await usersRef.doc(context.params.userId).get();
@@ -354,29 +334,24 @@ export const copyOpportunityToFeedsOnCreate = onDocumentWritten(
   },
 );
 
-export const createOpportunityFeedOnUserCreated = functions.auth
-  .user()
-  .onCreate(async (user) => {
-    const numOpsPerFeed = 500;
-    const opportunitiesSnap = await opportunitiesRef
-      .where("startTime", ">", Timestamp.now())
-      .limit(numOpsPerFeed)
-      .get();
+export const createOpportunityFeedOnUserCreated = functions.auth.user().onCreate(async (user) => {
+  const numOpsPerFeed = 500;
+  const opportunitiesSnap = await opportunitiesRef.where("startTime", ">", Timestamp.now()).limit(numOpsPerFeed).get();
 
-    await creditsRef.doc(user.uid).set(
-      {
-        opportunityQuota: 5,
-      },
-      { merge: true },
-    );
+  await creditsRef.doc(user.uid).set(
+    {
+      opportunityQuota: 5,
+    },
+    { merge: true },
+  );
 
-    await Promise.all(
-      opportunitiesSnap.docs.map(async (opDoc) => {
-        const op = opDoc.data() as Opportunity;
-        await _addOpportunityToUserFeed(user.uid, op);
-      }),
-    );
-  });
+  await Promise.all(
+    opportunitiesSnap.docs.map(async (opDoc) => {
+      const op = opDoc.data() as Opportunity;
+      await _addOpportunityToUserFeed(user.uid, op);
+    }),
+  );
+});
 
 export const addInterestedUserOnApplyToOpportunity = onDocumentUpdated(
   { document: "opportunityFeeds/{userId}/opportunities/{opportunityId}" },
@@ -390,10 +365,7 @@ export const addInterestedUserOnApplyToOpportunity = onDocumentUpdated(
     const afterOp = afterOpSnap?.data() as Opportunity | undefined;
 
     if (beforeOp === undefined || afterOp === undefined) {
-      throw new HttpsError(
-        "failed-precondition",
-        "before or after does not exist",
-      );
+      throw new HttpsError("failed-precondition", "before or after does not exist");
     }
 
     if (beforeOp.touched !== undefined && beforeOp.touched !== null) {
@@ -410,29 +382,23 @@ export const addInterestedUserOnApplyToOpportunity = onDocumentUpdated(
   },
 );
 
-export const copyOpportunitiesToFeedOnCreateUser = onDocumentCreated(
-  { document: "users/{userId}" },
-  async (event) => {
-    const snapshot = event.data;
-    const user = snapshot?.data() as UserModel | undefined;
+export const copyOpportunitiesToFeedOnCreateUser = onDocumentCreated({ document: "users/{userId}" }, async (event) => {
+  const snapshot = event.data;
+  const user = snapshot?.data() as UserModel | undefined;
 
-    if (user === undefined) {
-      throw new HttpsError("failed-precondition", "user does not exist");
-    }
+  if (user === undefined) {
+    throw new HttpsError("failed-precondition", "user does not exist");
+  }
 
-    const opportunitiesSnap = await opportunitiesRef
-      .where("startTime", ">", Timestamp.now())
-      .limit(25)
-      .get();
+  const opportunitiesSnap = await opportunitiesRef.where("startTime", ">", Timestamp.now()).limit(25).get();
 
-    await Promise.all(
-      opportunitiesSnap.docs.map(async (opDoc) => {
-        const op = opDoc.data() as Opportunity;
-        await _addOpportunityToUserFeed(user.id, op);
-      }),
-    );
-  },
-);
+  await Promise.all(
+    opportunitiesSnap.docs.map(async (opDoc) => {
+      const op = opDoc.data() as Opportunity;
+      await _addOpportunityToUserFeed(user.id, op);
+    }),
+  );
+});
 
 // export const setDailyOpportunityQuota = onSchedule(
 //   "0 0 * * *",

@@ -1,28 +1,16 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
-import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-  notifyScapeStart,
-} from "../../utils/notifications";
-import {
-  getEventNameFromUrl,
-  parseArtists,
-  parseTicketPrice,
-  parseTimes,
-} from "./parsing";
-import { config } from "./config";
-import { configDotenv } from "dotenv";
 import { v4 as uuidv4 } from "uuid";
-import { getTextContent } from "../../utils/text_content";
+import type { ScrapedEventData } from "../../types";
+import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";
 import { initScrape } from "../../utils/startup";
+import { getTextContent } from "../../utils/text_content";
+import { config } from "./config";
+import { getEventNameFromUrl, parseArtists, parseTicketPrice, parseTimes } from "./parsing";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -54,9 +42,7 @@ async function scrapeEvent(
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, element)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, element)) ?? "").trim();
 
   // Use evaluate to capture text content
   const description = await getTextContent(page, ".eventitem-column-content");
@@ -91,8 +77,7 @@ async function scrapeEvent(
     const dateString = getTextContent(container).trim();
 
     // Define a regex pattern to capture date and time components
-    const regexPattern =
-      /\s*(\w+), (\w+) (\d{1,2}), (\d{4})\s*(\d{1,2}:\d{2} (AM|PM))\s*/g;
+    const regexPattern = /\s*(\w+), (\w+) (\d{1,2}), (\d{4})\s*(\d{1,2}:\d{2} (AM|PM))\s*/g;
 
     // Create an array to store matched groups
     let match;
@@ -181,7 +166,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

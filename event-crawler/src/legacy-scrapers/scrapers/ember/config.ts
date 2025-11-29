@@ -1,4 +1,4 @@
-import { ScraperConfig } from "../../types";
+import type { ScraperConfig } from "../../types";
 
 export const config: ScraperConfig = {
   id: "mmV91PvDkYcawkDlhwgUUs4bsl83",

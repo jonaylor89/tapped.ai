@@ -1,18 +1,17 @@
 /* eslint-disable import/no-unresolved */
+
+import mailchimp from "@mailchimp/mailchimp_marketing";
 import * as functions from "firebase-functions";
-import mailchimp from "@mailchimp/mailchimp_marketing"
-import { MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX } from "./firebase";
 import { error } from "firebase-functions/logger";
+import { MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX } from "./firebase";
 
 export const addUserToMailchimpOnCreated = functions
-  .runWith({ secrets: [ MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX ] })
-  .auth
-  .user()
+  .runWith({ secrets: [MAILCHIMP_API_KEY, MAILCHIMP_SERVER_PREFIX] })
+  .auth.user()
   .onCreate(async (user) => {
-
     const email = user.email;
     if (!email) {
-      error(`user ${user.uid} has no email`)
+      error(`user ${user.uid} has no email`);
       return;
     }
 

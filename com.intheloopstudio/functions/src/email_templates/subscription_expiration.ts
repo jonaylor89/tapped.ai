@@ -1,5 +1,4 @@
-
-export const subscriptionExpiration= `
+export const subscriptionExpiration = `
 hey,
 
 your Tapped Premium subscription is expiring :(
@@ -14,4 +13,4 @@ make the product better
 best,
 Johannes
 Tapped CEO
-`
+`;

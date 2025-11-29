@@ -1,5 +1,5 @@
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
 
 export function getEventNameFromUrl(url: string) {
@@ -18,7 +18,7 @@ export function parseTicketPrice(desc: string) {
   const regex = /Tickets\s*\$\s*(\d+)/i;
   const match = desc.match(regex);
 
-  if (match && match[1]) {
+  if (match?.[1]) {
     const ticketPriceStr = match[1];
     const ticketPrice = parseInt(ticketPriceStr, 10);
     return ticketPrice;
@@ -28,46 +28,42 @@ export function parseTicketPrice(desc: string) {
 }
 
 export function parseTimes(startTimeStr: string[], endTimeStr: string[]) {
-  const [startTime, endTime] = [startTimeStr, endTimeStr].map(
-    (match: string[]) => {
-      // Function to convert month name to month index
-      const monthNameToIndex: {
-        [key: string]: number;
-      } = {
-        January: 0,
-        February: 1,
-        March: 2,
-        April: 3,
-        May: 4,
-        June: 5,
-        July: 6,
-        August: 7,
-        September: 8,
-        October: 9,
-        November: 10,
-        December: 11,
-      };
+  const [startTime, endTime] = [startTimeStr, endTimeStr].map((match: string[]) => {
+    // Function to convert month name to month index
+    const monthNameToIndex: {
+      [key: string]: number;
+    } = {
+      January: 0,
+      February: 1,
+      March: 2,
+      April: 3,
+      May: 4,
+      June: 5,
+      July: 6,
+      August: 7,
+      September: 8,
+      October: 9,
+      November: 10,
+      December: 11,
+    };
 
-      const year = parseInt(match[3]);
-      const monthStr: string = match[1];
-      const month: number = monthNameToIndex[monthStr];
-      const day = parseInt(match[2]);
-      const timeStr = match[4];
+    const year = parseInt(match[3], 10);
+    const monthStr: string = match[1];
+    const month: number = monthNameToIndex[monthStr];
+    const day = parseInt(match[2], 10);
+    const timeStr = match[4];
 
-      // Convert matches to JavaScript Date objects
-      const date = new Date(
-        year,
-        month,
-        day,
-        monthStr.endsWith("PM")
-          ? parseInt(timeStr.split(":")[0]) + 12
-          : parseInt(timeStr.split(":")[0]),
-        parseInt(timeStr.split(":")[1]),
-      );
+    // Convert matches to JavaScript Date objects
+    const date = new Date(
+      year,
+      month,
+      day,
+      monthStr.endsWith("PM") ? parseInt(timeStr.split(":")[0], 10) + 12 : parseInt(timeStr.split(":")[0], 10),
+      parseInt(timeStr.split(":")[1], 10),
+    );
 
-      return date;
-    },
-  );
+    return date;
+  });
 
   return {
     startTime,
@@ -88,8 +84,7 @@ export async function parseArtists(title: string): Promise<string[]> {
           items: {
             type: "string",
           },
-          description:
-            "The musicians listed in the title of this event or an empty array if none are found.",
+          description: "The musicians listed in the title of this event or an empty array if none are found.",
         },
       },
       required: ["artistNames"],

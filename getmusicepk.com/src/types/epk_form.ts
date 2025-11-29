@@ -1,14 +1,9 @@
-import { 
-    DocumentData, 
-    QueryDocumentSnapshot, 
-    SnapshotOptions,
-    Timestamp,
-} from "firebase/firestore";
+import type { DocumentData, QueryDocumentSnapshot, SnapshotOptions, Timestamp } from "firebase/firestore";
 
 export type EpkForm = {
   id: string;
   userId: string;
-  artistName: string; 
+  artistName: string;
   imageUrl: string;
   bio: string;
   location: string;
@@ -17,7 +12,7 @@ export type EpkForm = {
   instagramHandle?: string;
   tiktokHandle?: string;
   twitterHandle?: string;
-  notableSongs: { title: string, plays: number }[];
+  notableSongs: { title: string; plays: number }[];
   phoneNumber: string;
   timestamp: Timestamp;
 };
@@ -44,5 +39,5 @@ export const epkFormConverter = {
       phoneNumber: data.phoneNumber,
       timestamp: data.timestamp,
     };
-  }
+  },
 };

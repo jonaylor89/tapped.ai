@@ -1,27 +1,15 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
-import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import { config } from "./config";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-} from "../../utils/notifications";
-import {
-  getEventNameFromUrl,
-  parseArtists,
-  parseTicketPrice,
-  parseDescription,
-  parseTimes,
-} from "./parsing";
 import { v4 as uuidv4 } from "uuid";
-import { configDotenv } from "dotenv";
+import type { ScrapedEventData } from "../../types";
+import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess } from "../../utils/notifications";
 import { initScrape } from "../../utils/startup";
+import { config } from "./config";
+import { getEventNameFromUrl, parseArtists, parseDescription, parseTicketPrice, parseTimes } from "./parsing";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -53,17 +41,12 @@ async function scrapeEvent(
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, element)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, element)) ?? "").trim();
 
   // Use evaluate to capture text content
   const description = (await parseDescription(page)) ?? "";
 
-  const [ticketPrice, doorPrice] = parseTicketPrice(description) ?? [
-    null,
-    null,
-  ];
+  const [ticketPrice, doorPrice] = parseTicketPrice(description) ?? [null, null];
 
   const { startTimeStr, endTimeStr } = await page.evaluate(() => {
     function getTextContent(element: Element | ChildNode) {
@@ -108,8 +91,7 @@ async function scrapeEvent(
     }
 
     const amOrPm = String(matches[0][9]).slice(4) === "pm" ? "pm" : "am";
-    const defaultEndTime =
-      String(Number(matches[0][9].split(":")[0]) + 2) + amOrPm;
+    const defaultEndTime = String(Number(matches[0][9].split(":")[0]) + 2) + amOrPm;
 
     const startTimes = [];
     const endTimes = [];
@@ -215,7 +197,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

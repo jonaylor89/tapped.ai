@@ -18,15 +18,15 @@ export const getUserById = onRequest(async (req, res) => {
 
 export const getUserByUsername = onRequest(async (req, res) => {
   const { username } = req.query;
-    
+
   if (typeof username !== "string") {
     res.status(400).send("Invalid request");
     return;
   }
-    
+
   const userSnap = await usersRef.where("username", "==", username).get();
   const userData = userSnap.docs[0].data();
-    
+
   res.send(userData);
 });
 

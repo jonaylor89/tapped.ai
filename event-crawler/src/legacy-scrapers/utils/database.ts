@@ -1,16 +1,8 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { v4 as uuidv4 } from "uuid";
 import fetch from "node-fetch";
-import type {
-  UserModel,
-  Option,
-  Booking,
-  ScrapedEventData,
-  RunData,
-  ScraperMetadata,
-  Location,
-} from "../types";
+import { v4 as uuidv4 } from "uuid";
 import { auth, bucket, db } from "../firebase";
+import type { Booking, Location, Option, RunData, ScrapedEventData, ScraperMetadata, UserModel } from "../types";
 import { sanitizeUsername } from "../utils/sanitize";
 // import { chatGpt } from "../utils/ai";
 
@@ -31,9 +23,7 @@ export async function getUserById(userId: string): Promise<Option<UserModel>> {
   return userData;
 }
 
-export async function startScrapeRun(
-  scraper: ScraperMetadata,
-): Promise<string> {
+export async function startScrapeRun(scraper: ScraperMetadata): Promise<string> {
   // update scraper document
   const userId = scraper.id;
   await rawScrappingRef.doc(userId).set({
@@ -53,11 +43,7 @@ export async function startScrapeRun(
   return docRef.id;
 }
 
-export async function endScrapeRun(
-  scraper: ScraperMetadata,
-  scrapeRunId: string,
-  { error }: { error: string | null },
-) {
+export async function endScrapeRun(scraper: ScraperMetadata, scrapeRunId: string, { error }: { error: string | null }) {
   const userId = scraper.id;
 
   // update scraper document
@@ -67,14 +53,10 @@ export async function endScrapeRun(
   });
 
   // update last run
-  await rawScrappingRef
-    .doc(userId)
-    .collection("scrapeRuns")
-    .doc(scrapeRunId)
-    .update({
-      endTime: Timestamp.now(),
-      error: error,
-    });
+  await rawScrappingRef.doc(userId).collection("scrapeRuns").doc(scrapeRunId).update({
+    endTime: Timestamp.now(),
+    error: error,
+  });
 
   const topPerformerIds = await getTopPerformersByVenueId(scraper.venue.id);
   await usersRef.doc(scraper.venue.id).set(
@@ -87,11 +69,7 @@ export async function endScrapeRun(
   );
 }
 
-export async function saveScrapeResult(
-  scraper: ScraperMetadata,
-  runId: string,
-  data: ScrapedEventData,
-): Promise<void> {
+export async function saveScrapeResult(scraper: ScraperMetadata, runId: string, data: ScrapedEventData): Promise<void> {
   console.log(`[+] saving scrape result for ${runId} - ${data.title}`);
 
   const userId = scraper.id;
@@ -157,10 +135,7 @@ export async function getOrCreateArtist({
 }): Promise<string | null> {
   console.log(`[+] checking if performer exists: ${performerName}`);
   const artistUsername = sanitizeUsername(performerName);
-  const artistSnap = await usersRef
-    .where("username", "==", artistUsername)
-    .limit(1)
-    .get();
+  const artistSnap = await usersRef.where("username", "==", artistUsername).limit(1).get();
   if (!artistSnap.empty) {
     console.log(`[+] artist already exists: ${performerName}`);
     return artistSnap.docs[0].id;
@@ -223,11 +198,7 @@ export async function getOrCreateArtist({
   }
 }
 
-export async function createBookingsFromEvent(
-  scraper: ScraperMetadata,
-  runId: string,
-  data: ScrapedEventData,
-) {
+export async function createBookingsFromEvent(scraper: ScraperMetadata, runId: string, data: ScrapedEventData) {
   const userId = scraper.id;
   const location = scraper.location;
   const genres = scraper.venue.venueInfo?.genres ?? [];
@@ -245,10 +216,7 @@ export async function createBookingsFromEvent(
       return;
     }
 
-    const signedFlierUrl =
-      data.flierUrl !== null
-        ? await convertToSignedUrl({ url: data.flierUrl })
-        : null;
+    const signedFlierUrl = data.flierUrl !== null ? await convertToSignedUrl({ url: data.flierUrl }) : null;
 
     const booking: Booking = {
       location,
@@ -373,11 +341,7 @@ export async function createBookingsFromEvent(
 //   ]);
 // };
 
-export async function convertToSignedUrl({
-  url,
-}: {
-  url: string;
-}): Promise<string | null> {
+export async function convertToSignedUrl({ url }: { url: string }): Promise<string | null> {
   const filename = url.split("/").pop() ?? "flier.jpg";
   const extension = filename.split(".").pop();
   const imageRes = await fetch(url);
@@ -398,13 +362,8 @@ export async function convertToSignedUrl({
   return downloadURL;
 }
 
-export async function getTopPerformersByVenueId(
-  venueId: string,
-  count: number = 5,
-): Promise<string[]> {
-  const venueBookingsSnap = await bookingsRef
-    .where("requesterId", "==", venueId)
-    .get();
+export async function getTopPerformersByVenueId(venueId: string, count: number = 5): Promise<string[]> {
+  const venueBookingsSnap = await bookingsRef.where("requesterId", "==", venueId).get();
 
   const venueBookings = venueBookingsSnap.docs.map((doc) => doc.data());
 

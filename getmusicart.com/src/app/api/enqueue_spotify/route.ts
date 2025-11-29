@@ -1,13 +1,10 @@
-
-
 const cyaniteAccessToken = process.env.CYANITE_ACCESS_TOKEN;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
-  const spotifyTrackId = url.searchParams.get('spotifyTrackId');
+  const spotifyTrackId = url.searchParams.get("spotifyTrackId");
 
   console.log({ spotifyTrackId });
-
 
   const query = `
     mutation SpotifyTrackEnqueueMutation($input: SpotifyTrackEnqueueInput!) {
@@ -25,8 +22,8 @@ export async function GET(req: Request) {
       } 
     `;
 
-  const res = await fetch('https://api.cyanite.ai/graphql', {
-    method: 'POST',
+  const res = await fetch("https://api.cyanite.ai/graphql", {
+    method: "POST",
     body: JSON.stringify({
       query: {
         query,
@@ -38,8 +35,8 @@ export async function GET(req: Request) {
       },
     }),
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${cyaniteAccessToken}`,
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${cyaniteAccessToken}`,
     },
   });
 

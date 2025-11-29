@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 body {
-  background-color: #010F16;
-  color:  #fff;
+  background-color: #010f16;
+  color: #fff;
 }
 
 .tapped_btn {

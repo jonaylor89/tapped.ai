@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const AudienceField = ({ formData, updateFormData, onValidation }) => {
   const [error, setError] = useState<string | null>(null);
 
   const validateForUI = (value: string) => {
-    if (value.trim() === '') {
-      setError('Audience cannot be empty');
+    if (value.trim() === "") {
+      setError("Audience cannot be empty");
       onValidation(false);
     } else {
       setError(null);
@@ -14,7 +14,7 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
   };
 
   const justValidate = (value: string) => {
-    if (value.trim() === '') {
+    if (value.trim() === "") {
       onValidation(false);
     } else {
       onValidation(true);
@@ -22,10 +22,10 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
   };
 
   useEffect(() => {
-    justValidate(formData['audience'] || '');
-  }, [formData['audience']]);
+    justValidate(formData.audience || "");
+  }, [formData.audience, justValidate]);
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
     updateFormData({
       ...formData,
@@ -37,18 +37,16 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
   return (
     <div className="page flex h-full flex-col items-center justify-center">
       <div className="flex w-full flex-col items-start px-6">
-        <h1 className="mb-2 text-2xl font-bold text-white">
-          do you have a target audience?
-        </h1>
+        <h1 className="mb-2 text-2xl font-bold text-white">do you have a target audience?</h1>
         <div className="flex h-full w-full items-center justify-center">
           <input
             type="text"
             name="audience"
             placeholder="type here..."
-            value={formData['audience'] || ''}
+            value={formData.audience || ""}
             onChange={handleInputChange}
             className={`white_placeholder w-full appearance-none rounded ${
-              error ? 'border-2 border-red-500' : ''
+              error ? "border-2 border-red-500" : ""
             } bg-[#63b2fd] px-4 py-2 leading-tight text-white focus:bg-white focus:text-black font-semibold focus:outline-none`}
           />
         </div>
@@ -64,8 +62,8 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
           <button
             className="mb-2 px-4 py-2 rounded-xl bg-white text-black font-semibold"
             onClick={() => {
-              updateFormData({ ...formData, audience: 'teenagers' });
-              validateForUI('teenagers');
+              updateFormData({ ...formData, audience: "teenagers" });
+              validateForUI("teenagers");
             }}
           >
             teenagers
@@ -73,8 +71,8 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
           <button
             className="mb-2 px-4 py-2 rounded-xl bg-white text-black font-semibold"
             onClick={() => {
-              updateFormData({ ...formData, audience: 'college students' });
-              validateForUI('college students');
+              updateFormData({ ...formData, audience: "college students" });
+              validateForUI("college students");
             }}
           >
             college students
@@ -82,8 +80,8 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
           <button
             className="mb-2 px-4 py-2 rounded-xl bg-white text-black font-semibold"
             onClick={() => {
-              updateFormData({ ...formData, audience: 'the suburbs' });
-              validateForUI('the suburbs');
+              updateFormData({ ...formData, audience: "the suburbs" });
+              validateForUI("the suburbs");
             }}
           >
             the suburbs
@@ -91,8 +89,8 @@ const AudienceField = ({ formData, updateFormData, onValidation }) => {
           <button
             className="mb-2 px-4 py-2 rounded-xl bg-white text-black font-semibold"
             onClick={() => {
-              updateFormData({ ...formData, audience: 'the city' });
-              validateForUI('the city');
+              updateFormData({ ...formData, audience: "the city" });
+              validateForUI("the city");
             }}
           >
             the city

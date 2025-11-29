@@ -5,10 +5,12 @@ on:
     branches: [main]
     paths:
       - 'api.tapped.ai/**'
+      - 'venue-enrichment/**'
   pull_request:
     branches: [main]
     paths:
       - 'api.tapped.ai/**'
+      - 'venue-enrichment/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -16,16 +18,28 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project: [api.tapped.ai, venue-enrichment]
     defaults:
       run:
-        working-directory: api.tapped.ai
+        working-directory: ${{ matrix.project }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
+      
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          override: true
+          components: clippy
+          
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.project }}
+          
       - name: Build
         run: cargo build --verbose
-      # - name: Run tests
-      #   run: cargo test --verbose
+        
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+        
+      - name: Run tests
+        run: cargo test --verbose

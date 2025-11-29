@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getUserById } from "@/data/database";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function UserAvatar({
 	user,

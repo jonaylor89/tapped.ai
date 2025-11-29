@@ -1,6 +1,6 @@
+import UserTile from "@/components/user/UserTile";
 import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
-import UserTile from "@/components/user/UserTile";
 
 export default function ReviewTileServer({
 	review,

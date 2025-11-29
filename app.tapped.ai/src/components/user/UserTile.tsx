@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { profileImage, type UserModel } from "@/domain/types/user_model";
 import { Skeleton } from "@/components/ui/skeleton";
+import { profileImage, type UserModel } from "@/domain/types/user_model";
 
 export default function UserTile({ user }: { user: UserModel | null }) {
 	if (user === null) {

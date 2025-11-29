@@ -1,7 +1,7 @@
 /* eslint @typescript-eslint/no-var-requires: 0 */
 
 import { configDotenv } from "dotenv";
-import { initializeApp, cert, applicationDefault } from "firebase-admin/app";
+import { applicationDefault, cert, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -13,9 +13,7 @@ configDotenv({
 
 const production = process.env.NODE_ENV === "production";
 
-const credential = production
-  ? applicationDefault()
-  : cert(require("../credentials.json"));
+const credential = production ? applicationDefault() : cert(require("../credentials.json"));
 
 const app = initializeApp({
   projectId: "in-the-loop-306520",
@@ -29,8 +27,8 @@ const storage = getStorage(app);
 export const projectId = app.options.projectId;
 export const bucket = storage.bucket(`${projectId}.appspot.com`);
 
-export const openaiApiKey = process.env["OPENAI_API_KEY"] ?? "";
-export const slackWebhookUrl = process.env["SLACK_WEBHOOK_URL"] ?? "";
-export const googlePlacesApiKey = process.env["GOOGLE_PLACES_API_KEY"] ?? "";
+export const openaiApiKey = process.env.OPENAI_API_KEY ?? "";
+export const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL ?? "";
+export const googlePlacesApiKey = process.env.GOOGLE_PLACES_API_KEY ?? "";
 
 export { auth, db, fcm, storage };

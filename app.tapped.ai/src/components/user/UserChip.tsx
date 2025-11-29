@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { profileImage, type UserModel } from "@/domain/types/user_model";
 import { Button } from "@/components/ui/button";
+import { profileImage, type UserModel } from "@/domain/types/user_model";
 
 export default function UserChip({ user, onClick }: { user: UserModel; onClick?: () => void }) {
 	const router = useRouter();

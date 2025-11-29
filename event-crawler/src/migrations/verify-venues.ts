@@ -1,5 +1,5 @@
-import { db } from "../utils/firebase.js";
 import { legacyScraperConfigs } from "../legacy-scrapers/configs.js";
+import { db } from "../utils/firebase.js";
 
 const usersRef = db.collection("users");
 
@@ -18,17 +18,12 @@ export async function verifyVenueUsernames(): Promise<void> {
 
     try {
       // Check by username
-      const usernameQuery = await usersRef
-        .where("username", "==", config.username)
-        .limit(1)
-        .get();
+      const usernameQuery = await usersRef.where("username", "==", config.username).limit(1).get();
 
       if (!usernameQuery.empty) {
         const venueDoc = usernameQuery.docs[0];
         const venueData = venueDoc.data();
-        console.log(
-          `  ✅ Found by username: ${venueData.artistName || venueData.username}`,
-        );
+        console.log(`  ✅ Found by username: ${venueData.artistName || venueData.username}`);
         console.log(`     ID: ${venueDoc.id}`);
         console.log(`     Expected ID: ${config.id}`);
 
@@ -46,9 +41,7 @@ export async function verifyVenueUsernames(): Promise<void> {
       const idDoc = await usersRef.doc(config.id).get();
       if (idDoc.exists) {
         const venueData = idDoc.data();
-        console.log(
-          `  ✅ Found by ID: ${venueData?.artistName || venueData?.username}`,
-        );
+        console.log(`  ✅ Found by ID: ${venueData?.artistName || venueData?.username}`);
         console.log(`     Username in DB: ${venueData?.username}`);
         console.log(`     Expected username: ${config.username}`);
 
@@ -75,7 +68,7 @@ export async function verifyVenueUsernames(): Promise<void> {
     }
   }
 
-  console.log("\n" + "=".repeat(60));
+  console.log(`\n${"=".repeat(60)}`);
   console.log("📊 VERIFICATION SUMMARY");
   console.log("=".repeat(60));
   console.log(`Total venues checked: ${legacyScraperConfigs.length}`);
@@ -84,7 +77,9 @@ export async function verifyVenueUsernames(): Promise<void> {
 
   if (missingVenues > 0) {
     console.log("\n🚨 MISSING VENUES:");
-    missingVenuesList.forEach((venue) => console.log(`   - ${venue}`));
+    for (const venue of missingVenuesList) {
+      console.log(`   - ${venue}`);
+    }
     console.log("\n💡 Next steps:");
     console.log("   1. Check if usernames in config are correct");
     console.log("   2. Verify venue documents exist in Firestore");
@@ -103,7 +98,7 @@ export async function searchVenuesByName(searchTerm: string): Promise<void> {
   try {
     const querySnapshot = await usersRef
       .where("username", ">=", searchTerm)
-      .where("username", "<=", searchTerm + "\uf8ff")
+      .where("username", "<=", `${searchTerm}\uf8ff`)
       .limit(10)
       .get();
 
@@ -164,16 +159,14 @@ export async function listPotentialVenues(): Promise<void> {
     try {
       const querySnapshot = await usersRef
         .where("username", ">=", term)
-        .where("username", "<=", term + "\uf8ff")
+        .where("username", "<=", `${term}\uf8ff`)
         .limit(5)
         .get();
 
       querySnapshot.docs.forEach((doc) => {
         const data = doc.data();
         if (data.venueInfo || data.username.includes(term)) {
-          foundVenues.add(
-            `${data.username} (${doc.id}) - ${data.artistName || "No name"}`,
-          );
+          foundVenues.add(`${data.username} (${doc.id}) - ${data.artistName || "No name"}`);
         }
       });
     } catch (error) {
@@ -198,31 +191,25 @@ async function main() {
 
   try {
     switch (command) {
-    case "verify":
-      await verifyVenueUsernames();
-      break;
-    case "search":
-      if (!searchTerm) {
-        console.error("Usage: npm run verify-venues search <search_term>");
-        process.exit(1);
-      }
-      await searchVenuesByName(searchTerm);
-      break;
-    case "list":
-      await listPotentialVenues();
-      break;
-    default:
-      console.log("Usage:");
-      console.log(
-        "  npm run verify-venues verify  - Verify all legacy venue usernames",
-      );
-      console.log(
-        "  npm run verify-venues search <term>  - Search for venues by name",
-      );
-      console.log(
-        "  npm run verify-venues list    - List all potential venue accounts",
-      );
-      break;
+      case "verify":
+        await verifyVenueUsernames();
+        break;
+      case "search":
+        if (!searchTerm) {
+          console.error("Usage: npm run verify-venues search <search_term>");
+          process.exit(1);
+        }
+        await searchVenuesByName(searchTerm);
+        break;
+      case "list":
+        await listPotentialVenues();
+        break;
+      default:
+        console.log("Usage:");
+        console.log("  npm run verify-venues verify  - Verify all legacy venue usernames");
+        console.log("  npm run verify-venues search <term>  - Search for venues by name");
+        console.log("  npm run verify-venues list    - List all potential venue accounts");
+        break;
     }
   } catch (error) {
     console.error("💥 Script failed:", error);

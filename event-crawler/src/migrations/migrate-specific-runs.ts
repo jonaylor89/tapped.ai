@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
+import type { EventData, UserModel } from "../types.js";
 import { db } from "../utils/firebase.js";
-import { EventData, UserModel } from "../types.js";
 
 // Legacy types from webscrapers
 interface LegacyScrapedEventData {
@@ -59,10 +59,7 @@ async function findFailedRuns(runIds: string[]): Promise<FailedRun[]> {
     console.log(`[+] Checking scraper: ${scraperId}`);
 
     // Get all runs for this scraper
-    const runsSnapshot = await rawScrapeDataRef
-      .doc(scraperId)
-      .collection("scrapeRuns")
-      .get();
+    const runsSnapshot = await rawScrapeDataRef.doc(scraperId).collection("scrapeRuns").get();
 
     for (const runDoc of runsSnapshot.docs) {
       const runId = runDoc.id;
@@ -81,10 +78,7 @@ async function findFailedRuns(runIds: string[]): Promise<FailedRun[]> {
 /**
  * Migrate specific failed runs
  */
-export async function migrateSpecificRuns(
-  failedRuns: FailedRun[],
-  dryRun: boolean = true,
-): Promise<void> {
+export async function migrateSpecificRuns(failedRuns: FailedRun[], dryRun: boolean = true): Promise<void> {
   console.log(`[+] Starting specific run migration (dry run: ${dryRun})`);
   console.log(`[+] Processing ${failedRuns.length} failed runs`);
 
@@ -105,11 +99,7 @@ export async function migrateSpecificRuns(
       }
 
       // Get the specific run data
-      const runDoc = await rawScrapeDataRef
-        .doc(scraperId)
-        .collection("scrapeRuns")
-        .doc(runId)
-        .get();
+      const runDoc = await rawScrapeDataRef.doc(scraperId).collection("scrapeRuns").doc(runId).get();
 
       if (!runDoc.exists) {
         console.error(`[!] Run ${runId} not found for scraper ${scraperId}`);
@@ -134,19 +124,12 @@ export async function migrateSpecificRuns(
 
           // Validate required data
           if (!legacyEventData.startTime || !legacyEventData.endTime) {
-            console.warn(
-              `[!] Skipping event with missing dates: ${legacyEventData.id}`,
-            );
+            console.warn(`[!] Skipping event with missing dates: ${legacyEventData.id}`);
             continue;
           }
 
           // Transform legacy data to new schema
-          const newEventData = transformLegacyEventData(
-            legacyEventData,
-            venue,
-            runId,
-            runData.startTime.toDate(),
-          );
+          const newEventData = transformLegacyEventData(legacyEventData, venue, runId, runData.startTime.toDate());
 
           if (!dryRun) {
             // Save to new crawler collection
@@ -158,27 +141,20 @@ export async function migrateSpecificRuns(
                 endTime: Timestamp.fromDate(newEventData.endTime),
                 crawlerInfo: {
                   ...newEventData.crawlerInfo,
-                  timestamp: Timestamp.fromDate(
-                    newEventData.crawlerInfo.timestamp,
-                  ),
+                  timestamp: Timestamp.fromDate(newEventData.crawlerInfo.timestamp),
                 },
               },
               { merge: true },
             );
 
-            console.log(
-              `[+] Migrated event: ${newEventData.title} (${encodedLink})`,
-            );
+            console.log(`[+] Migrated event: ${newEventData.title} (${encodedLink})`);
           } else {
             console.log(`[DRY RUN] Would migrate event: ${newEventData.title}`);
           }
 
           totalEvents++;
         } catch (error) {
-          console.error(
-            `[!] Error processing event in run ${runId} for ${scraperId}:`,
-            error,
-          );
+          console.error(`[!] Error processing event in run ${runId} for ${scraperId}:`, error);
           console.error(
             "[!] Event data:",
             JSON.stringify(
@@ -241,17 +217,14 @@ function transformLegacyEventData(
     }
 
     // Validate that we have valid dates
-    if (isNaN(startTime.getTime())) {
+    if (Number.isNaN(startTime.getTime())) {
       throw new Error(`Invalid startTime date: ${legacyData.startTime}`);
     }
-    if (isNaN(endTime.getTime())) {
+    if (Number.isNaN(endTime.getTime())) {
       throw new Error(`Invalid endTime date: ${legacyData.endTime}`);
     }
   } catch (error) {
-    console.error(
-      `[!] Date conversion error for event ${legacyData.id}:`,
-      error,
-    );
+    console.error(`[!] Date conversion error for event ${legacyData.id}:`, error);
     throw error;
   }
 
@@ -296,14 +269,11 @@ async function getVenueById(venueId: string): Promise<UserModel | null> {
  * CLI interface
  */
 async function main() {
-  const dryRun =
-    process.argv.includes("--dry-run") || process.argv.includes("-d");
+  const dryRun = process.argv.includes("--dry-run") || process.argv.includes("-d");
   const force = process.argv.includes("--force") || process.argv.includes("-f");
 
   if (!dryRun && !force) {
-    console.error(
-      "This is a destructive operation. Use --dry-run to test or --force to execute.",
-    );
+    console.error("This is a destructive operation. Use --dry-run to test or --force to execute.");
     process.exit(1);
   }
 

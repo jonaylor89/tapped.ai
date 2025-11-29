@@ -1,19 +1,20 @@
 /* eslint-disable import/no-unresolved */
-import { onSchedule } from "firebase-functions/v2/scheduler";
-import { HttpsError } from "firebase-functions/v2/https";
-import * as functions from "firebase-functions";
-import {
-  bookingsRef,
-  // servicesRef,
-  usersRef,
-  bookerReviewsSubcollection,
-  performerReviewsSubcollection,
-  SLACK_WEBHOOK_URL,
-} from "./firebase";
-import { Booking } from "../types/models";
+
 // import { createActivity } from "./activities";
 import { FieldValue } from "firebase-admin/firestore";
+import * as functions from "firebase-functions";
 import { debug } from "firebase-functions/logger";
+import { HttpsError } from "firebase-functions/v2/https";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import type { Booking } from "../types/models";
+import {
+  bookerReviewsSubcollection,
+  bookingsRef,
+  performerReviewsSubcollection,
+  SLACK_WEBHOOK_URL,
+  // servicesRef,
+  usersRef,
+} from "./firebase";
 import { slackNotification } from "./notifications";
 import { isNullOrUndefined } from "./utils";
 
@@ -28,8 +29,7 @@ const _updatePerformerRating = async ({
   reviewCount: number;
   newRating: number;
 }) => {
-  const overallRating =
-    (currRating * reviewCount + newRating) / (reviewCount + 1);
+  const overallRating = (currRating * reviewCount + newRating) / (reviewCount + 1);
 
   await usersRef.doc(userId).set(
     {
@@ -52,8 +52,7 @@ const _updateBookerRating = async ({
   reviewCount: number;
   newRating: number;
 }) => {
-  const overallRating =
-    (currRating * reviewCount + newRating) / (reviewCount + 1);
+  const overallRating = (currRating * reviewCount + newRating) / (reviewCount + 1);
 
   await usersRef.doc(userId).set(
     {
@@ -124,21 +123,15 @@ const _updateBookerRating = async ({
 //   });
 
 export const notifyFoundersOnBookings = functions
-  .runWith({ secrets: [ SLACK_WEBHOOK_URL ] })
+  .runWith({ secrets: [SLACK_WEBHOOK_URL] })
   .firestore.document("bookings/{bookingId}")
   .onCreate(async (data) => {
     const booking = data.data() as Booking;
     if (booking === undefined) {
-      throw new HttpsError(
-        "failed-precondition",
-        `booking ${data.id} does not exist`,
-      );
+      throw new HttpsError("failed-precondition", `booking ${data.id} does not exist`);
     }
 
-    if (
-      !isNullOrUndefined(booking.scraperInfo) ||
-      !isNullOrUndefined(booking.crawlerInfo)
-    ) {
+    if (!isNullOrUndefined(booking.scraperInfo) || !isNullOrUndefined(booking.crawlerInfo)) {
       debug("booking added by scraper, not sending notification");
       return;
     }
@@ -153,7 +146,7 @@ export const notifyFoundersOnBookings = functions
 
         await slackNotification({
           title: "booking without location",
-          body: `booking https://app.tapped.ai/booking/${data.id} has no venue. added by ${requestee?.username ? "https://app.tapped.ai/u/" + requestee.username : "<UNKNOWN>"} and requested`,
+          body: `booking https://app.tapped.ai/booking/${data.id} has no venue. added by ${requestee?.username ? `https://app.tapped.ai/u/${requestee.username}` : "<UNKNOWN>"} and requested`,
           slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
         });
 
@@ -180,9 +173,7 @@ export const notifyFoundersOnBookings = functions
 
     const msg = {
       title: "NEW TAPPED BOOKING!!!",
-      body: `${requester?.artistName ?? "<UNKNOWN>"} booked ${
-        requestee?.artistName ?? "<UNKNOWN>"
-      }`,
+      body: `${requester?.artistName ?? "<UNKNOWN>"} booked ${requestee?.artistName ?? "<UNKNOWN>"}`,
     };
     await slackNotification({
       ...msg,
@@ -190,11 +181,8 @@ export const notifyFoundersOnBookings = functions
     });
   });
 
-export const cancelBookingIfExpired = onSchedule("0 * * * *", async (event) => {
-  const pendingBookings = await bookingsRef
-    .where("status", "==", "pending")
-    .limit(200)
-    .get();
+export const cancelBookingIfExpired = onSchedule("0 * * * *", async (_event) => {
+  const pendingBookings = await bookingsRef.where("status", "==", "pending").limit(200).get();
 
   for (const booking of pendingBookings.docs) {
     const bookingData = booking.data() as Booking;
@@ -253,8 +241,7 @@ export const incrementReviewCountOnPerformerReview = functions.firestore
     );
 
     const currRating = (await userRef.get()).data()?.performerInfo?.rating || 0;
-    const reviewCount =
-      (await userRef.get()).data()?.performInfo?.reviewCount || 0;
+    const reviewCount = (await userRef.get()).data()?.performInfo?.reviewCount || 0;
     const newRating = data.data()?.overallRating || 0;
 
     _updatePerformerRating({

@@ -1,11 +1,12 @@
 /* eslint-disable import/no-unresolved */
-import { v4 as uuidv4 } from "uuid";
-import * as functions from "firebase-functions";
-import { Booking, UserModel } from "../types/models";
-import { servicesRef } from "./firebase";
-import { HttpsError } from "firebase-functions/v2/https";
+
 import { FieldValue } from "firebase-admin/firestore";
+import * as functions from "firebase-functions";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { HttpsError } from "firebase-functions/v2/https";
+import { v4 as uuidv4 } from "uuid";
+import type { Booking, UserModel } from "../types/models";
+import { servicesRef } from "./firebase";
 
 const _createDefaultServices = async (user: UserModel) => {
   const userId = user.id;
@@ -40,53 +41,42 @@ const _createDefaultServices = async (user: UserModel) => {
       count: 0,
       deleted: false,
     },
-  ]
+  ];
 
   await Promise.all(
     services.map((service) => {
-      return servicesRef
-        .doc(user.id)
-        .collection("userServices")
-        .doc(service.id)
-        .set(service);
+      return servicesRef.doc(user.id).collection("userServices").doc(service.id).set(service);
     }),
   );
-}
+};
 
-export const incrementServiceCountOnBooking = functions
-  .firestore
+export const incrementServiceCountOnBooking = functions.firestore
   .document("bookings/{bookingId}")
   .onCreate(async (snapshot, context) => {
     const booking = snapshot.data() as Booking;
     if (booking === undefined) {
-      throw new HttpsError("failed-precondition", `booking ${context.params.bookingId} does not exist`,);
+      throw new HttpsError("failed-precondition", `booking ${context.params.bookingId} does not exist`);
     }
 
     if (booking.serviceId === undefined) {
-      throw new HttpsError("failed-precondition", `booking ${context.params.bookingId} does not have a serviceId`,);
+      throw new HttpsError("failed-precondition", `booking ${context.params.bookingId} does not have a serviceId`);
     }
 
     const serviceId = booking.serviceId;
-    if (serviceId !== null)
-      await servicesRef
-        .doc(serviceId)
-        .update({ bookingCount: FieldValue.increment(1) });
+    if (serviceId !== null) await servicesRef.doc(serviceId).update({ bookingCount: FieldValue.increment(1) });
   });
 
 // TODO: on user created, add a few services for them by default
-export const createDefaultServicesOnUserCreated = onDocumentCreated(
-  { document: "users/{userId}" },
-  async (event) => {
-    const snapshot = event.data;
-    const user = snapshot?.data() as UserModel | undefined;
-    if (user === undefined) {
-      throw new HttpsError("failed-precondition", "user does not exist");
-    }
+export const createDefaultServicesOnUserCreated = onDocumentCreated({ document: "users/{userId}" }, async (event) => {
+  const snapshot = event.data;
+  const user = snapshot?.data() as UserModel | undefined;
+  if (user === undefined) {
+    throw new HttpsError("failed-precondition", "user does not exist");
+  }
 
-    if (user.unclaimed) {
-      return;
-    }
+  if (user.unclaimed) {
+    return;
+  }
 
-    _createDefaultServices(user);
-  });
-
+  _createDefaultServices(user);
+});

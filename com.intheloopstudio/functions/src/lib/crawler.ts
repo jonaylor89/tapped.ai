@@ -1,15 +1,16 @@
 /* eslint-disable import/no-unresolved */
-import { v4 as uuidv4 } from "uuid";
+
 import { Timestamp } from "firebase-admin/firestore";
+import { getDownloadURL } from "firebase-admin/storage";
 import { error, info, warn } from "firebase-functions/logger";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
+import { v4 as uuidv4 } from "uuid";
+import type { Booking, EventData, Option } from "../types/models";
 import { auth, bookingsRef, bucket, crawlerRef, usersRef } from "./firebase";
-import { Option, Booking, EventData } from "../types/models";
 // import fetch from "node-fetch";
 import { sanitizeUsername } from "./utils";
-import { getDownloadURL } from "firebase-admin/storage";
 
-async function getBookingBySimilarity(booking: Booking): Promise<Booking | null>{
+async function getBookingBySimilarity(booking: Booking): Promise<Booking | null> {
   const bookingSnaps = await bookingsRef
     .where("requesteeId", "==", booking.requesteeId)
     .where("requesterId", "==", booking.requesterId)
@@ -28,22 +29,19 @@ export async function getOrCreatePerformer({
   bio,
   genres,
 }: {
-    performerName: string;
-    bio?: string;
-    genres: string[];
-    // location: Option<Location>;
-  }): Promise<string | null> {
+  performerName: string;
+  bio?: string;
+  genres: string[];
+  // location: Option<Location>;
+}): Promise<string | null> {
   console.log(`[+] checking if performer exists: ${performerName}`);
   const sanitizedPerformerName = sanitizeUsername(performerName);
-  const artistSnap = await usersRef
-    .where("username", "==", sanitizedPerformerName)
-    .limit(1)
-    .get();
+  const artistSnap = await usersRef.where("username", "==", sanitizedPerformerName).limit(1).get();
   if (!artistSnap.empty) {
     console.log(`[+] performer already exists: ${performerName}`);
     return artistSnap.docs[0].id;
   }
-  
+
   try {
     const artistEmail = `${sanitizedPerformerName}-${
       Math.floor(Math.random() * 100) // random number between 1 and 100
@@ -54,43 +52,43 @@ export async function getOrCreatePerformer({
     });
     const uid = userRecord.uid;
     const performerObject: {
-        id: string;
-        email: string;
-        timestamp: Timestamp;
-        username: string;
-        artistName: string;
-        bio: string;
-        occupations: string[];
-        profilePicture: string | null;
-        unclaimed: true;
-        location: Option<Location>;
-        performerInfo: {
-          genres: string[];
-          label: "Independent";
-          rating: number;
-          reviewCount: number;
-        };
-        deleted: false;
-      } = {
-        location: null,
-        id: uid,
-        email: artistEmail,
-        timestamp: Timestamp.now(),
-        username: sanitizedPerformerName,
-        artistName: performerName,
-        bio: bio ?? "",
-        occupations: [],
-        profilePicture: null,
-        performerInfo: {
-          label: "Independent",
-          genres: genres,
-          rating: 5.0,
-          reviewCount: 1,
-        },
-        unclaimed: true,
-        deleted: false,
+      id: string;
+      email: string;
+      timestamp: Timestamp;
+      username: string;
+      artistName: string;
+      bio: string;
+      occupations: string[];
+      profilePicture: string | null;
+      unclaimed: true;
+      location: Option<Location>;
+      performerInfo: {
+        genres: string[];
+        label: "Independent";
+        rating: number;
+        reviewCount: number;
       };
-  
+      deleted: false;
+    } = {
+      location: null,
+      id: uid,
+      email: artistEmail,
+      timestamp: Timestamp.now(),
+      username: sanitizedPerformerName,
+      artistName: performerName,
+      bio: bio ?? "",
+      occupations: [],
+      profilePicture: null,
+      performerInfo: {
+        label: "Independent",
+        genres: genres,
+        rating: 5.0,
+        reviewCount: 1,
+      },
+      unclaimed: true,
+      deleted: false,
+    };
+
     // console.log({ artistObject });
     await usersRef.doc(uid).set(performerObject);
     console.log(`[+] created performer: ${performerObject.artistName}`);
@@ -101,18 +99,12 @@ export async function getOrCreatePerformer({
   }
 }
 
-
-export async function convertToSignedUrl({
-  url,
-}: {
-    url: string;
-  }): Promise<string | null> {
+export async function convertToSignedUrl({ url }: { url: string }): Promise<string | null> {
   try {
-
     const filename = url.split("/").pop() ?? "flier.jpg";
     const extension = filename.split(".").pop();
     const imageRes = await fetch(url);
-  
+
     const buf = await imageRes.arrayBuffer();
     const theBuf = Buffer.from(buf);
 
@@ -121,7 +113,6 @@ export async function convertToSignedUrl({
       contentType: `image/${extension}`,
     });
 
-  
     const downloadUrl = await getDownloadURL(fileRef);
 
     return downloadUrl;
@@ -130,11 +121,8 @@ export async function convertToSignedUrl({
     return null;
   }
 }
-  
-export async function createBookingsFromEvent(
-  encodedLink: string,
-  data: EventData,
-): Promise<void> {
+
+export async function createBookingsFromEvent(encodedLink: string, data: EventData): Promise<void> {
   if (data.isMusicEvent === false) {
     console.log(`[+] skipping non-music event: ${data.title}`);
     return;
@@ -156,16 +144,13 @@ export async function createBookingsFromEvent(
       bio: "",
       genres,
     });
-  
+
     if (requesteeId === null) {
       return;
     }
-  
-    const signedFlierUrl =
-        data.flierUrl !== null
-          ? await convertToSignedUrl({ url: data.flierUrl })
-          : null;
-  
+
+    const signedFlierUrl = data.flierUrl !== null ? await convertToSignedUrl({ url: data.flierUrl }) : null;
+
     const booking: Booking = {
       addedByUser: false,
       location: venueLocation,
@@ -189,7 +174,7 @@ export async function createBookingsFromEvent(
       genres,
       referenceEventId: data.eventId ?? null,
     };
-  
+
     // check if booking like this exists already
     const candidateBooking = await getBookingBySimilarity(booking);
     if (candidateBooking === null) {
@@ -198,8 +183,7 @@ export async function createBookingsFromEvent(
     } else {
       warn(`booking like this exists already: ${candidateBooking.id}`);
     }
-  
-  
+
     // const bookingStartTime = booking.startTime.toDate();
     // if (bookingStartTime.getTime() < Date.now()) {
     //   console.log(`[+] creating reviews for booking: ${booking.name}`);
@@ -211,12 +195,15 @@ export async function createBookingsFromEvent(
     // }
 
     const bookingId = candidateBooking?.id ?? booking.id;
-    await crawlerRef.doc(encodedLink).set({
-      bookingId,
-    }, { merge: true })
+    await crawlerRef.doc(encodedLink).set(
+      {
+        bookingId,
+      },
+      { merge: true },
+    );
   }
 }
-  
+
 export const createBookingsFromCrawledData = async (): Promise<void> => {
   // get all crawled links
   const linkSnaps = await crawlerRef.get();
@@ -225,39 +212,37 @@ export const createBookingsFromCrawledData = async (): Promise<void> => {
     const link = doc.id;
     const eventData = doc.data() as EventData;
     const venue = eventData.venue;
-  
+
     // check if link is a music event
     if (!eventData.isMusicEvent) {
       console.log(`[+] skipping non-music event: ${eventData.title}`);
       continue;
     }
-  
+
     await createBookingsFromEvent(link, {
       ...eventData,
       venue,
     });
   }
-}
+};
 
-export const createBookingOnEventCrawled = onDocumentCreated(
-  { document: "crawler/{link}" },
-  async (event) => {
-    const snapshot = event.data;
-    if (snapshot === undefined) {
-      error("snapshot is undefined");
-      return;
-    }
+export const createBookingOnEventCrawled = onDocumentCreated({ document: "crawler/{link}" }, async (event) => {
+  const snapshot = event.data;
+  if (snapshot === undefined) {
+    error("snapshot is undefined");
+    return;
+  }
 
-    const encodedLink = snapshot.id;
-    const link = decodeURIComponent(encodedLink);
-    console.log(link);
+  const encodedLink = snapshot.id;
+  const link = decodeURIComponent(encodedLink);
+  console.log(link);
 
-    const eventData = snapshot.data() as EventData;
+  const eventData = snapshot.data() as EventData;
 
-    if (!eventData.isMusicEvent) {
-      console.log(`[+] skipping non-music event: ${eventData.title}`);
-      return;
-    }
+  if (!eventData.isMusicEvent) {
+    console.log(`[+] skipping non-music event: ${eventData.title}`);
+    return;
+  }
 
-    await createBookingsFromEvent(encodedLink, eventData);
-  });
+  await createBookingsFromEvent(encodedLink, eventData);
+});

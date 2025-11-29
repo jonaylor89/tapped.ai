@@ -1,12 +1,15 @@
 /* eslint-disable import/no-unresolved */
+
+import { FieldValue, Timestamp } from "firebase-admin/firestore";
 import * as functions from "firebase-functions";
+import { error, info } from "firebase-functions/logger";
+import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { marked } from "marked";
+import { Resend } from "resend";
+import Stripe from "stripe";
+import { v4 as uuidv4 } from "uuid";
+import type { MarketingPlan, UserModel } from "../types/models";
 import {
-  LEAP_API_KEY,
-  LEAP_WEBHOOK_SECRET,
-  OPEN_AI_KEY,
-  RESEND_API_KEY,
-  SLACK_WEBHOOK_URL,
   aiModelsRef,
   auth,
   avatarsRef,
@@ -14,10 +17,15 @@ import {
   creditsPerTestPriceId,
   creditsRef,
   guestMarketingPlansRef,
+  LEAP_API_KEY,
+  LEAP_WEBHOOK_SECRET,
   mainBucket,
   marketingFormsRef,
   marketingPlansRef,
+  OPEN_AI_KEY,
   projectId,
+  RESEND_API_KEY,
+  SLACK_WEBHOOK_URL,
   stripeCoverArtTestWebhookSecret,
   stripeCoverArtWebhookSecret,
   stripeKey,
@@ -26,21 +34,10 @@ import {
   trainingImagesRef,
   usersRef,
 } from "./firebase";
-import { Resend } from "resend";
-import { error, info } from "firebase-functions/logger";
-import {
-  basicEnhancedBio,
-  generateBasicMarketingPlan,
-  generateSingleBasicMarketingPlan,
-} from "./openai";
-import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
-import { authenticatedRequest } from "./utils";
 import { sd } from "./leapai";
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
-import { MarketingPlan, UserModel } from "../types/models";
-import Stripe from "stripe";
-import { v4 as uuidv4 } from "uuid";
 import { slackNotification } from "./notifications";
+import { basicEnhancedBio, generateBasicMarketingPlan, generateSingleBasicMarketingPlan } from "./openai";
+import { authenticatedRequest } from "./utils";
 
 const WEBHOOK_URL = `https://us-central1-${projectId}.cloudfunctions.net/trainWebhook`;
 const IMAGE_WEBHOOK_URL = `https://us-central1-${projectId}.cloudfunctions.net/imageWebhook`;
@@ -64,7 +61,7 @@ const _incrementCoverArtTestCredits = async (
     customer_details: {
       email: string;
     };
-  }
+  },
 ) => {
   const userId = checkoutSessionCompleted.client_reference_id;
 
@@ -77,18 +74,14 @@ const _incrementCoverArtTestCredits = async (
   info({ sessionId: checkoutSessionCompleted.id });
 
   // get form data from firestore
-  const checkoutSession = await stripe.checkout.sessions.retrieve(
-    checkoutSessionCompleted.id
-  );
+  const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionCompleted.id);
   info({ checkoutSession });
 
   // const customerEmail = checkoutSessionCompleted.customer_email ?? checkoutSessionCompleted.customer_details.email;
 
-  const lineItems = await stripe.checkout.sessions.listLineItems(
-    checkoutSessionCompleted.id
-  );
+  const lineItems = await stripe.checkout.sessions.listLineItems(checkoutSessionCompleted.id);
   const quantity = lineItems.data[0].quantity;
-  const priceId = lineItems.data[0].price!.id;
+  const priceId = lineItems.data[0].price?.id;
   const creditsPerUnit = creditsPerTestPriceId[priceId];
   const totalCreditsPurchased = quantity! * creditsPerUnit;
 
@@ -97,7 +90,7 @@ const _incrementCoverArtTestCredits = async (
   console.log({ priceId });
   console.log({ creditsPerUnit });
 
-  console.log("totalCreditsPurchased: " + totalCreditsPurchased);
+  console.log(`totalCreditsPurchased: ${totalCreditsPurchased}`);
 
   await creditsRef.doc(userId).update({
     coverArtCredits: FieldValue.increment(totalCreditsPurchased),
@@ -113,7 +106,7 @@ const _incrementCoverArtCredits = async (
     customer_details: {
       email: string;
     };
-  }
+  },
 ) => {
   const userId = checkoutSessionCompleted.client_reference_id;
 
@@ -126,18 +119,14 @@ const _incrementCoverArtCredits = async (
   info({ sessionId: checkoutSessionCompleted.id });
 
   // get form data from firestore
-  const checkoutSession = await stripe.checkout.sessions.retrieve(
-    checkoutSessionCompleted.id
-  );
+  const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionCompleted.id);
   info({ checkoutSession });
 
   // const customerEmail = checkoutSessionCompleted.customer_email ?? checkoutSessionCompleted.customer_details.email;
 
-  const lineItems = await stripe.checkout.sessions.listLineItems(
-    checkoutSessionCompleted.id
-  );
+  const lineItems = await stripe.checkout.sessions.listLineItems(checkoutSessionCompleted.id);
   const quantity = lineItems.data[0].quantity;
-  const priceId = lineItems.data[0].price!.id;
+  const priceId = lineItems.data[0].price?.id;
   const creditsPerUnit = creditsPerPriceId[priceId];
   const totalCreditsPurchased = quantity! * creditsPerUnit;
 
@@ -146,7 +135,7 @@ const _incrementCoverArtCredits = async (
   console.log({ priceId });
   console.log({ creditsPerUnit });
 
-  console.log("totalCreditsPurchased: " + totalCreditsPurchased);
+  console.log(`totalCreditsPurchased: ${totalCreditsPurchased}`);
 
   await creditsRef.doc(userId).update({
     coverArtCredits: FieldValue.increment(totalCreditsPurchased),
@@ -154,9 +143,12 @@ const _incrementCoverArtCredits = async (
 };
 
 const _giveUserCoverArtCredits = async (userId: string, amount: number) => {
-  await creditsRef.doc(userId).set({
-    coverArtCredits: FieldValue.increment(amount),
-  }, { merge: true });
+  await creditsRef.doc(userId).set(
+    {
+      coverArtCredits: FieldValue.increment(amount),
+    },
+    { merge: true },
+  );
 };
 
 const _emailMarketingPlan = async ({
@@ -194,15 +186,15 @@ const _emailMarketingPlan = async ({
   // TODO: get use follower count
   // TODO: switch case for if it's a single, EP, or album
   const { content, prompt } = await generateBasicMarketingPlan({
-    releaseType: formData["marketingType"],
-    artistName: formData["artistName"],
+    releaseType: formData.marketingType,
+    artistName: formData.artistName,
     // artistGenres: formData.genre,
     // igFollowerCount,
-    singleName: formData["productName"],
-    aesthetic: formData["aesthetic"],
-    targetAudience: formData["audience"],
-    moreToCome: formData["moreToCome"] ?? "nothing",
-    releaseTimeline: formData["timeline"],
+    singleName: formData.productName,
+    aesthetic: formData.aesthetic,
+    targetAudience: formData.audience,
+    moreToCome: formData.moreToCome ?? "nothing",
+    releaseTimeline: formData.timeline,
     apiKey: OPEN_AI_KEY.value(),
   });
 
@@ -218,7 +210,7 @@ const _emailMarketingPlan = async ({
   if (customerEmail !== null) {
     await resend.emails.send({
       from: "no-reply@tapped.ai",
-      to: [ customerEmail ],
+      to: [customerEmail],
       subject: "Your Marketing Plan",
       html: `<div>${marked.parse(content)}</div>`,
     });
@@ -247,7 +239,7 @@ export const onDeleteAvatar = functions.firestore
 
 export const createAvatarInferenceJob = onCall(
   {
-    secrets: [ LEAP_API_KEY, LEAP_WEBHOOK_SECRET ],
+    secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET],
   },
   async (request) => {
     // // Checking that the user is authenticated.
@@ -258,18 +250,12 @@ export const createAvatarInferenceJob = onCall(
 
     if (!(typeof modelId === "string") || modelId.length === 0) {
       // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError(
-        "invalid-argument",
-        "The function must be called " + "with argument \"modelId\"."
-      );
+      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "modelId".');
     }
 
     if (!(typeof prompt === "string") || prompt.length === 0) {
       // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError(
-        "invalid-argument",
-        "The function must be called " + "with argument \"avatarStyle\"."
-      );
+      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "avatarStyle".');
     }
 
     const userId = request.auth?.uid;
@@ -289,12 +275,12 @@ export const createAvatarInferenceJob = onCall(
     info({ inferenceId });
 
     return { inferenceId };
-  }
+  },
 );
 
 export const getAvatarInferenceJob = onCall(
   {
-    secrets: [ LEAP_API_KEY ],
+    secrets: [LEAP_API_KEY],
   },
   async (request) => {
     // Checking that the user is authenticated.
@@ -305,10 +291,7 @@ export const getAvatarInferenceJob = onCall(
 
     if (!(typeof inferenceId === "string") || inferenceId.length === 0) {
       // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError(
-        "invalid-argument",
-        "The function must be called " + "with argument \"inferenceId\"."
-      );
+      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "inferenceId".');
     }
 
     const { inferenceJob } = await sd.getInferenceJob({
@@ -317,29 +300,24 @@ export const getAvatarInferenceJob = onCall(
     });
 
     return { inferenceJob };
-  }
+  },
 );
 
-export const deleteInferenceJob = functions
-  .runWith({ secrets: [ LEAP_API_KEY ] })
-  .https.onCall(async (request) => {
-    // Checking that the user is authenticated.
-    if (!request.auth) {
-      // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError(
-        "failed-precondition",
-        "The function must be " + "called while authenticated."
-      );
-    }
+export const deleteInferenceJob = functions.runWith({ secrets: [LEAP_API_KEY] }).https.onCall(async (request) => {
+  // Checking that the user is authenticated.
+  if (!request.auth) {
+    // Throwing an HttpsError so that the client gets the error details.
+    throw new HttpsError("failed-precondition", "The function must be " + "called while authenticated.");
+  }
 
-    const leapApiKey = LEAP_API_KEY.value();
-    const { inferenceId } = request.data;
+  const leapApiKey = LEAP_API_KEY.value();
+  const { inferenceId } = request.data;
 
-    await sd.deleteInferenceJob({ inferenceId, leapApiKey });
-  });
+  await sd.deleteInferenceJob({ inferenceId, leapApiKey });
+});
 
 export const imageWebhook = onRequest(
-  { secrets: [ LEAP_API_KEY, LEAP_WEBHOOK_SECRET ] },
+  { secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] },
   async (request, response): Promise<void> => {
     const { id: inferenceId, state: status, result } = request.body;
 
@@ -354,9 +332,7 @@ export const imageWebhook = onRequest(
       return;
     }
 
-    if (
-      webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()
-    ) {
+    if (webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()) {
       response.status(401).json("Unauthorized!");
       return;
     }
@@ -379,100 +355,91 @@ export const imageWebhook = onRequest(
             modelId: modelId,
             url: image.uri,
           });
-        })
+        }),
       );
       response.status(200).json("Success");
     } catch (e) {
       info(e);
       response.status(500).json("Something went wrong!");
     }
-  }
+  },
 );
 
-export const trainModel = onCall(
-  { secrets: [ LEAP_API_KEY, LEAP_WEBHOOK_SECRET ] },
-  async (request) => {
-    // Checking that the user is authenticated.
-    if (!request.auth) {
-      // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError(
-        "failed-precondition",
-        "The function must be called while authenticated."
-      );
-    }
-
-    const userId = request.auth.uid;
-    info({ userId });
-    const {
-      imageUrls,
-      type,
-      name,
-    }: {
-      imageUrls: string[];
-      type: string;
-      name: string;
-    } = request.data;
-
-    if (imageUrls?.length < 4) {
-      throw new HttpsError(
-        "failed-precondition",
-        "Upload at least 4 sample images"
-      );
-    }
-    info({ imageUrls, type, name });
-
-    // eslint-disable-next-line max-len
-    const fullWebhook = `${WEBHOOK_URL.valueOf()}?user_id=${userId}&webhook_secret=${LEAP_WEBHOOK_SECRET.value()}&model_type=${type}`;
-
-    const modelId = await sd.createTrainingJob({
-      leapApiKey: LEAP_API_KEY.value(),
-      imageUrls,
-      name,
-      type,
-      userId,
-      webhookUrl: fullWebhook,
-    });
-
-    // add model to DB
-    await aiModelsRef.doc(userId).collection("imageModels").doc(modelId).set({
-      id: modelId,
-      user_id: userId,
-      name,
-      type,
-      timestamp: Timestamp.now(),
-      status: "training",
-    });
-
-    await Promise.all(
-      imageUrls.map(async (imageUrl) => {
-        // get image from url
-        const imagesSnap = await trainingImagesRef
-          .doc(userId)
-          .collection("userSamples")
-          .where("url", "==", imageUrl)
-          .get();
-
-        if (imagesSnap.empty) return;
-
-        // update image with modelId
-        await Promise.all(
-          imagesSnap.docs.map(async (doc) => {
-            await doc.ref.update({
-              modelId: modelId,
-            });
-          })
-        );
-      })
-    );
-
-    return {
-      success: true,
-    };
+export const trainModel = onCall({ secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] }, async (request) => {
+  // Checking that the user is authenticated.
+  if (!request.auth) {
+    // Throwing an HttpsError so that the client gets the error details.
+    throw new HttpsError("failed-precondition", "The function must be called while authenticated.");
   }
-);
+
+  const userId = request.auth.uid;
+  info({ userId });
+  const {
+    imageUrls,
+    type,
+    name,
+  }: {
+    imageUrls: string[];
+    type: string;
+    name: string;
+  } = request.data;
+
+  if (imageUrls?.length < 4) {
+    throw new HttpsError("failed-precondition", "Upload at least 4 sample images");
+  }
+  info({ imageUrls, type, name });
+
+  // eslint-disable-next-line max-len
+  const fullWebhook = `${WEBHOOK_URL.valueOf()}?user_id=${userId}&webhook_secret=${LEAP_WEBHOOK_SECRET.value()}&model_type=${type}`;
+
+  const modelId = await sd.createTrainingJob({
+    leapApiKey: LEAP_API_KEY.value(),
+    imageUrls,
+    name,
+    type,
+    userId,
+    webhookUrl: fullWebhook,
+  });
+
+  // add model to DB
+  await aiModelsRef.doc(userId).collection("imageModels").doc(modelId).set({
+    id: modelId,
+    user_id: userId,
+    name,
+    type,
+    timestamp: Timestamp.now(),
+    status: "training",
+  });
+
+  await Promise.all(
+    imageUrls.map(async (imageUrl) => {
+      // get image from url
+      const imagesSnap = await trainingImagesRef
+        .doc(userId)
+        .collection("userSamples")
+        .where("url", "==", imageUrl)
+        .get();
+
+      if (imagesSnap.empty) return;
+
+      // update image with modelId
+      await Promise.all(
+        imagesSnap.docs.map(async (doc) => {
+          await doc.ref.update({
+            modelId: modelId,
+          });
+        }),
+      );
+    }),
+  );
+
+  return {
+    success: true,
+  };
+});
 
 export const trainWebhook = onRequest(
-  { secrets: [ LEAP_API_KEY, LEAP_WEBHOOK_SECRET ] },
+  { secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] },
   async (request, response): Promise<void> => {
     const {
       id,
@@ -492,9 +459,7 @@ export const trainWebhook = onRequest(
       return;
     }
 
-    if (
-      webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()
-    ) {
+    if (webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()) {
       response.status(401).json("Unauthorized!");
       return;
     }
@@ -539,92 +504,70 @@ export const trainWebhook = onRequest(
       info(e);
       response.status(500).json("Something went wrong!");
     }
-  }
+  },
 );
 
-export const createSingleMarketingPlan = onCall(
-  { secrets: [ OPEN_AI_KEY ] },
-  async (request) => {
-    const openAiKey = OPEN_AI_KEY.value();
-    const {
-      userId,
-      name,
-      aesthetic,
-      targetAudience,
-      moreToCome,
-      releaseTimeline,
-    } = request.data;
+export const createSingleMarketingPlan = onCall({ secrets: [OPEN_AI_KEY] }, async (request) => {
+  const openAiKey = OPEN_AI_KEY.value();
+  const { userId, name, aesthetic, targetAudience, moreToCome, releaseTimeline } = request.data;
 
-    info({
-      userId,
-      name,
-      aesthetic,
-      targetAudience,
-      moreToCome,
-      releaseTimeline,
-    });
+  info({
+    userId,
+    name,
+    aesthetic,
+    targetAudience,
+    moreToCome,
+    releaseTimeline,
+  });
 
-    const userSnapshot = await usersRef.doc(userId).get();
-    if (!userSnapshot.exists) {
-      throw new HttpsError(
-        "failed-precondition",
-        `user ${userId} does not exist`
-      );
-    }
-
-    const artistName = userSnapshot.data()?.username;
-    const artistGenres = userSnapshot.data()?.genres;
-
-    // const labelApplicationsQuery = await labelApplicationsRef.where("id", "==", userId).get();
-    // if (labelApplicationsQuery.empty) {
-    //   throw new HttpsError("failed-precondition", `user ${userId} does not have a label application`);
-    // }
-
-    // const igFollowerCount = labelApplicationsQuery.docs[0].data().igFollowerCount;
-
-    const { content, prompt } = await generateSingleBasicMarketingPlan({
-      artistName,
-      artistGenres,
-      // igFollowerCount,
-      singleName: name,
-      aesthetic,
-      targetAudience,
-      moreToCome,
-      releaseTimeline,
-      apiKey: openAiKey,
-    });
-
-    const uuid = uuidv4();
-    const marketingPlan: MarketingPlan = {
-      id: uuid,
-      userId: userId,
-      name: name,
-      type: "single",
-      content: content,
-      prompt: prompt,
-      timestamp: Timestamp.now(),
-    };
-    await marketingPlansRef
-      .doc(userId)
-      .collection("userMarketingPlans")
-      .doc(uuid)
-      .set(marketingPlan);
-
-    return {
-      content,
-      prompt,
-    };
+  const userSnapshot = await usersRef.doc(userId).get();
+  if (!userSnapshot.exists) {
+    throw new HttpsError("failed-precondition", `user ${userId} does not exist`);
   }
-);
+
+  const artistName = userSnapshot.data()?.username;
+  const artistGenres = userSnapshot.data()?.genres;
+
+  // const labelApplicationsQuery = await labelApplicationsRef.where("id", "==", userId).get();
+  // if (labelApplicationsQuery.empty) {
+  //   throw new HttpsError("failed-precondition", `user ${userId} does not have a label application`);
+  // }
+
+  // const igFollowerCount = labelApplicationsQuery.docs[0].data().igFollowerCount;
+
+  const { content, prompt } = await generateSingleBasicMarketingPlan({
+    artistName,
+    artistGenres,
+    // igFollowerCount,
+    singleName: name,
+    aesthetic,
+    targetAudience,
+    moreToCome,
+    releaseTimeline,
+    apiKey: openAiKey,
+  });
+
+  const uuid = uuidv4();
+  const marketingPlan: MarketingPlan = {
+    id: uuid,
+    userId: userId,
+    name: name,
+    type: "single",
+    content: content,
+    prompt: prompt,
+    timestamp: Timestamp.now(),
+  };
+  await marketingPlansRef.doc(userId).collection("userMarketingPlans").doc(uuid).set(marketingPlan);
+
+  return {
+    content,
+    prompt,
+  };
+});
 
 export const marketingPlanStripeWebhook = onRequest(
   {
-    secrets: [
-      stripeTestKey,
-      stripeTestEndpointSecret,
-      RESEND_API_KEY,
-      OPEN_AI_KEY,
-    ],
+    secrets: [stripeTestKey, stripeTestEndpointSecret, RESEND_API_KEY, OPEN_AI_KEY],
   },
   async (req, res) => {
     const stripe = new Stripe(stripeTestKey.value(), {
@@ -639,17 +582,13 @@ export const marketingPlanStripeWebhook = onRequest(
     }
 
     try {
-      const event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig,
-        stripeTestEndpointSecret.value()
-      );
+      const event = stripe.webhooks.constructEvent(req.rawBody, sig, stripeTestEndpointSecret.value());
 
       // Handle the event
       switch (event.type) {
-      case "checkout.session.completed":
-        // eslint-disable-next-line no-case-declarations
-        const checkoutSessionCompleted = event.data.object as unknown as {
+        case "checkout.session.completed": {
+          // eslint-disable-next-line no-case-declarations
+          const checkoutSessionCompleted = event.data.object as unknown as {
             id: string;
             customer_email: string | null;
             customer_details: {
@@ -657,31 +596,29 @@ export const marketingPlanStripeWebhook = onRequest(
             };
           };
 
-        // create firestore document for marketing plan set to 'processing' keyed at session_id
-        info({ checkoutSessionCompleted });
-        info({ sessionId: checkoutSessionCompleted.id });
+          // create firestore document for marketing plan set to 'processing' keyed at session_id
+          info({ checkoutSessionCompleted });
+          info({ sessionId: checkoutSessionCompleted.id });
 
-        // get form data from firestore
-        // eslint-disable-next-line no-case-declarations
-        const checkoutSession = await stripe.checkout.sessions.retrieve(
-          checkoutSessionCompleted.id
-        );
-        info({ checkoutSession });
+          // get form data from firestore
+          // eslint-disable-next-line no-case-declarations
+          const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionCompleted.id);
+          info({ checkoutSession });
 
-        // eslint-disable-next-line no-case-declarations
-        const customerEmail =
-            checkoutSessionCompleted.customer_email ??
-            checkoutSessionCompleted.customer_details.email;
-        await _emailMarketingPlan({
-          checkoutSessionCompleteId: checkoutSessionCompleted.id,
-          checkoutSession,
-          customerEmail,
-          resendApiKey: RESEND_API_KEY.value(),
-        });
-        break;
+          // eslint-disable-next-line no-case-declarations
+          const customerEmail =
+            checkoutSessionCompleted.customer_email ?? checkoutSessionCompleted.customer_details.email;
+          await _emailMarketingPlan({
+            checkoutSessionCompleteId: checkoutSessionCompleted.id,
+            checkoutSession,
+            customerEmail,
+            resendApiKey: RESEND_API_KEY.value(),
+          });
+          break;
+        }
         // ... handle other event types
-      default:
-        console.log(`Unhandled event type ${event.type}`);
+        default:
+          console.log(`Unhandled event type ${event.type}`);
       }
 
       // Return a 200 response to acknowledge receipt of the event
@@ -691,15 +628,15 @@ export const marketingPlanStripeWebhook = onRequest(
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
-  }
+  },
 );
 
 export const generateMarketingPlan = functions
   .runWith({
-    secrets: [ RESEND_API_KEY, OPEN_AI_KEY ],
+    secrets: [RESEND_API_KEY, OPEN_AI_KEY],
   })
   .firestore.document("marketingForms/{clientReferenceId}")
-  .onCreate(async (request, context) => {
+  .onCreate(async (_request, context) => {
     const clientReferenceId = context.params.clientReferenceId;
     if (clientReferenceId === null) {
       throw new HttpsError("invalid-argument", "no client reference id");
@@ -721,15 +658,15 @@ export const generateMarketingPlan = functions
 
     // TODO: get use follower count
     const { content, prompt } = await generateBasicMarketingPlan({
-      releaseType: formData["marketingType"],
-      artistName: formData["artistName"],
+      releaseType: formData.marketingType,
+      artistName: formData.artistName,
       // artistGenres: formData.genre,
       // igFollowerCount,
-      singleName: formData["productName"],
-      aesthetic: formData["aesthetic"],
-      targetAudience: formData["audience"],
-      moreToCome: formData["moreToCome"] ?? "nothing",
-      releaseTimeline: formData["timeline"],
+      singleName: formData.productName,
+      aesthetic: formData.aesthetic,
+      targetAudience: formData.audience,
+      moreToCome: formData.moreToCome ?? "nothing",
+      releaseTimeline: formData.timeline,
       apiKey: OPEN_AI_KEY.value(),
     });
 
@@ -744,7 +681,7 @@ export const generateMarketingPlan = functions
 
 export const coverArtStripeTestWebhook = onRequest(
   {
-    secrets: [ stripeTestKey, stripeCoverArtTestWebhookSecret ],
+    secrets: [stripeTestKey, stripeCoverArtTestWebhookSecret],
   },
   async (req, res) => {
     const stripe = new Stripe(stripeTestKey.value(), {
@@ -759,17 +696,13 @@ export const coverArtStripeTestWebhook = onRequest(
     }
 
     try {
-      const event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig,
-        stripeCoverArtTestWebhookSecret.value()
-      );
+      const event = stripe.webhooks.constructEvent(req.rawBody, sig, stripeCoverArtTestWebhookSecret.value());
 
       // Handle the event
       switch (event.type) {
-      case "checkout.session.completed":
-        // eslint-disable-next-line no-case-declarations
-        const checkoutSessionCompleted = event.data.object as unknown as {
+        case "checkout.session.completed": {
+          // eslint-disable-next-line no-case-declarations
+          const checkoutSessionCompleted = event.data.object as unknown as {
             id: string;
             client_reference_id: string | null;
             customer_email: string | null;
@@ -778,11 +711,12 @@ export const coverArtStripeTestWebhook = onRequest(
             };
           };
 
-        await _incrementCoverArtTestCredits(stripe, checkoutSessionCompleted);
-        break;
+          await _incrementCoverArtTestCredits(stripe, checkoutSessionCompleted);
+          break;
+        }
         // ... handle other event types
-      default:
-        console.log(`Unhandled event type ${event.type}`);
+        default:
+          console.log(`Unhandled event type ${event.type}`);
       }
 
       // Return a 200 response to acknowledge receipt of the event
@@ -792,12 +726,12 @@ export const coverArtStripeTestWebhook = onRequest(
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
-  }
+  },
 );
 
 export const coverArtStripeWebhook = onRequest(
   {
-    secrets: [ stripeKey, stripeCoverArtWebhookSecret ],
+    secrets: [stripeKey, stripeCoverArtWebhookSecret],
   },
   async (req, res) => {
     const stripe = new Stripe(stripeKey.value(), {
@@ -812,17 +746,13 @@ export const coverArtStripeWebhook = onRequest(
     }
 
     try {
-      const event = stripe.webhooks.constructEvent(
-        req.rawBody,
-        sig,
-        stripeCoverArtWebhookSecret.value()
-      );
+      const event = stripe.webhooks.constructEvent(req.rawBody, sig, stripeCoverArtWebhookSecret.value());
 
       // Handle the event
       switch (event.type) {
-      case "checkout.session.completed":
-        // eslint-disable-next-line no-case-declarations
-        const checkoutSessionCompleted = event.data.object as unknown as {
+        case "checkout.session.completed": {
+          // eslint-disable-next-line no-case-declarations
+          const checkoutSessionCompleted = event.data.object as unknown as {
             id: string;
             client_reference_id: string | null;
             customer_email: string | null;
@@ -830,11 +760,12 @@ export const coverArtStripeWebhook = onRequest(
               email: string;
             };
           };
-        await _incrementCoverArtCredits(stripe, checkoutSessionCompleted);
-        break;
+          await _incrementCoverArtCredits(stripe, checkoutSessionCompleted);
+          break;
+        }
         // ... handle other event types
-      default:
-        console.log(`Unhandled event type ${event.type}`);
+        default:
+          console.log(`Unhandled event type ${event.type}`);
       }
 
       // Return a 200 response to acknowledge receipt of the event
@@ -844,54 +775,48 @@ export const coverArtStripeWebhook = onRequest(
       res.status(400).send(`Webhook Error: ${err.message}`);
       return;
     }
-  }
+  },
 );
 
-export const generateEnhancedBio = onCall(
-  { secrets: [ OPEN_AI_KEY ] },
-  async (request) => {
-    authenticatedRequest(request);
-    // pull artist data
-    const userId = request.auth?.uid;
-    if (userId === undefined) {
-      throw new HttpsError("unauthenticated", "user is not authenticated");
-    }
-
-    const userSnapshot = await usersRef.doc(userId).get();
-    const userData = userSnapshot.data() as UserModel;
-
-    const displayName = userData?.artistName ?? userData?.username ?? "";
-    const twitterHandle = userData?.socialFollowing?.twitterHandle ?? "";
-    const tiktokHandle = userData?.socialFollowing?.tiktokHandle ?? "";
-    const instagramHandle = userData?.socialFollowing?.instagramHandle ?? "";
-    const artistGenres = userData?.performerInfo?.genres ?? [];
-
-    const openAiKey = OPEN_AI_KEY.value();
-    const { content } = await basicEnhancedBio({
-      apiKey: openAiKey,
-      artistName: displayName,
-      twitterHandle,
-      tiktokHandle,
-      instagramHandle,
-      artistGenres,
-    });
-
-    return {
-      enhancedBio: content,
-    };
+export const generateEnhancedBio = onCall({ secrets: [OPEN_AI_KEY] }, async (request) => {
+  authenticatedRequest(request);
+  // pull artist data
+  const userId = request.auth?.uid;
+  if (userId === undefined) {
+    throw new HttpsError("unauthenticated", "user is not authenticated");
   }
-);
 
-export const giveUserCoverArtCreditsOnCreate = functions.auth
-  .user()
-  .onCreate(async (user) => {
-    await _giveUserCoverArtCredits(user.uid, 15);
+  const userSnapshot = await usersRef.doc(userId).get();
+  const userData = userSnapshot.data() as UserModel;
+
+  const displayName = userData?.artistName ?? userData?.username ?? "";
+  const twitterHandle = userData?.socialFollowing?.twitterHandle ?? "";
+  const tiktokHandle = userData?.socialFollowing?.tiktokHandle ?? "";
+  const instagramHandle = userData?.socialFollowing?.instagramHandle ?? "";
+  const artistGenres = userData?.performerInfo?.genres ?? [];
+
+  const openAiKey = OPEN_AI_KEY.value();
+  const { content } = await basicEnhancedBio({
+    apiKey: openAiKey,
+    artistName: displayName,
+    twitterHandle,
+    tiktokHandle,
+    instagramHandle,
+    artistGenres,
   });
 
+  return {
+    enhancedBio: content,
+  };
+});
+
+export const giveUserCoverArtCreditsOnCreate = functions.auth.user().onCreate(async (user) => {
+  await _giveUserCoverArtCredits(user.uid, 15);
+});
+
 export const notifyFoundersOnMarketingForm = functions
-  .runWith({ secrets: [ SLACK_WEBHOOK_URL ] })
-  .firestore
-  .document("marketingForm/{formId}")
+  .runWith({ secrets: [SLACK_WEBHOOK_URL] })
+  .firestore.document("marketingForm/{formId}")
   .onCreate(async (snapshot) => {
     const form = snapshot.data();
     await slackNotification({
@@ -902,9 +827,8 @@ export const notifyFoundersOnMarketingForm = functions
   });
 
 export const notifyFoundersOnGuestMarketingPlan = functions
-  .runWith({ secrets: [ SLACK_WEBHOOK_URL ] })
-  .firestore
-  .document("guestMarketingPlans/{planId}")
+  .runWith({ secrets: [SLACK_WEBHOOK_URL] })
+  .firestore.document("guestMarketingPlans/{planId}")
   .onCreate(async () => {
     await slackNotification({
       title: "New Marketing Plan \uD83D\uDE43",

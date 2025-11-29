@@ -1,5 +1,5 @@
 import { Timestamp } from "firebase-admin/firestore";
-import { Booking, EventData, UserModel } from "../types.js";
+import type { Booking, EventData, UserModel } from "../types.js";
 import { db } from "./firebase.js";
 import { getBaseDomain } from "./parsing.js";
 
@@ -2749,15 +2749,11 @@ export async function getUserByUsername(username: string) {
   return user;
 }
 
-export async function getAllScrapedLinks(
-  venueIds: string[],
-): Promise<string[]> {
+export async function getAllScrapedLinks(venueIds: string[]): Promise<string[]> {
   const links = (
     await Promise.all(
       venueIds.map(async (venueId) => {
-        const venueSnap = await crawlerRef
-          .where("venue.id", "==", venueId)
-          .get();
+        const venueSnap = await crawlerRef.where("venue.id", "==", venueId).get();
         if (venueSnap.empty) {
           return [];
         }
@@ -2776,10 +2772,7 @@ export async function hasLinkBeenScraped(link: string): Promise<boolean> {
   return linkDoc.exists;
 }
 
-export async function saveEventData(
-  encodedLink: string,
-  eventData: EventData,
-): Promise<void> {
+export async function saveEventData(encodedLink: string, eventData: EventData): Promise<void> {
   const startTime = new Date(eventData.startTime);
   const endTime = new Date(eventData.endTime);
   const timestamp = new Date(eventData.crawlerInfo.timestamp);
@@ -2822,9 +2815,7 @@ export async function buildDomainMap(venueUsernames: string[]): Promise<
 
   const domains = venues.map((venue) => {
     const rawWebsite = venue.venueInfo?.websiteUrl;
-    const website = rawWebsite?.trim().startsWith("http")
-      ? rawWebsite
-      : `https://${rawWebsite}`;
+    const website = rawWebsite?.trim().startsWith("http") ? rawWebsite : `https://${rawWebsite}`;
     if (!website) {
       throw new Error(`[!!!] no website found for ${venue.username}`);
     }
@@ -2846,10 +2837,7 @@ export async function buildDomainMap(venueUsernames: string[]): Promise<
 }
 
 export async function groupByDayOfWeek(venueId: string) {
-  const bookingsSnap = await bookingsRef
-    .where("requesterId", "==", venueId)
-    .where("status", "==", "confirmed")
-    .get();
+  const bookingsSnap = await bookingsRef.where("requesterId", "==", venueId).where("status", "==", "confirmed").get();
 
   const bookings = bookingsSnap.docs.map((doc) => doc.data() as Booking);
   const bookingsByDayOfWeek = Array.from({ length: 7 }, () => 0);
@@ -2879,13 +2867,8 @@ export async function setBestDaysOfWeek(venueId: string) {
   );
 }
 
-export async function getTopPerformersByVenueId(
-  venueId: string,
-  count: number = 5,
-): Promise<string[]> {
-  const venueBookingsSnap = await bookingsRef
-    .where("requesterId", "==", venueId)
-    .get();
+export async function getTopPerformersByVenueId(venueId: string, count: number = 5): Promise<string[]> {
+  const venueBookingsSnap = await bookingsRef.where("requesterId", "==", venueId).get();
 
   const venueBookings = venueBookingsSnap.docs.map((doc) => doc.data());
 
@@ -2907,13 +2890,7 @@ export async function getTopPerformersByVenueId(
   return topPerformers;
 }
 
-export async function setVenueTopPerformers({
-  venueId,
-  count = 5,
-}: {
-  venueId: string;
-  count?: number;
-}) {
+export async function setVenueTopPerformers({ venueId, count = 5 }: { venueId: string; count?: number }) {
   const performerIds = await getTopPerformersByVenueId(venueId, count);
   // const performers = await Promise.all(
   //   performerIds.map((id) => getUserById(id)),

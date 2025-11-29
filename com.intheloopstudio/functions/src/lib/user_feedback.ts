@@ -4,7 +4,7 @@ import { SLACK_WEBHOOK_URL } from "./firebase";
 import { slackNotification } from "./notifications";
 
 export const notifyFoundersOnUserFeedbackSubmitted = onDocumentCreated(
-  { document: "userFeedback/{feedbackId}", secrets: [ SLACK_WEBHOOK_URL ] },
+  { document: "userFeedback/{feedbackId}", secrets: [SLACK_WEBHOOK_URL] },
   async (event) => {
     const snapshot = event.data;
     const feedback = snapshot?.data();
@@ -13,5 +13,5 @@ export const notifyFoundersOnUserFeedbackSubmitted = onDocumentCreated(
       body: feedback?.text ?? "[no text provided]",
       slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
     });
-  }
+  },
 );

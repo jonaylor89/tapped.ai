@@ -1,19 +1,13 @@
-'use client';
+"use client";
 
-import React, {
-  ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
-import { auth } from '@/utils/firebase';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { UserModel } from '@/types/user_model';
-import { getUser } from '@/utils/database';
-import { getCustomClaims } from '@/utils/auth';
-import { useRouter } from 'next/navigation';
-import Loading from '@/components/loading';
+import { onAuthStateChanged, type User } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import React, { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import Loading from "@/components/loading";
+import type { UserModel } from "@/types/user_model";
+import { getCustomClaims } from "@/utils/auth";
+import { getUser } from "@/utils/database";
+import { auth } from "@/utils/firebase";
 
 export const AuthContext = createContext<{
   authUser: User | null;
@@ -27,9 +21,7 @@ interface AuthContextProviderProps {
   children: ReactNode;
 }
 
-export function AuthContextProvider({
-  children,
-}: AuthContextProviderProps): JSX.Element {
+export function AuthContextProvider({ children }: AuthContextProviderProps): JSX.Element {
   const router = useRouter();
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [user, setUser] = useState<UserModel | null>(null);
@@ -41,13 +33,13 @@ export function AuthContextProvider({
       if (authUser) {
         const claims = await getCustomClaims();
         if (claims === undefined || claims === null) {
-          router.push('/signup');
+          router.push("/signup");
           return;
         }
 
-        const claim = claims['stripeRole'] as string | null;
+        const claim = claims["stripeRole"] as string | null;
         if (claim === undefined || claim === null) {
-          router.push('/signup');
+          router.push("/signup");
           return;
         }
 
@@ -67,9 +59,7 @@ export function AuthContextProvider({
 
   return (
     <>
-      <AuthContext.Provider value={{ authUser, user, claim }}>
-        {loading ? <Loading /> : children}
-      </AuthContext.Provider>
+      <AuthContext.Provider value={{ authUser, user, claim }}>{loading ? <Loading /> : children}</AuthContext.Provider>
     </>
   );
 }

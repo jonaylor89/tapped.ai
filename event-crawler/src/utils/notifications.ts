@@ -1,4 +1,3 @@
-
 import { slackWebhookUrl } from "./firebase.js";
 
 export async function notifyOnScrapeFailure({ error }: { error: string }) {
@@ -16,17 +15,14 @@ async function slackNotification(msg: { text: string }) {
       },
       body: JSON.stringify(msg),
     });
-  
+
     if (!response.ok) {
-      console.error(
-        `[!!!] slack notification failed to send - ${response.status}`,
-      );
+      console.error(`[!!!] slack notification failed to send - ${response.status}`);
       return;
     }
-  
+
     console.log("[+] notification sent to slack successfully");
   } catch (error) {
     console.error(error);
   }
 }
-  

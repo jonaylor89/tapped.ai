@@ -1,13 +1,16 @@
-import { useAuth } from '@/context/AuthProvider';
-import { EpkForm } from '@/types/epk_form';
-import { aiEnhanceBio } from '@/utils/api';
-import { addEpkForm } from '@/utils/database';
-import { Timestamp } from 'firebase/firestore';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { Timestamp } from "firebase/firestore";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { useAuth } from "@/context/AuthProvider";
+import { EpkForm } from "@/types/epk_form";
+import { aiEnhanceBio } from "@/utils/api";
+import { addEpkForm } from "@/utils/database";
 
-
-const SubmitField = ({ formData, updateFormData, onValidation }: {
+const SubmitField = ({
+  formData,
+  updateFormData,
+  onValidation,
+}: {
   formData: { [key: string]: string };
   updateFormData: (key: string, value: any) => void;
   onValidation: (isValid: boolean) => void;
@@ -20,13 +23,8 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
-          <p className="text-lg font-bold text-white mb-4">
-            Please login to continue
-          </p>
-          <button
-            onClick={() => router.push('/login')}
-            className='tapped_btn_rounded'
-          >
+          <p className="text-lg font-bold text-white mb-4">Please login to continue</p>
+          <button onClick={() => router.push("/login")} className="tapped_btn_rounded">
             Login
           </button>
         </div>
@@ -42,9 +40,9 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
 
     const enhancedBio = await aiEnhanceBio({
       userId: authUser.uid,
-    })
+    });
 
-    formData['bio'] = enhancedBio;
+    formData["bio"] = enhancedBio;
 
     console.log({
       userId: authUser.uid,
@@ -52,28 +50,26 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
         ...formData,
         userId: authUser.uid,
         timestamp: Timestamp.now(),
-      }
+      },
     });
-    
+
     await addEpkForm({
       userId: authUser.uid,
       epkForm: {
         ...formData,
         userId: authUser.uid,
         timestamp: Timestamp.now(),
-      }
+      },
     });
     setLoading(false);
     router.push(`/results?id=${formData.id}`);
   };
 
   return (
-    <div style={{ backgroundColor: '#15242d', height: '100vh' }} className="flex items-center justify-center">
+    <div style={{ backgroundColor: "#15242d", height: "100vh" }} className="flex items-center justify-center">
       <div className="text-center">
         <div>
-          <p className="text-lg font-bold text-white mb-4">
-            ready for your epk?
-          </p>
+          <p className="text-lg font-bold text-white mb-4">ready for your epk?</p>
         </div>
         <div className="flex items-center justify-center w-[75%] mx-auto">
           {loading && (
@@ -82,14 +78,10 @@ const SubmitField = ({ formData, updateFormData, onValidation }: {
             </div>
           )}
           {!loading && (
-            <button
-              onClick={handleButtonClick}
-              className='tapped_btn_rounded'
-            >
+            <button onClick={handleButtonClick} className="tapped_btn_rounded">
               let&apos;s get it
             </button>
           )}
-
         </div>
       </div>
     </div>

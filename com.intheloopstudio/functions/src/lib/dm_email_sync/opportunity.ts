@@ -1,37 +1,47 @@
 /* eslint-disable import/no-unresolved */
-import { HttpsError, onCall } from "firebase-functions/v2/https";
-import { OPEN_AI_KEY, POSTMARK_SERVER_ID, bookingsRef, contactVenuesRef, opportunitiesRef, usersRef } from "../firebase";
-import { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
-import { debug, info } from "firebase-functions/logger";
+
 import { Timestamp } from "firebase-admin/firestore";
-import { _appendNewContactRequestToThread } from "./venue_contacting";
+import { debug, info } from "firebase-functions/logger";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import * as postmark from "postmark";
+import type { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
+import {
+  bookingsRef,
+  contactVenuesRef,
+  OPEN_AI_KEY,
+  opportunitiesRef,
+  POSTMARK_SERVER_ID,
+  usersRef,
+} from "../firebase";
+import { _appendNewContactRequestToThread } from "./venue_contacting";
 
 export const notifyVenueOfInterestedOpportunities = onCall(
-  { secrets: [ POSTMARK_SERVER_ID, OPEN_AI_KEY ] },
+  { secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY] },
   async (request) => {
     // update update
     const { opportunityIds, userId, note } = request.data;
     process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
 
-    const opportunities = (await Promise.all(
-      opportunityIds.map(async (opId: string) => {
-        const opSnap = await opportunitiesRef.doc(opId).get();
-        if (!opSnap.exists) {
-          return null;
-        }
+    const opportunities = (
+      await Promise.all(
+        opportunityIds.map(async (opId: string) => {
+          const opSnap = await opportunitiesRef.doc(opId).get();
+          if (!opSnap.exists) {
+            return null;
+          }
 
-        return opSnap.data() as Opportunity;
-      }),
-    )).filter((op) => op !== null) as Opportunity[];
+          return opSnap.data() as Opportunity;
+        }),
+      )
+    ).filter((op) => op !== null) as Opportunity[];
 
     if (opportunities.length <= 0) {
       throw new HttpsError("failed-precondition", "no opportunities found");
     }
 
-    const fullOps = (await Promise.all(
-      opportunities.map(
-        async (op) => {
+    const fullOps = (
+      await Promise.all(
+        opportunities.map(async (op) => {
           if (op.userId === userId) {
             debug(`opportunity ${op.id} is owned by user ${userId}, skipping`);
             return null;
@@ -44,13 +54,7 @@ export const notifyVenueOfInterestedOpportunities = onCall(
           }
 
           // get all bookings for that referenceEventId
-          const bookingsSnap = await bookingsRef
-            .where(
-              "referenceEventId",
-              "==",
-              op.referenceEventId,
-            )
-            .get();
+          const bookingsSnap = await bookingsRef.where("referenceEventId", "==", op.referenceEventId).get();
 
           const bookings = bookingsSnap.docs.map((doc) => doc.data() as Booking);
           return {
@@ -58,13 +62,14 @@ export const notifyVenueOfInterestedOpportunities = onCall(
             referenceBookings: bookings,
           };
         }),
-    )).filter((op) => op !== null && op !== undefined) as (Opportunity & { referenceBookings: Booking[] })[];
+      )
+    ).filter((op) => op !== null && op !== undefined) as (Opportunity & { referenceBookings: Booking[] })[];
 
     const opsByVenue: Record<string, (Opportunity & { referenceBookings: Booking[] })[]> = {};
     for (const op of fullOps) {
       const refernceBookings = op.referenceBookings;
       if (refernceBookings.length <= 0) {
-        debug(`no bookings for event if ${op.id}, skipping`)
+        debug(`no bookings for event if ${op.id}, skipping`);
         continue;
       }
 
@@ -80,10 +85,10 @@ export const notifyVenueOfInterestedOpportunities = onCall(
       }
 
       opsByVenue[venueId].push(op);
-    } 
+    }
 
     for (const entries of Object.entries(opsByVenue)) {
-      const [ venueId, ops ] = entries;
+      const [venueId, ops] = entries;
 
       const venueSnap = await usersRef.doc(venueId).get();
       const venue = venueSnap.data() as UserModel;
@@ -95,11 +100,7 @@ export const notifyVenueOfInterestedOpportunities = onCall(
       }
 
       // check if there is already a contactVenue email thread open
-      const contactVenueSnap = await contactVenuesRef
-        .doc(userId)
-        .collection("venuesContacted")
-        .doc(venue.id)
-        .get();
+      const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venue.id).get();
 
       const bookingEmail = venue.venueInfo?.bookingEmail;
       if (bookingEmail === undefined || bookingEmail === null) {
@@ -111,7 +112,7 @@ export const notifyVenueOfInterestedOpportunities = onCall(
       debug(`venue ${venue.id} contacted already? ${venueContactedAlready}`);
 
       // if there isn't, create a new contactVenue email thread
-      // what to add to the object to change the prompt? 
+      // what to add to the object to change the prompt?
       if (!venueContactedAlready) {
         const userSnap = await usersRef.doc(userId).get();
         const user = userSnap.data() as UserModel;
@@ -126,10 +127,10 @@ export const notifyVenueOfInterestedOpportunities = onCall(
           originalMessageId: null,
           latestMessageId: null,
           subject: null,
-          allEmails: [ bookingEmail ],
+          allEmails: [bookingEmail],
           collaborators: [],
           opportunityIds: ops.map((op) => op.id),
-        }
+        };
 
         await contactVenuesRef
           .doc(userId)
@@ -154,6 +155,5 @@ export const notifyVenueOfInterestedOpportunities = onCall(
         emailClient,
       });
     }
-  }
+  },
 );
-

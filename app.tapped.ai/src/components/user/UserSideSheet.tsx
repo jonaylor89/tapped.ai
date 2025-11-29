@@ -2,14 +2,14 @@ import { ArrowUpRight, Copy } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getUserByUsername } from "@/data/database";
-import type { UserModel } from "@/domain/types/user_model";
-import { trackEvent } from "@/utils/tracking";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
+import { getUserByUsername } from "@/data/database";
+import type { UserModel } from "@/domain/types/user_model";
+import { trackEvent } from "@/utils/tracking";
 
 export default function UserSideSheet() {
 	const router = useRouter();

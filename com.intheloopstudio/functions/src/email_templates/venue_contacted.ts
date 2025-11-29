@@ -1,4 +1,3 @@
-
 export const venueContacted = `
 <p>hey!
 
@@ -18,4 +17,4 @@ Thank you for using our app to connect with venues and share your musical talent
 
 best,
 Tapped Team
-`
+`;

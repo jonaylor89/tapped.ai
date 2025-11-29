@@ -3,7 +3,7 @@ import { CheerioCrawler, Sitemap } from "crawlee";
 import { configDotenv } from "dotenv";
 import { v4 as uuidv4 } from "uuid";
 import { getRouter } from "./routes.js";
-import { EventData } from "./types.js";
+import type { EventData } from "./types.js";
 import {
   buildDomainMap,
   getAllScrapedLinks,
@@ -14,6 +14,7 @@ import {
   setVenueTopPerformers,
 } from "./utils/database.js";
 import { getBaseDomain } from "./utils/parsing.js";
+
 configDotenv({
   path: ".env.local",
 });
@@ -39,10 +40,7 @@ async function main({ dryRun }: { dryRun?: boolean }) {
   const initVenueUsernames = getVenueUsernameChunk();
   const domainMap = await buildDomainMap(initVenueUsernames);
   const simplifiedDomainMap = Object.fromEntries(
-    Object.entries(domainMap).map(([domain, { venue }]) => [
-      domain,
-      venue.username,
-    ]),
+    Object.entries(domainMap).map(([domain, { venue }]) => [domain, venue.username]),
   );
   console.log({ domainMap: simplifiedDomainMap });
 
@@ -91,10 +89,7 @@ async function main({ dryRun }: { dryRun?: boolean }) {
     // ### WARNING!!!
     // EventData was serialized to JSON and deserialized back to a JS object.
     // This means that the Date objects are now strings.
-    const { loadedUrl, ...rest } = item as Omit<
-      EventData,
-      "venue" | "crawlerInfo"
-    > & { loadedUrl: string };
+    const { loadedUrl, ...rest } = item as Omit<EventData, "venue" | "crawlerInfo"> & { loadedUrl: string };
     const domainName = getBaseDomain(loadedUrl);
     const venuePair = domainMap[domainName];
     const venue = venuePair?.venue ?? null;
@@ -152,9 +147,7 @@ async function main({ dryRun }: { dryRun?: boolean }) {
     });
   }
 
-  console.log(
-    `[+] set best days of the week and top performers for ${initVenueUsernames} venues`,
-  );
+  console.log(`[+] set best days of the week and top performers for ${initVenueUsernames} venues`);
 
   return;
 }

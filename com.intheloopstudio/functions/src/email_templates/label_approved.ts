@@ -24,4 +24,4 @@ Feel free to post about your new journey on Instagram and let your fans and frie
 Once again, welcome to the Tapped Ai family. If you have any questions or need assistance, don't hesitate to reach out. We're here to make your music dreams a reality.
 
 Let's create something extraordinary! Remember you are not officially onboard until you finish filling everything out here: www.tapped.ai/pricing.
-`
+`;

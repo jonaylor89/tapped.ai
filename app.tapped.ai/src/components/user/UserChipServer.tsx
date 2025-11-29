@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { profileImage, type UserModel } from "@/domain/types/user_model";
 import { Button } from "@/components/ui/button";
+import { profileImage, type UserModel } from "@/domain/types/user_model";
 
 export default function UserChipServer({ user }: { user: UserModel }) {
 	const imageSrc = profileImage(user);

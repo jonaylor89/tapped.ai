@@ -1,29 +1,22 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
+import { v4 as uuidv4 } from "uuid";
+import type { ScrapedEventData } from "../../types";
 import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";
+import { initScrape } from "../../utils/startup";
 import { config } from "./config";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-  notifyScapeStart,
-} from "../../utils/notifications";
 import {
   getEventNameFromUrl,
   parseArtists,
-  parseTicketPrice,
   parseDescription,
-  parseTimes,
   parseFlierUrl,
+  parseTicketPrice,
+  parseTimes,
 } from "./parsing";
-import { v4 as uuidv4 } from "uuid";
-import { configDotenv } from "dotenv";
-import { initScrape } from "../../utils/startup";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -44,9 +37,7 @@ async function scrapeEvent(
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, element)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, element)) ?? "").trim();
   const description = (await parseDescription(page)) ?? "";
 
   // null if price string is empty
@@ -54,8 +45,7 @@ async function scrapeEvent(
 
   const timeRegexPattern = /\b(\d{1,2}(?::\d{2})?)(?:a|p|am|pm)?\b/gm;
 
-  const dateRegexPattern =
-    /(\b\d{1,2}\b\s+\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b)/gm;
+  const dateRegexPattern = /(\b\d{1,2}\b\s+\b(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b)/gm;
 
   // Create an array to store matched groups
   let match;
@@ -126,32 +116,30 @@ async function scrapeEvent(
       if (timeMatchesLength > 2) {
         showTimeString = String(filteredTimeMatches[0]);
         const showTimeValue = Number(showTimeString.split(":")[0]);
-        const lastTime = Number(
-          filteredTimeMatches[timeMatchesLength - 1].split(":")[0],
-        );
+        const lastTime = Number(filteredTimeMatches[timeMatchesLength - 1].split(":")[0]);
         const endTime =
           lastTime < showTimeValue
             ? filteredTimeMatches[timeMatchesLength - 2]
             : filteredTimeMatches[timeMatchesLength - 1];
 
         if (endTime.includes(":")) {
-          endTimeString = String(endTime) + "PM";
+          endTimeString = `${String(endTime)}PM`;
         } else {
-          endTimeString = String(lastTime) + ":00PM";
+          endTimeString = `${String(lastTime)}:00PM`;
         }
       } else {
         showTimeString = String(filteredTimeMatches[1]);
 
         endTimeString = String(Number(showTimeString.split(":")[0]) + 2);
         if (endTimeString.includes(":")) {
-          endTimeString = String(endTimeString) + "PM";
+          endTimeString = `${String(endTimeString)}PM`;
         } else {
-          endTimeString = String(endTimeString) + ":00PM";
+          endTimeString = `${String(endTimeString)}:00PM`;
         }
 
         //const doorTimeString = String(filteredTimeMatches[0]);
       }
-      startTimeList.push(showTimeString + ":00PM");
+      startTimeList.push(`${showTimeString}:00PM`);
       endTimeList.push(endTimeString);
     }
   }
@@ -182,7 +170,7 @@ async function scrapeEvent(
     title,
     description,
     ticketPrice: ticketPrice ?? null,
-    doorPrice: doorPrice ? doorPrice : ticketPrice ?? null,
+    doorPrice: doorPrice ? doorPrice : (ticketPrice ?? null),
     artists,
     startTime,
     endTime,
@@ -233,7 +221,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

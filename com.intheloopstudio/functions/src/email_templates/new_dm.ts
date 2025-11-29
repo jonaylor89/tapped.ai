@@ -1,8 +1,4 @@
-
-export const newDirectMessage = ({ msg, senderDisplayName }: {
-    msg: string;
-    senderDisplayName: string;
-}): string => `
+export const newDirectMessage = ({ msg, senderDisplayName }: { msg: string; senderDisplayName: string }): string => `
 <p>
 hey!
 </p>
@@ -19,4 +15,4 @@ you have a new direct message on Tapped from ${senderDisplayName}!
 
 <p>best,</p>
 <p>Tapped Team</p>
-`
+`;

@@ -1,7 +1,7 @@
-import { Page } from "puppeteer";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 
 export function getEventNameFromUrl(url: string) {
   const pathname = new URL(url).pathname;
@@ -21,11 +21,9 @@ export function parseTicketPrice(description: string) {
   let doorPrice;
 
   const priceRegex = /\$\d+/g;
-  const prices = description.match(priceRegex)
-    ? description.match(priceRegex)
-    : [];
+  const prices = description.match(priceRegex) ? description.match(priceRegex) : [];
   if (prices && prices.length !== 0) {
-    if (prices.length == 1) {
+    if (prices.length === 1) {
       ticketPrice = Number(prices[0].trim().slice(1));
       doorPrice = ticketPrice;
     } else {
@@ -63,47 +61,43 @@ export async function parseDescription(page: Page): Promise<string | null> {
 }
 
 export function parseTimes(startTimeStr: string[], endTimeStr: string[]) {
-  const [startTime, endTime] = [startTimeStr, endTimeStr].map(
-    (match: string[]) => {
-      // Function to convert month name to month index
+  const [startTime, endTime] = [startTimeStr, endTimeStr].map((match: string[]) => {
+    // Function to convert month name to month index
 
-      const monthNameToIndex: {
-        [key: string]: number;
-      } = {
-        Jan: 0,
-        Feb: 1,
-        Mar: 2,
-        Apr: 3,
-        May: 4,
-        Jun: 5,
-        Jul: 6,
-        Aug: 7,
-        Sep: 8,
-        Oct: 9,
-        Nov: 10,
-        Dec: 11,
-      };
+    const monthNameToIndex: {
+      [key: string]: number;
+    } = {
+      Jan: 0,
+      Feb: 1,
+      Mar: 2,
+      Apr: 3,
+      May: 4,
+      Jun: 5,
+      Jul: 6,
+      Aug: 7,
+      Sep: 8,
+      Oct: 9,
+      Nov: 10,
+      Dec: 11,
+    };
 
-      const year = parseInt(match[2]);
-      const monthStr: string = match[0];
-      const month: number = monthNameToIndex[monthStr];
-      const day = parseInt(match[1]);
-      const timeStr = match[3];
+    const year = parseInt(match[2], 10);
+    const monthStr: string = match[0];
+    const month: number = monthNameToIndex[monthStr];
+    const day = parseInt(match[1], 10);
+    const timeStr = match[3];
 
-      // Convert matches to JavaScript Date objects
-      const date = new Date(
-        year,
-        month,
-        day,
-        timeStr.endsWith("PM")
-          ? parseInt(timeStr.split(":")[0]) + 12
-          : parseInt(timeStr.split(":")[0]),
-        parseInt(timeStr.split(":")[1]),
-      );
+    // Convert matches to JavaScript Date objects
+    const date = new Date(
+      year,
+      month,
+      day,
+      timeStr.endsWith("PM") ? parseInt(timeStr.split(":")[0], 10) + 12 : parseInt(timeStr.split(":")[0], 10),
+      parseInt(timeStr.split(":")[1], 10),
+    );
 
-      return date;
-    },
-  );
+    return date;
+  });
 
   return {
     startTime,
@@ -124,8 +118,7 @@ export async function parseArtists(title: string): Promise<string[]> {
           items: {
             type: "string",
           },
-          description:
-            "The musicians listed in the title of this event or an empty array if none are found.",
+          description: "The musicians listed in the title of this event or an empty array if none are found.",
         },
       },
       required: ["artistNames"],

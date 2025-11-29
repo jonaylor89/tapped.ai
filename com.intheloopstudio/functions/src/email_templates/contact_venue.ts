@@ -1,9 +1,13 @@
-import { SocialFollowing, UserModel } from "../types/models";
+import type { SocialFollowing, UserModel } from "../types/models";
 
-export const contactVenueTemplate = ({ performer, collaborators, emailText }: {
-  performer: UserModel,
-  collaborators: UserModel[],
-  emailText: string,
+export const contactVenueTemplate = ({
+  performer,
+  collaborators,
+  emailText,
+}: {
+  performer: UserModel;
+  collaborators: UserModel[];
+  emailText: string;
 }): { html: string; text: string } => {
   const username = performer.username;
   const displayName = performer.artistName || username;
@@ -48,31 +52,23 @@ export const contactVenueTemplate = ({ performer, collaborators, emailText }: {
 
     Thanks,
     ${displayName}
-  `
+  `;
 
   return {
     text,
     html,
   };
-}
+};
 
-const formatSocialLinks = (
-  socialFollowing: SocialFollowing,
-): string => {
-  const { 
-    instagramHandle, 
-    facebookHandle, 
-    twitterHandle, 
-    spotifyUrl, 
-    youtubeChannelId,
-    soundcloudHandle,
-  } = socialFollowing;
+const formatSocialLinks = (socialFollowing: SocialFollowing): string => {
+  const { instagramHandle, facebookHandle, twitterHandle, spotifyUrl, youtubeChannelId, soundcloudHandle } =
+    socialFollowing;
   const row = (label: string, link: string) => {
     if (!link) {
       return "";
     }
     return `<p>${label}: <a href="${link}">${link}</a></p>`;
-  }
+  };
 
   const instagram = instagramHandle ? row("Instagram", `https://instagram.com/${instagramHandle}`) : "";
   const facebook = facebookHandle ? row("Facebook", `https://facebook.com/${facebookHandle}`) : "";
@@ -94,25 +90,17 @@ const formatSocialLinks = (
     `;
 
   return socialLinks;
-}
+};
 
-const formatSocialLinksText = (
-  socialFollowing: SocialFollowing,
-): string => {
-  const { 
-    instagramHandle, 
-    facebookHandle, 
-    twitterHandle, 
-    spotifyUrl, 
-    youtubeChannelId,
-    soundcloudHandle,
-  } = socialFollowing;
+const formatSocialLinksText = (socialFollowing: SocialFollowing): string => {
+  const { instagramHandle, facebookHandle, twitterHandle, spotifyUrl, youtubeChannelId, soundcloudHandle } =
+    socialFollowing;
   const row = (label: string, link: string) => {
     if (!link) {
       return "";
     }
     return `${label}: ${link}`;
-  }
+  };
 
   const instagram = instagramHandle ? row("Instagram", `https://instagram.com/${instagramHandle}`) : "";
   const facebook = facebookHandle ? row("Facebook", `https://facebook.com/${facebookHandle}`) : "";
@@ -132,7 +120,7 @@ const formatSocialLinksText = (
         `;
 
   return socialLinks;
-}
+};
 
 const formatPressKit = (performer: UserModel): string => {
   const pressKitUrl = performer.performerInfo?.pressKitUrl;
@@ -142,7 +130,7 @@ const formatPressKit = (performer: UserModel): string => {
   return `
     <p><a href="${pressKitUrl}">my press kit</a></p>
   `;
-}
+};
 
 const formatPressKitText = (performer: UserModel): string => {
   const pressKitUrl = performer.performerInfo?.pressKitUrl;
@@ -150,7 +138,7 @@ const formatPressKitText = (performer: UserModel): string => {
     return "";
   }
   return `my press kit: ${pressKitUrl}`;
-}
+};
 
 const formatCollaborators = (collaborators: UserModel[]): string => {
   if (collaborators.length === 0) {
@@ -166,10 +154,10 @@ const formatCollaborators = (collaborators: UserModel[]): string => {
     return `<a href=${href}>${collaborator.artistName || collaborator.username}</a>`;
   });
 
-  const collaboratorsTextString = `<p>here are some other performers I can play with: ${collaboratorsText.join("")}</p>`
+  const collaboratorsTextString = `<p>here are some other performers I can play with: ${collaboratorsText.join("")}</p>`;
 
   return collaboratorsTextString;
-}
+};
 
 const formatCollaboratorsText = (collaborators: UserModel[]): string => {
   if (collaborators.length === 0) {
@@ -187,7 +175,7 @@ const formatCollaboratorsText = (collaborators: UserModel[]): string => {
     `;
   });
 
-  const collaboratorsTextString = `here are some other performers I can play with: ${collaboratorsText.join(", ")}`
+  const collaboratorsTextString = `here are some other performers I can play with: ${collaboratorsText.join(", ")}`;
 
   return collaboratorsTextString;
-}
+};

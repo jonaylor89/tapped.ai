@@ -1,4 +1,3 @@
-
 export const labelApplied = `
 <b>you've been approved!</b>
 
@@ -11,4 +10,4 @@ if you want to guarantee your spot in our next batch of beta testers (<b>and get
 (<b>use the code APPROVED for the discount</b>)
 
 https://buy.stripe.com/00g9CseCE2jubC0bIM
-`
+`;

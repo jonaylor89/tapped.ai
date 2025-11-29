@@ -1,6 +1,6 @@
 /* eslint-disable import/no-unresolved */
 import { Leap } from "@leap-ai/sdk";
-import { LeapInferenceSchema } from "@leap-ai/sdk/dist/types/schemas/Inference";
+import type { LeapInferenceSchema } from "@leap-ai/sdk/dist/types/schemas/Inference";
 import { info } from "firebase-functions/logger";
 import { HttpsError } from "firebase-functions/v1/auth";
 
@@ -23,16 +23,13 @@ export const sd = {
     imageUrls.forEach((image) => {
       formData.append("imageSampleUrls", image);
     });
-    
-    formData.append(
-      "webhookUrl",
-      webhookUrl,
-    );
-    
+
+    formData.append("webhookUrl", webhookUrl);
+
     formData.append("name", name);
     formData.append("subjectType", type);
     formData.append("subjectKeyword", "@subject");
-    
+
     const options = {
       method: "POST",
       headers: {
@@ -41,26 +38,20 @@ export const sd = {
       },
       body: formData,
     };
-    const resp = await fetch(
-      "https://api.tryleap.ai/api/v2/images/models/new",
-      options
-    );
-    
+    const resp = await fetch("https://api.tryleap.ai/api/v2/images/models/new", options);
+
     const { status, statusText } = resp;
     const body = (await resp.json()) as {
-          id: string;
-          imageSamples: string[];
-        };
+      id: string;
+      imageSamples: string[];
+    };
 
     info({ status, statusText, body });
-    
+
     if (body.id === undefined) {
-      throw new HttpsError(
-        "internal",
-        "the model id is undefined",
-      );
+      throw new HttpsError("internal", "the model id is undefined");
     }
-    
+
     return body.id;
   },
   createInferenceJob: async ({
@@ -77,7 +68,7 @@ export const sd = {
     negativePrompt: string;
     numberOfImages: number;
     webhookUrl?: string;
-}): Promise<{ inferenceId: string }> => {
+  }): Promise<{ inferenceId: string }> => {
     const leap = new Leap(leapApiKey);
 
     const { data, error } = await leap.generate.createInferenceJob({
@@ -101,8 +92,8 @@ export const sd = {
     inferenceId,
   }: {
     leapApiKey: string;
-        inferenceId: string;
-}): Promise<{ inferenceJob: LeapInferenceSchema }> => {
+    inferenceId: string;
+  }): Promise<{ inferenceJob: LeapInferenceSchema }> => {
     const leap = new Leap(leapApiKey);
     const { data, error } = await leap.generate.getInferenceJob({
       inferenceId: inferenceId,
@@ -120,7 +111,7 @@ export const sd = {
   }: {
     leapApiKey: string;
     inferenceId: string;
-}): Promise<void> => {
+  }): Promise<void> => {
     const leap = new Leap(leapApiKey);
     const { data, error } = await leap.generate.deleteInference({
       inferenceId: inferenceId,

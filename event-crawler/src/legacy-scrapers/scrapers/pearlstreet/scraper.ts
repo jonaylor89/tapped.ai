@@ -1,28 +1,15 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
-import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import { config } from "./config";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-  notifyScapeStart,
-} from "../../utils/notifications";
-import {
-  getEventNameFromUrl,
-  parseArtists,
-  parseTicketPrice,
-  parseDescription,
-  parseTimes,
-} from "./parsing";
 import { v4 as uuidv4 } from "uuid";
-import { configDotenv } from "dotenv";
+import type { ScrapedEventData } from "../../types";
+import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";
 import { initScrape } from "../../utils/startup";
+import { config } from "./config";
+import { getEventNameFromUrl, parseArtists, parseDescription, parseTicketPrice, parseTimes } from "./parsing";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -54,9 +41,7 @@ async function scrapeEvent(
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, element)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, element)) ?? "").trim();
   const description = (await parseDescription(page)) ?? "";
 
   const priceContainer = await page.waitForSelector(".tw-price");
@@ -66,12 +51,7 @@ async function scrapeEvent(
     return null;
   }
 
-  const price = (
-    (await page.evaluate(
-      (priceContainer) => priceContainer.textContent,
-      priceContainer,
-    )) ?? ""
-  ).trim();
+  const price = ((await page.evaluate((priceContainer) => priceContainer.textContent, priceContainer)) ?? "").trim();
 
   // null if price string is empty
   const [ticketPrice, doorPrice] = parseTicketPrice(price);
@@ -103,8 +83,7 @@ async function scrapeEvent(
 
     const dateString = getTextContent(container).trim();
     // Define a regex pattern to capture date and time components
-    const regexPattern =
-      /(\w+)\s+(\w+)\s+(\w+)\s+(\d{1,2}:\d{2}\s+(?:am|pm))/gm;
+    const regexPattern = /(\w+)\s+(\w+)\s+(\w+)\s+(\d{1,2}:\d{2}\s+(?:am|pm))/gm;
 
     // Create an array to store matched groups
     let match;
@@ -125,8 +104,7 @@ async function scrapeEvent(
       const numberDayString = String(matches[0][2]);
       const startTimeString = String(matches[0][3]);
       const splitTimeString = startTimeString.split(":");
-      const endTimeString =
-        String(Number(splitTimeString[0]) + 2) + ":" + splitTimeString[1];
+      const endTimeString = `${String(Number(splitTimeString[0]) + 2)}:${splitTimeString[1]}`;
 
       startTime.push(monthString);
       startTime.push(numberDayString);
@@ -168,7 +146,7 @@ async function scrapeEvent(
     title,
     description,
     ticketPrice: ticketPrice ?? null,
-    doorPrice: doorPrice ? doorPrice : ticketPrice ?? null,
+    doorPrice: doorPrice ? doorPrice : (ticketPrice ?? null),
     artists,
     startTime,
     endTime,
@@ -219,7 +197,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

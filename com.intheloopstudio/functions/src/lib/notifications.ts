@@ -1,26 +1,22 @@
 import { fcm } from "./firebase";
 import { getFoundersDeviceTokens } from "./utils";
 
-export async function notifyFounders({ title, body }: {
-    title: string;
-    body: string;
-}): Promise<void> {
+export async function notifyFounders({ title, body }: { title: string; body: string }): Promise<void> {
   const devices = await getFoundersDeviceTokens();
   const payload = {
     notification: {
       title,
       body,
-    }
+    },
   };
 
   fcm.sendToDevice(devices, payload);
 }
 
-
 export async function slackNotification({
   title,
   body,
-  slackWebhookUrl
+  slackWebhookUrl,
 }: {
   title: string;
   body: string;

@@ -1,7 +1,7 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { v4 as uuidv4 } from "uuid";
+import type { Booking, EventData, UserModel } from "../types.js";
 import { db } from "../utils/firebase.js";
-import { EventData, Booking, UserModel } from "../types.js";
 
 // Legacy types from webscrapers
 interface LegacyScrapedEventData {
@@ -63,9 +63,7 @@ const usersRef = db.collection("users");
 /**
  * Main migration function
  */
-export async function migrateLegacyScrapers(
-  dryRun: boolean = true,
-): Promise<void> {
+export async function migrateLegacyScrapers(dryRun: boolean = true): Promise<void> {
   console.log(`[+] Starting legacy scraper migration (dry run: ${dryRun})`);
 
   let totalEvents = 0;
@@ -90,10 +88,7 @@ export async function migrateLegacyScrapers(
       }
 
       // Get all scrape runs for this scraper
-      const runsSnapshot = await rawScrapeDataRef
-        .doc(scraperId)
-        .collection("scrapeRuns")
-        .get();
+      const runsSnapshot = await rawScrapeDataRef.doc(scraperId).collection("scrapeRuns").get();
 
       for (const runDoc of runsSnapshot.docs) {
         const runId = runDoc.id;
@@ -115,19 +110,12 @@ export async function migrateLegacyScrapers(
 
             // Validate required data
             if (!legacyEventData.startTime || !legacyEventData.endTime) {
-              console.warn(
-                `[!] Skipping event with missing dates: ${legacyEventData.id}`,
-              );
+              console.warn(`[!] Skipping event with missing dates: ${legacyEventData.id}`);
               continue;
             }
 
             // Transform legacy data to new schema
-            const newEventData = transformLegacyEventData(
-              legacyEventData,
-              venue,
-              runId,
-              runData.startTime.toDate(),
-            );
+            const newEventData = transformLegacyEventData(legacyEventData, venue, runId, runData.startTime.toDate());
 
             if (!dryRun) {
               // Save to new crawler collection
@@ -139,29 +127,20 @@ export async function migrateLegacyScrapers(
                   endTime: Timestamp.fromDate(newEventData.endTime),
                   crawlerInfo: {
                     ...newEventData.crawlerInfo,
-                    timestamp: Timestamp.fromDate(
-                      newEventData.crawlerInfo.timestamp,
-                    ),
+                    timestamp: Timestamp.fromDate(newEventData.crawlerInfo.timestamp),
                   },
                 },
                 { merge: true },
               );
 
-              console.log(
-                `[+] Migrated event: ${newEventData.title} (${encodedLink})`,
-              );
+              console.log(`[+] Migrated event: ${newEventData.title} (${encodedLink})`);
             } else {
-              console.log(
-                `[DRY RUN] Would migrate event: ${newEventData.title}`,
-              );
+              console.log(`[DRY RUN] Would migrate event: ${newEventData.title}`);
             }
 
             totalEvents++;
           } catch (error) {
-            console.error(
-              `[!] Error processing event in run ${runId} for ${scraperId}:`,
-              error,
-            );
+            console.error(`[!] Error processing event in run ${runId} for ${scraperId}:`, error);
             console.error(
               "[!] Event data:",
               JSON.stringify(
@@ -181,10 +160,7 @@ export async function migrateLegacyScrapers(
       }
 
       // Migrate bookings for this scraper
-      const migratedBookingCount = await migrateBookingsForScraper(
-        scraperId,
-        dryRun,
-      );
+      const migratedBookingCount = await migrateBookingsForScraper(scraperId, dryRun);
       totalBookings += migratedBookingCount;
     }
 
@@ -235,17 +211,14 @@ function transformLegacyEventData(
     }
 
     // Validate that we have valid dates
-    if (isNaN(startTime.getTime())) {
+    if (Number.isNaN(startTime.getTime())) {
       throw new Error(`Invalid startTime date: ${legacyData.startTime}`);
     }
-    if (isNaN(endTime.getTime())) {
+    if (Number.isNaN(endTime.getTime())) {
       throw new Error(`Invalid endTime date: ${legacyData.endTime}`);
     }
   } catch (error) {
-    console.error(
-      `[!] Date conversion error for event ${legacyData.id}:`,
-      error,
-    );
+    console.error(`[!] Date conversion error for event ${legacyData.id}:`, error);
     throw error;
   }
 
@@ -273,15 +246,10 @@ function transformLegacyEventData(
 /**
  * Migrate bookings to add crawlerInfo
  */
-async function migrateBookingsForScraper(
-  scraperId: string,
-  dryRun: boolean,
-): Promise<number> {
+async function migrateBookingsForScraper(scraperId: string, dryRun: boolean): Promise<number> {
   console.log(`[+] Migrating bookings for scraper: ${scraperId}`);
 
-  const bookingsSnapshot = await bookingsRef
-    .where("scraperInfo.scraperId", "==", scraperId)
-    .get();
+  const bookingsSnapshot = await bookingsRef.where("scraperInfo.scraperId", "==", scraperId).get();
 
   let count = 0;
 
@@ -346,14 +314,11 @@ async function getVenueById(venueId: string): Promise<UserModel | null> {
  * CLI interface
  */
 async function main() {
-  const dryRun =
-    process.argv.includes("--dry-run") || process.argv.includes("-d");
+  const dryRun = process.argv.includes("--dry-run") || process.argv.includes("-d");
   const force = process.argv.includes("--force") || process.argv.includes("-f");
 
   if (!dryRun && !force) {
-    console.error(
-      "This is a destructive operation. Use --dry-run to test or --force to execute.",
-    );
+    console.error("This is a destructive operation. Use --dry-run to test or --force to execute.");
     process.exit(1);
   }
 

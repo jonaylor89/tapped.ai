@@ -1,8 +1,7 @@
-
-import { OpenAI, ChatOpenAI } from "@langchain/openai";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { LLMChain } from "langchain/chains";
 import { HumanMessage } from "@langchain/core/messages";
+import { PromptTemplate } from "@langchain/core/prompts";
+import { ChatOpenAI, OpenAI } from "@langchain/openai";
+import { LLMChain } from "langchain/chains";
 
 // const AVATAR_PROMPT = '';
 // const STAGE_PHOTOS_PROMPT = '';
@@ -54,25 +53,28 @@ Use the information provided, social media handles (if applicable
 ), 
 genre ({ARTIST_GENRES}), and any outstanding accomplishments, to craft a compelling two-paragraph 
 artist introduction. Remember to keep it captivating and suitable for press and 
-promotional materials. It should be no more than 100 words`
+promotional materials. It should be no more than 100 words`;
 
-
-export const llm = async (template: string, apiKey: string, options?: {
+export const llm = async (
+  template: string,
+  apiKey: string,
+  options?: {
     temperature?: number;
-}): Promise<string> => {
+  },
+): Promise<string> => {
   process.env.OPENAI_API_KEY = apiKey;
 
   const prompt = PromptTemplate.fromTemplate(template);
-  const llm = new OpenAI(options)
+  const llm = new OpenAI(options);
   const llmChain = new LLMChain({
     llm,
     prompt,
-  })
+  });
 
   const res = await llmChain.invoke({});
 
   return res.text;
-}
+};
 
 export const chatGpt = async (
   prompt: string,
@@ -96,7 +98,7 @@ export const chatGpt = async (
     ],
   });
 
-  const res = await model.invoke([ message ]);
+  const res = await model.invoke([message]);
 
   const result = res.content.toString();
 
@@ -113,19 +115,19 @@ export async function generateBasicMarketingPlan({
   artistName,
   // artistGenres,
   // igFollowerCount,
-  apiKey, 
+  apiKey,
 }: {
-    releaseType: string;
-    singleName: string;
-    aesthetic: string;
-    releaseTimeline: string;
-    moreToCome: string;
-    targetAudience: string;
-    artistName: string;
-    // artistGenres: string;
-    // igFollowerCount: number;
-    apiKey: string;
-  }): Promise<{ content: string; prompt: string; }> {
+  releaseType: string;
+  singleName: string;
+  aesthetic: string;
+  releaseTimeline: string;
+  moreToCome: string;
+  targetAudience: string;
+  artistName: string;
+  // artistGenres: string;
+  // igFollowerCount: number;
+  apiKey: string;
+}): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
   const model = new ChatOpenAI({});
@@ -175,7 +177,7 @@ export async function generateBasicMarketingPlan({
   return {
     content: content,
     prompt: formatted,
-  }
+  };
 }
 
 export async function generateSingleBasicMarketingPlan({
@@ -187,18 +189,18 @@ export async function generateSingleBasicMarketingPlan({
   artistName,
   artistGenres,
   // igFollowerCount,
-  apiKey, 
+  apiKey,
 }: {
-    singleName: string;
-    aesthetic: string;
-    releaseTimeline: string;
-    moreToCome: string;
-    targetAudience: string;
-    artistName: string;
-    artistGenres: string;
-    // igFollowerCount: number;
-    apiKey: string;
-  }): Promise<{ content: string; prompt: string; }> {
+  singleName: string;
+  aesthetic: string;
+  releaseTimeline: string;
+  moreToCome: string;
+  targetAudience: string;
+  artistName: string;
+  artistGenres: string;
+  // igFollowerCount: number;
+  apiKey: string;
+}): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
   const model = new ChatOpenAI({});
@@ -223,7 +225,7 @@ export async function generateSingleBasicMarketingPlan({
     AESTHETIC: aesthetic,
     RELEASE_TIMELINE: releaseTimeline,
     MORE_TO_COME: moreToCome,
-    TARGET_AUDIENCE: targetAudience, 
+    TARGET_AUDIENCE: targetAudience,
     ARTIST_NAME: artistName,
     ARTIST_GENRES: artistGenres,
     // IG_FOLLOWER_COUNT: igFollowerCount,
@@ -234,7 +236,7 @@ export async function generateSingleBasicMarketingPlan({
     AESTHETIC: aesthetic,
     RELEASE_TIMELINE: releaseTimeline,
     MORE_TO_COME: moreToCome,
-    TARGET_AUDIENCE: targetAudience, 
+    TARGET_AUDIENCE: targetAudience,
     ARTIST_NAME: artistName,
     ARTIST_GENRES: artistGenres,
     // IG_FOLLOWER_COUNT: igFollowerCount,
@@ -243,7 +245,7 @@ export async function generateSingleBasicMarketingPlan({
   return {
     content: res.text,
     prompt: formatted,
-  }
+  };
 }
 
 export async function basicEnhancedBio({
@@ -254,24 +256,18 @@ export async function basicEnhancedBio({
   artistGenres,
   apiKey,
 }: {
-    artistName: string;
-    twitterHandle: string;
-    instagramHandle: string;
-    tiktokHandle: string;
-    artistGenres: Array<string>;
-    apiKey: string;
-  }): Promise<{ content: string; prompt: string; }> {
+  artistName: string;
+  twitterHandle: string;
+  instagramHandle: string;
+  tiktokHandle: string;
+  artistGenres: Array<string>;
+  apiKey: string;
+}): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
   const model = new ChatOpenAI({});
   const prompt = new PromptTemplate({
-    inputVariables: [
-      "ARTIST_NAME",
-      "TIKTOK_HANDLE",
-      "TWITTER_HANDLE",
-      "INSTAGRAM_HANDLE",
-      "ARTIST_GENRES",
-    ],
+    inputVariables: ["ARTIST_NAME", "TIKTOK_HANDLE", "TWITTER_HANDLE", "INSTAGRAM_HANDLE", "ARTIST_GENRES"],
     template: ENHANCE_BIO_TEMPLATE,
   });
 
@@ -282,7 +278,7 @@ export async function basicEnhancedBio({
     TWITTER_HANDLE: twitterHandle,
     INSTAGRAM_HANDLE: instagramHandle,
     TIKTOK_HANDLE: tiktokHandle,
-    ARTIST_GENRES: artistGenres.join(", ")
+    ARTIST_GENRES: artistGenres.join(", "),
   });
 
   const formatted = await prompt.format({
@@ -290,7 +286,7 @@ export async function basicEnhancedBio({
     TWITTER_HANDLE: twitterHandle,
     INSTAGRAM_HANDLE: instagramHandle,
     TIKTOK_HANDLE: tiktokHandle,
-    ARTIST_GENRES: artistGenres.join(", ")
+    ARTIST_GENRES: artistGenres.join(", "),
   });
 
   const content = res.content.toString();
@@ -298,5 +294,5 @@ export async function basicEnhancedBio({
   return {
     content,
     prompt: formatted,
-  }
+  };
 }

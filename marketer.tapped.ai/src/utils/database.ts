@@ -1,19 +1,14 @@
+import { collection, doc, onSnapshot, setDoc } from "@firebase/firestore";
+import { getDocs, limit, query, Timestamp, where } from "firebase/firestore";
+import type { AccessCode } from "@/types/access_code";
+import type { MarketingForm } from "@/types/marketing_form";
+import type { MarketingPlan } from "@/types/marketing_plan";
+import { db } from "@/utils/firebase";
 
-import type { MarketingForm } from '@/types/marketing_form';
-import type { MarketingPlan } from '@/types/marketing_plan';
+const GUEST_PLANS_COLLECTION = "guestMarketingPlans";
+const FORMS_COLLECTION = "marketingForms";
 
-import { doc, collection, setDoc, onSnapshot } from '@firebase/firestore';
-import { db } from '@/utils/firebase';
-import { Timestamp, getDoc, getDocs, limit, query, where } from 'firebase/firestore';
-import { AccessCode } from '@/types/access_code';
-
-const GUEST_PLANS_COLLECTION = 'guestMarketingPlans';
-const FORMS_COLLECTION = 'marketingForms';
-
-export function marketingPlanListener(
-  clientReferenceId: string,
-  callback: (data: MarketingPlan) => void,
-) {
+export function marketingPlanListener(clientReferenceId: string, callback: (data: MarketingPlan) => void) {
   console.log({ clientReferenceId });
   const docRef = doc(db, GUEST_PLANS_COLLECTION, clientReferenceId);
   onSnapshot(docRef, (doc) => {
@@ -23,13 +18,11 @@ export function marketingPlanListener(
   });
 }
 
-export async function createEmptyMarketingPlan({ clientReferenceId }: {
-    clientReferenceId: string;
-}) {
+export async function createEmptyMarketingPlan({ clientReferenceId }: { clientReferenceId: string }) {
   console.log({ clientReferenceId });
   const marketingPlan: MarketingPlan = {
     clientReferenceId,
-    status: 'initial',
+    status: "initial",
   };
 
   const docRef = doc(db, GUEST_PLANS_COLLECTION, clientReferenceId);
@@ -52,8 +45,8 @@ export async function saveForm(form: MarketingForm) {
 }
 
 export async function getAccessCode(code: string): Promise<AccessCode | null> {
-  const accessCodeCollection = collection(db, 'accessCodes');
-  const queryRef = query(accessCodeCollection, where('code', '==', code), limit(1));
+  const accessCodeCollection = collection(db, "accessCodes");
+  const queryRef = query(accessCodeCollection, where("code", "==", code), limit(1));
   const querySnapshot = await getDocs(queryRef);
 
   if (querySnapshot.empty) {
@@ -62,31 +55,37 @@ export async function getAccessCode(code: string): Promise<AccessCode | null> {
 
   const dataStuff = querySnapshot.docs[0].data();
   return {
-    code: dataStuff.code || '',
+    code: dataStuff.code || "",
     used: dataStuff.used || false,
     permacode: dataStuff.permacode || false,
   };
 }
 
-
-export async function useAccessCode({ code, clientReferenceId }: {
+export async function useAccessCode({
+  code,
+  clientReferenceId,
+}: {
   code: string;
   clientReferenceId: string;
 }): Promise<void> {
-  const accessCodeCollection = collection(db, 'accessCodes');
-  const queryRef = query(accessCodeCollection, where('code', '==', code), limit(1));
+  const accessCodeCollection = collection(db, "accessCodes");
+  const queryRef = query(accessCodeCollection, where("code", "==", code), limit(1));
   const querySnapshot = await getDocs(queryRef);
 
   if (querySnapshot.empty) {
-    throw new Error('Access code not found');
+    throw new Error("Access code not found");
   }
 
   const docRef = querySnapshot.docs[0].ref;
-  await setDoc(docRef, {
-    used: true,
-    clientReferenceId,
-    usedAt: Timestamp.now(),
-  }, {
-    merge: true,
-  });
+  await setDoc(
+    docRef,
+    {
+      used: true,
+      clientReferenceId,
+      usedAt: Timestamp.now(),
+    },
+    {
+      merge: true,
+    },
+  );
 }

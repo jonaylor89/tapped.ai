@@ -1,0 +1,12 @@
+packages:
+  - "app.tapped.ai"
+  - "getmusicart.com"
+  - "getmusicepk.com"
+  - "getmusicviralchecker.com"
+  - "linktree.tapped.ai"
+  - "marketer.tapped.ai"
+  - "event-crawler"
+  - "ticket-crawler"
+  - "viralsocialmediaideas.com"
+  - "com.intheloopstudio/functions"
+  - "packages/*"

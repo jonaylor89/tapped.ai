@@ -1,10 +1,10 @@
 import {
-  signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
+  signInWithEmailAndPassword,
   signInWithPopup,
-} from 'firebase/auth';
-import { auth } from '@/utils/firebase';
+} from "firebase/auth";
+import { auth } from "@/utils/firebase";
 
 export type Credentials = { email: string; password: string };
 
@@ -13,27 +13,19 @@ export type LoginResult = { uid: string };
 export type SignupResult = { uid: string };
 
 export async function loginWithCredentials({ email, password }: Credentials) {
-  console.debug('loginWithCredentials', { email });
-  const loginResult = await signInWithEmailAndPassword(
-    auth,
-    email,
-    password,
-  );
+  console.debug("loginWithCredentials", { email });
+  const loginResult = await signInWithEmailAndPassword(auth, email, password);
   return { uid: loginResult.user.uid };
 }
 
 export async function signupWithCredentials({ email, password }: Credentials) {
-  console.debug('signup');
-  const loginResult = await createUserWithEmailAndPassword(
-    auth,
-    email,
-    password,
-  );
+  console.debug("signup");
+  const loginResult = await createUserWithEmailAndPassword(auth, email, password);
   return { uid: loginResult.user.uid };
 }
 
 export async function loginWithGoogle() {
-  console.debug('loginWithGoogle');
+  console.debug("loginWithGoogle");
   const provider = new GoogleAuthProvider();
   const loginResult = await signInWithPopup(auth, provider);
 
@@ -41,7 +33,7 @@ export async function loginWithGoogle() {
 }
 
 export async function logout() {
-  console.debug('logout');
+  console.debug("logout");
   await auth.signOut();
 }
 

@@ -1,7 +1,7 @@
 /* eslint @typescript-eslint/no-var-requires: 0 */
 
 import type { Bucket } from "@google-cloud/storage";
-import { initializeApp, cert, applicationDefault } from "firebase-admin/app";
+import { applicationDefault, cert, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
@@ -9,9 +9,7 @@ import { getStorage } from "firebase-admin/storage";
 
 const production = process.env.NODE_ENV === "production";
 
-const credential = production
-  ? applicationDefault()
-  : cert(require("../../credentials.json"));
+const credential = production ? applicationDefault() : cert(require("../../credentials.json"));
 
 const app = initializeApp({
   projectId: "in-the-loop-306520",

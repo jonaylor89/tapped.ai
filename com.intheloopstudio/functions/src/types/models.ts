@@ -1,7 +1,7 @@
+import type { firestore } from "firebase-admin";
 import type { Timestamp } from "firebase-admin/firestore";
-import { firestore } from "firebase-admin";
 
-export type Option<T> = T | null ;
+export type Option<T> = T | null;
 
 export type Location = {
   placeId: string;

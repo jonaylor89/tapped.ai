@@ -1,6 +1,17 @@
 /* eslint-disable import/no-unresolved */
 
+import { Timestamp } from "firebase-admin/firestore";
+import { debug, error, info } from "firebase-functions/logger";
+// import { getFoundersDeviceTokens } from "./utils";
+import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
+import * as postmark from "postmark";
+import { Resend } from "resend";
+import { StreamChat, type User } from "stream-chat";
+import { contactVenueTemplate } from "../../email_templates/contact_venue";
+import type { Opportunity, UserModel, VenueContactRequest } from "../../types/models";
+// import _ from "lodash";
+import { _sendEmailOnVenueContacting } from "../email_triggers";
 import {
   contactVenuesRef,
   OPEN_AI_KEY,
@@ -12,22 +23,11 @@ import {
   streamSecret,
   usersRef,
 } from "../firebase";
-import { debug, error, info } from "firebase-functions/logger";
-import * as postmark from "postmark";
-// import { getFoundersDeviceTokens } from "./utils";
-import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { StreamChat, User } from "stream-chat";
-import { contactVenueTemplate } from "../../email_templates/contact_venue";
-import { Opportunity, UserModel, VenueContactRequest } from "../../types/models";
 import { slackNotification } from "../notifications";
-import { Timestamp } from "firebase-admin/firestore";
 import { authenticatedRequest, imageUrlToBase64 } from "../utils";
-import { Resend } from "resend";
-// import _ from "lodash";
-import { _sendEmailOnVenueContacting } from "../email_triggers";
 import { writeAiEmailReply, writeEmailWithAi } from "./compose_email";
-import { createEmailMessageId } from "./utils";
 import { dmAutoReply, sendStreamMessage } from "./messaging";
+import { createEmailMessageId } from "./utils";
 
 async function sendAsEmail({
   venueContactData,
@@ -39,17 +39,19 @@ async function sendAsEmail({
   venue: UserModel;
 }): Promise<string | null> {
   const opIds = venueContactData.opportunityIds ?? [];
-  const opportunities = (await Promise.all(
-    opIds.map(async (id: string) => {
-      const snap = await opportunitiesRef.doc(id).get();
-      if (!snap.exists) {
-        error("no opportunity found");
-        return null;
-      }
+  const opportunities = (
+    await Promise.all(
+      opIds.map(async (id: string) => {
+        const snap = await opportunitiesRef.doc(id).get();
+        if (!snap.exists) {
+          error("no opportunity found");
+          return null;
+        }
 
-      return snap.data() as Opportunity;
-    })
-  )).filter((o) => o !== null) as Opportunity[];
+        return snap.data() as Opportunity;
+      }),
+    )
+  ).filter((o) => o !== null) as Opportunity[];
 
   const collaborators = venueContactData.collaborators ?? [];
 
@@ -119,26 +121,17 @@ async function sendAsEmail({
   };
 
   // add msg id to initial request
-  await contactVenuesRef
-    .doc(userId)
-    .collection("venuesContacted")
-    .doc(venue.id)
-    .set(
-      {
-        subject,
-        originalMessageId: messageId,
-        latestMessageId: messageId,
-      },
-      { merge: true }
-    );
+  await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venue.id).set(
+    {
+      subject,
+      originalMessageId: messageId,
+      latestMessageId: messageId,
+    },
+    { merge: true },
+  );
 
   // add email to emails collection
-  await contactVenuesRef
-    .doc(userId)
-    .collection("venuesContacted")
-    .doc(venue.id)
-    .collection("emailsSent")
-    .add(emailObj);
+  await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venue.id).collection("emailsSent").add(emailObj);
 
   const res = await client.sendEmail(emailObj);
   debug({ res });
@@ -157,10 +150,9 @@ async function sendAsDirectMessage({
   userId: string;
   note: string;
 }) {
-
   // join channel
   const channel = streamClient.channel("messaging", {
-    members: [ userId, venueId ],
+    members: [userId, venueId],
     created_by_id: venueId,
   });
   await channel.create();
@@ -187,11 +179,7 @@ export async function sendEmailFromStreamMessage({
   attachments: string[];
 }): Promise<void> {
   // get venue contact info (i.e. messageId)
-  const contactRequestSnap = await contactVenuesRef
-    .doc(user.id)
-    .collection("venuesContacted")
-    .doc(venue.id)
-    .get();
+  const contactRequestSnap = await contactVenuesRef.doc(user.id).collection("venuesContacted").doc(venue.id).get();
 
   const contactRequestData = contactRequestSnap.data();
   const latestMessageId = contactRequestData?.latestMessageId;
@@ -216,7 +204,6 @@ export async function sendEmailFromStreamMessage({
   }
 
   const messageId = createEmailMessageId();
-
 
   const emailAttachments: postmark.Attachment[] = await Promise.all(
     attachments.map(async (imageUrl) => {
@@ -256,13 +243,9 @@ export async function sendEmailFromStreamMessage({
     Attachments: emailAttachments,
   };
 
-  await contactVenuesRef
-    .doc(user.id)
-    .collection("venuesContacted")
-    .doc(venue.id)
-    .update({
-      latestMessageId: messageId,
-    });
+  await contactVenuesRef.doc(user.id).collection("venuesContacted").doc(venue.id).update({
+    latestMessageId: messageId,
+  });
 
   // add email to emails collection
   await contactVenuesRef
@@ -295,11 +278,7 @@ export const _appendNewContactRequestToThread = async ({
   emailClient: postmark.ServerClient;
 }): Promise<void> => {
   // get the current thread
-  const contactVenueSnap = await contactVenuesRef
-    .doc(userId)
-    .collection("venuesContacted")
-    .doc(venueId)
-    .get();
+  const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).get();
   const contactVenueData = contactVenueSnap.data() as VenueContactRequest | undefined;
 
   if (contactVenueData === undefined) {
@@ -307,7 +286,7 @@ export const _appendNewContactRequestToThread = async ({
     return;
   }
 
-  const allEmails = contactVenueData?.allEmails ?? [ contactVenueData.bookingEmail ];
+  const allEmails = contactVenueData?.allEmails ?? [contactVenueData.bookingEmail];
 
   const userSnap = await usersRef.doc(userId).get();
   const userData = userSnap.data() as UserModel;
@@ -326,29 +305,33 @@ export const _appendNewContactRequestToThread = async ({
 
   const allEmailSents = emailsSentSnap.docs.map((d) => d.data() as postmark.Message);
 
-  const collaborators = (await Promise.all(
-    collaboratorIds.map(async (id: string) => {
-      const snap = await usersRef.doc(id).get();
-      if (!snap.exists) {
-        error("no collaborator found");
-        return null;
-      }
+  const collaborators = (
+    await Promise.all(
+      collaboratorIds.map(async (id: string) => {
+        const snap = await usersRef.doc(id).get();
+        if (!snap.exists) {
+          error("no collaborator found");
+          return null;
+        }
 
-      return snap.data() as UserModel;
-    }),
-  )).filter((u) => u !== null) as UserModel[];
+        return snap.data() as UserModel;
+      }),
+    )
+  ).filter((u) => u !== null) as UserModel[];
 
-  const opportunities = (await Promise.all(
-    opportunityIds.map(async (id: string) => {
-      const snap = await opportunitiesRef.doc(id).get();
-      if (!snap.exists) {
-        error("no opportunity found");
-        return null;
-      }
+  const opportunities = (
+    await Promise.all(
+      opportunityIds.map(async (id: string) => {
+        const snap = await opportunitiesRef.doc(id).get();
+        if (!snap.exists) {
+          error("no opportunity found");
+          return null;
+        }
 
-      return snap.data() as Opportunity;
-    })
-  )).filter((o) => o !== null) as Opportunity[];
+        return snap.data() as Opportunity;
+      }),
+    )
+  ).filter((o) => o !== null) as Opportunity[];
 
   const message = await writeAiEmailReply({
     opportunities,
@@ -400,28 +383,19 @@ export const _appendNewContactRequestToThread = async ({
     MessageStream: "outbound",
   };
 
-  await contactVenuesRef
-    .doc(userId)
-    .collection("venuesContacted")
-    .doc(venueId)
-    .update({
-      latestMessageId: messageId,
-    });
+  await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).update({
+    latestMessageId: messageId,
+  });
 
   // add email to emails collection
-  await contactVenuesRef
-    .doc(userId)
-    .collection("venuesContacted")
-    .doc(venueId)
-    .collection("emailsSent")
-    .add(emailObj);
+  await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).collection("emailsSent").add(emailObj);
 
   // send email to venue
   const emailRes = await emailClient.sendEmail(emailObj);
   debug({ emailRes });
 
   return;
-}
+};
 
 export const sendEmailToVenueFromStreamMessage = async ({
   receiverData,
@@ -431,7 +405,7 @@ export const sendEmailToVenueFromStreamMessage = async ({
   attachments,
   postmarkServerId,
 }: {
-  receiverData: UserModel,
+  receiverData: UserModel;
   receiver: User;
   sender: User;
   msg: string;
@@ -447,11 +421,7 @@ export const sendEmailToVenueFromStreamMessage = async ({
   }
 
   // check if ongoing venue contact thread going on
-  const venueContactSnap = await contactVenuesRef
-    .doc(sender.id)
-    .collection("venuesContacted")
-    .doc(receiver.id)
-    .get();
+  const venueContactSnap = await contactVenuesRef.doc(sender.id).collection("venuesContacted").doc(receiver.id).get();
 
   if (!venueContactSnap.exists) {
     error("no ongoing venue contact");
@@ -470,21 +440,17 @@ export const sendEmailToVenueFromStreamMessage = async ({
     attachments,
     emailClient,
   });
-
-}
+};
 
 export const notifyFoundersOnVenueContact = onDocumentCreated(
   {
     document: "contactVenues/{userId}/venuesContacted/{venueId}",
-    secrets: [ 
-      POSTMARK_SERVER_ID, streamKey, streamSecret, OPEN_AI_KEY, SLACK_WEBHOOK_URL ],
+    secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret, OPEN_AI_KEY, SLACK_WEBHOOK_URL],
   },
   async (event) => {
     process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
     const snapshot = event.data;
-    const venueContactData = snapshot?.data() as
-      | VenueContactRequest
-      | undefined;
+    const venueContactData = snapshot?.data() as VenueContactRequest | undefined;
 
     try {
       if (venueContactData === undefined) {
@@ -495,10 +461,7 @@ export const notifyFoundersOnVenueContact = onDocumentCreated(
       const venueId = event.params.venueId;
       const userId = event.params.userId;
 
-      const streamChat = new StreamChat(
-        streamKey.value(),
-        streamSecret.value()
-      );
+      const streamChat = new StreamChat(streamKey.value(), streamSecret.value());
 
       // check if claimed or unclaimed
       // if claimed, send message as DM, and return;
@@ -560,13 +523,13 @@ export const notifyFoundersOnVenueContact = onDocumentCreated(
         slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
       });
     }
-  }
+  },
 );
 
 export const notifyFoundersOnOrphanEmail = onDocumentCreated(
   {
     document: "orphanEmails/{emailId}",
-    secrets: [ POSTMARK_SERVER_ID, SLACK_WEBHOOK_URL ],
+    secrets: [POSTMARK_SERVER_ID, SLACK_WEBHOOK_URL],
   },
   async (event) => {
     const snapshot = event.data;
@@ -590,16 +553,15 @@ export const notifyFoundersOnOrphanEmail = onDocumentCreated(
       body: `An email was not able to be processed: ${error}`,
       slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
     });
-  }
+  },
 );
 
 export const notifyFoundersOnEmail = onDocumentCreated(
   {
     document: "contactVenues/{userId}/venuesContacted/{venueId}/emailsSent/{emailId}",
-    secrets: [ SLACK_WEBHOOK_URL ],
+    secrets: [SLACK_WEBHOOK_URL],
   },
   async (event) => {
-
     const snapshot = event.data;
     const documentData = snapshot?.data();
     const email = documentData ?? null;
@@ -609,7 +571,6 @@ export const notifyFoundersOnEmail = onDocumentCreated(
     const venue = await usersRef.doc(venueId).get();
     const venueData = venue.data() as UserModel;
     const venueName = venueData.artistName ?? venueData.username;
-
 
     const user = await usersRef.doc(userId).get();
     const userData = user.data() as UserModel;
@@ -623,7 +584,8 @@ export const notifyFoundersOnEmail = onDocumentCreated(
       body: `${sender} => ${receiver}`,
       slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
     });
-  });
+  },
+);
 
 export const setLatestContactRequest = onDocumentCreated(
   { document: "contactVenues/{userId}/venuesContacted/{venueId}" },
@@ -636,24 +598,26 @@ export const setLatestContactRequest = onDocumentCreated(
       return;
     }
 
-    await contactVenuesRef
-      .doc(userId)
-      .set({
+    await contactVenuesRef.doc(userId).set(
+      {
         latestContactRequest: documentData,
         timestamp: Timestamp.now(),
-      }, { merge: true });
-  });
+      },
+      { merge: true },
+    );
+  },
+);
 
 export const genericContactVenues = onCall(
-  { secrets: [ RESEND_API_KEY, POSTMARK_SERVER_ID, OPEN_AI_KEY ] },
+  { secrets: [RESEND_API_KEY, POSTMARK_SERVER_ID, OPEN_AI_KEY] },
   async (request) => {
     authenticatedRequest(request);
     process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
 
     const userId = request.data.userId as string | undefined;
     const venueIds = request.data.venueIds as string[] | undefined;
-    const note = request.data.note as string | undefined ?? "";
-    const collaborators = request.data.collaborators as string[] | undefined ?? [];
+    const note = (request.data.note as string | undefined) ?? "";
+    const collaborators = (request.data.collaborators as string[] | undefined) ?? [];
 
     if (!userId) {
       throw new Error("no userId found");
@@ -686,12 +650,7 @@ export const genericContactVenues = onCall(
           return;
         }
 
-        const contactVenueSnap = await contactVenuesRef
-          .doc(userId)
-          .collection("venuesContacted")
-          .doc(venueId)
-          .get();
-
+        const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).get();
 
         const alreadyContacted = contactVenueSnap.exists;
         const resend = new Resend(RESEND_API_KEY.value());
@@ -709,7 +668,7 @@ export const genericContactVenues = onCall(
               bookingEmail,
               user: userData,
               venue: venueData,
-              allEmails: [ bookingEmail ],
+              allEmails: [bookingEmail],
               latestMessageId: null,
               originalMessageId: null,
               subject: null,
@@ -741,4 +700,5 @@ export const genericContactVenues = onCall(
         });
       }),
     );
-  });
+  },
+);

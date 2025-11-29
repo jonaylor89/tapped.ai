@@ -1,7 +1,7 @@
-import type { Page } from "puppeteer";
-import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenAI } from "@langchain/openai";
 import { JsonOutputFunctionsParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 
 export function getEventNameFromUrl(url: string) {
   const pathname = new URL(url).pathname;
@@ -23,7 +23,7 @@ export function parseTicketPrice(priceText: string) {
   const priceRegex = /\$\d+/g;
   const prices = priceText.match(priceRegex) ? priceText.match(priceRegex) : [];
   if (prices && prices.length !== 0) {
-    if (prices.length == 1) {
+    if (prices.length === 1) {
       ticketPrice = Number(prices[0].trim().slice(1));
       doorPrice = ticketPrice;
     } else {
@@ -69,10 +69,7 @@ export async function parseDescription(page: Page): Promise<string | null> {
 // }
 
 export async function parseDates(page: Page) {
-  const element = await page.$$eval(
-    ".wpem-event-date-time",
-    (el) => el[0].outerHTML,
-  );
+  const element = await page.$$eval(".wpem-event-date-time", (el) => el[0].outerHTML);
 
   const htmlContent = element;
 
@@ -92,8 +89,8 @@ export async function parseDates(page: Page) {
   }
 
   // Convert matched dates and times to Date objects
-  const startTime = new Date(matches[0].date + " " + matches[0].time);
-  const endTime = new Date(matches[1].date + " " + matches[1].time);
+  const startTime = new Date(`${matches[0].date} ${matches[0].time}`);
+  const endTime = new Date(`${matches[1].date} ${matches[1].time}`);
 
   return {
     startTime,
@@ -101,10 +98,7 @@ export async function parseDates(page: Page) {
   };
 }
 
-export async function parseArtists(
-  title: string,
-  description: string,
-): Promise<string[]> {
+export async function parseArtists(title: string, description: string): Promise<string[]> {
   const parser = new JsonOutputFunctionsParser();
   const extractionFunctionSchema = {
     name: "extractor",
@@ -117,8 +111,7 @@ export async function parseArtists(
           items: {
             type: "string",
           },
-          description:
-            "The musicians listed in the title of this event or an empty array if none are found.",
+          description: "The musicians listed in the title of this event or an empty array if none are found.",
         },
       },
       required: ["artistNames"],

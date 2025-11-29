@@ -26,8 +26,8 @@ recreate:
 migrate-to-firestore:
     deno --allow-env scripts/migrate-firestore-to-typesense.ts
 
-# Quick setup - start services and initialize with samples
-setup: start init-samples
+# Quick setup - start services and initialize
+setup: start init
 
 # Health check - verify Typesense is running
 health:
@@ -42,3 +42,55 @@ test-search query="*":
 clean: stop
     docker-compose down -v
     docker system prune -f
+
+# === Monorepo Commands ===
+
+# Install all dependencies
+install:
+    pnpm install
+
+# Lint all packages
+lint:
+    pnpm -r run lint
+
+# Fix lint issues in all packages  
+lint-fix:
+    pnpm -r run lint:fix
+
+# Build all Node.js packages
+build-node:
+    pnpm -r run build
+
+# Typecheck all TypeScript packages
+typecheck:
+    pnpm -r run typecheck
+
+# Build Rust API
+build-api:
+    cd api.tapped.ai && cargo build --release
+
+# Build Rust venue-enrichment
+build-venue:
+    cd venue-enrichment && cargo build --release
+
+# Build all Rust projects
+build-rust: build-api build-venue
+
+# Build everything
+build-all: build-node build-rust
+
+# Run Flutter app (iOS simulator)
+flutter-ios:
+    cd com.intheloopstudio && flutter run
+
+# Run Flutter app (Android)
+flutter-android:
+    cd com.intheloopstudio && flutter run -d android
+
+# Dev server for main web app
+dev-app:
+    cd app.tapped.ai && pnpm dev
+
+# Dev server for a specific package
+dev package:
+    cd {{package}} && pnpm dev

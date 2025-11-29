@@ -1,20 +1,8 @@
-import type {
-  Option,
-  Location,
-  RunData,
-  ScraperConfig,
-  ScraperMetadata,
-} from "../types";
-import { getUserById, startScrapeRun, getLatestRun } from "./database";
+import type { Location, Option, RunData, ScraperConfig, ScraperMetadata } from "../types";
+import { getLatestRun, getUserById, startScrapeRun } from "./database";
 import { searchPlaces } from "./place";
 
-export async function initScrape({
-  config,
-  online,
-}: {
-  config: ScraperConfig;
-  online: boolean;
-}): Promise<{
+export async function initScrape({ config, online }: { config: ScraperConfig; online: boolean }): Promise<{
   runId: string;
   latestRun: Option<RunData>;
   metadata: ScraperMetadata;

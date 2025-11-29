@@ -1,29 +1,22 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
+import { v4 as uuidv4 } from "uuid";
+import type { ScrapedEventData } from "../../types";
 import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-  notifyScapeStart,
-} from "../../utils/notifications";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";
+import { initScrape } from "../../utils/startup";
+import { config } from "./config";
 import {
   getEventNameFromUrl,
-  parseArtists,
-  parseTicketPrice,
-  parseDescription,
-  parseDates,
   getFlierUrl,
+  parseArtists,
+  parseDates,
+  parseDescription,
+  parseTicketPrice,
 } from "./parsing";
-import { config } from "./config";
-import { configDotenv } from "dotenv";
-import { v4 as uuidv4 } from "uuid";
-import { initScrape } from "../../utils/startup";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -44,26 +37,19 @@ async function scrapeEvent(
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, element)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, element)) ?? "").trim();
 
   const description = (await parseDescription(page)) ?? "";
 
   // null if price string is empty
-  const priceContainer = await page.waitForSelector(
-    ".eventitem-column-content",
-  );
+  const priceContainer = await page.waitForSelector(".eventitem-column-content");
   if (!priceContainer) {
     console.log("[-] price not found");
     return null;
   }
 
   const priceText = (
-    (await page.evaluate(
-      (priceContainer) => priceContainer.textContent,
-      priceContainer,
-    )) ?? ""
+    (await page.evaluate((priceContainer) => priceContainer.textContent, priceContainer)) ?? ""
   ).trim();
 
   const [ticketPrice, doorPrice] = parseTicketPrice(priceText);
@@ -81,7 +67,7 @@ async function scrapeEvent(
     title,
     description,
     ticketPrice: ticketPrice ?? null,
-    doorPrice: doorPrice ? doorPrice : ticketPrice ?? null,
+    doorPrice: doorPrice ? doorPrice : (ticketPrice ?? null),
     artists,
     startTime: startTime ? startTime : new Date(),
     endTime: endTime ? endTime : new Date(),
@@ -133,7 +119,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

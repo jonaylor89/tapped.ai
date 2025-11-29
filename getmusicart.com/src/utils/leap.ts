@@ -1,5 +1,5 @@
-import { GenerateImageProps } from '@/types/generate_image';
-import { Model } from '@/types/model';
+import type { GenerateImageProps } from "@/types/generate_image";
+import { Model } from "@/types/model";
 
 const LEAP_API_KEY = process.env.LEAP_API_KEY;
 // const CALLBACK_URL = process.env.CALLBACK_URL;
@@ -7,7 +7,7 @@ const LEAP_API_KEY = process.env.LEAP_API_KEY;
 export async function generateImage({
   model = Model.SDXL,
   prompt,
-  negativePrompt = 'asymmetric, watermarks',
+  negativePrompt = "asymmetric, watermarks",
   steps = 50,
   width = 1024,
   height = 1024,
@@ -18,11 +18,11 @@ export async function generateImage({
   const url = `https://api.tryleap.ai/api/v1/images/models/${model}/inferences`;
 
   const options = {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'accept': 'application/json',
-      'content-type': 'application/json',
-      'authorization': `Bearer ${LEAP_API_KEY}`,
+      accept: "application/json",
+      "content-type": "application/json",
+      authorization: `Bearer ${LEAP_API_KEY}`,
     },
     body: JSON.stringify({
       prompt,
@@ -41,15 +41,12 @@ export async function generateImage({
   return await res.json();
 }
 
-export async function getInference({ inferenceId, modelId }: {
-    inferenceId: string,
-    modelId: string,
-}) {
+export async function getInference({ inferenceId, modelId }: { inferenceId: string; modelId: string }) {
   const url = `https://api.tryleap.ai/api/v1/images/models/${modelId}/inferences/${inferenceId}`;
   const options = {
-    method: 'GET',
+    method: "GET",
     headers: {
-      accept: 'application/json',
+      accept: "application/json",
       authorization: `Bearer ${LEAP_API_KEY}`,
     },
   };

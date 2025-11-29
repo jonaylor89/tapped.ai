@@ -10,11 +10,11 @@
 
 body {
   color: #fff;
-  background: #010F16;
+  background: #010f16;
 }
 
 #loading-gif {
-  background: url('/output.gif') center center;
+  background: url("/output.gif") center center;
   height: 100%;
   width: 100%;
   /* z-index: 9999999; */

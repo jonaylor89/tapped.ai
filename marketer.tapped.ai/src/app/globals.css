@@ -10,7 +10,7 @@
 
 body {
   color: #fff;
-  background-color: #010F16;
+  background-color: #010f16;
 }
 
 .tapped_btn {
@@ -67,7 +67,7 @@ body {
 .blueShapesBackground .thirdCircle,
 .blueShapesBackground .firstCircle,
 .blueShapesBackground .secondCircle {
-  content: '';
+  content: "";
   position: absolute;
   background-color: #63b2fd;
   border-radius: 50%;
@@ -97,39 +97,39 @@ body {
   transform: translateX(-50%);
 }
 
-.markdown-content p, 
-.markdown-content blockquote, 
+.markdown-content p,
+.markdown-content blockquote,
 .markdown-content pre {
-   page-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-.markdown-content ol, 
+.markdown-content ol,
 .markdown-content ul {
-   page-break-inside: auto;
+  page-break-inside: auto;
 }
 
 .markdown-content li {
-   page-break-inside: avoid;
+  page-break-inside: avoid;
 }
 
-.markdown-content h1:first-child, 
+.markdown-content h1:first-child,
 .markdown-content h2:first-child {
-   page-break-before: auto;
+  page-break-before: auto;
 }
 
-.markdown-content h1, 
+.markdown-content h1,
 .markdown-content h2 {
-   page-break-before: always;
-   page-break-after: avoid;
+  page-break-before: always;
+  page-break-after: avoid;
 }
 
 .markdown-content p {
-   orphans: 3;
-   widows: 3;
+  orphans: 3;
+  widows: 3;
 }
 
 #loading-gif {
-  background: url('/output.gif') center center;
+  background: url("/output.gif") center center;
   height: 100%;
   width: 100%;
   /* z-index: 9999999; */

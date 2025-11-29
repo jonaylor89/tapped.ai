@@ -1,13 +1,10 @@
-import type { Page } from "puppeteer";
-import { ChatOpenAI } from "@langchain/openai";
-import { RunnableSequence } from "@langchain/core/runnables";
-import { CommaSeparatedListOutputParser } from "langchain/output_parsers";
 import { PromptTemplate } from "@langchain/core/prompts";
+import { RunnableSequence } from "@langchain/core/runnables";
+import { ChatOpenAI } from "@langchain/openai";
+import { CommaSeparatedListOutputParser } from "langchain/output_parsers";
+import type { Page } from "puppeteer";
 
-async function getPerformersFromEventDetails(
-  title: string,
-  description: string,
-): Promise<string[]> {
+async function getPerformersFromEventDetails(title: string, description: string): Promise<string[]> {
   // Instantiate the parser
   const parser = new CommaSeparatedListOutputParser();
 
@@ -26,11 +23,7 @@ Some of the events involve cover bands and tribute bands, so don't include the o
 {formatInstructions}
     `;
 
-  const runnable = RunnableSequence.from([
-    PromptTemplate.fromTemplate(promptTemplate),
-    model,
-    parser,
-  ]);
+  const runnable = RunnableSequence.from([PromptTemplate.fromTemplate(promptTemplate), model, parser]);
 
   // Invoke the runnable with an input
   const result = await runnable.invoke({
@@ -133,9 +126,7 @@ export async function getTitle(page: Page): Promise<string | null> {
     return null;
   }
 
-  const title = (
-    (await page.evaluate((element) => element.textContent, titleElement)) ?? ""
-  ).trim();
+  const title = ((await page.evaluate((element) => element.textContent, titleElement)) ?? "").trim();
 
   return title;
 }
@@ -256,10 +247,7 @@ export async function getTimes(page: Page): Promise<{
   };
 }
 
-export async function getArtists(
-  title: string,
-  description: string,
-): Promise<string[]> {
+export async function getArtists(title: string, description: string): Promise<string[]> {
   const artists = getPerformersFromEventDetails(title, description);
   return artists;
 }

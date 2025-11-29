@@ -1,28 +1,15 @@
+import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { ScrapedEventData } from "../../types";
-import { endScrapeRun, saveScrapeResult } from "../../utils/database";
-import { config } from "./config";
-import {
-  notifyOnScrapeFailure,
-  notifyOnScrapeSuccess,
-} from "../../utils/notifications";
-import {
-  getEventNameFromUrl,
-  getTitle,
-  getDescription,
-  getArtists,
-  getTimes,
-  getFlierUrl,
-} from "./parsing";
-import { configDotenv } from "dotenv";
 import { v4 as uuidv4 } from "uuid";
+import type { ScrapedEventData } from "../../types";
+import { endScrapeRun, saveScrapeResult } from "../../utils/database";
+import { notifyOnScrapeFailure, notifyOnScrapeSuccess } from "../../utils/notifications";
 import { initScrape } from "../../utils/startup";
+import { config } from "./config";
+import { getArtists, getDescription, getEventNameFromUrl, getFlierUrl, getTimes, getTitle } from "./parsing";
 
-async function scrapeEvent(
-  browser: Browser,
-  eventUrl: string,
-): Promise<ScrapedEventData | null> {
+async function scrapeEvent(browser: Browser, eventUrl: string): Promise<ScrapedEventData | null> {
   const eventName = getEventNameFromUrl(eventUrl);
 
   if (!eventName) {
@@ -112,7 +99,6 @@ export async function scrape({ online }: { online: boolean }): Promise<void> {
         }
       } catch (e) {
         console.log("[!!!] error:", e);
-        continue;
       }
     }
     await browser.close();

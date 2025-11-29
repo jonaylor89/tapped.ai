@@ -81,9 +81,7 @@ export const legacyScraperConfigs = [
   },
 ];
 
-export const LEGACY_SCRAPER_IDS = legacyScraperConfigs.map(
-  (config) => config.id,
-);
+export const LEGACY_SCRAPER_IDS = legacyScraperConfigs.map((config) => config.id);
 
 export function getLegacyScraperById(id: string) {
   return legacyScraperConfigs.find((config) => config.id === id);

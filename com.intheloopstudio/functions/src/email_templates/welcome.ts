@@ -1,4 +1,3 @@
-
 export const welcomeTemplate = `
 hey!
 
@@ -15,4 +14,4 @@ if you have any questions or problems, email me - johannes@tapped.ai
 best,
 johannes
 tapped ceo
-`
+`;

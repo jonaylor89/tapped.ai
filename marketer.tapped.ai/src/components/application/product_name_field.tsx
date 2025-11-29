@@ -1,20 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const ProductNameField = ({ formData, updateFormData, onValidation }) => {
   const [error, setError] = useState<string | null>(null);
-  let product = '';
+  let product = "";
 
-  if (formData['marketing_field'] === 'single') {
-    product = 'single';
-  } else if (formData['marketing_field'] === 'EP') {
-    product = 'EP';
+  if (formData.marketing_field === "single") {
+    product = "single";
+  } else if (formData.marketing_field === "EP") {
+    product = "EP";
   } else {
-    product = 'album';
+    product = "album";
   }
 
   const validateForUI = (value: string) => {
-    if (value.trim() === '') {
-      setError('Product name cannot be empty');
+    if (value.trim() === "") {
+      setError("Product name cannot be empty");
       onValidation(false);
     } else {
       setError(null);
@@ -23,7 +23,7 @@ const ProductNameField = ({ formData, updateFormData, onValidation }) => {
   };
 
   const justValidate = (value: string) => {
-    if (value.trim() === '') {
+    if (value.trim() === "") {
       onValidation(false);
     } else {
       onValidation(true);
@@ -31,10 +31,10 @@ const ProductNameField = ({ formData, updateFormData, onValidation }) => {
   };
 
   useEffect(() => {
-    justValidate(formData['productName'] || '');
-  }, [formData['productName']]);
+    justValidate(formData.productName || "");
+  }, [formData.productName, justValidate]);
 
-  const handleInputChange = (e: { target: { name: any; value: any; }; }) => {
+  const handleInputChange = (e: { target: { name: any; value: any } }) => {
     const { name, value } = e.target;
     updateFormData({
       ...formData,
@@ -46,18 +46,16 @@ const ProductNameField = ({ formData, updateFormData, onValidation }) => {
   return (
     <div className="page flex h-full flex-col items-center justify-center">
       <div className="flex w-full flex-col items-start px-6">
-        <h1 className="mb-2 text-2xl font-bold text-white">
-          what is the name of the {product}?
-        </h1>
+        <h1 className="mb-2 text-2xl font-bold text-white">what is the name of the {product}?</h1>
         <div className="flex h-full w-full items-center justify-center">
           <input
             type="text"
             name="productName"
             placeholder="type here..."
-            value={formData['productName'] || ''}
+            value={formData.productName || ""}
             onChange={handleInputChange}
             className={`white_placeholder w-full appearance-none rounded ${
-              error ? 'border-2 border-red-500' : ''
+              error ? "border-2 border-red-500" : ""
             } bg-[#63b2fd] px-4 py-2 leading-tight text-white focus:bg-white focus:text-black font-semibold focus:outline-none`}
           />
         </div>
@@ -73,8 +71,8 @@ const ProductNameField = ({ formData, updateFormData, onValidation }) => {
           <button
             className="mb-2 px-4 py-2 rounded-xl bg-white text-black font-semibold"
             onClick={() => {
-              updateFormData({ ...formData, productName: 'untitled' });
-              validateForUI('untitled');
+              updateFormData({ ...formData, productName: "untitled" });
+              validateForUI("untitled");
             }}
           >
             untitled

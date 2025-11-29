@@ -6,8 +6,8 @@ import InstagramButton from "@/components/profile/InstagramButton";
 import SpotifyButton from "@/components/profile/SpotifyButton";
 import TiktokButton from "@/components/profile/TiktokButton";
 import TwitterButton from "@/components/profile/TwitterButton";
-import UserInfoSection from "@/components/user/UserInfoSection";
 import { Button } from "@/components/ui/button";
+import UserInfoSection from "@/components/user/UserInfoSection";
 import {
 	profileImage,
 	reviewCount,

@@ -1,30 +1,28 @@
 /* eslint-disable import/no-unresolved */
 import * as functions from "firebase-functions";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { usersRef } from "./firebase";
 import { createActivity } from "./activities";
+import { usersRef } from "./firebase";
 
-export const transformLocationPayloadForSearch = functions.https
-  .onCall((data) => {
+export const transformLocationPayloadForSearch = functions.https.onCall((data) => {
+  const { location, ...rest } = data;
+  if (!location) {
+    return rest;
+  }
 
-    const { location, ...rest } = data;
-    if (!location) {
-      return rest;
-    }
+  const { lat, lng } = location;
 
-    const { lat, lng } = location;
+  const payload: Record<string, any> = {
+    location,
+    ...rest,
+  };
 
-    const payload: Record<string, any> = {
-      location,
-      ...rest,
-    };
+  if (lat !== undefined && lat !== null && lng !== undefined && lng !== null) {
+    payload._geoloc = { lat, lng };
+  }
 
-    if (lat !== undefined && lat !== null && lng !== undefined && lng !== null) {
-      payload._geoloc = { lat, lng }
-    }
-
-    return payload;
-  })
+  return payload;
+});
 
 // export const transformBookingPayloadForSearch = functions.https
 //   .onCall(async (data) => {

@@ -1,5 +1,5 @@
-import { type NextRequest, NextResponse } from "next/server";
 import { LRUCache } from "lru-cache";
+import { type NextRequest, NextResponse } from "next/server";
 import {
 	type BoundingBox,
 	queryUsers,
@@ -18,20 +18,14 @@ const venueCache = new LRUCache<string, UserModel[]>({
 	ttl: 60 * 1000,
 });
 
-function buildUserCacheKey(
-	query: string,
-	options: UserSearchOptions
-): string {
+function buildUserCacheKey(query: string, options: UserSearchOptions): string {
 	const lat = options.lat?.toFixed(3) ?? "null";
 	const lng = options.lng?.toFixed(3) ?? "null";
 	const hitsPerPage = options.hitsPerPage ?? "null";
 	return `users:${query}:${lat}:${lng}:${hitsPerPage}`;
 }
 
-function buildVenueCacheKey(
-	boundingBox: BoundingBox | null,
-	options: UserSearchOptions
-): string {
+function buildVenueCacheKey(boundingBox: BoundingBox | null, options: UserSearchOptions): string {
 	const neLat = boundingBox?.ne.lat.toFixed(3) ?? "null";
 	const neLng = boundingBox?.ne.lng.toFixed(3) ?? "null";
 	const swLat = boundingBox?.sw.lat.toFixed(3) ?? "null";

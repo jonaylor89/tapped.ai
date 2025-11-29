@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import UserChip from "@/components/user/UserChip";
 import { getOpportunityById, getUserById } from "@/data/database";
 import { getPlaceById } from "@/data/places";
 import { type Opportunity, opImage } from "@/domain/types/opportunity";
@@ -12,7 +13,6 @@ import type { PlaceData } from "@/domain/types/place_data";
 import type { UserModel } from "@/domain/types/user_model";
 import { LoadingSpinner } from "../LoadingSpinner";
 import EmbededMap from "../profile/EmbededMap";
-import UserChip from "@/components/user/UserChip";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 

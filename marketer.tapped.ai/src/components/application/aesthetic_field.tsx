@@ -1,30 +1,30 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const AestheticField = ({ formData, updateFormData, onValidation }) => {
   const [error, setError] = useState<string | null>(null);
   const [hasInteracted, setHasInteracted] = useState(false);
-  let product = '';
+  let product = "";
 
-  if (formData['marketingType'] === 'single') {
-    product = 'single';
-  } else if (formData['marketingType'] === 'EP') {
-    product = 'EP';
+  if (formData.marketingType === "single") {
+    product = "single";
+  } else if (formData.marketingType === "EP") {
+    product = "EP";
   } else {
-    product = 'album';
+    product = "album";
   }
 
   const handleInputChange = (e) => {
     setHasInteracted(true);
 
     const { value } = e.target;
-    updateFormData({ ...formData, ['aesthetic']: value });
+    updateFormData({ ...formData, aesthetic: value });
     validateForUI(value);
   };
 
   const validateForUI = (value) => {
     if (hasInteracted) {
       if (!value) {
-        setError('Please select your aesthetic.');
+        setError("Please select your aesthetic.");
         onValidation(false);
       } else {
         setError(null);
@@ -45,31 +45,24 @@ const AestheticField = ({ formData, updateFormData, onValidation }) => {
   };
 
   useEffect(() => {
-    justValidate(formData['aesthetic']);
-  }, [formData['aesthetic']]);
+    justValidate(formData.aesthetic);
+  }, [formData.aesthetic, justValidate]);
 
-  const options = [
-    'dreamy waves',
-    'futuristic cyberpunk',
-    '90s y2k',
-    'rage rap',
-  ];
+  const options = ["dreamy waves", "futuristic cyberpunk", "90s y2k", "rage rap"];
 
   return (
     <div className="page flex h-full flex-col items-center justify-center">
       <div className="flex w-full flex-col items-start px-6">
-        <h1 className="mb-2 text-2xl font-bold text-white">
-          what is the {product}'s aesthetic?
-        </h1>
+        <h1 className="mb-2 text-2xl font-bold text-white">what is the {product}'s aesthetic?</h1>
 
         <input
           type="text"
           name="aesthetic"
           placeholder="type here..."
           onChange={handleInputChange}
-          value={formData['aesthetic'] || ''}
+          value={formData.aesthetic || ""}
           className={`white_placeholder w-full appearance-none rounded ${
-            error ? 'border-2 border-red-500' : ''
+            error ? "border-2 border-red-500" : ""
           } bg-[#63b2fd] px-4 py-2 leading-tight text-white focus:bg-white focus:text-black font-semibold focus:outline-none`}
         />
 
@@ -87,14 +80,14 @@ const AestheticField = ({ formData, updateFormData, onValidation }) => {
                 id={option}
                 name="aesthetic"
                 value={option}
-                checked={formData['aesthetic'] === option}
+                checked={formData.aesthetic === option}
                 onChange={handleInputChange}
                 className="sr-only"
               />
               <label
                 htmlFor={option}
                 className={`w-full text-center px-4 py-2 rounded-xl cursor-pointer transition duration-200 ease-in-out 
-                ${formData['aesthetic'] === option ? 'bg-white font-bold text-black' : 'bg-[#63b2fd] font-bold text-white'}`}
+                ${formData.aesthetic === option ? "bg-white font-bold text-black" : "bg-[#63b2fd] font-bold text-white"}`}
               >
                 {option}
               </label>

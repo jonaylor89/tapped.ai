@@ -1,6 +1,6 @@
-import { Scraper } from "../../types";
-import { scrape } from "./scraper";
+import type { Scraper } from "../../types";
 import { config } from "./config";
+import { scrape } from "./scraper";
 
 const scraper: Scraper = {
   run: scrape,

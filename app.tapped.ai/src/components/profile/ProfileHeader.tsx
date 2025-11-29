@@ -10,12 +10,14 @@ const GaugeComponent = dynamic(() => import("react-gauge-component"), {
 	ssr: false,
 	loading: () => <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />,
 });
+
 import InstagramButton from "@/components/profile/InstagramButton";
 import SpotifyButton from "@/components/profile/SpotifyButton";
 import TiktokButton from "@/components/profile/TiktokButton";
 import TwitterButton from "@/components/profile/TwitterButton";
-import UserInfoSection from "@/components/user/UserInfoSection";
 import { Button } from "@/components/ui/button";
+import UserCluster from "@/components/user/UserCluster";
+import UserInfoSection from "@/components/user/UserInfoSection";
 import {
 	getBookingCount,
 	getBookingsByRequestee,
@@ -38,7 +40,6 @@ import { trackEvent } from "@/utils/tracking";
 import AppStoreButton from "../appstorebuttons/AppStoreButton";
 import GooglePlayButton from "../appstorebuttons/GooglePlayButton";
 import { LoadingSpinner } from "../LoadingSpinner";
-import UserCluster from "@/components/user/UserCluster";
 import { Card } from "../ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";

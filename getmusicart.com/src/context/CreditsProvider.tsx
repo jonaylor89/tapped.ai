@@ -1,31 +1,23 @@
-'use client';
+"use client";
 
-import React, {
-  ReactNode,
-  createContext,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
-import { userCreditsListener } from '@/utils/database';
-import { useRouter } from 'next/navigation';
-import { useAuth } from './AuthProvider';
+import { useRouter } from "next/navigation";
+import { createContext, type ReactNode, useContext, useEffect, useState } from "react";
+import { userCreditsListener } from "@/utils/database";
+import { useAuth } from "./AuthProvider";
 
 export const CreditsContext = createContext<{
-    credits: number;
+  credits: number;
 }>({ credits: 0 });
 
 export const useCredits = () => useContext(CreditsContext);
 
 interface CreditsContextProviderProps {
-    children: ReactNode;
+  children: ReactNode;
 }
 
-export function CreditsContextProvider({
-  children,
-}: CreditsContextProviderProps): JSX.Element {
-  const { authUser } =useAuth();
-  const router = useRouter();
+export function CreditsContextProvider({ children }: CreditsContextProviderProps): JSX.Element {
+  const { authUser } = useAuth();
+  const _router = useRouter();
   const [credits, setCredits] = useState(0);
 
   useEffect(() => {
@@ -38,13 +30,7 @@ export function CreditsContextProvider({
     });
 
     return () => unsubscribe();
-  }, [router, authUser]);
+  }, [authUser]);
 
-  return (
-    <>
-      <CreditsContext.Provider value={{ credits }}>
-        {children}
-      </CreditsContext.Provider>
-    </>
-  );
+  return <CreditsContext.Provider value={{ credits }}>{children}</CreditsContext.Provider>;
 }

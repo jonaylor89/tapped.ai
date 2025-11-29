@@ -1,18 +1,14 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import Partners from '@/components/partners';
-import Nav from '@/components/Nav';
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import Nav from "@/components/Nav";
+import Partners from "@/components/partners";
 
 export default function Home() {
-  const words = [
-    'album',
-    'ep',
-    'single',
-  ];
+  const words = ["album", "ep", "single"];
 
-  const [word, setWord] = useState('');
+  const [word, setWord] = useState("");
 
   // eslint-disable-next-line sonarjs/cognitive-complexity
   useEffect(() => {
@@ -66,18 +62,20 @@ export default function Home() {
       <Nav />
       <div className="flex-grow flex flex-col justify-center items-center">
         <h1 className="text-4xl md:text-5xl md:w-1/2 my-2 font-extrabold text-white text-center">
-            market your next <span className="text-transparent bg-clip-text bg-gradient-to-br from-pink-400 to-red-600">{word}</span>
+          market your next{" "}
+          <span className="text-transparent bg-clip-text bg-gradient-to-br from-pink-400 to-red-600">{word}</span>
         </h1>
         <div className="h-4 md:h-6"></div>
         <h2 className="text-lg md:text-2xl md:w-1/3 font-light my-2 text-center">
-         create a marketing plan for your next project
-         just like the majors
+          create a marketing plan for your next project just like the majors
         </h2>
         <div className="flex flex-col md:flex-row items-center gap-2 my-2 md:my-4 mb-8">
           <Link
             href="/marketing_form"
             className="bg-white text-black font-bold text-xl rounded-full px-4 py-2 hover:scale-105 transform transition-all duration-200 ease-in-out"
-          >start now</Link>
+          >
+            start now
+          </Link>
           <Link
             href="https://www.loom.com/embed/ff089c94893f42219be46fb37bdfdfdf?sid=839ef7f2-a3fb-4585-9fca-75e38593d6a9"
             className="text-white bg-black font-bold text-xl rounded-full px-4 py-2 hover:scale-105 transform transition-all duration-200 ease-in-out"

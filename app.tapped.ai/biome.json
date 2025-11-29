@@ -75,7 +75,7 @@
 				"useAwait": "off"
 			},
 			"nursery": {
-				"useSortedClasses": "warn"
+				"recommended": false
 			}
 		}
 	},
