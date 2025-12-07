@@ -1,0 +1,10 @@
+ignoredBuiltDependencies:
+  - core-js
+  - jpegtran-bin
+  - protobufjs
+  - unrs-resolver
+
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - '@firebase/util'
+  - sharp
