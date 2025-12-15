@@ -18,7 +18,7 @@
     "eslint-plugin-typescript": "^0.14.0",
     "firebase": "^10.6.0",
     "lru-cache": "^10.0.1",
-    "next": "14.0.1",
+    "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "react-hot-toast": "^2.4.1",
