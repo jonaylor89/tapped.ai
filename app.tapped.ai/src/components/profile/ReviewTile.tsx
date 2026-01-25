@@ -1,33 +1,31 @@
-import { getUserById } from "@/data/database";
-import { Review } from "@/domain/types/review";
-import { UserModel } from "@/domain/types/user_model";
 import { useEffect, useState } from "react";
+import { getUserById } from "@/data/database";
+import type { Review } from "@/domain/types/review";
+import type { UserModel } from "@/domain/types/user_model";
 import UserTile from "../UserTile";
 
 export default function ReviewTile({ review }: { review: Review }) {
-  const [reviewer, setReviewer] = useState<UserModel | null>(null);
+	const [reviewer, setReviewer] = useState<UserModel | null>(null);
 
-  useEffect(() => {
-    const fetchUsers = async () => {
-      if (review === null) {
-        return;
-      }
+	useEffect(() => {
+		const fetchUsers = async () => {
+			if (review === null) {
+				return;
+			}
 
-      const reviewerId = review.type === "booker" ? review.performerId : review.bookerId;
+			const reviewerId = review.type === "booker" ? review.performerId : review.bookerId;
 
-      const reviewer = await getUserById(reviewerId);
-      setReviewer(reviewer ?? null);
-    };
-    fetchUsers();
-  }, [review]);
+			const reviewer = await getUserById(reviewerId);
+			setReviewer(reviewer ?? null);
+		};
+		fetchUsers();
+	}, [review]);
 
-  return (
-    <>
-      <div className="bg-card rounded-xl p-4">
-        <UserTile user={reviewer} />
-        <div className="h-2" />
-        <p>{review.overallReview}</p>
-      </div>
-    </>
-  );
+	return (
+		<div className="rounded-xl bg-card p-4">
+			<UserTile user={reviewer} />
+			<div className="h-2" />
+			<p>{review.overallReview}</p>
+		</div>
+	);
 }

@@ -58,7 +58,7 @@ interface StepperProps extends StepOptions {
 	steps: StepItem[];
 }
 
-interface StepProps extends React.HTMLAttributes<HTMLLIElement> {
+interface StepProps extends React.HTMLAttributes<HTMLButtonElement> {
 	label?: string | React.ReactNode;
 	description?: string;
 	icon?: IconType;

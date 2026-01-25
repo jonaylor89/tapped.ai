@@ -2,7 +2,7 @@
 
 import { Timestamp } from "firebase/firestore";
 import Typesense from "typesense";
-import type { UserModel } from "@/domain/types/user_model";
+import type { PerformerInfo, UserModel } from "@/domain/types/user_model";
 
 export type UserSearchOptions = {
 	hitsPerPage: number;
@@ -92,7 +92,7 @@ export async function queryVenuesInBoundedBox(
 			.documents()
 			.search(searchParameters);
 
-		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document)) || [];
+		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)) || [];
 	} catch (e) {
 		console.error(e);
 		return [];
@@ -193,7 +193,7 @@ export async function queryUsers(
 			.documents()
 			.search(searchParameters);
 
-		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document)) || [];
+		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)) || [];
 	} catch (e) {
 		console.error(e);
 		return [];
@@ -208,6 +208,8 @@ const getBoolean = (value: unknown, fallback = false) =>
 const getNumber = (value: unknown, fallback = 0) => (typeof value === "number" ? value : fallback);
 const getStringArray = (value: unknown) =>
 	Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+const getNumberArray = (value: unknown) =>
+	Array.isArray(value) ? value.filter((item): item is number => typeof item === "number") : [];
 
 // Helper function to convert Typesense document to UserModel
 export function convertTypesenseDocumentToUserModel(doc: TypesenseDocument): UserModel {
@@ -292,7 +294,10 @@ export function convertTypesenseDocumentToUserModel(doc: TypesenseDocument): Use
 					reviewCount: getNumber(doc["performerInfo.reviewCount"]),
 					label: getString(doc["performerInfo.label"]),
 					spotifyId: getString(doc["performerInfo.spotifyId"], "") || null,
-					category: getString(doc["performerInfo.category"], "undiscovered"),
+					category: getString(
+						doc["performerInfo.category"],
+						"undiscovered"
+					) as PerformerInfo["category"],
 				}
 			: null,
 		venueInfo: hasVenueInfo
@@ -311,7 +316,7 @@ export function convertTypesenseDocumentToUserModel(doc: TypesenseDocument): Use
 					microphones: getString(doc["venueInfo.microphones"], "") || null,
 					lights: getString(doc["venueInfo.lights"], "") || null,
 					topPerformerIds: getStringArray(doc["venueInfo.topPerformerIds"]),
-					bookingsByDayOfWeek: doc["venueInfo.bookingsByDayOfWeek"],
+					bookingsByDayOfWeek: getNumberArray(doc["venueInfo.bookingsByDayOfWeek"]),
 				}
 			: null,
 		bookerInfo: hasBookerInfo

@@ -1,9 +1,9 @@
-import { getUserByUsername } from "@/data/database";
-import { UserModel } from "@/domain/types/user_model";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Sheet as BSheet } from "react-modal-sheet";
 import { styled } from "styled-components";
+import { getUserByUsername } from "@/data/database";
+import type { UserModel } from "@/domain/types/user_model";
 import ProfileView from "./ProfileView";
 
 const UserSheet = styled(BSheet)`
@@ -21,45 +21,41 @@ const UserSheet = styled(BSheet)`
 `;
 
 export default function UserBottomSheet() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-  const username = searchParams.get("username");
-  const isOpen = username !== null;
+	const router = useRouter();
+	const searchParams = useSearchParams();
+	const pathname = usePathname();
+	const username = searchParams.get("username");
+	const isOpen = username !== null;
 
-  const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
-  useEffect(() => {
-    if (username === null) {
-      return;
-    }
-    const fetchUser = async () => {
-      const user = await getUserByUsername(username);
-      setSelectedUser(user ?? null);
-    };
-    fetchUser();
-  }, [username]);
+	const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
+	useEffect(() => {
+		if (username === null) {
+			return;
+		}
+		const fetchUser = async () => {
+			const user = await getUserByUsername(username);
+			setSelectedUser(user ?? null);
+		};
+		fetchUser();
+	}, [username]);
 
-  const onClose = () => {
-    setSelectedUser(null);
-    const newPathname = pathname.replace(`?username=${username}`, "");
-    router.push(newPathname);
-  };
+	const onClose = () => {
+		setSelectedUser(null);
+		const newPathname = pathname.replace(`?username=${username}`, "");
+		router.push(newPathname);
+	};
 
-  return (
-    <>
-      <UserSheet isOpen={isOpen} onClose={onClose}>
-        <BSheet.Container>
-          <BSheet.Header />
-          <BSheet.Content>
-            <BSheet.Scroller>
-              {selectedUser === null ? null : (
-                <ProfileView username={selectedUser.username} />
-              )}
-            </BSheet.Scroller>
-          </BSheet.Content>
-        </BSheet.Container>
-        <BSheet.Backdrop />
-      </UserSheet>
-    </>
-  );
+	return (
+		<UserSheet isOpen={isOpen} onClose={onClose}>
+			<BSheet.Container>
+				<BSheet.Header />
+				<BSheet.Content>
+					<BSheet.Scroller>
+						{selectedUser === null ? null : <ProfileView username={selectedUser.username} />}
+					</BSheet.Scroller>
+				</BSheet.Content>
+			</BSheet.Container>
+			<BSheet.Backdrop />
+		</UserSheet>
+	);
 }
