@@ -1,0 +1,36 @@
+---
+import "../css/normalize.css";
+import "../css/skeleton.css";
+import "../css/components.css";
+
+const { title, description } = Astro.props;
+const pageTitle = title ? `${title}` : "tapped toolkit";
+const pageDescription =
+	description || "Discover the tapped toolkit: links to our products, tools, and social channels.";
+---
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={pageDescription} />
+    <meta name="color-scheme" content="light dark" />
+    <title>{pageTitle}</title>
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={pageDescription} />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="preload" href="/icon.webp" as="image" />
+    <script is:inline>
+      const storedTheme = localStorage.getItem("theme");
+      if (storedTheme) {
+        document.documentElement.dataset.theme = storedTheme;
+      }
+    </script>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

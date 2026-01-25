@@ -1,4 +1,4 @@
-# Links : A beautiful Single Page Application made with React (Alternative to linktr.ee)
+# Links: A fast Astro-powered link hub (Alternative to linktr.ee)
 
 [![Generic badge](https://img.shields.io/badge/Build-Success-<COLOR>.svg)](https://vercel.com/jonaylor89/bio/deployments) 
 
@@ -8,11 +8,11 @@
 
 
 ## How to use
-1. Fork the Repo
-2. Go to assets/items and add your own items and links
-3. Go to public/index.html and add your preferred title
-4. Add your Banners in assets, or use mine
-5. Deploy to Vercel and Profit!
+1. Fork the repo
+2. Edit `src/data/items.js` to add your own items and links
+3. Update the title/description in `src/pages/index.astro`
+4. Add your banners in `src/assets`, or reuse the existing images
+5. Deploy to Vercel and profit
 <br>
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/git/external?repository-url=https%3A%2F%2Fgithub.com%2Fjonaylor89%2Flinktree)
@@ -23,4 +23,3 @@ We always welcome contributions; big or small, it can be documentation updates, 
 ## 🙏🏽 Thanks to Some People who have contributed
 
 <a><img width="150px" src="https://contrib.rocks/image?repo=jonaylor89/linktree" /></a>
-

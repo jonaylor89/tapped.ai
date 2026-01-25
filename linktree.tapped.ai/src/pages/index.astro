@@ -1,0 +1,19 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import Header from "../components/Header.astro";
+import Card from "../components/Card.astro";
+import Footer from "../components/Footer.astro";
+import items from "../data/items.js";
+
+const title = "tapped toolkit";
+const description = "Explore tapped's products, tools, and community links in one place.";
+---
+<BaseLayout title={title} description={description}>
+  <Header />
+  <main class="container row">
+    {items.map((item, index) => (
+      <Card item={item} index={index} />
+    ))}
+  </main>
+  <Footer />
+</BaseLayout>

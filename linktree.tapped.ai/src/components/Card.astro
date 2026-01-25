@@ -1,0 +1,21 @@
+---
+const { item, index } = Astro.props;
+const delay = `${index * 0.1}s`;
+---
+<a href={item.link} class="CardLink">
+  <div class="Card four columns" style={`--delay: ${delay}`}>
+    <img
+      class="cover"
+      src={item.image.src}
+      width={item.image.width}
+      height={item.image.height}
+      alt={item.title}
+      loading="lazy"
+      decoding="async"
+    />
+    <div class="data">
+      <h2>{item.title}</h2>
+      <p>{item.subtitle}</p>
+    </div>
+  </div>
+</a>
