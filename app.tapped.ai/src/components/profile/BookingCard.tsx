@@ -1,63 +1,9 @@
-"use client";
-
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { getServiceById, getUserById } from "@/data/database";
 import { type Booking, bookingImage } from "@/domain/types/booking";
-import type { Option } from "@/domain/types/option";
-import type { Service } from "@/domain/types/service";
 import type { UserModel } from "@/domain/types/user_model";
 
 export default function BookingCard({ booking, user }: { booking: Booking; user: UserModel }) {
-	const [_booker, setBooker] = useState<Option<UserModel>>(null);
-	const [_performer, setPerformer] = useState<Option<UserModel>>(null);
-	const [_service, setService] = useState<Option<Service>>(null); // TODO: [service, setService
-
-	useEffect(() => {
-		const fetchUsers = async () => {
-			if (booking === null) {
-				return;
-			}
-
-			const requesterId = booking.requesterId;
-			const booker = await (() => {
-				if (requesterId === undefined || requesterId === null) {
-					return null;
-				}
-
-				return getUserById(requesterId);
-			})();
-
-			const performer = await getUserById(booking.requesteeId);
-			setBooker(booker);
-			setPerformer(performer);
-		};
-		fetchUsers();
-	}, [booking]);
-
-	useEffect(() => {
-		const fetchService = async () => {
-			if (booking === null) {
-				return;
-			}
-
-			if (booking.serviceId === undefined || booking.serviceId === null) {
-				return;
-			}
-
-			const bookingService = await getServiceById({
-				userId: user.id,
-				serviceId: booking.serviceId,
-			});
-
-			setService(bookingService);
-		};
-		fetchService();
-	}, [booking, user]);
-
-	// const isRequester = user.id == booker?.id;
-
 	const bookerImageSrc = bookingImage(booking, user);
 	const startTimeStr = booking.startTime.toDateString();
 

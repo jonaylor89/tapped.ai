@@ -1,6 +1,14 @@
 import type { Metadata, ResolvingMetadata } from "next";
+import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
-import ProfileView from "@/components/ProfileView";
+import ProfileViewServer, { type ProfileData } from "@/components/profile/ProfileViewServer";
+import {
+	getBookingsByRequestee,
+	getBookingsByRequester,
+	getLatestPerformerReviewByPerformerId,
+	getUserById,
+	getUserByUsername,
+} from "@/data/database";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
 
 type Props = {
@@ -69,12 +77,65 @@ export async function generateMetadata(
 	}
 }
 
+async function fetchProfileData(username: string): Promise<ProfileData | null> {
+	const user = await getUserByUsername(username);
+	if (!user) {
+		return null;
+	}
+
+	const [requesteeBookings, requesterBookings, latestReview, topPerformers] = await Promise.all([
+		getBookingsByRequestee(user.id, { limit: 5 }),
+		getBookingsByRequester(user.id, { limit: 5 }),
+		getLatestPerformerReviewByPerformerId(user.id),
+		fetchTopPerformers(user.venueInfo?.topPerformerIds ?? []),
+	]);
+
+	const bookings = [...requesteeBookings, ...requesterBookings].sort(
+		(a, b) => b.startTime.getTime() - a.startTime.getTime()
+	);
+
+	const reviewer = latestReview
+		? await fetchReviewer(latestReview.type, latestReview.performerId, latestReview.bookerId)
+		: null;
+
+	return {
+		user,
+		bookings,
+		latestReview: latestReview ?? null,
+		topPerformers,
+		reviewer,
+	};
+}
+
+async function fetchTopPerformers(topPerformerIds: string[]): Promise<UserModel[]> {
+	if (topPerformerIds.length === 0) {
+		return [];
+	}
+	const performers = await Promise.all(topPerformerIds.map((id) => getUserById(id)));
+	return performers.filter((user): user is UserModel => user !== null);
+}
+
+async function fetchReviewer(
+	type: "performer" | "booker",
+	performerId: string,
+	bookerId: string
+): Promise<UserModel | null> {
+	const reviewerId = type === "booker" ? performerId : bookerId;
+	return (await getUserById(reviewerId)) ?? null;
+}
+
 export default async function Page(props: Props) {
 	const params = await props.params;
 	const username = params.username;
+
+	const data = await fetchProfileData(username);
+	if (!data) {
+		notFound();
+	}
+
 	return (
 		<div>
-			<ProfileView username={username} />
+			<ProfileViewServer data={data} />
 			<Footer />
 		</div>
 	);

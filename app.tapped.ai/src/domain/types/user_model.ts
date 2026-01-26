@@ -36,7 +36,12 @@ export type BookerInfo = {
 	reviewCount: number;
 };
 
-type PerformerCategory = "undiscovered" | "emerging" | "hometownHero" | "mainstream" | "legendary";
+export type PerformerCategory =
+	| "undiscovered"
+	| "emerging"
+	| "hometownHero"
+	| "mainstream"
+	| "legendary";
 export type PerformerInfo = {
 	pressKitUrl?: Option<string>;
 	genres: string[];

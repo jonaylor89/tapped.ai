@@ -1,15 +1,20 @@
 import { BadgeCheck, Facebook, Link2, MapPinned, MicVocal, Network } from "lucide-react";
+import dynamic from "next/dynamic";
 import { Manrope } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import GaugeComponent from "react-gauge-component";
+
+const GaugeComponent = dynamic(() => import("react-gauge-component"), {
+	ssr: false,
+	loading: () => <div className="h-[200px] w-full animate-pulse rounded-lg bg-muted" />,
+});
 import InstagramButton from "@/components/profile/InstagramButton";
 import SpotifyButton from "@/components/profile/SpotifyButton";
 import TiktokButton from "@/components/profile/TiktokButton";
 import TwitterButton from "@/components/profile/TwitterButton";
-import UserInfoSection from "@/components/UserInfoSection";
+import UserInfoSection from "@/components/user/UserInfoSection";
 import { Button } from "@/components/ui/button";
 import {
 	getBookingCount,
@@ -33,7 +38,7 @@ import { trackEvent } from "@/utils/tracking";
 import AppStoreButton from "../appstorebuttons/AppStoreButton";
 import GooglePlayButton from "../appstorebuttons/GooglePlayButton";
 import { LoadingSpinner } from "../LoadingSpinner";
-import UserCluster from "../UserCluster";
+import UserCluster from "@/components/user/UserCluster";
 import { Card } from "../ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 import { useToast } from "../ui/use-toast";

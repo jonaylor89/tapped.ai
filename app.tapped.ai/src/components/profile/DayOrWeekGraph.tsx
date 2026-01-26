@@ -1,8 +1,20 @@
-import Chart, { BarElement } from "chart.js/auto";
-import { Bar } from "react-chartjs-2";
+"use client";
+
+import dynamic from "next/dynamic";
 import { Card } from "../ui/card";
 
-Chart.register(BarElement);
+const Chart = dynamic(
+	() =>
+		import("chart.js/auto").then((mod) => {
+			mod.default.register(mod.BarElement);
+			return import("react-chartjs-2").then((chartjs) => chartjs.Bar);
+		}),
+	{
+		ssr: false,
+		loading: () => <div className="h-[200px] w-full animate-pulse bg-muted rounded-md" />,
+	}
+);
+
 export default function DayOfWeekGraph({
 	dayOfWeekData,
 	label = "when are shows?",
@@ -49,7 +61,7 @@ export default function DayOfWeekGraph({
 
 	return (
 		<Card>
-			<Bar data={data} options={{}} height={200} width={400} />
+			<Chart data={data} options={{}} height={200} width={400} />
 		</Card>
 	);
 }
