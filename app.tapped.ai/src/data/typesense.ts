@@ -92,7 +92,11 @@ export async function queryVenuesInBoundedBox(
 			.documents()
 			.search(searchParameters);
 
-		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)) || [];
+		return (
+			response.hits?.map((hit) =>
+				convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)
+			) || []
+		);
 	} catch (e) {
 		console.error(e);
 		return [];
@@ -193,7 +197,11 @@ export async function queryUsers(
 			.documents()
 			.search(searchParameters);
 
-		return response.hits?.map((hit) => convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)) || [];
+		return (
+			response.hits?.map((hit) =>
+				convertTypesenseDocumentToUserModel(hit.document as TypesenseDocument)
+			) || []
+		);
 	} catch (e) {
 		console.error(e);
 		return [];
