@@ -1,8 +1,11 @@
 import FeaturedPerformers from "@/components/FeaturedPerformers";
 import SearchBar from "@/components/search/SearchBar";
 import UnauthHeader from "@/components/unauth_header";
+import { getFeaturedPerformers } from "@/data/database";
 
-export default function Page() {
+export default async function Page() {
+	const performers = await getFeaturedPerformers();
+
 	return (
 		<>
 			<UnauthHeader />
@@ -12,7 +15,7 @@ export default function Page() {
 					<SearchBar animatedPlaceholder />
 				</div>
 				<div className="w-full md:w-3/4">
-					<FeaturedPerformers />
+					<FeaturedPerformers performers={performers} />
 				</div>
 			</div>
 		</>

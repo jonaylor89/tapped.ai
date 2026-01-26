@@ -1,37 +1,25 @@
 "use client";
 
 import { Dices } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { getFeaturedPerformers } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
 import { trackEvent } from "@/utils/tracking";
-import UserChip from "./UserChip";
+import UserChip from "@/components/user/UserChip";
 import { Button } from "./ui/button";
 
-export default function FeaturedPerformers() {
-	const [loading, setLoading] = useState(false);
-	const [performers, setPerformers] = useState<UserModel[]>([]);
-	const [sampledPerformers, setSampledPerformers] = useState<UserModel[]>([]);
+function samplePerformers(performers: UserModel[], count = 10): UserModel[] {
+	return [...performers].sort(() => 0.5 - Math.random()).slice(0, count);
+}
 
-	useEffect(() => {
-		const getPerformers = async () => {
-			setLoading(true);
-			const data = await getFeaturedPerformers();
-			setPerformers(data);
-			const randomPerformers = data.sort(() => 0.5 - Math.random()).slice(0, 10);
-			setSampledPerformers(randomPerformers);
-			setLoading(false);
-		};
-
-		getPerformers();
-	}, []);
+export default function FeaturedPerformers({ performers }: { performers: UserModel[] }) {
+	const initialSample = useMemo(() => samplePerformers(performers), [performers]);
+	const [sampledPerformers, setSampledPerformers] = useState<UserModel[]>(initialSample);
 
 	useHotkeys(
 		"space",
 		() => {
-			const newPerformers = performers.sort(() => 0.5 - Math.random()).slice(0, 10);
-			setSampledPerformers(newPerformers);
+			setSampledPerformers(samplePerformers(performers));
 		},
 		{ preventDefault: true }
 	);
@@ -47,22 +35,19 @@ export default function FeaturedPerformers() {
 					}}
 				/>
 			))}
-			{!loading && (
-				<Button
-					variant={"outline"}
-					onClick={() => {
-						const newPerformers = performers.sort(() => 0.5 - Math.random()).slice(0, 10);
-						setSampledPerformers(newPerformers);
-					}}
-				>
-					<div className="flex flex-row items-center justify-start">
-						<div className="relative h-6 w-6 rounded-xl bg-card">
-							<Dices className="h-6 w-6" />
-						</div>
-						<p className="p-1 md:p-2">show more</p>
+			<Button
+				variant={"outline"}
+				onClick={() => {
+					setSampledPerformers(samplePerformers(performers));
+				}}
+			>
+				<div className="flex flex-row items-center justify-start">
+					<div className="relative h-6 w-6 rounded-xl bg-card">
+						<Dices className="h-6 w-6" />
 					</div>
-				</Button>
-			)}
+					<p className="p-1 md:p-2">show more</p>
+				</div>
+			</Button>
 		</div>
 	);
 }
