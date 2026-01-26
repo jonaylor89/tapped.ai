@@ -1,15 +1,26 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import { Suspense, use } from "react";
+import { use } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import VenueMap from "@/components/map/map";
 import { Button } from "@/components/ui/button";
 import { useFeatureFlag } from "@/context/use-feature-flag";
+
+const VenueMap = dynamic(() => import("@/components/map/map"), {
+	ssr: false,
+	loading: () => (
+		<div className="flex min-h-screen w-screen items-center justify-center">
+			<LoadingSpinner />
+		</div>
+	),
+});
 
 export default function Page(props: { searchParams: Promise<{ [key: string]: string }> }) {
 	const searchParams = use(props.searchParams);
 	const { value } = useFeatureFlag("map-city-center");
 	const latlng = {
-		control: { lat: "40.730610", lng: "-73.935242" }, // new york
+		control: { lat: "40.730610", lng: "-73.935242" },
 		los_angles: { lat: "34.052235", lng: "-118.243683" },
 		chicago: { lat: "41.878113", lng: "-87.629799" },
 		miami: { lat: "25.761681", lng: "-80.191788" },
@@ -26,17 +37,9 @@ export default function Page(props: { searchParams: Promise<{ [key: string]: str
 
 	return (
 		<>
-			<Suspense
-				fallback={
-					<div className="flex min-h-screen w-screen items-center justify-center">
-						<LoadingSpinner />
-					</div>
-				}
-			>
-				<div className="h-screen">
-					<VenueMap lat={intLat} lng={intLng} zoom={intZoom} />
-				</div>
-			</Suspense>
+			<div className="h-screen">
+				<VenueMap lat={intLat} lng={intLng} zoom={intZoom} />
+			</div>
 			<div className="no-scroll bottom-0 z-40 hidden w-full md:absolute">
 				<div className="flex flex-row items-center justify-center">
 					<p className="text-center text-sm">

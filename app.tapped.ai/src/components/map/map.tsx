@@ -1,11 +1,10 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import classNames from "classnames";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { type JSX, Suspense, useCallback, useMemo, useRef, useState } from "react";
+import { type JSX, useCallback, useMemo, useRef, useState } from "react";
 import {
 	FullscreenControl,
 	GeolocateControl,
@@ -13,7 +12,6 @@ import {
 	type MapEvent,
 	Marker,
 } from "react-map-gl";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
 import TappedBanner from "@/components/TappedBanner";
 import { useDebounce } from "@/context/debounce";
 import { useSearch } from "@/context/search";
@@ -29,24 +27,11 @@ const mapboxDarkStyle = "mapbox/dark-v11";
 const mapboxLightStyle = "mapbox/light-v11";
 const LIMIT = 250;
 
-const queryClient = new QueryClient();
-export default function VenueMap(props: { lat: number; lng: number; zoom: number }) {
-	return (
-		<QueryClientProvider client={queryClient}>
-			<Suspense
-				fallback={
-					<div className="flex min-h-screen w-full items-center justify-center pt-[60px]">
-						<LoadingSpinner />
-					</div>
-				}
-			>
-				<_VenueMap {...props} />
-			</Suspense>
-		</QueryClientProvider>
-	);
+export default function VenueMap({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+	return <VenueMapInner lat={lat} lng={lng} zoom={zoom} />;
 }
 
-function _VenueMap({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
+function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
 	const [bounds, setBounds] = useState<null | BoundingBox>(null);
 	const [sidebarIsOpen, setSidebarIsOpen] = useState(false);
 	const { useVenueData } = useSearch();
@@ -91,8 +76,6 @@ function _VenueMap({ lat, lng, zoom }: { lat: number; lng: number; zoom: number 
 
 		const newMarkers = (data ?? [])
 			.map((venue) => {
-				console.log({ venue });
-
 				const lat = venue.location?.lat ?? null;
 				const lng = venue.location?.lng ?? null;
 
