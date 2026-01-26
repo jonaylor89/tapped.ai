@@ -4,7 +4,7 @@ import { Suspense } from "react";
 import useWindowDimensions from "@/utils/window_dimensions";
 import UserBottomSheet from "./BottomSheet";
 import { LoadingSpinner } from "./LoadingSpinner";
-import UserSideSheet from "./UserSideSheet";
+import UserSideSheet from "@/components/user/UserSideSheet";
 
 export default function TappedSheet() {
 	const { width } = useWindowDimensions();

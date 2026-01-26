@@ -12,7 +12,7 @@ import type { PlaceData } from "@/domain/types/place_data";
 import type { UserModel } from "@/domain/types/user_model";
 import { LoadingSpinner } from "../LoadingSpinner";
 import EmbededMap from "../profile/EmbededMap";
-import UserChip from "../UserChip";
+import UserChip from "@/components/user/UserChip";
 import { Button } from "../ui/button";
 import { useToast } from "../ui/use-toast";
 

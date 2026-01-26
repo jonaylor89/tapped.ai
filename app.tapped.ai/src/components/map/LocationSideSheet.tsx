@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { getUserById } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
 import VenueCard from "../location/VenueCard";
-import UserCluster from "../UserCluster";
+import UserCluster from "@/components/user/UserCluster";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent } from "../ui/sheet";
 import { useToast } from "../ui/use-toast";

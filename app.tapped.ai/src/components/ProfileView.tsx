@@ -19,7 +19,7 @@ import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
 import { trackEvent } from "@/utils/tracking";
 import { LoadingSpinner } from "./LoadingSpinner";
-import UserCluster from "./UserCluster";
+import UserCluster from "@/components/user/UserCluster";
 
 export default function ProfileView({ username }: { username: string }) {
 	const router = useRouter();
