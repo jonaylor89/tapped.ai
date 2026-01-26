@@ -1,6 +1,6 @@
 import { BarChart3, CalendarDays, Map as MapIcon } from "lucide-react";
 import Link from "next/link";
-import { AppStoreButton, GooglePlayButton } from "@/components/react-mobile-app-button";
+import { AppStoreButton, GooglePlayButton } from "@/components/appstorebuttons";
 import { Button } from "@/components/ui/button";
 import { APPLE_URL, GOOGLE_URL } from "@/utils/app_download";
 

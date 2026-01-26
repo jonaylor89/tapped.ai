@@ -1,6 +1,6 @@
 import { MapPinned, MicVocal, Network } from "lucide-react";
 import Image from "next/image";
-import { AppStoreButton, GooglePlayButton } from "@/components/react-mobile-app-button";
+import { AppStoreButton, GooglePlayButton } from "@/components/appstorebuttons";
 import { Button } from "@/components/ui/button";
 import { APPLE_URL, GOOGLE_URL } from "@/utils/app_download";
 
