@@ -160,7 +160,5 @@ export const searchPlaces = async (q: string): Promise<PlacePrediction[]> => {
 		};
 	});
 
-	console.log({ places });
-
 	return places ?? [];
 };
