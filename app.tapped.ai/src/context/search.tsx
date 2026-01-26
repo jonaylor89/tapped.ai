@@ -1,13 +1,19 @@
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { autocompleteCities, searchPlaces } from "@/data/places";
 import type { BoundingBox, UserSearchOptions } from "@/data/typesense";
 import type { UserModel } from "@/domain/types/user_model";
+import { QueryProvider } from "./query-provider";
+
+function boundingBoxKey(bb: BoundingBox | null): string {
+	if (!bb) return "null";
+	return `${bb.ne.lat.toFixed(3)},${bb.ne.lng.toFixed(3)},${bb.sw.lat.toFixed(3)},${bb.sw.lng.toFixed(3)}`;
+}
 
 export const useSearch = () => {
 	const useVenueData = (boundingBox: BoundingBox | null, options: UserSearchOptions) =>
 		useQuery({
-			queryKey: ["venues", boundingBox],
+			queryKey: ["venues", boundingBoxKey(boundingBox), options.hitsPerPage],
 			queryFn: async (): Promise<UserModel[]> => {
 				const response = await fetch("/api/search", {
 					method: "POST",
@@ -99,6 +105,5 @@ export const useSearch = () => {
 };
 
 export function SearchProvider({ children }: { children: ReactNode }) {
-	const queryClient = new QueryClient();
-	return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+	return <QueryProvider>{children}</QueryProvider>;
 }
