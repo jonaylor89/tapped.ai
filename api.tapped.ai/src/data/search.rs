@@ -1,9 +1,21 @@
 use crate::domain::models::user::UserModel;
-use algoliasearch::{index::AroundRadius, Client, SearchQueryBuilder};
 use anyhow::Result;
 use axum::async_trait;
 use std::collections::HashSet;
 use tracing::instrument;
+use typesense_codegen::apis::configuration::{ApiKey, Configuration};
+use typesense_codegen::apis::documents_api;
+use typesense_codegen::models::SearchParameters;
+
+#[derive(Debug, Clone, Default)]
+pub struct MockSearch;
+
+#[async_trait]
+impl Search for MockSearch {
+    async fn search_users(&self, _query: String, _option: UserSearchOptions) -> Result<Vec<UserModel>> {
+        Ok(vec![])
+    }
+}
 
 #[derive(Debug, Default, Builder)]
 pub struct UserSearchOptions {
@@ -42,22 +54,51 @@ pub trait Search: Send + Sync {
     ) -> Result<Vec<UserModel>>;
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct Algolia {}
+#[derive(Debug, Clone)]
+pub struct Typesense {
+    config: Configuration,
+}
+
+impl Typesense {
+    pub fn new(host: String, port: u16, protocol: String, api_key: String) -> Self {
+        let base_path = format!("{}://{}:{}", protocol, host, port);
+        let config = Configuration {
+            base_path,
+            api_key: Some(ApiKey {
+                prefix: None,
+                key: api_key,
+            }),
+            ..Default::default()
+        };
+
+        Self { config }
+    }
+
+    pub fn from_env() -> Self {
+        let host = std::env::var("TYPESENSE_HOST").unwrap_or_else(|_| "localhost".to_string());
+        let port = std::env::var("TYPESENSE_PORT")
+            .unwrap_or_else(|_| "8108".to_string())
+            .parse()
+            .unwrap_or(8108);
+        let protocol = std::env::var("TYPESENSE_PROTOCOL").unwrap_or_else(|_| "http".to_string());
+        let api_key = std::env::var("TYPESENSE_SEARCH_API_KEY")
+            .expect("TYPESENSE_SEARCH_API_KEY must be set");
+
+        Self::new(host, port, protocol, api_key)
+    }
+}
 
 #[async_trait]
-impl Search for Algolia {
-    #[instrument]
+impl Search for Typesense {
+    #[instrument(skip(self))]
     async fn search_users(
         &self,
         query: String,
         options: UserSearchOptions,
     ) -> Result<Vec<UserModel>> {
-        let index = Client::default().init_index::<UserModel>("prod_users");
+        tracing::info!("searching users from Typesense: {}", query);
 
-        tracing::info!("searching users from Algolia: {}", query);
-
-        let _occupations_intersection = if let (Some(occupations), Some(black_list)) =
+        if let (Some(occupations), Some(black_list)) =
             (&options.occupations, &options.occupations_black_list)
         {
             let occ_set: HashSet<_> = occupations.iter().collect();
@@ -67,115 +108,116 @@ impl Search for Algolia {
                 eprintln!("occupations and occupations_black_list have intersection");
                 return Ok(vec![]);
             }
-            Some(intersection)
-        } else {
-            None
-        };
+        }
 
-        let formatted_is_deleted_filter = "deleted:false".to_string();
-        let formatted_label_filter = options.labels.map(|labels| {
-            format!(
-                "({})",
-                labels
-                    .into_iter()
-                    .map(|e| format!("performerInfo.label:'{}'", e))
-                    .collect::<Vec<_>>()
-                    .join(" OR ")
-            )
-        });
-        let formatted_genre_filter = options.genres.map(|genres| {
-            format!(
-                "({})",
-                genres
-                    .into_iter()
-                    .map(|e| format!("performerInfo.genres:'{}'", e))
-                    .collect::<Vec<_>>()
-                    .join(" OR ")
-            )
-        });
-        let formatted_occupation_filter = options.occupations.map(|occupations| {
-            format!(
-                "({})",
-                occupations
-                    .into_iter()
-                    .map(|e| format!("occupations:'{}'", e))
-                    .collect::<Vec<_>>()
-                    .join(" OR ")
-            )
-        });
-        let formatted_occupation_black_list_filter =
-            options.occupations_black_list.map(|black_list| {
-                format!(
-                    "({})",
-                    black_list
-                        .into_iter()
-                        .map(|e| format!("NOT occupations:'{}'", e))
-                        .collect::<Vec<_>>()
-                        .join(" AND ")
-                )
-            });
-        let formatted_venue_genre_filter = options.venue_genres.map(|venue_genres| {
-            format!(
-                "({})",
-                venue_genres
-                    .into_iter()
-                    .map(|e| format!("venueInfo.genres:'{}'", e))
-                    .collect::<Vec<_>>()
-                    .join(" OR ")
-            )
-        });
-        let formatted_unclaimed_filter = options
-            .unclaimed
-            .map(|unclaimed| format!("unclaimed:{}", unclaimed));
+        let mut filters: Vec<String> = Vec::new();
 
-        let filters = vec![
-            Some(formatted_is_deleted_filter),
-            formatted_label_filter,
-            formatted_genre_filter,
-            formatted_occupation_filter,
-            formatted_occupation_black_list_filter,
-            formatted_venue_genre_filter,
-            formatted_unclaimed_filter,
-        ]
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>()
-        .join(" AND ");
+        filters.push("deleted:=false".to_string());
 
-        let formatted_location_filter = if let (Some(lat), Some(lng)) = (options.lat, options.lng) {
-            Some(format!("{}, {}", lat, lng))
-        } else {
-            None
-        };
+        if let Some(labels) = options.labels
+            && !labels.is_empty() {
+                let label_values = labels
+                    .iter()
+                    .map(|l| format!("'{}'", l))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                filters.push(format!("performerInfo.label:=[{}]", label_values));
+            }
 
-        let mut numeric_filters = Vec::new();
+        if let Some(genres) = options.genres
+            && !genres.is_empty() {
+                let genre_values = genres
+                    .iter()
+                    .map(|g| format!("'{}'", g))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                filters.push(format!("performerInfo.genres:=[{}]", genre_values));
+            }
+
+        if let Some(occupations) = options.occupations
+            && !occupations.is_empty() {
+                let occupation_values = occupations
+                    .iter()
+                    .map(|o| format!("'{}'", o))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                filters.push(format!("occupations:=[{}]", occupation_values));
+            }
+
+        if let Some(black_list) = options.occupations_black_list
+            && !black_list.is_empty() {
+                let black_list_values = black_list
+                    .iter()
+                    .map(|o| format!("'{}'", o))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                filters.push(format!("occupations:!=[{}]", black_list_values));
+            }
+
+        if let Some(venue_genres) = options.venue_genres
+            && !venue_genres.is_empty() {
+                let venue_genre_values = venue_genres
+                    .iter()
+                    .map(|g| format!("'{}'", g))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                filters.push(format!("venueInfo.genres:=[{}]", venue_genre_values));
+            }
+
+        if let Some(unclaimed) = options.unclaimed {
+            filters.push(format!("unclaimed:={}", unclaimed));
+        }
+
         if let Some(min_capacity) = options.min_capacity {
-            numeric_filters.push(format!("venueInfo.capacity>={}", min_capacity));
-        }
-        if let Some(max_capacity) = options.max_capacity {
-            numeric_filters.push(format!("venueInfo.capacity<={}", max_capacity));
+            filters.push(format!("venueInfo.capacity:>={}", min_capacity));
         }
 
-        let numeric_filters = if numeric_filters.is_empty() {
+        if let Some(max_capacity) = options.max_capacity {
+            filters.push(format!("venueInfo.capacity:<={}", max_capacity));
+        }
+
+        if let (Some(lat), Some(lng)) = (options.lat, options.lng) {
+            let radius_km = options.radius.unwrap_or(50_000) as f64 / 1000.0;
+            filters.push(format!("location:({}, {}, {} km)", lat, lng, radius_km));
+        }
+
+        let filter_by = if filters.is_empty() {
             None
         } else {
-            Some(numeric_filters)
+            Some(filters.join(" && "))
         };
 
-        let query = SearchQueryBuilder::default()
-            .query(query)
-            .filters(filters)
-            .hits_per_page(options.hits_per_page.unwrap_or(10))
-            .around_radius(AroundRadius::Radius(options.radius.unwrap_or(50_000)))
-            .around_lat_lng(formatted_location_filter)
-            .numeric_filters(numeric_filters)
-            .build()?;
+        let query_str = if query.is_empty() {
+            "*".to_string()
+        } else {
+            query
+        };
 
-        let response = index
-            .search(query)
-            .await
-            .expect("failed to search users from Algolia");
+        let sort_by = if let (Some(lat), Some(lng)) = (options.lat, options.lng) {
+            Some(format!("location({}, {}):asc", lat, lng))
+        } else {
+            Some("_text_match:desc".to_string())
+        };
 
-        Ok(response.hits)
+        let mut search_params = SearchParameters::new(
+            query_str,
+            "artistName,username,bio,performerInfo.label,venueInfo.type".to_string(),
+        );
+        search_params.filter_by = filter_by;
+        search_params.sort_by = sort_by;
+        search_params.per_page = Some(options.hits_per_page.unwrap_or(10) as i32);
+
+        let response =
+            documents_api::search_collection::<UserModel>(&self.config, "users", search_params)
+                .await?;
+
+        let users: Vec<UserModel> = response
+            .hits
+            .unwrap_or_default()
+            .into_iter()
+            .filter_map(|hit| hit.document)
+            .collect();
+
+        Ok(users)
     }
 }

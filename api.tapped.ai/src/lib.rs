@@ -4,7 +4,6 @@ extern crate derive_builder;
 pub mod data;
 pub mod docs;
 pub mod domain;
-pub mod environment;
 pub mod errors;
 pub mod extractors;
 pub mod routes;

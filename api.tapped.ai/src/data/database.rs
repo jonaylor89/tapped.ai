@@ -1,9 +1,43 @@
 use crate::domain::models::{api_key::ApiKey, booking::Booking, review::Review, user::UserModel};
 use anyhow::Result;
 use axum::async_trait;
-use firestore::{struct_path::path, FirestoreDb, FirestoreResult};
-use futures::{stream::BoxStream, TryStreamExt};
+use firestore::{FirestoreDb, FirestoreResult, struct_path::path};
+use futures::{TryStreamExt, stream::BoxStream};
 use tracing::instrument;
+
+#[derive(Debug, Clone, Default)]
+pub struct MockDatabase;
+
+#[async_trait]
+impl Database for MockDatabase {
+    async fn get_user_from_api_key(&self, _api_key: &str) -> Result<String> {
+        Ok("mock-user-id".to_string())
+    }
+
+    async fn get_user_by_id(&self, id: &str) -> Result<UserModel> {
+        Ok(UserModel::default_with_id(id.to_string()))
+    }
+
+    async fn get_user_by_username(&self, username: &str) -> Result<UserModel> {
+        Ok(UserModel::default_with_username(username.to_string()))
+    }
+
+    async fn get_bookings_by_performer_id(&self, _performer_id: &str) -> Result<Vec<Booking>> {
+        Ok(vec![])
+    }
+
+    async fn get_bookings_by_booker_id(&self, _booker_id: &str) -> Result<Vec<Booking>> {
+        Ok(vec![])
+    }
+
+    async fn get_reviews_by_performer_id(&self, _performer_id: &str) -> Result<Vec<Review>> {
+        Ok(vec![])
+    }
+
+    async fn get_reviews_by_booker_id(&self, _booker_id: &str) -> Result<Vec<Review>> {
+        Ok(vec![])
+    }
+}
 
 #[async_trait]
 pub trait Database: Send + Sync {

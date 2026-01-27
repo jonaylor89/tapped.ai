@@ -1,7 +1,9 @@
 use once_cell::sync::Lazy;
+use std::sync::Arc;
 use tapped_api_rs::{
-    environment::Environment,
+    data::{database::MockDatabase, search::MockSearch},
     startup::Application,
+    state::AppStateDyn,
     tracing::{get_subscriber, init_subscriber},
 };
 
@@ -29,7 +31,12 @@ impl TestApp {}
 pub async fn spawn_app() -> TestApp {
     Lazy::force(&TRACING);
 
-    let application = Application::build(3000, "in-the-loop-306520".into(), Environment::Stage)
+    let state = AppStateDyn {
+        database: Arc::new(MockDatabase),
+        search: Arc::new(MockSearch),
+    };
+
+    let application = Application::build_with_state(0, state)
         .await
         .expect("Failed to build application");
 

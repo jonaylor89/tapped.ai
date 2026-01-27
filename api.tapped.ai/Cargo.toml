@@ -2,12 +2,11 @@
 name = "tapped-api-rs"
 authors = ["Johannes Naylor <johannes@tapped.ai>"]
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [dependencies]
 aide = { version = "0.13.4", features = [
     "redoc",
-    "scalar",
     "axum",
     "axum-extra",
     "macros",
@@ -27,7 +26,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 uuid = { version = "1.10.0", features = ["serde", "v4"] }
 schemars = { version = "0.8.21", features = ["uuid1"] }
 axum-macros = "0.4.1"
-algoliasearch = "0.1.7"
+typesense_codegen = "0.25.1"
 dotenvy = "0.15.7"
 firestore = "0.43.0"
 futures = "0.3.30"

@@ -3,14 +3,13 @@ use std::sync::Arc;
 use crate::{extractors::Json, state::AppStateDyn};
 use aide::{
     axum::{
-        routing::{get, get_with},
         ApiRouter, IntoApiResponse,
+        routing::{get, get_with},
     },
     openapi::OpenApi,
     redoc::Redoc,
-    scalar::Scalar,
 };
-use axum::{response::IntoResponse, Extension};
+use axum::{Extension, response::IntoResponse};
 
 pub fn docs_routes(state: AppStateDyn) -> ApiRouter {
     // We infer the return types for these routes
@@ -19,13 +18,13 @@ pub fn docs_routes(state: AppStateDyn) -> ApiRouter {
     // As a result, the `serve_redoc` route will
     // have the `text/html` content-type correctly set
     // with a 200 status.
-    aide::gen::infer_responses(true);
+    aide::r#gen::infer_responses(true);
 
     let router: ApiRouter = ApiRouter::new()
         .api_route_with(
             "/",
             get_with(
-                Scalar::new("/swagger/json")
+                Redoc::new("/swagger/json")
                     .with_title("Tapped API docs")
                     .axum_handler(),
                 |op| op.description("This documentation page."),
@@ -47,7 +46,7 @@ pub fn docs_routes(state: AppStateDyn) -> ApiRouter {
 
     // Afterwards we disable response inference because
     // it might be incorrect for other routes.
-    aide::gen::infer_responses(false);
+    aide::r#gen::infer_responses(false);
 
     router
 }

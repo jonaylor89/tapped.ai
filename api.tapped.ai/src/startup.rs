@@ -1,7 +1,6 @@
 use crate::{
-    data::{database::Firestore, search::Algolia},
+    data::{database::Firestore, search::Typesense},
     docs::docs_routes,
-    environment::Environment,
     errors::AppError,
     routes::v1_routes,
     state::AppStateDyn,
@@ -11,20 +10,20 @@ use aide::{
     openapi::{OpenApi, Tag},
     transform::TransformOpenApi,
 };
-use axum::serve::Serve;
 use axum::Router;
+use axum::serve::Serve;
 use axum::{
+    Extension, Json,
     extract::MatchedPath,
     http::{Request, StatusCode},
     response::Html,
     routing::get,
-    Extension, Json,
 };
 use axum_swagger_ui::swagger_ui;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::WrapErr;
 use firestore::{FirestoreDb, FirestoreDbOptions};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
@@ -36,14 +35,40 @@ pub struct Application {
     server: Serve<Router, Router>,
 }
 
+const CREDENTIALS_PATH: &str = "./credentials.json";
+
 impl Application {
-    pub async fn build(port: u16, project_id: String, env: Environment) -> Result<Self> {
+    pub async fn build(port: u16, project_id: String) -> Result<Self> {
         let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.wrap_err(
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
         )?;
 
-        let server = run(listener, project_id, env).await?;
+        let firestore_instance = if std::path::Path::new(CREDENTIALS_PATH).exists() {
+            FirestoreDb::with_options_service_account_key_file(
+                FirestoreDbOptions::new(project_id),
+                CREDENTIALS_PATH.into(),
+            )
+            .await?
+        } else {
+            FirestoreDb::new(project_id).await?
+        };
 
+        let state = AppStateDyn {
+            database: Arc::new(Firestore::new(firestore_instance)),
+            search: Arc::new(Typesense::from_env()),
+        };
+
+        let server = run(listener, state).await?;
+        Ok(Self { port, server })
+    }
+
+    pub async fn build_with_state(port: u16, state: AppStateDyn) -> Result<Self> {
+        let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.wrap_err(
+            "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
+        )?;
+        let port = listener.local_addr()?.port();
+
+        let server = run(listener, state).await?;
         Ok(Self { port, server })
     }
 
@@ -56,34 +81,13 @@ impl Application {
     }
 }
 
-async fn run(
-    listener: TcpListener,
-    project_id: String,
-    env: Environment,
-) -> Result<Serve<Router, Router>> {
-    let firestore_instance = match env {
-        Environment::Stage => {
-            FirestoreDb::with_options_service_account_key_file(
-                FirestoreDbOptions::new(project_id),
-                "./credentials.json".into(),
-            )
-            .await?
-        }
-        Environment::Production => FirestoreDb::new(project_id).await?,
-    };
+async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, Router>> {
 
-    let db = Firestore::new(firestore_instance);
-    let search = Algolia::default();
-    let state = AppStateDyn {
-        database: Arc::new(db.clone()),
-        search: Arc::new(search.clone()),
-    };
-
-    aide::gen::on_error(|error| {
+    aide::r#gen::on_error(|error| {
         tracing::error!("{error}");
     });
 
-    aide::gen::extract_schemas(true);
+    aide::r#gen::extract_schemas(true);
     let mut api = OpenApi::default();
     let app = ApiRouter::new()
         .route(

@@ -180,6 +180,20 @@ pub struct UserModel {
 }
 
 impl UserModel {
+    pub fn default_with_id(id: String) -> Self {
+        Self {
+            id,
+            ..Default::default()
+        }
+    }
+
+    pub fn default_with_username(username: String) -> Self {
+        Self {
+            username,
+            ..Default::default()
+        }
+    }
+
     pub fn total_audience_size(&self) -> u32 {
         let social_following = &self.social_following;
 

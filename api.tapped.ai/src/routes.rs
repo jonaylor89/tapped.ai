@@ -10,7 +10,9 @@ use crate::{
 };
 
 pub fn v1_routes(state: AppStateDyn) -> ApiRouter {
-    let router = ApiRouter::new()
+    
+
+    ApiRouter::new()
         .route("/performer/search", get(search_performers))
         .route("/performer/:id", get(get_performer))
         .route("/performer/username/:username", get(get_performer_username))
@@ -19,7 +21,5 @@ pub fn v1_routes(state: AppStateDyn) -> ApiRouter {
             state.clone(),
             verify_api_token,
         ))
-        .with_state(state);
-
-    router
+        .with_state(state)
 }
