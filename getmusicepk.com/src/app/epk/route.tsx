@@ -55,51 +55,31 @@ export async function GET(request: Request) {
   let fontDataItalic;
   let fontDataBold;
 
+  const baseUrl = process.env.VERCEL_URL 
+    ? `https://${process.env.VERCEL_URL}` 
+    : 'https://getmusicepk.com';
+
   if (theme === 'funky'){
       chosenFont = 'JosefinSans';
       chosenFontItalic = 'JosefinSansItalic';
       chosenFontBold = 'JosefinSansBold'
-      fontDataRegular = await fetch(
-          new URL('../fonts/JosefinSans-Medium.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataItalic = await fetch(
-          new URL('../fonts/JosefinSans-Italic.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataBold = await fetch(
-          new URL('../fonts/JosefinSans-Bold.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
+      fontDataRegular = await fetch(`${baseUrl}/fonts/JosefinSans-Medium.ttf`).then((res) => res.arrayBuffer());
+      fontDataItalic = await fetch(`${baseUrl}/fonts/JosefinSans-Italic.ttf`).then((res) => res.arrayBuffer());
+      fontDataBold = await fetch(`${baseUrl}/fonts/JosefinSans-Bold.ttf`).then((res) => res.arrayBuffer());
   } else if (theme === 'minimalist'){
       chosenFont = 'Arimo';
       chosenFontItalic = 'ArimoItalic';
       chosenFontBold = 'ArimoBold'
-      fontDataRegular = await fetch(
-          new URL('../fonts/Arimo-Medium.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataItalic = await fetch(
-          new URL('../fonts/Arimo-Italic.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataBold = await fetch(
-          new URL('../fonts/Arimo-Bold.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
+      fontDataRegular = await fetch(`${baseUrl}/fonts/Arimo-Medium.ttf`).then((res) => res.arrayBuffer());
+      fontDataItalic = await fetch(`${baseUrl}/fonts/Arimo-Italic.ttf`).then((res) => res.arrayBuffer());
+      fontDataBold = await fetch(`${baseUrl}/fonts/Arimo-Bold.ttf`).then((res) => res.arrayBuffer());
   } else {
       chosenFont = 'Inter';
       chosenFontItalic = 'InterItalic';
       chosenFontBold = 'InterBold'
-      fontDataRegular = await fetch(
-          new URL('../fonts/Inter-Medium.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataItalic = await fetch(
-          new URL('../fonts/InterTight-Italic.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
-  
-      fontDataBold = await fetch(
-          new URL('../fonts/Inter-Bold.ttf', import.meta.url)
-      ).then((res) => res.arrayBuffer());
+      fontDataRegular = await fetch(`${baseUrl}/fonts/Inter-Medium.ttf`).then((res) => res.arrayBuffer());
+      fontDataItalic = await fetch(`${baseUrl}/fonts/InterTight-Italic.ttf`).then((res) => res.arrayBuffer());
+      fontDataBold = await fetch(`${baseUrl}/fonts/Inter-Bold.ttf`).then((res) => res.arrayBuffer());
   }
 
   const ThemeComponent: EPKComponent = themeComponents[theme || 'tapped'];
