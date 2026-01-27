@@ -1,0 +1,39 @@
+---
+import de from "../../../dictionaries/de.json";
+import en from "../../../dictionaries/en.json";
+import es from "../../../dictionaries/es.json";
+import fr from "../../../dictionaries/fr.json";
+import hi from "../../../dictionaries/hi.json";
+import nl from "../../../dictionaries/nl.json";
+import zh from "../../../dictionaries/zh.json";
+import Nav from "../../components/Nav.astro";
+import RandomIdea from "../../components/RandomIdea.astro";
+import Layout from "../../layouts/Layout.astro";
+
+const dictionaries = { en, de, es, fr, nl, zh, hi };
+
+export function getStaticPaths() {
+	return [
+		{ params: { lang: "en" } },
+		{ params: { lang: "de" } },
+		{ params: { lang: "es" } },
+		{ params: { lang: "fr" } },
+		{ params: { lang: "nl" } },
+		{ params: { lang: "zh" } },
+		{ params: { lang: "hi" } },
+	];
+}
+
+const { lang } = Astro.params;
+const ideas = dictionaries[lang as keyof typeof dictionaries]?.postIdeas ?? en.postIdeas;
+---
+
+<Layout lang={lang}>
+  <Nav />
+  <main class="min-h-screen flex flex-col items-center justify-center p-12">
+    <div class="hidden md:block py-12">
+      <img src="/images/icon_1024.png" alt="Tapped AI Logo" width="200" height="200" />
+    </div>
+    <RandomIdea ideas={ideas} />
+  </main>
+</Layout>

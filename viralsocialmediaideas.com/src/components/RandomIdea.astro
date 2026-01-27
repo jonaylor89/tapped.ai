@@ -1,0 +1,62 @@
+---
+interface Props {
+	ideas: string[];
+}
+
+const { ideas } = Astro.props;
+---
+
+<div class="flex flex-col justify-center items-center text-center lg:max-w-5xl lg:w-full pb-12">
+  <div id="loading">
+    <h3 class="text-2xl font-bold text-center text-white">creating something special for you...</h3>
+    <div class="h-8"></div>
+    <div class="flex justify-center">
+      <div class="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" role="status">
+        <span class="sr-only">Loading...</span>
+      </div>
+    </div>
+  </div>
+  
+  <div id="idea-display" class="hidden">
+    <div id="idea-text" class="text-5xl font-extrabold m-2 md:w-2/3 mx-auto text-white lowercase"></div>
+    <div class="p-6"></div>
+    <button id="next-btn" class="bg-black p-4 rounded-full text-white font-bold text-lg">
+      show me the next idea!
+    </button>
+    <div class="p-2"></div>
+    <div class="hidden md:block">or press space</div>
+  </div>
+</div>
+
+<script define:vars={{ ideas }}>
+  const ideasList = ideas;
+  
+  function randomChoice(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  
+  function showIdea() {
+    const loading = document.getElementById('loading');
+    const display = document.getElementById('idea-display');
+    const ideaText = document.getElementById('idea-text');
+    
+    loading.classList.remove('hidden');
+    display.classList.add('hidden');
+    
+    const idea = randomChoice(ideasList);
+    
+    setTimeout(() => {
+      ideaText.textContent = idea;
+      loading.classList.add('hidden');
+      display.classList.remove('hidden');
+    }, 500);
+  }
+  
+  document.getElementById('next-btn')?.addEventListener('click', showIdea);
+  
+  document.addEventListener('keyup', (e) => {
+    if (e.code === 'Space') showIdea();
+  });
+  
+  showIdea();
+</script>

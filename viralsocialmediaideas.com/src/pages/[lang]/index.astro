@@ -1,0 +1,29 @@
+---
+import Nav from "../../components/Nav.astro";
+import Layout from "../../layouts/Layout.astro";
+
+export function getStaticPaths() {
+	return [
+		{ params: { lang: "en" } },
+		{ params: { lang: "de" } },
+		{ params: { lang: "es" } },
+		{ params: { lang: "fr" } },
+		{ params: { lang: "nl" } },
+		{ params: { lang: "zh" } },
+		{ params: { lang: "hi" } },
+	];
+}
+
+const { lang } = Astro.params;
+---
+
+<Layout lang={lang}>
+  <Nav />
+  <main class="flex min-h-screen flex-col items-center justify-center p-12">
+    <div class="h-16"></div>
+    <h1 class="text-4xl md:text-7xl font-extrabold text-center md:w-2/3">out of ideas?</h1>
+    <h2 class="text-xl md:text-2xl font-thin text-center md:w-2/3">generate social media ideas in less than a second</h2>
+    <div class="h-8"></div>
+    <a class="font-bold text-lg text-center px-8 py-2 rounded-full bg-black" href={`/${lang}/idea`}>begin</a>
+  </main>
+</Layout>

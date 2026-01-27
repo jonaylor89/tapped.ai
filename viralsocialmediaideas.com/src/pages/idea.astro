@@ -1,0 +1,16 @@
+---
+import ideas from "../../dictionaries/en.json";
+import Nav from "../components/Nav.astro";
+import RandomIdea from "../components/RandomIdea.astro";
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+  <Nav />
+  <main class="min-h-screen flex flex-col items-center justify-center p-12">
+    <div class="hidden md:block py-12">
+      <img src="/images/icon_1024.png" alt="Tapped AI Logo" width="200" height="200" />
+    </div>
+    <RandomIdea ideas={ideas.postIdeas} />
+  </main>
+</Layout>
