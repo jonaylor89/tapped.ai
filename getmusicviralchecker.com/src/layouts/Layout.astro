@@ -1,0 +1,45 @@
+---
+interface Props {
+	title?: string;
+	description?: string;
+}
+
+const {
+	title = "Tapped.ai - Viral Checker",
+	description = "check if your song is viral on tiktok",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta property="og:site_name" content="tapped.ai" />
+		<meta property="og:description" content={description} />
+		<meta property="og:title" content={title} />
+		<meta property="og:image" content="https://getmusicviralchecker.com/og.png" />
+		<meta property="og:url" content="https://tapped.ai" />
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		<meta property="twitter:image" content="https://getmusicviralchecker.com/og.png" />
+		<link rel="icon" type="image/x-icon" href="/favicon.ico" />
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link
+			href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			body {
+				font-family: "Rubik", sans-serif;
+			}
+		</style>
+	</head>
+	<body>
+		<slot />
+	</body>
+</html>

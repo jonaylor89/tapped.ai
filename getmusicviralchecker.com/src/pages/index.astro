@@ -1,0 +1,127 @@
+---
+import Nav from "@/components/Nav.astro";
+import Layout from "@/layouts/Layout.astro";
+import "@/styles/global.css";
+---
+
+<Layout>
+	<Nav />
+	<main class="flex min-h-screen flex-col items-center justify-center">
+		<div class="px-6">
+			<h1 class="text-center text-5xl font-extrabold">Tiktok Viral Checker ✅</h1>
+			<h3 class="text-center text-2xl">See if your song is viral on Tiktok</h3>
+			<div class="h-8"></div>
+			<form id="search-form">
+				<div class="flex w-full min-w-[200px] max-w-[32rem] flex-col justify-center">
+					<input
+						type="text"
+						id="search-input"
+						class="rounded-xl p-4"
+						placeholder="track name"
+						autocomplete="off"
+					/>
+					<div class="h-4"></div>
+					<button class="mb-4 rounded-xl bg-blue-500 p-4 font-bold" type="submit"> Submit </button>
+				</div>
+				<p id="search-label" class="hidden px-4 text-lg font-bold">
+					Showing results for <em id="display-term"></em>
+				</p>
+			</form>
+			<div class="flex flex-col px-4">
+				<div id="result-container" class="hidden w-75">
+					<h2 id="result-text"></h2>
+					<h2 id="viral-status"></h2>
+				</div>
+				<div id="search-results"></div>
+			</div>
+		</div>
+	</main>
+</Layout>
+
+<script>
+	interface Song {
+		id: string;
+		artist: string;
+		name: string;
+	}
+
+	let searchResults: Song[] = [];
+
+	const form = document.getElementById("search-form") as HTMLFormElement;
+	const input = document.getElementById("search-input") as HTMLInputElement;
+	const searchLabel = document.getElementById("search-label") as HTMLElement;
+	const displayTerm = document.getElementById("display-term") as HTMLElement;
+	const resultContainer = document.getElementById("result-container") as HTMLElement;
+	const resultText = document.getElementById("result-text") as HTMLElement;
+	const viralStatus = document.getElementById("viral-status") as HTMLElement;
+	const searchResultsEl = document.getElementById("search-results") as HTMLElement;
+
+	function removeDuplicates(orig: Song[]): Song[] {
+		const names = orig.map((song) => song.name);
+		return orig.filter((song, index) => names.indexOf(song.name) === index);
+	}
+
+	function obtainDuplicates(songs: Song[], searchSong: Song): string[] {
+		return songs
+			.filter((item) => searchSong.name === item.name && searchSong.artist === item.artist)
+			.map((item) => item.id);
+	}
+
+	function renderResults(results: Song[]) {
+		searchResultsEl.innerHTML = "";
+		for (const item of results) {
+			const div = document.createElement("div");
+			div.className =
+				"cursor-pointer hover:bg-blue-500 bg-white rounded-xl shadow-lg text-center md:text-left p-3 my-2";
+			div.textContent = `${item.name} by ${item.artist}`;
+			div.addEventListener("click", () => onSongSelect(item));
+			searchResultsEl.appendChild(div);
+		}
+	}
+
+	async function onSongSelect(item: Song) {
+		const dupes = obtainDuplicates(searchResults, item);
+		let body: string;
+
+		if (dupes.length > 1) {
+			const term = encodeURIComponent(JSON.stringify(dupes));
+			body = JSON.stringify({ term });
+		} else {
+			body = JSON.stringify({ id: item.id });
+		}
+
+		const response = await fetch("/api/isviral", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body,
+		});
+
+		const { is_viral: isViral } = await response.json();
+		resultText.textContent = `Is "${item.name}" by ${item.artist} viral?`;
+		viralStatus.textContent = isViral ? "Yes ✅" : "No ❌";
+		resultContainer.classList.remove("hidden");
+		searchResultsEl.innerHTML = "";
+	}
+
+	form.addEventListener("submit", async (e) => {
+		e.preventDefault();
+		const term = input.value.trim();
+		if (!term) return;
+
+		resultContainer.classList.add("hidden");
+		searchResultsEl.innerHTML = "";
+
+		const res = await fetch("/api/search", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ term }),
+		});
+
+		const { results }: { results: Song[] } = await res.json();
+		searchResults = removeDuplicates(results ?? []);
+
+		displayTerm.textContent = term;
+		searchLabel.classList.remove("hidden");
+		renderResults(searchResults);
+	});
+</script>

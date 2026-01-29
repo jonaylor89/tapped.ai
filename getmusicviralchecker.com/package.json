@@ -1,28 +1,24 @@
 {
-  "name": "tiktok-viral-checker",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@vercel/analytics": "^1.1.1",
-    "next": "15.5.8",
-    "react": "latest",
-    "react-dom": "latest"
-  },
-  "devDependencies": {
-    "@types/node": "latest",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "autoprefixer": "latest",
-    "eslint": "latest",
-    "eslint-config-next": "latest",
-    "postcss": "latest",
-    "tailwindcss": "latest",
-    "typescript": "latest"
-  }
+	"name": "tiktok-viral-checker",
+	"type": "module",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview",
+		"lint": "biome check",
+		"lint:fix": "biome check --write"
+	},
+	"dependencies": {
+		"@astrojs/tailwind": "^6.0.2",
+		"@astrojs/vercel": "^9.0.4",
+		"astro": "^5.7.10",
+		"tailwindcss": "^3.4.17"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.0.5",
+		"@types/node": "^22.15.3",
+		"typescript": "^5.8.3"
+	}
 }
