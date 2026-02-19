@@ -192,8 +192,8 @@ module.exports = {
 
 1. **Initial Setup**:
 ```bash
-# SSH into your instance
-gcloud compute ssh typesense-instance --zone=us-central1-a
+# SSH into the Typesense server (Hetzner)
+ssh root@46.225.133.198
 
 # Run the deployment script
 sudo /opt/crawler/deploy-crawler.sh

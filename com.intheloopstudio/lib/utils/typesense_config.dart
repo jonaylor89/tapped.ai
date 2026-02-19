@@ -1,7 +1,7 @@
 class TypesenseConfig {
   static const String host = String.fromEnvironment(
     'TYPESENSE_HOST',
-    defaultValue: '104.197.126.110',
+    defaultValue: '46.225.133.198',
   );
 
   static const String port = String.fromEnvironment(
