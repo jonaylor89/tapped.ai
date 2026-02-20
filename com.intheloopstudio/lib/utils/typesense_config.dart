@@ -16,6 +16,6 @@ class TypesenseConfig {
 
   static const String searchApiKey = String.fromEnvironment(
     'TYPESENSE_SEARCH_API_KEY',
-    defaultValue: 'wVoV9Wg2dS7qLVRegvoLor2AvXmUypqr',
+    defaultValue: 'sRkjhWNnQ5klpbiH98F3Qhr2S9Ynyzx4',
   );
 }

@@ -50,3 +50,5 @@ app.*.map.json
 
 secrets.ts
 scripts/
+
+.claude/
