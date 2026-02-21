@@ -51,27 +51,27 @@ install:
 
 # Lint all packages
 lint:
-    pnpm -r run lint
+    pnpm run lint
 
 # Fix lint issues in all packages  
 lint-fix:
-    pnpm -r run lint:fix
+    pnpm run lint:fix
 
 # Build all Node.js packages
 build-node:
-    pnpm -r run build
+    pnpm run build
 
 # Typecheck all TypeScript packages
 typecheck:
-    pnpm -r run typecheck
+    pnpm run typecheck
 
 # Build Rust API
 build-api:
-    cd api.tapped.ai && cargo build --release
+    cd services/api.tapped.ai && cargo build --release
 
 # Build Rust venue-enrichment
 build-venue:
-    cd venue-enrichment && cargo build --release
+    cd services/venue-enrichment && cargo build --release
 
 # Build all Rust projects
 build-rust: build-api build-venue
@@ -89,8 +89,8 @@ flutter-android:
 
 # Dev server for main web app
 dev-app:
-    cd app.tapped.ai && pnpm dev
+    cd apps/app.tapped.ai && pnpm dev
 
-# Dev server for a specific package
-dev package:
-    cd {{package}} && pnpm dev
+# Dev server for a specific app
+dev app:
+    cd apps/{{app}} && pnpm dev

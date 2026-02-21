@@ -7,6 +7,7 @@ import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/onboarding_bloc/onboarding_bloc.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/opportunity_feed/components/opportunity_view.dart';
 import 'package:intheloopapp/utils/admin_builder.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -70,7 +71,7 @@ class _OpportunityCardState extends State<OpportunityCard> {
         context: context,
         builder: (_) => AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(25),
+            borderRadius: TappedRadius.xlAll,
           ),
           elevation: 5,
           title: const Text('are your sure?'),
@@ -88,7 +89,7 @@ class _OpportunityCardState extends State<OpportunityCard> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       behavior: SnackBarBehavior.floating,
-                      backgroundColor: Colors.red,
+                      backgroundColor: TappedColors.error,
                       content: Text('error deleting opportunity'),
                     ),
                   );
@@ -115,7 +116,7 @@ class _OpportunityCardState extends State<OpportunityCard> {
       ),
       badgeContent: const Icon(
         CupertinoIcons.xmark_circle_fill,
-        color: Colors.white,
+        color: TappedColors.textOnImage,
         size: 25,
       ),
       child: child,
@@ -187,7 +188,7 @@ class _OpportunityCardState extends State<OpportunityCard> {
                       width: 50,
                       height: 50,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: TappedRadius.smAll,
                         image: DecorationImage(
                           image: provider,
                           fit: BoxFit.contain,
@@ -226,18 +227,18 @@ class _OpportunityCardState extends State<OpportunityCard> {
                     trailing: _isApplied
                     ? Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 5,
+                        horizontal: TappedSpacing.xs + 1,
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(5),
+                        color: TappedColors.success,
+                        borderRadius: TappedRadius.smAll,
                       ),
                       child: const Text(
-                        'applied' ,
+                        'applied',
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.white,
+                          color: TappedColors.textOnImage,
                         ),
                       ),
                     )
@@ -247,9 +248,9 @@ class _OpportunityCardState extends State<OpportunityCard> {
                       ).format(
                         widget.opportunity.startTime,
                       ),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 10,
-                        color: Colors.grey,
+                        color: Theme.of(context).hintColor,
                       ),
                     ),
                   );

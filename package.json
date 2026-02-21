@@ -2,25 +2,22 @@
   "name": "tapped-monorepo",
   "private": true,
   "workspaces": [
-    "app.tapped.ai",
-    "getmusicart.com",
-    "getmusicepk.com",
-    "getmusicviralchecker.com",
-    "linktree.tapped.ai",
-    "marketer.tapped.ai",
-    "event-crawler",
-    "ticket-crawler",
-    "viralsocialmediaideas.com",
+    "apps/*",
+    "services/event-crawler",
+    "services/ticket-crawler",
     "com.intheloopstudio/functions",
     "packages/*"
   ],
   "scripts": {
-    "lint": "pnpm -r run lint",
-    "lint:fix": "pnpm -r run lint:fix",
-    "build": "pnpm -r run build",
-    "typecheck": "pnpm -r run typecheck"
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "typecheck": "turbo run typecheck"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.3.12"
-  }
+    "@biomejs/biome": "^2.3.12",
+    "turbo": "^2.8.18"
+  },
+  "packageManager": "pnpm@10.27.0"
 }

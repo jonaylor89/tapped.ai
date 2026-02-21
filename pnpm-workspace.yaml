@@ -1,13 +1,7 @@
 packages:
-  - app.tapped.ai
-  - getmusicart.com
-  - getmusicepk.com
-  - getmusicviralchecker.com
-  - linktree.tapped.ai
-  - marketer.tapped.ai
-  - event-crawler
-  - ticket-crawler
-  - viralsocialmediaideas.com
+  - apps/*
+  - services/event-crawler
+  - services/ticket-crawler
   - com.intheloopstudio/functions
   - packages/*
 

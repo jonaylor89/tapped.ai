@@ -4,13 +4,13 @@ on:
   push:
     branches: [main]
     paths:
-      - 'api.tapped.ai/**'
-      - 'venue-enrichment/**'
+      - 'services/api.tapped.ai/**'
+      - 'services/venue-enrichment/**'
   pull_request:
     branches: [main]
     paths:
-      - 'api.tapped.ai/**'
-      - 'venue-enrichment/**'
+      - 'services/api.tapped.ai/**'
+      - 'services/venue-enrichment/**'
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        project: [api.tapped.ai, venue-enrichment]
+        project: [services/api.tapped.ai, services/venue-enrichment]
     defaults:
       run:
         working-directory: ${{ matrix.project }}

@@ -12,6 +12,8 @@ import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/domains/onboarding_bloc/onboarding_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/premium_banner.dart';
 import 'package:intheloopapp/ui/discover/components/draggable_sheet.dart';
 import 'package:intheloopapp/ui/discover/components/map_base.dart';
 import 'package:intheloopapp/ui/discover/components/map_settings.dart';
@@ -60,10 +62,11 @@ class DiscoverView extends StatelessWidget {
       builder: (context, isPremium) {
         return BlocBuilder<DiscoverCubit, DiscoverState>(
           builder: (context, state) {
+            final theme = Theme.of(context);
             final cubit = context.read<DiscoverCubit>();
             return Positioned(
-              bottom: 110 + 10,
-              right: 10,
+              bottom: 120,
+              right: TappedSpacing.md,
               child: Column(
                 children: [
                   // const OverlayChanger(),
@@ -81,14 +84,14 @@ class DiscoverView extends StatelessWidget {
                             width: double.infinity,
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 20,
+                                horizontal: TappedSpacing.xl,
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Padding(
                                     padding: EdgeInsets.symmetric(
-                                      vertical: 8,
+                                      vertical: TappedSpacing.sm,
                                     ),
                                     child: Text(
                                       'choose map',
@@ -110,14 +113,14 @@ class DiscoverView extends StatelessWidget {
                                           },
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(15),
+                                              borderRadius: TappedRadius.lgAll,
                                               border: Border.all(
                                                 width: state.mapOverlay == MapOverlay.venues
                                                     ? 3
                                                     : 0,
                                                 color: state.mapOverlay == MapOverlay.venues
-                                                    ? Colors.blue
-                                                    : Colors.grey,
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme.outline,
                                               ),
                                             ),
                                             child: Column(
@@ -129,8 +132,8 @@ class DiscoverView extends StatelessWidget {
                                                   width: double.infinity,
                                                   decoration: const BoxDecoration(
                                                     borderRadius: BorderRadius.only(
-                                                      topLeft: Radius.circular(15),
-                                                      topRight: Radius.circular(15),
+                                                      topLeft: Radius.circular(TappedRadius.lg),
+                                                      topRight: Radius.circular(TappedRadius.lg),
                                                     ),
                                                     image: DecorationImage(
                                                       fit: BoxFit.cover,
@@ -142,8 +145,8 @@ class DiscoverView extends StatelessWidget {
                                                 ),
                                                 const Padding(
                                                   padding: EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 6,
+                                                    horizontal: TappedSpacing.md,
+                                                    vertical: TappedSpacing.sm,
                                                   ),
                                                   child: Text(
                                                     'venues',
@@ -157,7 +160,7 @@ class DiscoverView extends StatelessWidget {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(width: TappedSpacing.sm),
                                       Expanded(
                                         child: GestureDetector(
                                           onTap: () {
@@ -168,14 +171,14 @@ class DiscoverView extends StatelessWidget {
                                           },
                                           child: Container(
                                             decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(15),
+                                              borderRadius: TappedRadius.lgAll,
                                               border: Border.all(
                                                 width: state.mapOverlay == MapOverlay.opportunities
                                                     ? 3
                                                     : 0,
                                                 color: state.mapOverlay == MapOverlay.opportunities
-                                                    ? Colors.blue
-                                                    : Colors.grey,
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme.outline,
                                               ),
                                             ),
                                             child: Column(
@@ -187,8 +190,8 @@ class DiscoverView extends StatelessWidget {
                                                   width: double.infinity,
                                                   decoration: const BoxDecoration(
                                                     borderRadius: BorderRadius.only(
-                                                      topLeft: Radius.circular(15),
-                                                      topRight: Radius.circular(15),
+                                                      topLeft: Radius.circular(TappedRadius.lg),
+                                                      topRight: Radius.circular(TappedRadius.lg),
                                                     ),
                                                     image: DecorationImage(
                                                       fit: BoxFit.cover,
@@ -200,8 +203,8 @@ class DiscoverView extends StatelessWidget {
                                                 ),
                                                 const Padding(
                                                   padding: EdgeInsets.symmetric(
-                                                    horizontal: 12,
-                                                    vertical: 6,
+                                                    horizontal: TappedSpacing.md,
+                                                    vertical: TappedSpacing.sm,
                                                   ),
                                                   child: Text(
                                                     'gigs',
@@ -310,62 +313,6 @@ class DiscoverView extends StatelessWidget {
     );
   }
 
-  Widget _buildPremiumBanner(BuildContext context) {
-    return PremiumBuilder(
-      builder: (context, isPremium) {
-        if (isPremium) {
-          return const SizedBox();
-        }
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              gradient: LinearGradient(
-                colors: [
-                  Colors.red.shade800.withOpacity(0.8),
-                  Colors.pink.withOpacity(0.8),
-                ],
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.star,
-                    color: Colors.white,
-                  ),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      'try tapped premium to increase your chances of getting booked!',
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      context.push(PaywallPage());
-                    },
-                    child: const Text(
-                      'upgrade',
-                      style: TextStyle(
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -406,7 +353,7 @@ class DiscoverView extends StatelessWidget {
                         SafeArea(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
+                              horizontal: TappedSpacing.lg,
                             ),
                             child: Column(
                               children: [
@@ -466,8 +413,8 @@ class DiscoverView extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 4),
-                                _buildPremiumBanner(context),
+                                const SizedBox(height: TappedSpacing.xs),
+                                const PremiumBanner(),
                                 const TasksBanner(),
                                 const SearchNewAreaButton(),
                               ],

@@ -121,7 +121,7 @@ class TypesenseSearchImpl extends SearchRepository {
         'query_by':
             'artistName,username,bio,performerInfo.label,venueInfo.type',
         'filter_by': filterBy.join(' && '),
-        'per_page': limit,
+        'per_page': limit.toString(),
       };
 
       // Add geo location filter and sorting if coordinates are provided
@@ -332,7 +332,7 @@ class TypesenseSearchImpl extends SearchRepository {
         'query_by':
             'artistName,username,bio,performerInfo.label,venueInfo.type',
         'filter_by': filterBy.join(' && '),
-        'per_page': limit,
+        'per_page': limit.toString(),
       };
 
       final response =
@@ -371,7 +371,7 @@ class TypesenseSearchImpl extends SearchRepository {
         'q': input.isEmpty ? '*' : input,
         'query_by': 'title,description',
         'filter_by': polygonFilter,
-        'per_page': limit,
+        'per_page': limit.toString(),
       };
 
       final response = await client
@@ -429,7 +429,7 @@ class TypesenseSearchImpl extends SearchRepository {
         'q': input.isEmpty ? '*' : input,
         'query_by': 'title,description',
         'filter_by': filterBy.join(' && '),
-        'per_page': limit,
+        'per_page': limit.toString(),
       };
 
       final response = await client
@@ -478,6 +478,34 @@ class TypesenseSearchImpl extends SearchRepository {
     final modifiedDoc = Map<String, dynamic>.from(doc);
     modifiedDoc['timestamp'] = timestamp;
 
+    // Normalize list fields that Typesense may return as scalars
+    _normalizeListField(modifiedDoc, 'occupations');
+
+    final rawVenueInfo = modifiedDoc['venueInfo'];
+    if (rawVenueInfo is Map) {
+      final venueInfo = Map<String, dynamic>.from(rawVenueInfo);
+      _normalizeListField(venueInfo, 'genres');
+      _normalizeListField(venueInfo, 'venuePhotos');
+      _normalizeListField(venueInfo, 'topPerformerIds');
+      _normalizeListField(venueInfo, 'bookingsByDayOfWeek');
+      modifiedDoc['venueInfo'] = venueInfo;
+    }
+
+    final rawPerformerInfo = modifiedDoc['performerInfo'];
+    if (rawPerformerInfo is Map) {
+      final performerInfo = Map<String, dynamic>.from(rawPerformerInfo);
+      _normalizeListField(performerInfo, 'genres');
+      _normalizeListField(performerInfo, 'subgenres');
+      modifiedDoc['performerInfo'] = performerInfo;
+    }
+
     return UserModel.fromJson(modifiedDoc);
+  }
+
+  void _normalizeListField(Map<String, dynamic> map, String key) {
+    final value = map[key];
+    if (value != null && value is! List) {
+      map[key] = [value];
+    }
   }
 }

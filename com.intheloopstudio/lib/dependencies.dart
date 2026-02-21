@@ -137,12 +137,6 @@ List<BlocProvider> buildBlocs({
         remoteConfigRepository: context.remoteConfig,
       )..add(CheckStatus()),
     ),
-    // BlocProvider<ActivityBloc>(
-    //   create: (context) => ActivityBloc(
-    //     databaseRepository: context.database,
-    //     authenticationBloc: context.authentication,
-    //   ),
-    // ),
     BlocProvider<BookingsBloc>(
       create: (context) => BookingsBloc(
         database: context.database,

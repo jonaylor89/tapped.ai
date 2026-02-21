@@ -34,13 +34,13 @@ services:
 
   api:
     build:
-      context: ./api.tapped.ai
+      context: ./services/api.tapped.ai
       dockerfile: Dockerfile
     restart: on-failure
     ports:
       - "3000:3000"
     env_file:
-      - ./api.tapped.ai/.env
+      - ./services/api.tapped.ai/.env
     environment:
       - RUST_LOG=info
     depends_on:

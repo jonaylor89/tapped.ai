@@ -5,6 +5,8 @@ interface Props {
 	lang?: string;
 }
 
+import "../styles/global.css";
+
 const {
 	title = "Viral Social Media Ideas",
 	description = "Generate viral social media ideas for musicians",
@@ -44,14 +46,4 @@ const {
   </body>
 </html>
 
-<style is:global>
-  @tailwind base;
-  @tailwind components;
-  @tailwind utilities;
 
-  body {
-    color: #fff;
-    background-color: #38B6FF;
-    font-family: 'Rubik', sans-serif;
-  }
-</style>

@@ -15,7 +15,8 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 final FirebaseAuth _auth = FirebaseAuth.instance;
 final FirebaseFirestore _fireStore = FirebaseFirestore.instance;
 final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-final CollectionReference<Map<String, dynamic>> usersRef = _fireStore.collection('users');
+final CollectionReference<Map<String, dynamic>> usersRef =
+    _fireStore.collection('users');
 
 String _generateNonce([int length = 32]) {
   const charset =

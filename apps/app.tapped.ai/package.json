@@ -1,4 +1,5 @@
 {
+	"name": "app.tapped.ai",
 	"private": true,
 	"scripts": {
 		"dev": "next dev --turbopack",

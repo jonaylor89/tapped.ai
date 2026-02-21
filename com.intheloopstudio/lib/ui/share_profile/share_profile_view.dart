@@ -84,16 +84,16 @@ class _ShareProfileViewState extends State<ShareProfileView> {
     final theme = Theme.of(context);
     // const borderRadius = 25.0;
     // final bookingCount = user.performerInfo.map((t) => t.bookingCount);
-    final reviewCount = user.performerInfo.map((t) => t.reviewCount);
-    final audience = user.socialFollowing.audienceSize;
+    // final reviewCount = user.performerInfo.map((t) => t.reviewCount);
+    // final audience = user.socialFollowing.audienceSize;
     final rating = user.performerInfo.flatMap((t) => t.rating);
     final socialFollowing = user.socialFollowing;
     final numberFormat = NumberFormat.compact();
     final genres = user.performerInfo.map((t) => t.genres).getOrElse(() => []);
     final label = user.performerInfo.map((t) => t.label);
     final category = user.performerInfo.map((t) => t.category);
-    final averagePerformerTicketPrice =
-        user.performerInfo.map((t) => t.formattedPriceRange);
+    // final averagePerformerTicketPrice =
+    // user.performerInfo.map((t) => t.formattedPriceRange);
     return Screenshot(
       controller: _screenshotController,
       child: AspectRatio(

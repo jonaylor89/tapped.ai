@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
 
 // const itlAccent = Color(0xff6200ee);
 const tappedAccent = Color(0xff0086CC);
@@ -30,6 +31,7 @@ ThemeData buildLightTheme({
       primary: primaryColor,
       secondary: secondaryColor,
       surface: backgroundLightColor,
+      error: TappedColors.error,
     ),
 
     // floating action button
@@ -74,6 +76,103 @@ ThemeData buildLightTheme({
         ),
       ),
     ),
+
+    // ── Component themes ──────────────────────────────────────────────
+
+    cardTheme: CardThemeData(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+      color: Colors.white,
+      margin: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+        vertical: TappedSpacing.sm,
+      ),
+    ),
+
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: Colors.grey.shade100,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+        vertical: TappedSpacing.md,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: const BorderSide(color: tappedAccent, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: const BorderSide(color: TappedColors.error),
+      ),
+    ),
+
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        padding: const EdgeInsets.symmetric(
+          horizontal: TappedSpacing.xl,
+          vertical: TappedSpacing.md,
+        ),
+      ),
+    ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        padding: const EdgeInsets.symmetric(
+          horizontal: TappedSpacing.lg,
+          vertical: TappedSpacing.sm,
+        ),
+      ),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: Colors.grey.shade100,
+      selectedColor: primaryColor.withValues(alpha: 0.15),
+      labelStyle: const TextStyle(fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.smAll),
+      side: BorderSide.none,
+      padding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.sm,
+        vertical: TappedSpacing.xs,
+      ),
+    ),
+
+    bottomSheetTheme: const BottomSheetThemeData(
+      showDragHandle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(TappedRadius.xl),
+        ),
+      ),
+    ),
+
+    dialogTheme: DialogThemeData(
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.xlAll),
+    ),
+
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
+    ),
   );
 }
 
@@ -94,6 +193,7 @@ ThemeData buildDarkTheme({
       primary: primaryColor,
       secondary: secondaryColor,
       surface: backgroundDarkColor,
+      error: TappedColors.error,
     ),
     // floating action button
     floatingActionButtonTheme: FloatingActionButtonThemeData(
@@ -134,6 +234,103 @@ ThemeData buildDarkTheme({
           fontFamily: 'TitilliumWeb',
         ),
       ),
+    ),
+
+    // ── Component themes ──────────────────────────────────────────────
+
+    cardTheme: CardThemeData(
+      elevation: 0,
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+      color: const Color(0xff1C2B33),
+      margin: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+        vertical: TappedSpacing.sm,
+      ),
+    ),
+
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: const Color(0xff1C2B33),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+        vertical: TappedSpacing.md,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: const BorderSide(color: tappedAccent, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: const BorderSide(color: TappedColors.error),
+      ),
+    ),
+
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        backgroundColor: primaryColor,
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        padding: const EdgeInsets.symmetric(
+          horizontal: TappedSpacing.xl,
+          vertical: TappedSpacing.md,
+        ),
+      ),
+    ),
+
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primaryColor,
+        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        padding: const EdgeInsets.symmetric(
+          horizontal: TappedSpacing.lg,
+          vertical: TappedSpacing.sm,
+        ),
+      ),
+    ),
+
+    chipTheme: ChipThemeData(
+      backgroundColor: const Color(0xff1C2B33),
+      selectedColor: primaryColor.withValues(alpha: 0.25),
+      labelStyle: const TextStyle(fontSize: 13),
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.smAll),
+      side: BorderSide.none,
+      padding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.sm,
+        vertical: TappedSpacing.xs,
+      ),
+    ),
+
+    bottomSheetTheme: const BottomSheetThemeData(
+      showDragHandle: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(TappedRadius.xl),
+        ),
+      ),
+    ),
+
+    dialogTheme: DialogThemeData(
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.xlAll),
+    ),
+
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: TappedSpacing.lg,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
+    ),
+
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
     ),
   );
 }

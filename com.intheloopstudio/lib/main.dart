@@ -18,7 +18,6 @@ import 'package:path_provider/path_provider.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-
 Future<void> main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
@@ -54,7 +53,6 @@ Future<void> main() async {
   );
 
   final client = StreamChatClient('xyk6dwdsp422');
-  // StreamVideo.init('xyk6dwdsp422');
   final navigatorKey = GlobalKey<NavigatorState>();
 
   runApp(

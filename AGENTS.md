@@ -14,21 +14,23 @@ just dev <package>   # Start dev server for specific package
 
 ## Project Structure
 
+This is a Turborepo monorepo. Frontend apps live in `apps/`, backend services in `services/`.
+
 | Directory | Tech | Description |
 |-----------|------|-------------|
-| `app.tapped.ai/` | Next.js | Main web application |
-| `api.tapped.ai/` | Rust | Backend API |
+| `apps/app.tapped.ai/` | Next.js | Main web application |
+| `apps/getmusicart.com/` | Next.js | Music art generator |
+| `apps/getmusicepk.com/` | Next.js | EPK generator |
+| `apps/getmusicviralchecker.com/` | Astro | Viral checker tool |
+| `apps/linktree.tapped.ai/` | Astro | Link tree page |
+| `apps/marketer.tapped.ai/` | Next.js | Marketing tools |
+| `apps/viralsocialmediaideas.com/` | Astro | Social media ideas |
+| `services/api.tapped.ai/` | Rust | Backend API |
+| `services/event-crawler/` | Node.js | Event scraping service |
+| `services/ticket-crawler/` | Node.js | Ticket scraping service |
+| `services/venue-enrichment/` | Rust | Venue data enrichment |
+| `services/midia-to-threads/` | Python | Midia to threads |
 | `com.intheloopstudio/` | Flutter | Mobile app |
-| `event-crawler/` | Node.js | Event scraping service |
-| `ticket-crawler/` | Node.js | Ticket scraping service |
-| `venue-enrichment/` | Rust | Venue data enrichment |
-| `getmusicart.com/` | Next.js | Music art generator |
-| `getmusicepk.com/` | Next.js | EPK generator |
-| `getmusicviralchecker.com/` | Next.js | Viral checker tool |
-| `linktree.tapped.ai/` | Astro | Link tree page |
-| `marketer.tapped.ai/` | Next.js | Marketing tools |
-| `viralsocialmediaideas.com/` | Next.js | Social media ideas |
-| `armada.tapped.ai/` | Node.js | Armada deployment |
 | `platform/` | Terraform | Infrastructure |
 | `packages/` | TypeScript | Shared code |
 

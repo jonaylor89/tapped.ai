@@ -26,6 +26,7 @@ import 'package:intheloopapp/ui/profile/components/social_media_icons.dart';
 import 'package:intheloopapp/ui/profile/components/top_performers_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/top_tracks_sliver.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/default_image.dart';
@@ -104,7 +105,7 @@ class ProfileView extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.5),
+                    TappedColors.scrim,
                   ],
                 ),
               ),
@@ -132,7 +133,6 @@ class ProfileView extends StatelessWidget {
         )
           ..getTopBookings()
           ..getLatestReview()
-          // ..initServices()
           ..initOpportunities()
           ..initTopSpotifyTracks()
           ..loadIsBlocked()
@@ -208,7 +208,6 @@ class ProfileView extends StatelessWidget {
                     HapticFeedback.mediumImpact(),
                     cubit.getTopBookings(),
                     cubit.getLatestReview(),
-                    // cubit.initServices(),
                     cubit.initOpportunities(),
                     cubit.initTopSpotifyTracks(),
                     cubit.refetchVisitedUser(),
@@ -221,7 +220,7 @@ class ProfileView extends StatelessWidget {
               onPressed: onQuit ?? () => context.pop(),
               icon: Icon(
                 CupertinoIcons.xmark_circle_fill,
-                color: Colors.white.withOpacity(0.8),
+                color: TappedColors.textOnImageMuted,
               ),
             ),
           ],
@@ -231,8 +230,8 @@ class ProfileView extends StatelessWidget {
               StretchMode.fadeTitle,
             ],
             titlePadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
+              horizontal: TappedSpacing.md,
+              vertical: TappedSpacing.sm,
             ),
             centerTitle: false,
             title: PremiumBuilder(
@@ -288,7 +287,7 @@ class ProfileView extends StatelessWidget {
                                                 style: TextStyle(
                                                   color: theme
                                                       .colorScheme.onSurface
-                                                      .withOpacity(0.5),
+                                                      .withValues(alpha: 0.5),
                                                 ),
                                               ),
                                             ),
@@ -343,26 +342,23 @@ class ProfileView extends StatelessWidget {
           child: TopPerformersSliver(),
         ),
         const SliverToBoxAdapter(
-          child: SizedBox(height: 12),
+          child: SizedBox(height: TappedSpacing.md),
         ),
         const SliverToBoxAdapter(
           child: TopTracksSliver(),
         ),
         const SliverToBoxAdapter(
-          child: SizedBox(height: 12),
+          child: SizedBox(height: TappedSpacing.md),
         ),
         const SliverToBoxAdapter(
           child: BookingsSliver(),
         ),
         const SliverToBoxAdapter(
-          child: SizedBox(height: 12),
+          child: SizedBox(height: TappedSpacing.md),
         ),
         const SliverToBoxAdapter(
           child: ReviewsSliver(),
         ),
-        // const SliverToBoxAdapter(
-        //   child: ServicesSliver(),
-        // ),
         const SliverToBoxAdapter(
           child: BioSliver(),
         ),
@@ -371,9 +367,7 @@ class ProfileView extends StatelessWidget {
             child: ClaimProfileButton(),
           ),
         const SliverToBoxAdapter(
-          child: SizedBox(
-            height: 50,
-          ),
+          child: SizedBox(height: 50),
         ),
       ];
 
@@ -408,15 +402,15 @@ class ProfileView extends StatelessWidget {
               StretchMode.fadeTitle,
             ],
             titlePadding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
+              horizontal: TappedSpacing.md,
+              vertical: TappedSpacing.sm,
             ),
             centerTitle: false,
             title: Text.rich(
               TextSpan(
                 text: visitedUser.artistName,
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: TappedColors.textOnImage,
                   fontSize: 32,
                 ),
                 children: [
@@ -476,7 +470,6 @@ class ProfileView extends StatelessWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
       body: BlocBuilder<OnboardingBloc, OnboardingState>(
-        // selector: (state) => (state is Onboarded) ? state.currentUser : null,
         buildWhen: (previous, current) {
           if (previous is Onboarded && current is Onboarded) {
             return previous.currentUser.id != current.currentUser.id;

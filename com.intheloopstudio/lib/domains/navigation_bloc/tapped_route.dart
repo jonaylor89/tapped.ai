@@ -443,19 +443,7 @@ final class ImagePage extends TappedRoute {
           view: Builder(
             builder: (context) {
               return Scaffold(
-                appBar: AppBar(
-                    // actions: [
-                    //   IconButton(
-                    //     onPressed: () {
-                    //       _saveImage(
-                    //         context,
-                    //         heroImage,
-                    //       );
-                    //     },
-                    //     icon: const Icon(Icons.download_rounded),
-                    //   ),
-                    // ],
-                    ),
+                appBar: AppBar(),
                 body: PhotoView(
                   imageProvider: heroImage.imageProvider,
                   heroAttributes:
@@ -466,72 +454,6 @@ final class ImagePage extends TappedRoute {
           ),
         );
 
-  // static Future<void> _writeToFile(ByteData data, String path) {
-  //   final buffer = data.buffer;
-  //   return File(path).writeAsBytes(
-  //     buffer.asUint8List(
-  //       data.offsetInBytes,
-  //       data.lengthInBytes,
-  //     ),
-  //   );
-  // }
-  //
-  // static Future<void> _saveImage(
-  //   BuildContext context,
-  //   HeroImage heroImage,
-  // ) async {
-  //   String? message;
-  //   final scaffoldMessenger = ScaffoldMessenger.of(context);
-  //   final config = createLocalImageConfiguration(context);
-  //
-  //   await EasyLoading.show();
-  //   try {
-  //     final imageBytes = await heroImage.imageProvider.getBytes(
-  //       imageConfig: config,
-  //     );
-  //     if (imageBytes == null) {
-  //       throw Exception('Failed to get image bytes');
-  //     }
-  //
-  //     // save bytes to path
-  //     final uuid = const Uuid().v4();
-  //     final mime = lookupMimeType('', headerBytes: imageBytes) ?? 'image/png';
-  //     final extension = extensionFromMime(mime);
-  //     final tempDir = await getTemporaryDirectory();
-  //     final tempPath = tempDir.path;
-  //     final filePath = '$tempPath/$uuid.$extension';
-  //
-  //     await _writeToFile(imageBytes.buffer.asByteData(), filePath);
-  //
-  //     final result = await GallerySaver.saveImage(
-  //       filePath,
-  //       // imageBytes,
-  //       // quality: 100,
-  //     );
-  //     message = 'Image saved to $result';
-  //   } catch (e, s) {
-  //     logger.error(
-  //       'Failed to save image',
-  //       error: e,
-  //       stackTrace: s,
-  //     );
-  //     message = 'Failed to save image: $e';
-  //   } finally {
-  //     await EasyLoading.dismiss();
-  //   }
-  //
-  //   scaffoldMessenger.showSnackBar(
-  //     SnackBar(
-  //       shape: RoundedRectangleBorder(
-  //         borderRadius: BorderRadius.circular(8),
-  //       ),
-  //       content: Text(
-  //         message,
-  //       ),
-  //     ),
-  //   );
-  // }
-  //
   final HeroImage heroImage;
 }
 

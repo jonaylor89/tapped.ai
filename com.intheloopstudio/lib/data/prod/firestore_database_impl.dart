@@ -22,27 +22,6 @@ import 'package:intheloopapp/utils/geohash.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:rxdart/rxdart.dart';
 
-// final _storage = FirebaseStorage.instance.ref();
-final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
-
-final CollectionReference<Map<String, dynamic>> _usersRef = _firestore.collection('users');
-final CollectionReference<Map<String, dynamic>> _activitiesRef = _firestore.collection('activities');
-final CollectionReference<Map<String, dynamic>> _badgesSentRef = _firestore.collection('badgesSent');
-final CollectionReference<Map<String, dynamic>> _bookingsRef = _firestore.collection('bookings');
-final CollectionReference<Map<String, dynamic>> _servicesRef = _firestore.collection('services');
-final CollectionReference<Map<String, dynamic>> _mailRef = _firestore.collection('mail');
-final CollectionReference<Map<String, dynamic>> _leadersRef = _firestore.collection('leaderboard');
-final CollectionReference<Map<String, dynamic>> _blockerRef = _firestore.collection('blockers');
-// final _blockeeRef = _firestore.collection('blockees');
-final CollectionReference<Map<String, dynamic>> _reviewsRef = _firestore.collection('reviews');
-final CollectionReference<Map<String, dynamic>> _opportunitiesRef = _firestore.collection('opportunities');
-final CollectionReference<Map<String, dynamic>> _opportunityFeedsRef = _firestore.collection('opportunityFeeds');
-final CollectionReference<Map<String, dynamic>> _creditsRef = _firestore.collection('credits');
-final CollectionReference<Map<String, dynamic>> _premiumWailistRef = _firestore.collection('premiumWaitlist');
-final CollectionReference<Map<String, dynamic>> _userFeedbackRef = _firestore.collection('userFeedback');
-final CollectionReference<Map<String, dynamic>> _contactVenuesRef = _firestore.collection('contactVenues');
-
 const verifiedBadgeId = '0aa46576-1fbe-4312-8b69-e2fef3269083';
 
 const blockerSubcollection = 'blockedUsers';
@@ -59,6 +38,40 @@ Future<bool> _asyncShouldCache(bool candidate) async {
 
 /// Database implementation using Firebase's FirestoreDB
 class FirestoreDatabaseImpl extends DatabaseRepository {
+  static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
+  static final CollectionReference<Map<String, dynamic>> _usersRef =
+      _firestore.collection('users');
+  static final CollectionReference<Map<String, dynamic>> _activitiesRef =
+      _firestore.collection('activities');
+  static final CollectionReference<Map<String, dynamic>> _badgesSentRef =
+      _firestore.collection('badgesSent');
+  static final CollectionReference<Map<String, dynamic>> _bookingsRef =
+      _firestore.collection('bookings');
+  static final CollectionReference<Map<String, dynamic>> _servicesRef =
+      _firestore.collection('services');
+  static final CollectionReference<Map<String, dynamic>> _mailRef =
+      _firestore.collection('mail');
+  static final CollectionReference<Map<String, dynamic>> _leadersRef =
+      _firestore.collection('leaderboard');
+  static final CollectionReference<Map<String, dynamic>> _blockerRef =
+      _firestore.collection('blockers');
+  static final CollectionReference<Map<String, dynamic>> _reviewsRef =
+      _firestore.collection('reviews');
+  static final CollectionReference<Map<String, dynamic>> _opportunitiesRef =
+      _firestore.collection('opportunities');
+  static final CollectionReference<Map<String, dynamic>> _opportunityFeedsRef =
+      _firestore.collection('opportunityFeeds');
+  static final CollectionReference<Map<String, dynamic>> _creditsRef =
+      _firestore.collection('credits');
+  static final CollectionReference<Map<String, dynamic>> _premiumWailistRef =
+      _firestore.collection('premiumWaitlist');
+  static final CollectionReference<Map<String, dynamic>> _userFeedbackRef =
+      _firestore.collection('userFeedback');
+  static final CollectionReference<Map<String, dynamic>> _contactVenuesRef =
+      _firestore.collection('contactVenues');
+
   String _getFileFromURL(String fileURL) {
     final fSlashes = fileURL.split('/');
     final fQuery = fSlashes[fSlashes.length - 1].split('?');
@@ -99,30 +112,15 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
     final blacklist = ['anonymous', '*deleted*'];
 
     if (blacklist.contains(username)) {
-      // print('''
-      //   username check for blacklisted item:
-      //     userId: ${data.userId},
-      //     username: ${data.username}
-      // ''');
       return false;
     }
 
     final userQuery =
         await _usersRef.where('username', isEqualTo: username).get();
     if (userQuery.docs.isNotEmpty && userQuery.docs.first.id != userid) {
-      // print('''
-      //   username check for already taken username:
-      //     userId: ${data.userId},
-      //     username: ${data.username}
-      // ''');
       return false;
     }
 
-    // print('''
-    //   username check for available username:
-    //     userId: ${data.userId},
-    //     username: ${data.username}
-    // ''');
     return true;
   }
 
@@ -250,36 +248,12 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
         return [];
       }
 
-      final usersWithFP = usersSnapshot.docs.map(UserModel.fromDoc).toList();
-
-      final users = usersWithFP
-          .map((user) {
-            final filteredUser = switch (user.location) {
-              None() => null,
-              Some(:final value) => (() {
-                  // We have to filter out a few false positives due to GeoHash
-                  // accuracy, but most will match
-                  final distanceInKm = geoDistance(
-                    Point(latitude: value.lat, longitude: value.lng),
-                    Point(latitude: lat, longitude: lng),
-                  );
-
-                  final distanceInM = distanceInKm * 1000;
-                  if (distanceInM > radiusInMeters) {
-                    return null;
-                  }
-
-                  return user;
-                })(),
-            };
-
-            return filteredUser;
-          })
-          .where((e) => e != null)
-          .whereType<UserModel>()
-          .toList();
-
-      return users;
+      return _filterByDistance(
+        usersSnapshot.docs,
+        lat: lat,
+        lng: lng,
+        radiusInMeters: radiusInMeters,
+      );
     } else {
       final usersSnapshot = await _usersRef
           .orderBy('geohash')
@@ -292,122 +266,71 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
         return [];
       }
 
-      final usersWithFP = usersSnapshot.docs.map(UserModel.fromDoc).toList();
-
-      final users = usersWithFP
-          .map((user) {
-            final filteredUser = switch (user.location) {
-              None() => null,
-              Some(:final value) => (() {
-                  // We have to filter out a few false positives due to GeoHash
-                  // accuracy, but most will match
-                  final distanceInKm = geoDistance(
-                    Point(latitude: value.lat, longitude: value.lng),
-                    Point(latitude: lat, longitude: lng),
-                  );
-
-                  final distanceInM = distanceInKm * 1000;
-                  if (distanceInM > radiusInMeters) {
-                    return null;
-                  }
-
-                  return user;
-                })(),
-            };
-
-            return filteredUser;
-          })
-          .where((e) => e != null)
-          .whereType<UserModel>()
-          .toList();
-
-      return users;
+      return _filterByDistance(
+        usersSnapshot.docs,
+        lat: lat,
+        lng: lng,
+        radiusInMeters: radiusInMeters,
+      );
     }
   }
 
-  @override
-  @cached
-  Future<List<UserModel>> getBookingLeaders() async {
+  List<UserModel> _filterByDistance(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> docs, {
+    required double lat,
+    required double lng,
+    required int radiusInMeters,
+  }) {
+    return docs.map(UserModel.fromDoc).where((user) {
+      return switch (user.location) {
+        None() => false,
+        Some(:final value) => () {
+            // We have to filter out a few false positives due to GeoHash
+            // accuracy, but most will match
+            final distanceInKm = geoDistance(
+              Point(latitude: value.lat, longitude: value.lng),
+              Point(latitude: lat, longitude: lng),
+            );
+            return distanceInKm * 1000 <= radiusInMeters;
+          }(),
+      };
+    }).toList();
+  }
+
+  Future<List<UserModel>> _getLeadersByField(String fieldName) async {
     try {
       final leadersSnapshot = await _leadersRef.doc('leaders').get();
-
       final leadingUsernames =
-          leadersSnapshot.getOrElse('bookingLeaders', <dynamic>[]);
-
+          leadersSnapshot.getOrElse(fieldName, <dynamic>[]);
       final leaders = await Future.wait(
         leadingUsernames.map(
-          (username) async {
-            final user = await getUserByUsername(username as String);
-            return user;
-          },
+          (username) async => getUserByUsername(username as String),
         ),
       );
-
       return leaders
           .whereType<Some<UserModel>>()
           .map((e) => e.toNullable())
           .toList();
     } catch (e, s) {
-      logger.error('getBookingLeaders', error: e, stackTrace: s);
+      logger.error(fieldName, error: e, stackTrace: s);
       return [];
     }
   }
 
   @override
   @cached
-  Future<List<UserModel>> getBookerLeaders() async {
-    try {
-      final leadersSnapshot = await _leadersRef.doc('leaders').get();
-
-      final leadingUsernames =
-          leadersSnapshot.getOrElse('bookerLeaders', <dynamic>[]);
-
-      final leaders = await Future.wait(
-        leadingUsernames.map(
-          (username) async {
-            final user = await getUserByUsername(username as String);
-            return user;
-          },
-        ),
-      );
-
-      return leaders
-          .whereType<Some<UserModel>>()
-          .map((e) => e.toNullable())
-          .toList();
-    } catch (e, s) {
-      logger.error('getBookerLeaders', error: e, stackTrace: s);
-      return [];
-    }
-  }
+  Future<List<UserModel>> getBookingLeaders() =>
+      _getLeadersByField('bookingLeaders');
 
   @override
   @cached
-  Future<List<UserModel>> getFeaturedPerformers() async {
-    try {
-      final leadersSnapshot = await _leadersRef.doc('leaders').get();
+  Future<List<UserModel>> getBookerLeaders() =>
+      _getLeadersByField('bookerLeaders');
 
-      final leadingUsernames =
-          leadersSnapshot.getOrElse('featuredPerformers', <dynamic>[]);
-
-      final leaders = await Future.wait(
-        leadingUsernames.map(
-          (username) async {
-            final user = await getUserByUsername(username as String);
-            return user;
-          },
-        ),
-      );
-
-      return leaders
-          .whereType<Some<UserModel>>()
-          .map((e) => e.toNullable())
-          .toList();
-    } catch (e, s) {
-      logger.error('getFeaturedPerformers', error: e, stackTrace: s);
-      return [];
-    }
-  }
+  @override
+  @cached
+  Future<List<UserModel>> getFeaturedPerformers() =>
+      _getLeadersByField('featuredPerformers');
 
   @override
   @Cached(ttl: 60 * 5) // 5 minute
@@ -799,7 +722,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       )
           .map((DocumentChange<Map<String, dynamic>> element) async {
         final bookingId = element.doc.id;
-        // print('BOOKING ID { $bookingId }');
         final bookingSnapshot = await _bookingsRef.doc(bookingId).get();
         return Booking.fromDoc(bookingSnapshot);
       });
@@ -891,7 +813,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       )
           .map((DocumentChange<Map<String, dynamic>> element) async {
         final bookingId = element.doc.id;
-        // print('BOOKING ID { $bookingId }');
         final bookingSnapshot = await _bookingsRef.doc(bookingId).get();
         return Booking.fromDoc(bookingSnapshot);
       });
@@ -1673,7 +1594,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
         )
             .map((DocumentChange<Map<String, dynamic>> element) async {
           final reviewId = element.doc.id;
-          // print('REVIEW ID { $reviewId }');
 
           final reviewSnapshot = await _reviewsRef
               .doc(bookerId)
@@ -1789,7 +1709,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
         )
             .map((DocumentChange<Map<String, dynamic>> element) async {
           final reviewId = element.doc.id;
-          // print('REVIEW ID { $reviewId }');
           final reviewSnapshot = await _reviewsRef
               .doc(performerId)
               .collection(performerReviewsSubcollection)

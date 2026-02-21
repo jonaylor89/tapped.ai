@@ -25,11 +25,11 @@ jobs:
         run: pnpm install --frozen-lockfile
         
       - name: Lint
-        run: pnpm -r run lint
+        run: pnpm run lint
         
       - name: Typecheck
-        run: pnpm -r run typecheck
+        run: pnpm run typecheck
         continue-on-error: true
         
       - name: Build
-        run: pnpm -r run build
+        run: pnpm run build
