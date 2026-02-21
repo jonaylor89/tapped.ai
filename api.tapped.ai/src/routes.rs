@@ -10,8 +10,6 @@ use crate::{
 };
 
 pub fn v1_routes(state: AppStateDyn) -> ApiRouter {
-    
-
     ApiRouter::new()
         .route("/performer/search", get(search_performers))
         .route("/performer/:id", get(get_performer))

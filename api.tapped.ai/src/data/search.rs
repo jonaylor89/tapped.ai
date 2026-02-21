@@ -12,7 +12,11 @@ pub struct MockSearch;
 
 #[async_trait]
 impl Search for MockSearch {
-    async fn search_users(&self, _query: String, _option: UserSearchOptions) -> Result<Vec<UserModel>> {
+    async fn search_users(
+        &self,
+        _query: String,
+        _option: UserSearchOptions,
+    ) -> Result<Vec<UserModel>> {
         Ok(vec![])
     }
 }
@@ -115,54 +119,59 @@ impl Search for Typesense {
         filters.push("deleted:=false".to_string());
 
         if let Some(labels) = options.labels
-            && !labels.is_empty() {
-                let label_values = labels
-                    .iter()
-                    .map(|l| format!("'{}'", l))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                filters.push(format!("performerInfo.label:=[{}]", label_values));
-            }
+            && !labels.is_empty()
+        {
+            let label_values = labels
+                .iter()
+                .map(|l| format!("'{}'", l))
+                .collect::<Vec<_>>()
+                .join(", ");
+            filters.push(format!("performerInfo.label:=[{}]", label_values));
+        }
 
         if let Some(genres) = options.genres
-            && !genres.is_empty() {
-                let genre_values = genres
-                    .iter()
-                    .map(|g| format!("'{}'", g))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                filters.push(format!("performerInfo.genres:=[{}]", genre_values));
-            }
+            && !genres.is_empty()
+        {
+            let genre_values = genres
+                .iter()
+                .map(|g| format!("'{}'", g))
+                .collect::<Vec<_>>()
+                .join(", ");
+            filters.push(format!("performerInfo.genres:=[{}]", genre_values));
+        }
 
         if let Some(occupations) = options.occupations
-            && !occupations.is_empty() {
-                let occupation_values = occupations
-                    .iter()
-                    .map(|o| format!("'{}'", o))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                filters.push(format!("occupations:=[{}]", occupation_values));
-            }
+            && !occupations.is_empty()
+        {
+            let occupation_values = occupations
+                .iter()
+                .map(|o| format!("'{}'", o))
+                .collect::<Vec<_>>()
+                .join(", ");
+            filters.push(format!("occupations:=[{}]", occupation_values));
+        }
 
         if let Some(black_list) = options.occupations_black_list
-            && !black_list.is_empty() {
-                let black_list_values = black_list
-                    .iter()
-                    .map(|o| format!("'{}'", o))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                filters.push(format!("occupations:!=[{}]", black_list_values));
-            }
+            && !black_list.is_empty()
+        {
+            let black_list_values = black_list
+                .iter()
+                .map(|o| format!("'{}'", o))
+                .collect::<Vec<_>>()
+                .join(", ");
+            filters.push(format!("occupations:!=[{}]", black_list_values));
+        }
 
         if let Some(venue_genres) = options.venue_genres
-            && !venue_genres.is_empty() {
-                let venue_genre_values = venue_genres
-                    .iter()
-                    .map(|g| format!("'{}'", g))
-                    .collect::<Vec<_>>()
-                    .join(", ");
-                filters.push(format!("venueInfo.genres:=[{}]", venue_genre_values));
-            }
+            && !venue_genres.is_empty()
+        {
+            let venue_genre_values = venue_genres
+                .iter()
+                .map(|g| format!("'{}'", g))
+                .collect::<Vec<_>>()
+                .join(", ");
+            filters.push(format!("venueInfo.genres:=[{}]", venue_genre_values));
+        }
 
         if let Some(unclaimed) = options.unclaimed {
             filters.push(format!("unclaimed:={}", unclaimed));

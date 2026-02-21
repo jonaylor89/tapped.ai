@@ -19,7 +19,7 @@ async fn main() -> Result<()> {
         .unwrap_or_else(|_| "3000".into())
         .parse()
         .wrap_err("failed to parse PORT")?;
-    let project_id = std::env::var("PROJECT_ID").wrap_err("Failed to parse PROJECT_ID")?;
+    let project_id = std::env::var("FIREBASE_PROJECT_ID").wrap_err("Failed to parse PROJECT_ID")?;
 
     let app = Application::build(port, project_id).await?;
     app.run_until_stopped().await?;

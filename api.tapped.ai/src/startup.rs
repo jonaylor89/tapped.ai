@@ -82,7 +82,6 @@ impl Application {
 }
 
 async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, Router>> {
-
     aide::r#gen::on_error(|error| {
         tracing::error!("{error}");
     });

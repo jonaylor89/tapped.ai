@@ -32,6 +32,21 @@ services:
     depends_on:
       - typesense
 
+  api:
+    build:
+      context: ./api.tapped.ai
+      dockerfile: Dockerfile
+    restart: on-failure
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./api.tapped.ai/.env
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      typesense:
+        condition: service_healthy
+
 volumes:
   typesense-data:
     driver: local
