@@ -1,34 +1,11 @@
 {
   "name": "getmusicart.com",
-  "version": "0.1.0",
   "private": true,
+  "version": "1.0.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-    "@upstash/qstash": "^2.1.11",
-    "@upstash/redis": "^1.24.3",
-    "@vercel/analytics": "^1.1.1",
-    "classnames": "^2.3.2",
-    "firebase": "^10.6.0",
-    "lru-cache": "^10.0.1",
-    "next": "14.2.35",
-    "react": "^18",
-    "react-dom": "^18",
-    "react-hot-toast": "^2.4.1",
-    "stripe": "^14.5.0"
-  },
-  "devDependencies": {
-    "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
-    "autoprefixer": "^10.0.1",
-    "postcss": "^8",
-    "tailwindcss": "^3.3.0",
-    "typescript": "^5"
-  }
+  "keywords": [],
+  "author": "Johannes Naylor <johannes@tapped.ai>",
+  "packageManager": "pnpm@10.27.0"
 }

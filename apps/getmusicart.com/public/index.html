@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>getmusicart archive</title>
+    <meta name="description" content="Archived landing page for the former getmusicart.com service." />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" href="./favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #010f16;
+        --white: #ffffff;
+        --blue: #2563eb;
+        --gray-300: #d1d5db;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        min-height: 100%;
+      }
+
+      body {
+        margin: 0;
+        color: var(--white);
+        background: var(--bg);
+        font-family: "Rubik", sans-serif;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .site-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 20;
+        display: flex;
+        width: 100vw;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 0.75rem;
+        background: rgba(1, 15, 22, 0.3);
+        backdrop-filter: blur(24px);
+      }
+
+      .brand-link {
+        margin-right: 1rem;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem;
+      }
+
+      .menu-toggle {
+        margin-left: auto;
+        display: inline-flex;
+        border: 0;
+        border-radius: 0.25rem;
+        background: transparent;
+        padding: 0.75rem;
+        color: var(--white);
+        outline: none;
+        cursor: pointer;
+      }
+
+      .menu-toggle:hover,
+      .menu-item:hover {
+        background: #3b82f6;
+        color: var(--white);
+      }
+
+      .menu-panel {
+        display: none;
+        width: 100%;
+      }
+
+      .site-nav.is-open .menu-panel {
+        display: block;
+      }
+
+      .menu-links {
+        display: flex;
+        height: auto;
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .menu-item {
+        display: inline-flex;
+        width: 100%;
+        align-items: center;
+        justify-content: center;
+        border-radius: 0.25rem;
+        padding: 0.5rem 0.75rem;
+        font-weight: 700;
+      }
+
+      .hero {
+        display: flex;
+        min-height: 90vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 0 1.5rem;
+      }
+
+      .hero-title {
+        margin: 0;
+        text-align: center;
+        font-size: 3.75rem;
+        font-weight: 800;
+        letter-spacing: -0.05em;
+        line-height: 1;
+      }
+
+      .hero-subtitle {
+        margin: 1.5rem 0 0;
+        text-align: center;
+        font-size: 1.125rem;
+        font-weight: 300;
+        line-height: 1.75rem;
+        color: var(--gray-300);
+      }
+
+      .hero-actions {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        justify-content: center;
+        margin-top: 1.5rem;
+      }
+
+      .cta-button {
+        width: 100%;
+        border: 0;
+        border-radius: 0.75rem;
+        background: var(--blue);
+        padding: 0.75rem 3rem;
+        text-align: center;
+        font-size: 1.125rem;
+        color: var(--white);
+        transition: all 300ms ease-in-out;
+      }
+
+      .cta-button:disabled {
+        cursor: not-allowed;
+        opacity: 1;
+      }
+
+      .marquee-viewport {
+        overflow: hidden;
+        width: 100vw;
+      }
+
+      .marquee-shell {
+        position: relative;
+        display: flex;
+        flex-direction: row;
+      }
+
+      .marquee-strip {
+        display: flex;
+        flex-direction: row;
+        white-space: nowrap;
+        animation: marquee 25s linear infinite;
+      }
+
+      .marquee-strip.secondary {
+        position: absolute;
+        animation-name: marquee2;
+      }
+
+      .cover-card {
+        position: relative;
+        margin: 0.5rem;
+        height: 16rem;
+        width: 12rem;
+        flex-shrink: 0;
+        transform: scale(1);
+        transition: all 200ms ease-in-out;
+      }
+
+      .cover-card:hover {
+        transform: scale(1.05);
+      }
+
+      .cover-image {
+        display: block;
+        height: 100%;
+        width: 100%;
+        border-radius: 1rem;
+        object-fit: cover;
+      }
+
+      .page-bottom-space {
+        height: 3rem;
+      }
+
+      @keyframes marquee {
+        0% {
+          transform: translateX(0%);
+        }
+
+        100% {
+          transform: translateX(-100%);
+        }
+      }
+
+      @keyframes marquee2 {
+        0% {
+          transform: translateX(100%);
+        }
+
+        100% {
+          transform: translateX(0%);
+        }
+      }
+
+      @media (min-width: 768px) {
+        .hero {
+          min-height: 70vh;
+        }
+
+        .hero-title,
+        .hero-subtitle,
+        .hero-actions {
+          width: 50%;
+        }
+
+        .hero-actions {
+          flex-direction: row;
+        }
+
+        .cover-card {
+          height: 18rem;
+          width: 16rem;
+        }
+      }
+
+      @media (min-width: 1024px) {
+        .menu-toggle {
+          display: none;
+        }
+
+        .menu-panel {
+          display: inline-flex;
+          width: auto;
+          flex-grow: 1;
+        }
+
+        .menu-links {
+          margin-left: auto;
+          width: auto;
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .menu-item {
+          width: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav" id="site-nav">
+      <a class="brand-link" href="https://tapped.ai" target="_blank" rel="noopener noreferrer">
+        <img src="./images/tapped_reverse.png" width="75" height="75" alt="tapped logo" />
+      </a>
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-panel">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M5 17h14M5 12h14M5 7h14"
+          />
+        </svg>
+      </button>
+      <div class="menu-panel" id="menu-panel">
+        <div class="menu-links">
+          <a class="menu-item" href="https://tapped.ai" target="_blank" rel="noopener noreferrer">home</a>
+          <a class="menu-item" href="https://linktree.tapped.ai" target="_blank" rel="noopener noreferrer">socials</a>
+          <a class="menu-item" href="mailto:support@tapped.ai">contact us</a>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <section class="hero">
+        <h1 class="hero-title">create beautiful cover art in minutes.</h1>
+        <h2 class="hero-subtitle">design, edit, and export cover art for your next project.</h2>
+        <div class="hero-actions">
+          <button class="cta-button" type="button" disabled aria-disabled="true">get started</button>
+        </div>
+      </section>
+
+      <div class="marquee-viewport">
+        <div class="marquee-shell">
+          <div class="marquee-strip primary" id="row-1-primary"></div>
+          <div class="marquee-strip secondary" id="row-1-secondary"></div>
+        </div>
+      </div>
+
+      <div class="marquee-viewport">
+        <div class="marquee-shell">
+          <div class="marquee-strip primary" id="row-2-primary"></div>
+          <div class="marquee-strip secondary" id="row-2-secondary"></div>
+        </div>
+      </div>
+
+      <div class="page-bottom-space"></div>
+    </main>
+
+    <script>
+      const coverArtExamples = [
+        "512.adventure.png",
+        "512.big.png",
+        "512.small.png",
+        "512.dentist.png",
+        "512.justin.png",
+        "512.pokemon.png",
+        "512.punk.jpeg",
+        "512.tcc.png",
+        "512.two_blue.png",
+        "512.what.png",
+        "512.blackandwhite.png",
+        "512.drake.png",
+        "512.green.png",
+      ];
+
+      function shuffle(array) {
+        const shuffled = [...array];
+
+        for (let i = shuffled.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+
+        return shuffled;
+      }
+
+      function renderImages(targetId, images) {
+        const target = document.getElementById(targetId);
+
+        target.innerHTML = images
+          .map(
+            (image) => `
+              <div class="cover-card">
+                <img class="cover-image" src="./images/marque/${image}" alt="cover art example: ${image}" />
+              </div>
+            `,
+          )
+          .join("");
+      }
+
+      const shuffledExamples = shuffle(coverArtExamples);
+      const firstHalf = shuffledExamples.slice(0, shuffledExamples.length / 2);
+      const secondHalf = shuffledExamples.slice(shuffledExamples.length / 2);
+
+      renderImages("row-1-primary", firstHalf);
+      renderImages("row-1-secondary", firstHalf);
+      renderImages("row-2-primary", secondHalf);
+      renderImages("row-2-secondary", secondHalf);
+
+      const siteNav = document.getElementById("site-nav");
+      const menuToggle = document.getElementById("menu-toggle");
+
+      menuToggle.addEventListener("click", () => {
+        const isOpen = siteNav.classList.toggle("is-open");
+        menuToggle.setAttribute("aria-expanded", String(isOpen));
+      });
+    </script>
+  </body>
+</html>

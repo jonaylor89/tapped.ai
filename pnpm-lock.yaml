@@ -265,63 +265,7 @@ importers:
         specifier: ^5.3.3
         version: 5.9.3
 
-  apps/getmusicart.com:
-    dependencies:
-      '@upstash/qstash':
-        specifier: ^2.1.11
-        version: 2.9.0
-      '@upstash/redis':
-        specifier: ^1.24.3
-        version: 1.36.1
-      '@vercel/analytics':
-        specifier: ^1.1.1
-        version: 1.6.1(next@14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      classnames:
-        specifier: ^2.3.2
-        version: 2.5.1
-      firebase:
-        specifier: ^10.6.0
-        version: 10.14.1
-      lru-cache:
-        specifier: ^10.0.1
-        version: 10.4.3
-      next:
-        specifier: 14.2.35
-        version: 14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react:
-        specifier: ^18
-        version: 18.3.1
-      react-dom:
-        specifier: ^18
-        version: 18.3.1(react@18.3.1)
-      react-hot-toast:
-        specifier: ^2.4.1
-        version: 2.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      stripe:
-        specifier: ^14.5.0
-        version: 14.25.0
-    devDependencies:
-      '@types/node':
-        specifier: ^20
-        version: 20.19.30
-      '@types/react':
-        specifier: ^18
-        version: 18.3.27
-      '@types/react-dom':
-        specifier: ^18
-        version: 18.3.7(@types/react@18.3.27)
-      autoprefixer:
-        specifier: ^10.0.1
-        version: 10.4.27(postcss@8.5.8)
-      postcss:
-        specifier: ^8
-        version: 8.5.8
-      tailwindcss:
-        specifier: ^3.3.0
-        version: 3.4.19(tsx@4.21.0)(yaml@2.8.2)
-      typescript:
-        specifier: ^5
-        version: 5.9.3
+  apps/getmusicart.com: {}
 
   apps/getmusicepk.com:
     dependencies:
@@ -4437,9 +4381,6 @@ packages:
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
 
-  '@upstash/qstash@2.9.0':
-    resolution: {integrity: sha512-RFvWB98ot5SXUZFIV/Av6hYdS+yu700kg+azUaJqV/fqgylUrWkYnCTOE4DJgdMHUEb0l7tH2Xhl70Zd4Q4zHw==}
-
   '@upstash/redis@1.36.1':
     resolution: {integrity: sha512-N6SjDcgXdOcTAF+7uNoY69o7hCspe9BcA7YjQdxVu5d25avljTwyLaHBW3krWjrP0FfocgMk94qyVtQbeDp39A==}
 
@@ -6400,11 +6341,6 @@ packages:
     resolution: {integrity: sha512-wiSuFQLZ+urS9x2gGPl1H5drc5twabmm4m2gTR27XDFyjUHJUNsS8o/2aKyIF6IoBaR630atdher0XJ5g6OMmA==}
     engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
-  goober@2.1.18:
-    resolution: {integrity: sha512-2vFqsaDVIT9Gz7N6kAL++pLpp41l3PfDuusHcjnGLfR6+huZkl6ziX+zgVC3ZxpqWhzH6pyDdGrCeDhMIvwaxw==}
-    peerDependencies:
-      csstype: ^3.0.10
-
   google-auth-library@8.9.0:
     resolution: {integrity: sha512-f7aQCJODJFmYWN6PeNKzgvy9LI2tYmXnzpNDHEjG5sDNPgGb2FXQyTBnXeSH+PAtpKESFD+LmHw3Ox3mN7e1Fg==}
     engines: {node: '>=12'}
@@ -7061,9 +6997,6 @@ packages:
 
   jose@4.15.9:
     resolution: {integrity: sha512-1vUQX+IdDMVPj4k8kOxgUqlcK518yluMuGZwqlr44FS1ppZB/5GWh4rZG89erpOBOJjU/OBsnCVFfapsRz6nEA==}
-
-  jose@5.10.0:
-    resolution: {integrity: sha512-s+3Al/p9g32Iq+oqXxkW//7jk2Vig6FF1CFqzVXoTUXt2qz89YWbL+OwS17NFYEvxC35n0FKeGO2LGYSxeM2Gg==}
 
   jpegtran-bin@5.0.2:
     resolution: {integrity: sha512-4FSmgIcr8d5+V6T1+dHbPZjaFH0ogVyP4UVsE+zri7S9YLO4qAT2our4IN3sW3STVgNTbqPermdIgt2XuAJ4EA==}
@@ -8078,10 +8011,6 @@ packages:
     resolution: {integrity: sha512-Z4SmBUweYa09+o6pG+eASabEpP6QkQ70yHj351pQoEXIs8uHbaU2DWVmzBANKgflPa47A50PtB2+NgRpQvr7vA==}
     engines: {node: '>= 10'}
 
-  neverthrow@7.2.0:
-    resolution: {integrity: sha512-iGBUfFB7yPczHHtA8dksKTJ9E8TESNTAx1UQWW6TzMF280vo9jdPYpLUXrMN1BCkPdHFdNG3fxOt2CUad8KhAw==}
-    engines: {node: '>=18'}
-
   next-themes@0.4.6:
     resolution: {integrity: sha512-pZvgD5L0IEvX5/9GWyHMf3m8BKiVQwsCMHfoFosXtXBMnaS0ZnIJ9ST4b4NqLVKDEm8QBxoNNGNaBv2JNF6XNA==}
     peerDependencies:
@@ -8976,13 +8905,6 @@ packages:
     peerDependencies:
       react: '>=16.8.0'
 
-  react-hot-toast@2.6.0:
-    resolution: {integrity: sha512-bH+2EBMZ4sdyou/DPrfgIouFpcRLCJ+HoCA32UoAYHn6T3Ur5yfcDCeSr5mwldl6pFOsiocmrXMuoCJ1vV8bWg==}
-    engines: {node: '>=10'}
-    peerDependencies:
-      react: '>=16'
-      react-dom: '>=16'
-
   react-hotkeys-hook@4.6.2:
     resolution: {integrity: sha512-FmP+ZriY3EG59Ug/lxNfrObCnW9xQShgk7Nb83+CkpfkcCpfS95ydv+E9JuXA5cp8KtskU7LGlIARpkc92X22Q==}
     peerDependencies:
@@ -9712,10 +9634,6 @@ packages:
 
   stripe@11.18.0:
     resolution: {integrity: sha512-OUA32uhNoSoM6wOodyFbV+3IBCoO140uzdXmBArQ0S88D4EbH91xl2v+Ml1sKalcFKUBadHLeHfU/p9AbsOfGw==}
-    engines: {node: '>=12.*'}
-
-  stripe@14.25.0:
-    resolution: {integrity: sha512-wQS3GNMofCXwH8TSje8E1SE8zr6ODiGtHQgPtO95p9Mb4FhKC9jvXR2NUTpZ9ZINlckJcFidCmaTFV4P6vsb9g==}
     engines: {node: '>=12.*'}
 
   strnum@1.1.2:
@@ -15011,15 +14929,10 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@upstash/qstash@2.9.0':
-    dependencies:
-      crypto-js: 4.2.0
-      jose: 5.10.0
-      neverthrow: 7.2.0
-
   '@upstash/redis@1.36.1':
     dependencies:
       uncrypto: 0.1.3
+    optional: true
 
   '@vercel/analytics@1.6.1(next@14.2.35(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     optionalDependencies:
@@ -17475,10 +17388,6 @@ snapshots:
       merge2: 1.4.1
       slash: 4.0.0
 
-  goober@2.1.18(csstype@3.2.3):
-    dependencies:
-      csstype: 3.2.3
-
   google-auth-library@8.9.0(encoding@0.1.13):
     dependencies:
       arrify: 2.0.1
@@ -18325,8 +18234,6 @@ snapshots:
   jiti@2.6.1: {}
 
   jose@4.15.9: {}
-
-  jose@5.10.0: {}
 
   jpegtran-bin@5.0.2:
     dependencies:
@@ -19686,8 +19593,6 @@ snapshots:
 
   neotraverse@0.6.18: {}
 
-  neverthrow@7.2.0: {}
-
   next-themes@0.4.6(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       react: 19.1.1
@@ -20738,13 +20643,6 @@ snapshots:
     transitivePeerDependencies:
       - immer
 
-  react-hot-toast@2.6.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
-    dependencies:
-      csstype: 3.2.3
-      goober: 2.1.18(csstype@3.2.3)
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-
   react-hotkeys-hook@4.6.2(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
       react: 19.1.1
@@ -21678,11 +21576,6 @@ snapshots:
       escape-string-regexp: 1.0.5
 
   stripe@11.18.0:
-    dependencies:
-      '@types/node': 20.19.30
-      qs: 6.14.1
-
-  stripe@14.25.0:
     dependencies:
       '@types/node': 20.19.30
       qs: 6.14.1
