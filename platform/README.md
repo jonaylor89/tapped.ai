@@ -1,6 +1,6 @@
-# Typesense Infrastructure - Hetzner Cloud
+# Tapped Infrastructure - Hetzner Cloud
 
-Typesense search engine is hosted on a Hetzner Cloud VPS.
+The Tapped API and Typesense search engine are hosted on a Hetzner Cloud VPS behind Caddy (auto-HTTPS).
 
 ## Server Details
 
@@ -9,9 +9,13 @@ Typesense search engine is hosted on a Hetzner Cloud VPS.
 - **OS**: Ubuntu 24.04 LTS
 - **RAM**: 4 GB
 - **Disk**: 40 GB
-- **Typesense Version**: 0.25.2
-- **Data Directory**: `/opt/typesense/data`
-- **Port**: 8108
+- **Deployment**: Docker Compose at `/opt/tapped/`
+
+| Service | Domain | Internal Port |
+|---------|--------|---------------|
+| API | `https://api.tapped.ai` | 3000 |
+| Typesense | `https://search.tapped.ai` | 8108 |
+| Caddy (reverse proxy) | — | 80/443 |
 
 ## Connect
 
@@ -19,33 +23,38 @@ Typesense search engine is hosted on a Hetzner Cloud VPS.
 ssh root@46.225.133.198
 ```
 
-## Manage Typesense
+## Manage Services
 
 ### Check status
 ```bash
-docker ps
-curl http://localhost:8108/health
+cd /opt/tapped && docker compose ps
 ```
 
 ### View logs
 ```bash
-docker logs typesense -f
+docker compose logs -f           # all services
+docker compose logs -f api       # API only
+docker compose logs -f typesense # Typesense only
+docker compose logs -f caddy     # Caddy only
 ```
 
 ### Restart
 ```bash
-docker restart typesense
+cd /opt/tapped && docker compose restart
 ```
 
-### Stop / Start
+### Deploy a new API version
 ```bash
-docker stop typesense
-docker start typesense
+# On your laptop (from repo root):
+docker buildx build --platform linux/amd64 -t jonaylor/api.tapped.ai:latest --push ./services/api.tapped.ai
+
+# On the VPS:
+cd /opt/tapped && docker compose pull api && docker compose up -d
 ```
 
 ## Backup
 
-### Export data
+### Export Typesense data
 ```bash
 # From your local machine
 scp -r root@46.225.133.198:/opt/typesense/data ./typesense-backup-$(date +%Y%m%d)
@@ -53,11 +62,12 @@ scp -r root@46.225.133.198:/opt/typesense/data ./typesense-backup-$(date +%Y%m%d
 
 ## Environment Variables
 
-Services that connect to Typesense use these env vars:
+Services that connect to Typesense and the API use these env vars:
 
 | Variable | Value |
 |----------|-------|
-| `TYPESENSE_HOST` | `46.225.133.198` |
-| `TYPESENSE_PORT` | `8108` |
-| `TYPESENSE_PROTOCOL` | `http` |
+| `TYPESENSE_HOST` | `search.tapped.ai` |
+| `TYPESENSE_PORT` | `443` |
+| `TYPESENSE_PROTOCOL` | `https` |
 | `TYPESENSE_SEARCH_API_KEY` | (stored in GCP Secret Manager: `typesense-api-key`) |
+| `NEXT_PUBLIC_API_URL` | `https://api.tapped.ai` |

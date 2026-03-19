@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 // the following code is taken from : https://nextjs.org/docs/advanced-features/middleware#setting-headers
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
 	// Clone the request headers and set a new header `x-hello-from-middleware1`
 	const requestHeaders = new Headers(request.headers);
 	requestHeaders.set("x-pathname", request.nextUrl.pathname);

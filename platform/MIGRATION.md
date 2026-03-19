@@ -1,7 +1,7 @@
 # Migrating Cloud Functions → Rust API
 
 ## Overview
-Move HTTP/callable Cloud Functions from `com.intheloopstudio/functions/` to the Rust API (`api.tapped.ai`), deployed on the Hetzner VPS (`46.225.133.198`).
+Move HTTP/callable Cloud Functions from `com.intheloopstudio/functions/` to the Rust API at `https://api.tapped.ai` (deployed on the Hetzner VPS).
 
 ## Firebase Auth in Rust
 Use [`firebase-verifyid`](https://crates.io/crates/firebase-verifyid) for Axum middleware:

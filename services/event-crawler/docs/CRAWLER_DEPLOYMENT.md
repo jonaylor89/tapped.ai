@@ -192,7 +192,7 @@ module.exports = {
 
 1. **Initial Setup**:
 ```bash
-# SSH into the Typesense server (Hetzner)
+# SSH into the Hetzner VPS
 ssh root@46.225.133.198
 
 # Run the deployment script

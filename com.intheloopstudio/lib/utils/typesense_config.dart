@@ -1,17 +1,17 @@
 class TypesenseConfig {
   static const String host = String.fromEnvironment(
     'TYPESENSE_HOST',
-    defaultValue: '46.225.133.198',
+    defaultValue: 'search.tapped.ai',
   );
 
   static const String port = String.fromEnvironment(
     'TYPESENSE_PORT',
-    defaultValue: '8108',
+    defaultValue: '443',
   );
 
   static const String protocol = String.fromEnvironment(
     'TYPESENSE_PROTOCOL',
-    defaultValue: 'http',
+    defaultValue: 'https',
   );
 
   static const String searchApiKey = String.fromEnvironment(
