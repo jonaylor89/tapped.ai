@@ -16,7 +16,6 @@ import {
   contactVenuesRef,
   orphanEmailsRef,
   POSTMARK_SERVER_ID,
-  RESEND_API_KEY,
   SLACK_WEBHOOK_URL,
   streamKey,
   streamSecret,
@@ -26,14 +25,14 @@ import { slackNotification } from "./notifications";
 
 // send email on subscription purchase
 export const sendEmailOnSubscriptionPurchase = onRequest(
-  { secrets: [RESEND_API_KEY, streamKey, streamSecret] },
+  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionPurchase", req.body);
       const { event } = req.body;
       const { app_user_id: userId } = event;
 
-      await sendEmailSubscriptionPurchase(RESEND_API_KEY.value(), userId);
+      await sendEmailSubscriptionPurchase(POSTMARK_SERVER_ID.value(), userId);
 
       // add them to group chat
       await addUserToPremiumChat(userId, {
@@ -50,14 +49,14 @@ export const sendEmailOnSubscriptionPurchase = onRequest(
 );
 
 export const sendEmailOnSubscriptionExpiration = onRequest(
-  { secrets: [RESEND_API_KEY, streamKey, streamSecret] },
+  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionExpiration", req.body);
       const { event } = req.body;
       const { app_user_id: userId } = event;
 
-      await sendEmailSubscriptionExpiration(RESEND_API_KEY.value(), userId);
+      await sendEmailSubscriptionExpiration(POSTMARK_SERVER_ID.value(), userId);
 
       // remove from group chat
       await removeUserFromPremiumChat(userId, {
@@ -72,7 +71,7 @@ export const sendEmailOnSubscriptionExpiration = onRequest(
 );
 
 export const streamBeforeMessageWebhook = onRequest(
-  { secrets: [streamKey, streamSecret, POSTMARK_SERVER_ID, RESEND_API_KEY] },
+  { secrets: [streamKey, streamSecret, POSTMARK_SERVER_ID] },
   async (req, res) => {
     const client = new StreamChat(streamKey.value(), streamSecret.value());
 
@@ -136,7 +135,7 @@ export const streamBeforeMessageWebhook = onRequest(
         msg,
         receiverData,
         senderUser,
-        resendApiKey: RESEND_API_KEY.value(),
+        postmarkServerId: POSTMARK_SERVER_ID.value(),
       });
     } else {
       // send email if venue

@@ -5,52 +5,30 @@ import * as functions from "firebase-functions";
 import { error, info } from "firebase-functions/logger";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { marked } from "marked";
-import { Resend } from "resend";
+import * as postmark from "postmark";
 import Stripe from "stripe";
 import { v4 as uuidv4 } from "uuid";
 import type { MarketingPlan, UserModel } from "../types/models";
 import {
-  aiModelsRef,
-  auth,
-  avatarsRef,
   creditsPerPriceId,
   creditsPerTestPriceId,
   creditsRef,
   guestMarketingPlansRef,
-  LEAP_API_KEY,
-  LEAP_WEBHOOK_SECRET,
-  mainBucket,
   marketingFormsRef,
   marketingPlansRef,
   OPEN_AI_KEY,
-  projectId,
-  RESEND_API_KEY,
+  POSTMARK_SERVER_ID,
   SLACK_WEBHOOK_URL,
   stripeCoverArtTestWebhookSecret,
   stripeCoverArtWebhookSecret,
   stripeKey,
   stripeTestEndpointSecret,
   stripeTestKey,
-  trainingImagesRef,
   usersRef,
 } from "./firebase";
-import { sd } from "./leapai";
 import { slackNotification } from "./notifications";
 import { basicEnhancedBio, generateBasicMarketingPlan, generateSingleBasicMarketingPlan } from "./openai";
 import { authenticatedRequest } from "./utils";
-
-const WEBHOOK_URL = `https://us-central1-${projectId}.cloudfunctions.net/trainWebhook`;
-const IMAGE_WEBHOOK_URL = `https://us-central1-${projectId}.cloudfunctions.net/imageWebhook`;
-
-const prompts = [
-  "8k portrait of @subject in the style of jackson pollock's 'abstract expressionism,' featuring drips, splatters, and energetic brushwork.",
-
-  "8k portrait of @subject in the style of salvador dalí's 'surrealism,' featuring unexpected juxtapositions, melting objects, and a dreamlike atmosphere.",
-
-  "8k portrait of @subject in the style of Retro comic style artwork, highly detailed spiderman, comic book cover, symmetrical, vibrant",
-
-  "8k close up linkedin profile picture of @subject, professional jack suite, professional headshots, photo-realistic, 4k, high-resolution image, workplace settings, upper body, modern outfit, professional suit, businessman, blurred background, glass building, office window",
-];
 
 const _incrementCoverArtTestCredits = async (
   stripe: Stripe,
@@ -81,7 +59,7 @@ const _incrementCoverArtTestCredits = async (
 
   const lineItems = await stripe.checkout.sessions.listLineItems(checkoutSessionCompleted.id);
   const quantity = lineItems.data[0].quantity;
-  const priceId = lineItems.data[0].price?.id;
+  const priceId = lineItems.data[0].price?.id ?? "";
   const creditsPerUnit = creditsPerTestPriceId[priceId];
   const totalCreditsPurchased = quantity! * creditsPerUnit;
 
@@ -126,7 +104,7 @@ const _incrementCoverArtCredits = async (
 
   const lineItems = await stripe.checkout.sessions.listLineItems(checkoutSessionCompleted.id);
   const quantity = lineItems.data[0].quantity;
-  const priceId = lineItems.data[0].price?.id;
+  const priceId = lineItems.data[0].price?.id ?? "";
   const creditsPerUnit = creditsPerPriceId[priceId];
   const totalCreditsPurchased = quantity! * creditsPerUnit;
 
@@ -155,14 +133,14 @@ const _emailMarketingPlan = async ({
   checkoutSessionCompleteId,
   checkoutSession,
   customerEmail,
-  resendApiKey,
+  postmarkServerId,
 }: {
   checkoutSessionCompleteId: string;
   checkoutSession: Stripe.Response<Stripe.Checkout.Session>;
   customerEmail: string | null;
-  resendApiKey: string;
+  postmarkServerId: string;
 }) => {
-  const resend = new Resend(resendApiKey);
+  const client = new postmark.ServerClient(postmarkServerId);
 
   const { client_reference_id: clientReferenceId } = checkoutSession;
   if (clientReferenceId === null) {
@@ -208,304 +186,16 @@ const _emailMarketingPlan = async ({
 
   // email marketing plan to user
   if (customerEmail !== null) {
-    await resend.emails.send({
-      from: "no-reply@tapped.ai",
-      to: [customerEmail],
-      subject: "Your Marketing Plan",
-      html: `<div>${marked.parse(content)}</div>`,
+    await client.sendEmail({
+      From: "no-reply@tapped.ai",
+      To: customerEmail,
+      Subject: "Your Marketing Plan",
+      HtmlBody: `<div>${marked.parse(content)}</div>`,
+      TextBody: "Your Marketing Plan",
+      MessageStream: "outbound",
     });
   }
 };
-
-export const onDeleteAvatar = functions.firestore
-  .document("avatars/{userId}/userAvatars/{avatarId}")
-  .onDelete(async (data) => {
-    const avatar = data.data();
-    const url = avatar?.url;
-    const userId = avatar?.userId;
-
-    if (url === undefined) {
-      return;
-    }
-
-    if (userId === undefined) {
-      return;
-    }
-
-    await mainBucket.deleteFiles({
-      prefix: `images/${userId}/avatar_${data.id}.png`,
-    });
-  });
-
-export const createAvatarInferenceJob = onCall(
-  {
-    secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET],
-  },
-  async (request) => {
-    // // Checking that the user is authenticated.
-    authenticatedRequest(request);
-
-    const leapApiKey = LEAP_API_KEY.value();
-    const { modelId, prompt } = request.data;
-
-    if (!(typeof modelId === "string") || modelId.length === 0) {
-      // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "modelId".');
-    }
-
-    if (!(typeof prompt === "string") || prompt.length === 0) {
-      // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "avatarStyle".');
-    }
-
-    const userId = request.auth?.uid;
-
-    // const prompt = `8k portrait of @subject in the style of ${avatarStyle}`;
-    const negativePrompt =
-      "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), text, close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck";
-
-    const { inferenceId } = await sd.createInferenceJob({
-      leapApiKey,
-      modelId,
-      prompt,
-      negativePrompt,
-      numberOfImages: 4,
-      webhookUrl: `${IMAGE_WEBHOOK_URL}?user_id=${userId}&model_id=${modelId}&webhook_secret=${LEAP_WEBHOOK_SECRET.value()}`,
-    });
-    info({ inferenceId });
-
-    return { inferenceId };
-  },
-);
-
-export const getAvatarInferenceJob = onCall(
-  {
-    secrets: [LEAP_API_KEY],
-  },
-  async (request) => {
-    // Checking that the user is authenticated.
-    authenticatedRequest(request);
-
-    const leapApiKey = LEAP_API_KEY.value();
-    const { inferenceId } = request.data;
-
-    if (!(typeof inferenceId === "string") || inferenceId.length === 0) {
-      // Throwing an HttpsError so that the client gets the error details.
-      throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "inferenceId".');
-    }
-
-    const { inferenceJob } = await sd.getInferenceJob({
-      leapApiKey,
-      inferenceId,
-    });
-
-    return { inferenceJob };
-  },
-);
-
-export const deleteInferenceJob = functions.runWith({ secrets: [LEAP_API_KEY] }).https.onCall(async (request) => {
-  // Checking that the user is authenticated.
-  if (!request.auth) {
-    // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError("failed-precondition", "The function must be " + "called while authenticated.");
-  }
-
-  const leapApiKey = LEAP_API_KEY.value();
-  const { inferenceId } = request.data;
-
-  await sd.deleteInferenceJob({ inferenceId, leapApiKey });
-});
-
-export const imageWebhook = onRequest(
-  { secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] },
-  async (request, response): Promise<void> => {
-    const { id: inferenceId, state: status, result } = request.body;
-
-    const userId = request.query.user_id as string;
-    const modelId = request.query.model_id as string;
-    const webhookSecret = request.query.webhook_secret as string;
-
-    info({ userId, status, inferenceId });
-
-    if (!webhookSecret) {
-      response.status(500).json("Malformed URL, no webhook_secret detected!");
-      return;
-    }
-
-    if (webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()) {
-      response.status(401).json("Unauthorized!");
-      return;
-    }
-
-    if (!userId) {
-      response.status(500).json("Malformed URL, no user_id detected!");
-      return;
-    }
-
-    if (!modelId) {
-      response.status(500).json("Malformed URL, no model_id detected!");
-      return;
-    }
-
-    try {
-      info({ images: result.images });
-      await Promise.all(
-        result.images.map(async (image: any) => {
-          avatarsRef.doc(userId).collection("userAvatars").add({
-            modelId: modelId,
-            url: image.uri,
-          });
-        }),
-      );
-      response.status(200).json("Success");
-    } catch (e) {
-      info(e);
-      response.status(500).json("Something went wrong!");
-    }
-  },
-);
-
-export const trainModel = onCall({ secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] }, async (request) => {
-  // Checking that the user is authenticated.
-  if (!request.auth) {
-    // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError("failed-precondition", "The function must be called while authenticated.");
-  }
-
-  const userId = request.auth.uid;
-  info({ userId });
-  const {
-    imageUrls,
-    type,
-    name,
-  }: {
-    imageUrls: string[];
-    type: string;
-    name: string;
-  } = request.data;
-
-  if (imageUrls?.length < 4) {
-    throw new HttpsError("failed-precondition", "Upload at least 4 sample images");
-  }
-  info({ imageUrls, type, name });
-
-  // eslint-disable-next-line max-len
-  const fullWebhook = `${WEBHOOK_URL.valueOf()}?user_id=${userId}&webhook_secret=${LEAP_WEBHOOK_SECRET.value()}&model_type=${type}`;
-
-  const modelId = await sd.createTrainingJob({
-    leapApiKey: LEAP_API_KEY.value(),
-    imageUrls,
-    name,
-    type,
-    userId,
-    webhookUrl: fullWebhook,
-  });
-
-  // add model to DB
-  await aiModelsRef.doc(userId).collection("imageModels").doc(modelId).set({
-    id: modelId,
-    user_id: userId,
-    name,
-    type,
-    timestamp: Timestamp.now(),
-    status: "training",
-  });
-
-  await Promise.all(
-    imageUrls.map(async (imageUrl) => {
-      // get image from url
-      const imagesSnap = await trainingImagesRef
-        .doc(userId)
-        .collection("userSamples")
-        .where("url", "==", imageUrl)
-        .get();
-
-      if (imagesSnap.empty) return;
-
-      // update image with modelId
-      await Promise.all(
-        imagesSnap.docs.map(async (doc) => {
-          await doc.ref.update({
-            modelId: modelId,
-          });
-        }),
-      );
-    }),
-  );
-
-  return {
-    success: true,
-  };
-});
-
-export const trainWebhook = onRequest(
-  { secrets: [LEAP_API_KEY, LEAP_WEBHOOK_SECRET] },
-  async (request, response): Promise<void> => {
-    const {
-      id,
-      state: status,
-    }: {
-      id: string;
-      state: string;
-    } = await request.body;
-    const userId = request.query.user_id as string;
-    const webhookSecret = request.query.webhook_secret as string;
-    const modelType = request.query.model_type as string;
-
-    info({ status, id });
-
-    if (!webhookSecret) {
-      response.status(500).json("Malformed URL, no webhook_secret detected!");
-      return;
-    }
-
-    if (webhookSecret.toLowerCase() !== LEAP_WEBHOOK_SECRET.value().toLowerCase()) {
-      response.status(401).json("Unauthorized!");
-      return;
-    }
-
-    if (!userId) {
-      response.status(500).json("Malformed URL, no user_id detected!");
-      return;
-    }
-
-    const user = await auth.getUser(userId);
-    if (!user) {
-      response.status(401).json("User not found!");
-      return;
-    }
-
-    try {
-      if (status === "finished") {
-        await aiModelsRef.doc(userId).collection("imageModels").doc(id).update({
-          status: "ready",
-        });
-
-        for (let index = 0; index < prompts.length; index++) {
-          const { inferenceId } = await sd.createInferenceJob({
-            leapApiKey: LEAP_API_KEY.value(),
-            modelId: id,
-            prompt: prompts[index].replace("{model_type}", modelType ?? ""),
-            negativePrompt:
-              "(deformed iris, deformed pupils, semi-realistic, cgi, 3d, render, sketch, cartoon, drawing, anime:1.4), text, close up, cropped, out of frame, worst quality, low quality, jpeg artifacts, ugly, duplicate, morbid, mutilated, extra fingers, mutated hands, poorly drawn hands, poorly drawn face, mutation, deformed, blurry, dehydrated, bad anatomy, bad proportions, extra limbs, cloned face, disfigured, gross proportions, malformed limbs, missing arms, missing legs, extra arms, extra legs, fused fingers, too many fingers, long neck",
-            numberOfImages: 0,
-            webhookUrl: `${IMAGE_WEBHOOK_URL}?user_id=${userId}&model_id=${id}&webhook_secret=${LEAP_WEBHOOK_SECRET.value()}`,
-          });
-          info({ inferenceId });
-        }
-      } else {
-        await aiModelsRef.doc(userId).collection("imageModels").doc(id).update({
-          status: "errored",
-        });
-      }
-
-      response.status(200).json("Success");
-    } catch (e) {
-      info(e);
-      response.status(500).json("Something went wrong!");
-    }
-  },
-);
 
 export const createSingleMarketingPlan = onCall({ secrets: [OPEN_AI_KEY] }, async (request) => {
   const openAiKey = OPEN_AI_KEY.value();
@@ -567,7 +257,7 @@ export const createSingleMarketingPlan = onCall({ secrets: [OPEN_AI_KEY] }, asyn
 
 export const marketingPlanStripeWebhook = onRequest(
   {
-    secrets: [stripeTestKey, stripeTestEndpointSecret, RESEND_API_KEY, OPEN_AI_KEY],
+    secrets: [stripeTestKey, stripeTestEndpointSecret, POSTMARK_SERVER_ID, OPEN_AI_KEY],
   },
   async (req, res) => {
     const stripe = new Stripe(stripeTestKey.value(), {
@@ -612,7 +302,7 @@ export const marketingPlanStripeWebhook = onRequest(
             checkoutSessionCompleteId: checkoutSessionCompleted.id,
             checkoutSession,
             customerEmail,
-            resendApiKey: RESEND_API_KEY.value(),
+            postmarkServerId: POSTMARK_SERVER_ID.value(),
           });
           break;
         }
@@ -633,7 +323,7 @@ export const marketingPlanStripeWebhook = onRequest(
 
 export const generateMarketingPlan = functions
   .runWith({
-    secrets: [RESEND_API_KEY, OPEN_AI_KEY],
+    secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY],
   })
   .firestore.document("marketingForms/{clientReferenceId}")
   .onCreate(async (_request, context) => {

@@ -1,77 +1,82 @@
 import type * as postmark from "postmark";
-import type { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
+import type { Booking, Opportunity, UserModel } from "../../types/models";
 import { bookingsRef, usersRef } from "../firebase";
 import { chatGpt } from "../openai";
 
-export async function writeEmailWithAi({
+async function buildOpportunitySnippet(opportunities: Opportunity[]): Promise<string> {
+  const shortenedOps = await Promise.all(
+    opportunities.map(async (o) => {
+      const referenceEventId = o.referenceEventId;
+      if (!referenceEventId) {
+        return {
+          title: o.title,
+          date: o.startTime.toDate().toISOString().split("T")[0],
+          otherOpPerformers: [] as string[],
+        };
+      }
+
+      const bookingsSnap = await bookingsRef.where("referenceEventId", "==", referenceEventId).get();
+
+      const otherOpPerformers = await Promise.all(
+        bookingsSnap.docs.map(async (doc) => {
+          const booking = doc.data() as Booking;
+          const requesteeDoc = await usersRef.doc(booking.requesteeId).get();
+          const requestee = requesteeDoc.data() as UserModel;
+          return requestee.artistName ?? requestee.username;
+        }),
+      );
+
+      return {
+        title: o.title,
+        date: o.startTime.toDate().toISOString().split("T")[0],
+        otherOpPerformers,
+      };
+    }),
+  );
+
+  return shortenedOps
+    .map((o) => `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `)
+    .join("\n");
+}
+
+export async function composeVenueEmail({
   performer,
   venue,
   note,
   opportunities,
+  previousEmails,
 }: {
   performer: UserModel;
   venue: UserModel;
   note: string;
   opportunities: Opportunity[];
+  previousEmails?: postmark.Message[];
 }): Promise<{
   subject: string;
   body: string;
 }> {
-  const username = performer.username;
-  const displayName = performer.artistName || username;
+  const displayName = performer.artistName || performer.username;
   const genres = performer.performerInfo?.genres?.join(", ") ?? "";
-
   const venueName = venue.artistName;
   const subject = `Performance Inquiry from ${displayName}`;
 
-  if (opportunities.length > 0) {
-    const shortenedOps = await Promise.all(
-      opportunities.map(async (o) => {
-        const referenceEventId = o.referenceEventId;
-        if (!referenceEventId) {
-          return {
-            title: o.title,
-            description: o.description,
-            date: o.startTime.toDate().toISOString().split("T")[0],
-            otherOpPerformers: [],
-          };
-        }
+  const emailThreadSection =
+    previousEmails && previousEmails.length > 0
+      ? `\n  Previous Conversations/Email Thread: \n  ###\n  ${previousEmails.map((e) => e.TextBody).join("\n--------------")}\n  ###\n`
+      : "";
 
-        const bookingsSnap = await bookingsRef.where("referenceEventId", "==", referenceEventId).get();
-
-        const otherOpPerformers = await Promise.all(
-          bookingsSnap.docs.map(async (doc) => {
-            const booking = doc.data() as Booking;
-            const requesteeId = booking.requesteeId;
-            const requesteeDoc = await usersRef.doc(requesteeId).get();
-            const requestee = requesteeDoc.data() as UserModel;
-
-            return requestee.artistName ?? requestee.username;
-          }),
-        );
-
-        return {
-          title: o.title,
-          description: o.description,
-          date: o.startTime.toDate().toISOString().split("T")[0],
-          otherOpPerformers: otherOpPerformers,
-        };
-      }),
-    );
-
-    const opportunitySnippet = shortenedOps
-      .map((o) => {
-        return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
-      })
-      .join("\n");
-    // write op reply
-    const res = await chatGpt(`
+  const infoSection = `
   Venue Name: ${venueName}
   Performer Name: ${displayName}
   ${genres !== "" ? `Perfomers Genres: ${genres}` : ""}
 
   ${note !== "" ? `Note: ${note}` : ""}
+${emailThreadSection}`;
 
+  let prompt: string;
+  if (opportunities.length > 0) {
+    const opportunitySnippet = await buildOpportunitySnippet(opportunities);
+    prompt = `${infoSection}
   --------------------------
   Given the information above, write an paragraph to send that you're open to performing with this:
   ${opportunitySnippet}
@@ -82,135 +87,9 @@ export async function writeEmailWithAi({
   Your response should ONLY use the information provider and assume that's all the information that's available.
   Don't include any intro like "dear venue owner" or signature like "sincerly" or "thanks".
   Be concise, to the point and keep it short.
-      `);
-    return {
-      subject,
-      body: res,
-    };
-  }
-
-  const res = await chatGpt(`
-  Venue Name: ${venueName}
-  Performer Name: ${displayName}
-  ${genres !== "" ? `Perfomers Genres: ${genres}` : ""}
-
-  ${note !== "" ? `Note: ${note}` : ""}
-
-  Given the information above, write an paragraph to send to venues to request a booking in the style
-  of a musicians looking to perform there.
-  The paragraph should be friendly, professional, and a little dry (i.e. straight to the point).
-  Be sure to mention that you were recommended to reach out be Tapped Ai.
-  Your response should ONLY use the information provider and assume that's all the information that's available.
-  Don't include any intro like "dear venue owner" or signature like "sincerly" or "thanks".
-  Be concise, to the point and keep it short.
-  `);
-
-  return {
-    subject,
-    body: res,
-  };
-}
-
-export async function writeAiEmailReply({
-  opportunities,
-  note,
-  userData,
-  contactVenueData,
-  emailsSent,
-}: {
-  opportunities: Opportunity[];
-  note: string;
-  userData: UserModel;
-  contactVenueData: VenueContactRequest;
-  emailsSent: postmark.Message[];
-}): Promise<string> {
-  const username = userData.username;
-  const displayName = userData.artistName || username;
-  const genres = userData.performerInfo?.genres?.join(", ") ?? "";
-
-  const venueName = contactVenueData.venue.artistName;
-  const emailsTextContent = emailsSent.map((e) => e.TextBody).join("\n--------------");
-
-  if (opportunities.length > 0) {
-    const shortenedOps = await Promise.all(
-      opportunities.map(async (o) => {
-        const referenceEventId = o.referenceEventId;
-        if (!referenceEventId) {
-          return {
-            title: o.title,
-            description: o.description,
-            date: o.startTime.toDate().toISOString().split("T")[0],
-            otherOpPerformers: [],
-          };
-        }
-
-        const bookingsSnap = await bookingsRef.where("referenceEventId", "==", referenceEventId).get();
-
-        const otherOpPerformers = await Promise.all(
-          bookingsSnap.docs.map(async (doc) => {
-            const booking = doc.data() as Booking;
-            const requesteeId = booking.requesteeId;
-            const requesteeDoc = await usersRef.doc(requesteeId).get();
-            const requestee = requesteeDoc.data() as UserModel;
-
-            return requestee.artistName ?? requestee.username;
-          }),
-        );
-
-        return {
-          title: o.title,
-          description: o.description,
-          date: o.startTime.toDate().toISOString().split("T")[0],
-          otherOpPerformers: otherOpPerformers,
-        };
-      }),
-    );
-
-    const opportunitySnippet = shortenedOps
-      .map((o) => {
-        return `${o.title} on ${o.date} with these other performers ${o.otherOpPerformers.join(",")}. `;
-      })
-      .join("\n");
-
-    // write op reply
-    const res = chatGpt(`
-  Venue Name: ${venueName}
-  Performer Name: ${displayName}
-  ${genres !== "" ? `Perfomers Genres: ${genres}` : ""}
-
-  ${note !== "" ? `Note: ${note}` : ""}
-
-  Previous Conversations/Email Thread: 
-  ###
-  ${emailsTextContent}
-  ###
-
-  --------------------------
-  Given the information above, write an paragraph to send that you're open to performing with this:
-  ${opportunitySnippet}
-  
-
-  The paragraph should be friendly, professional, and a little dry (i.e. straight to the point).
-  Be sure to mention that you were recommended to reach out be Tapped Ai.
-  Your response should ONLY use the information provider and assume that's all the information that's available.
-  Don't include any intro like "dear venue owner" or signature like "sincerly" or "thanks".
-  Be concise, to the point and keep it short.
-      `);
-    return res;
-  }
-
-  const res = chatGpt(`
-  Venue Name: ${venueName}
-  Performer Name: ${displayName}
-  ${genres !== "" ? `Perfomers Genres: ${genres}` : ""}
-
-  ${note !== "" ? `Note: ${note}` : ""}
-
-  Previous Conversations/Email Thread: 
-  ###
-  ${emailsTextContent}
-  ###
-
+      `;
+  } else {
+    prompt = `${infoSection}
   --------------------------
   Given the information above, write an paragraph to send to venues to request a booking in the style
   of a musicians looking to perform there.
@@ -219,7 +98,9 @@ export async function writeAiEmailReply({
   Your response should ONLY use the information provider and assume that's all the information that's available.
   Don't include any intro like "dear venue owner" or signature like "sincerly" or "thanks".
   Be concise, to the point and keep it short.
-    `);
+  `;
+  }
 
-  return res;
+  const body = await chatGpt(prompt);
+  return { subject, body };
 }

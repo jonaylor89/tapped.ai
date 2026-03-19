@@ -1,16 +1,18 @@
 {
   "compilerOptions": {
+    "target": "ES2022",
     "module": "commonjs",
-    "noImplicitReturns": true,
-    "noUnusedLocals": true,
+    "lib": ["ES2022", "DOM"],
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
-    "target": "es2017",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noImplicitReturns": true,
+    "noUnusedLocals": true
   },
-  "compileOnSave": true,
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "src/**/*.test.ts"]
 }

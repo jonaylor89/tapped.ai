@@ -1,37 +1,33 @@
 /* eslint-disable import/no-unresolved */
 import * as functions from "firebase-functions";
-import { UserRecord } from "firebase-functions/v1/auth";
-import {
-  SLACK_WEBHOOK_URL,
-  bucket,
-  usersRef,
-} from "./lib/firebase";
+import type { UserRecord } from "firebase-functions/v1/auth";
+import { bucket, SLACK_WEBHOOK_URL, usersRef } from "./lib/firebase";
 import { slackNotification } from "./lib/notifications";
-import { UserModel } from "./types/models";
 import { createUnclaimedUser, transferUser } from "./lib/users";
+import type { UserModel } from "./types/models";
 
-export * from "./lib/rest";
-export * from "./lib/webhooks";
-export * from "./lib/email_triggers";
-export * from "./lib/bookings";
 export * from "./lib/activities";
-export * from "./lib/payments";
-export * from "./lib/stream";
 export * from "./lib/ai_generators";
-export * from "./lib/opportunities";
-export * from "./lib/services";
-export * from "./lib/signups";
-export * from "./lib/search";
+export * from "./lib/bookings";
 export * from "./lib/calendar";
-export * from "./lib/places";
-export * from "./lib/user_feedback";
-export * from "./lib/notifications";
-export * from "./lib/spotify";
 export * from "./lib/chartmetric";
 export * from "./lib/crawler";
-export * from "./lib/users";
-export * from "./lib/mailchimp";
 export * from "./lib/dm_email_sync";
+export * from "./lib/email_triggers";
+export * from "./lib/mailchimp";
+export * from "./lib/notifications";
+export * from "./lib/opportunities";
+export * from "./lib/payments";
+export * from "./lib/places";
+export * from "./lib/rest";
+export * from "./lib/search";
+export * from "./lib/services";
+export * from "./lib/signups";
+export * from "./lib/spotify";
+export * from "./lib/stream";
+export * from "./lib/user_feedback";
+export * from "./lib/users";
+export * from "./lib/webhooks";
 
 const _deleteUser = async (user: UserModel, slackUrl: string) => {
   await slackNotification({
@@ -57,10 +53,7 @@ const _unclaimedUser = async (user: UserModel, slackUrl: string) => {
   // TODO create new user
   const displayName = user.artistName ?? user.username;
   if (!displayName || displayName.length === 0) {
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "The function argument 'displayName' cannot be empty"
-    );
+    throw new functions.https.HttpsError("invalid-argument", "The function argument 'displayName' cannot be empty");
   }
 
   const newUserId = await createUnclaimedUser(displayName);
@@ -79,10 +72,7 @@ const _onDeleteUser = async (data: { id: string }) => {
   // Checking attribute.
   if (data.id.length === 0) {
     // Throwing an HttpsError so that the client gets the error details.
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      "The function argument 'id' cannot be empty"
-    );
+    throw new functions.https.HttpsError("invalid-argument", "The function argument 'id' cannot be empty");
   }
 
   const user = await usersRef.doc(data.id).get();
@@ -92,7 +82,7 @@ const _onDeleteUser = async (data: { id: string }) => {
 
   const slackUrl = SLACK_WEBHOOK_URL.value();
   const userDoc = user.data() as UserModel;
-  const unclaimed =  userDoc.unclaimed || false;
+  const unclaimed = userDoc.unclaimed || false;
 
   if (unclaimed) {
     await _deleteUser(userDoc, slackUrl);
@@ -103,7 +93,6 @@ const _onDeleteUser = async (data: { id: string }) => {
 
 // --------------------------------------------------------
 export const onUserDeleted = functions
-  .runWith({ secrets: [ SLACK_WEBHOOK_URL ] })
-  .auth
-  .user()
+  .runWith({ secrets: [SLACK_WEBHOOK_URL] })
+  .auth.user()
   .onDelete((user: UserRecord) => _onDeleteUser({ id: user.uid }));

@@ -1,11 +1,4 @@
-import { HumanMessage } from "@langchain/core/messages";
-import { PromptTemplate } from "@langchain/core/prompts";
-import { ChatOpenAI, OpenAI } from "@langchain/openai";
-import { LLMChain } from "langchain/chains";
-
-// const AVATAR_PROMPT = '';
-// const STAGE_PHOTOS_PROMPT = '';
-// const ALBUM_ART_PROMPT = '';
+import OpenAI from "openai";
 
 const SINGLE_MARKETING_PLAN_TEMPLATE = `
 Please provide a detailed marketing strategy report for promoting {ARTIST_NAME}'s 
@@ -39,9 +32,6 @@ Finally, this {RELEASE_TYPE} is leading to {MORE_TO_COME}.
 Format the response to be in markdown format.
 `;
 
-// const BRANDING_GUIDANCE_TEMPLATE = '';
-// const SOCIAL_BIO_TEMPLATE = '';
-
 const ENHANCE_BIO_TEMPLATE = `Create a concise and engaging artist 
 biography for {ARTIST_NAME}. 
 Highlight their unique style, achievements, 
@@ -55,26 +45,13 @@ genre ({ARTIST_GENRES}), and any outstanding accomplishments, to craft a compell
 artist introduction. Remember to keep it captivating and suitable for press and 
 promotional materials. It should be no more than 100 words`;
 
-export const llm = async (
-  template: string,
-  apiKey: string,
-  options?: {
-    temperature?: number;
-  },
-): Promise<string> => {
-  process.env.OPENAI_API_KEY = apiKey;
-
-  const prompt = PromptTemplate.fromTemplate(template);
-  const llm = new OpenAI(options);
-  const llmChain = new LLMChain({
-    llm,
-    prompt,
-  });
-
-  const res = await llmChain.invoke({});
-
-  return res.text;
-};
+export function formatTemplate(template: string, vars: Record<string, string>): string {
+  let result = template;
+  for (const [key, value] of Object.entries(vars)) {
+    result = result.split(`{${key}}`).join(value);
+  }
+  return result;
+}
 
 export const chatGpt = async (
   prompt: string,
@@ -83,26 +60,14 @@ export const chatGpt = async (
     temperature?: number;
   },
 ): Promise<string> => {
-  const modelName = options?.model ?? "gpt-4-1106-preview";
-  const model = new ChatOpenAI({
-    modelName,
-    ...options,
+  const client = new OpenAI();
+  const res = await client.chat.completions.create({
+    model: options?.model ?? "gpt-4-1106-preview",
+    temperature: options?.temperature,
+    messages: [{ role: "user", content: prompt }],
   });
 
-  const message = new HumanMessage({
-    content: [
-      {
-        type: "text",
-        text: prompt,
-      },
-    ],
-  });
-
-  const res = await model.invoke([message]);
-
-  const result = res.content.toString();
-
-  return result;
+  return res.choices[0]?.message?.content ?? "";
 };
 
 export async function generateBasicMarketingPlan({
@@ -113,8 +78,6 @@ export async function generateBasicMarketingPlan({
   moreToCome,
   targetAudience,
   artistName,
-  // artistGenres,
-  // igFollowerCount,
   apiKey,
 }: {
   releaseType: string;
@@ -124,31 +87,11 @@ export async function generateBasicMarketingPlan({
   moreToCome: string;
   targetAudience: string;
   artistName: string;
-  // artistGenres: string;
-  // igFollowerCount: number;
   apiKey: string;
 }): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
-  const model = new ChatOpenAI({});
-  const prompt = new PromptTemplate({
-    inputVariables: [
-      "SINGLE_NAME",
-      "AESTHETIC",
-      "RELEASE_TIMELINE",
-      "MORE_TO_COME",
-      "TARGET_AUDIENCE",
-      "ARTIST_NAME",
-      // "ARTIST_GENRES",
-      "RELEASE_TYPE",
-      // "IG_FOLLOWER_COUNT",
-    ],
-    template: MARKETING_PLAN_TEMPLATE,
-  });
-
-  const chain = prompt.pipe(model);
-
-  const res = await chain.invoke({
+  const vars = {
     RELEASE_TYPE: releaseType,
     SINGLE_NAME: singleName,
     AESTHETIC: aesthetic,
@@ -156,28 +99,12 @@ export async function generateBasicMarketingPlan({
     MORE_TO_COME: moreToCome,
     TARGET_AUDIENCE: targetAudience,
     ARTIST_NAME: artistName,
-    // ARTIST_GENRES: artistGenres,
-    // IG_FOLLOWER_COUNT: igFollowerCount,
-  });
-
-  const formatted = await prompt.format({
-    RELEASE_TYPE: releaseType,
-    SINGLE_NAME: singleName,
-    AESTHETIC: aesthetic,
-    RELEASE_TIMELINE: releaseTimeline,
-    MORE_TO_COME: moreToCome,
-    TARGET_AUDIENCE: targetAudience,
-    ARTIST_NAME: artistName,
-    // ARTIST_GENRES: artistGenres,
-    // IG_FOLLOWER_COUNT: igFollowerCount,
-  });
-
-  const content = res.content.toString();
-
-  return {
-    content: content,
-    prompt: formatted,
   };
+
+  const formatted = formatTemplate(MARKETING_PLAN_TEMPLATE, vars);
+  const content = await chatGpt(formatted);
+
+  return { content, prompt: formatted };
 }
 
 export async function generateSingleBasicMarketingPlan({
@@ -188,7 +115,6 @@ export async function generateSingleBasicMarketingPlan({
   targetAudience,
   artistName,
   artistGenres,
-  // igFollowerCount,
   apiKey,
 }: {
   singleName: string;
@@ -198,29 +124,11 @@ export async function generateSingleBasicMarketingPlan({
   targetAudience: string;
   artistName: string;
   artistGenres: string;
-  // igFollowerCount: number;
   apiKey: string;
 }): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
-  const model = new ChatOpenAI({});
-  const prompt = new PromptTemplate({
-    inputVariables: [
-      "SINGLE_NAME",
-      "AESTHETIC",
-      "RELEASE_TIMELINE",
-      "MORE_TO_COME",
-      "TARGET_AUDIENCE",
-      "ARTIST_NAME",
-      "ARTIST_GENRES",
-      // "IG_FOLLOWER_COUNT",
-    ],
-    template: SINGLE_MARKETING_PLAN_TEMPLATE,
-  });
-
-  const chain = prompt.pipe(model);
-
-  const res = await chain.invoke({
+  const vars = {
     SINGLE_NAME: singleName,
     AESTHETIC: aesthetic,
     RELEASE_TIMELINE: releaseTimeline,
@@ -228,24 +136,12 @@ export async function generateSingleBasicMarketingPlan({
     TARGET_AUDIENCE: targetAudience,
     ARTIST_NAME: artistName,
     ARTIST_GENRES: artistGenres,
-    // IG_FOLLOWER_COUNT: igFollowerCount,
-  });
-
-  const formatted = await prompt.format({
-    SINGLE_NAME: singleName,
-    AESTHETIC: aesthetic,
-    RELEASE_TIMELINE: releaseTimeline,
-    MORE_TO_COME: moreToCome,
-    TARGET_AUDIENCE: targetAudience,
-    ARTIST_NAME: artistName,
-    ARTIST_GENRES: artistGenres,
-    // IG_FOLLOWER_COUNT: igFollowerCount,
-  });
-
-  return {
-    content: res.text,
-    prompt: formatted,
   };
+
+  const formatted = formatTemplate(SINGLE_MARKETING_PLAN_TEMPLATE, vars);
+  const content = await chatGpt(formatted);
+
+  return { content, prompt: formatted };
 }
 
 export async function basicEnhancedBio({
@@ -265,34 +161,16 @@ export async function basicEnhancedBio({
 }): Promise<{ content: string; prompt: string }> {
   process.env.OPENAI_API_KEY = apiKey;
 
-  const model = new ChatOpenAI({});
-  const prompt = new PromptTemplate({
-    inputVariables: ["ARTIST_NAME", "TIKTOK_HANDLE", "TWITTER_HANDLE", "INSTAGRAM_HANDLE", "ARTIST_GENRES"],
-    template: ENHANCE_BIO_TEMPLATE,
-  });
-
-  const chain = prompt.pipe(model);
-
-  const res = await chain.invoke({
+  const vars = {
     ARTIST_NAME: artistName,
     TWITTER_HANDLE: twitterHandle,
     INSTAGRAM_HANDLE: instagramHandle,
     TIKTOK_HANDLE: tiktokHandle,
     ARTIST_GENRES: artistGenres.join(", "),
-  });
-
-  const formatted = await prompt.format({
-    ARTIST_NAME: artistName,
-    TWITTER_HANDLE: twitterHandle,
-    INSTAGRAM_HANDLE: instagramHandle,
-    TIKTOK_HANDLE: tiktokHandle,
-    ARTIST_GENRES: artistGenres.join(", "),
-  });
-
-  const content = res.content.toString();
-
-  return {
-    content,
-    prompt: formatted,
   };
+
+  const formatted = formatTemplate(ENHANCE_BIO_TEMPLATE, vars);
+  const content = await chatGpt(formatted);
+
+  return { content, prompt: formatted };
 }

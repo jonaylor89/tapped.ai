@@ -6,18 +6,15 @@ import { debug, error, info } from "firebase-functions/logger";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
 import * as postmark from "postmark";
-import { Resend } from "resend";
 import { StreamChat, type User } from "stream-chat";
 import { contactVenueTemplate } from "../../email_templates/contact_venue";
 import type { Opportunity, UserModel, VenueContactRequest } from "../../types/models";
-// import _ from "lodash";
 import { _sendEmailOnVenueContacting } from "../email_triggers";
 import {
   contactVenuesRef,
   OPEN_AI_KEY,
   opportunitiesRef,
   POSTMARK_SERVER_ID,
-  RESEND_API_KEY,
   SLACK_WEBHOOK_URL,
   streamKey,
   streamSecret,
@@ -25,7 +22,7 @@ import {
 } from "../firebase";
 import { slackNotification } from "../notifications";
 import { authenticatedRequest, imageUrlToBase64 } from "../utils";
-import { writeAiEmailReply, writeEmailWithAi } from "./compose_email";
+import { composeVenueEmail } from "./compose_email";
 import { dmAutoReply, sendStreamMessage } from "./messaging";
 import { createEmailMessageId } from "./utils";
 
@@ -84,7 +81,7 @@ async function sendAsEmail({
   const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
   const messageId = createEmailMessageId();
 
-  const { subject, body } = await writeEmailWithAi({
+  const { subject, body } = await composeVenueEmail({
     performer: user,
     venue: venueContactData?.venue,
     note,
@@ -333,12 +330,12 @@ export const _appendNewContactRequestToThread = async ({
     )
   ).filter((o) => o !== null) as Opportunity[];
 
-  const message = await writeAiEmailReply({
-    opportunities,
+  const { body: message } = await composeVenueEmail({
+    performer: userData,
+    venue: contactVenueData.venue,
     note,
-    userData,
-    contactVenueData,
-    emailsSent: allEmailSents,
+    opportunities,
+    previousEmails: allEmailSents,
   });
 
   const { text, html } = contactVenueTemplate({
@@ -608,97 +605,88 @@ export const setLatestContactRequest = onDocumentCreated(
   },
 );
 
-export const genericContactVenues = onCall(
-  { secrets: [RESEND_API_KEY, POSTMARK_SERVER_ID, OPEN_AI_KEY] },
-  async (request) => {
-    authenticatedRequest(request);
-    process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
+export const genericContactVenues = onCall({ secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY] }, async (request) => {
+  authenticatedRequest(request);
+  process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
 
-    const userId = request.data.userId as string | undefined;
-    const venueIds = request.data.venueIds as string[] | undefined;
-    const note = (request.data.note as string | undefined) ?? "";
-    const collaborators = (request.data.collaborators as string[] | undefined) ?? [];
+  const userId = request.data.userId as string | undefined;
+  const venueIds = request.data.venueIds as string[] | undefined;
+  const note = (request.data.note as string | undefined) ?? "";
+  const collaborators = (request.data.collaborators as string[] | undefined) ?? [];
 
-    if (!userId) {
-      throw new Error("no userId found");
-    }
+  if (!userId) {
+    throw new Error("no userId found");
+  }
 
-    if (!venueIds) {
-      throw new Error("no venueIds found");
-    }
+  if (!venueIds) {
+    throw new Error("no venueIds found");
+  }
 
-    const userSnap = await usersRef.doc(userId).get();
-    if (!userSnap.exists) {
-      throw new Error("no user found");
-    }
+  const userSnap = await usersRef.doc(userId).get();
+  if (!userSnap.exists) {
+    throw new Error("no user found");
+  }
 
-    const userData = userSnap.data() as UserModel;
+  const userData = userSnap.data() as UserModel;
+  const emailClient = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
 
-    await Promise.all(
-      venueIds.map(async (venueId) => {
-        // for each venueId, check if user has open email thread with venue
-        const venueSnap = await usersRef.doc(venueId).get();
-        if (!venueSnap.exists) {
-          error(`no venue found for id ${venueId}`);
-          return;
-        }
-        const venueData = venueSnap.data() as UserModel;
+  await Promise.all(
+    venueIds.map(async (venueId) => {
+      const venueSnap = await usersRef.doc(venueId).get();
+      if (!venueSnap.exists) {
+        error(`no venue found for id ${venueId}`);
+        return;
+      }
+      const venueData = venueSnap.data() as UserModel;
 
-        const bookingEmail = venueData.venueInfo?.bookingEmail;
-        if (!bookingEmail) {
-          error(`no bookingEmail found for venue ${venueId}`);
-          return;
-        }
+      const bookingEmail = venueData.venueInfo?.bookingEmail;
+      if (!bookingEmail) {
+        error(`no bookingEmail found for venue ${venueId}`);
+        return;
+      }
 
-        const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).get();
+      const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).get();
 
-        const alreadyContacted = contactVenueSnap.exists;
-        const resend = new Resend(RESEND_API_KEY.value());
+      const alreadyContacted = contactVenueSnap.exists;
 
-        // if not, create new email thread (make ContactVenueRequest)
-        if (!alreadyContacted) {
-          await contactVenuesRef
-            .doc(userId)
-            .collection("venuesContacted")
-            .doc(venueId)
-            .set({
-              opportunityIds: [],
-              collaborators,
-              note,
-              bookingEmail,
-              user: userData,
-              venue: venueData,
-              allEmails: [bookingEmail],
-              latestMessageId: null,
-              originalMessageId: null,
-              subject: null,
-            });
-
-          // send email to user that they've send the request
-          await _sendEmailOnVenueContacting({
-            resend,
-            userId,
+      if (!alreadyContacted) {
+        await contactVenuesRef
+          .doc(userId)
+          .collection("venuesContacted")
+          .doc(venueId)
+          .set({
+            opportunityIds: [],
+            collaborators,
+            note,
+            bookingEmail,
+            user: userData,
+            venue: venueData,
+            allEmails: [bookingEmail],
+            latestMessageId: null,
+            originalMessageId: null,
+            subject: null,
           });
-          return;
-        }
 
-        // if so, add email to thread
-        const emailClient = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
-        await _appendNewContactRequestToThread({
-          userId,
-          venueId,
-          collaboratorIds: collaborators,
-          note,
-          opportunityIds: [],
-          emailClient,
-        });
-
-        // send email to user that they've send the request
         await _sendEmailOnVenueContacting({
-          resend,
+          emailClient,
           userId,
         });
-      }),
-    );
-  },
-);
+        return;
+      }
+
+      await _appendNewContactRequestToThread({
+        userId,
+        venueId,
+        collaboratorIds: collaborators,
+        note,
+        opportunityIds: [],
+        emailClient,
+      });
+
+      await _sendEmailOnVenueContacting({
+        emailClient,
+        userId,
+      });
+    }),
+  );
+});

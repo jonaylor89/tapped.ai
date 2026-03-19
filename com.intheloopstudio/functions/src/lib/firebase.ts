@@ -1,17 +1,16 @@
 /* eslint-disable import/no-unresolved */
-import { getStorage } from "firebase-admin/storage";
+
+import { SecretManagerServiceClient } from "@google-cloud/secret-manager";
+import { getApp, getApps, initializeApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getRemoteConfig } from "firebase-admin/remote-config";
-import { getFirestore } from "firebase-admin/firestore";
-import { getApp, getApps, initializeApp } from "firebase-admin/app";
+import { getStorage } from "firebase-admin/storage";
 import { defineSecret } from "firebase-functions/params";
-import { getAuth } from "firebase-admin/auth";
-import  { SecretManagerServiceClient } from "@google-cloud/secret-manager";
 
 const client = new SecretManagerServiceClient();
-const app = getApps().length <= 0 ?
-  initializeApp() :
-  getApp();
+const app = getApps().length <= 0 ? initializeApp() : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
@@ -31,7 +30,7 @@ export const feedsRef = db.collection("feeds");
 // const badgesRef = db.collection("badges");
 // const badgesSentRef = db.collection("badgesSent");
 export const bookingsRef = db.collection("bookings");
-export const tokensRef = db.collection("device_tokens")
+export const tokensRef = db.collection("device_tokens");
 export const servicesRef = db.collection("services");
 export const mailRef = db.collection("mail");
 export const queuedWritesRef = db.collection("queued_writes");
@@ -63,7 +62,7 @@ export const loopsFeedSubcollection = "userFeed";
 export const bookerReviewsSubcollection = "bookerReviews";
 export const performerReviewsSubcollection = "performerReviews";
 
-export const mainBucket = storage.bucket("in-the-loop-306520.appspot.com")
+export const mainBucket = storage.bucket("in-the-loop-306520.appspot.com");
 
 export const streamKey = defineSecret("STREAM_KEY");
 export const streamSecret = defineSecret("STREAM_SECRET");
@@ -79,9 +78,6 @@ export const stripeCoverArtTestWebhookSecret = defineSecret("STRIPE_COVER_ART_TE
 export const stripeCoverArtWebhookSecret = defineSecret("STRIPE_COVER_ART_WEBHOOK_SECRET");
 
 export const OPEN_AI_KEY = defineSecret("OPEN_AI_KEY");
-export const LEAP_API_KEY = defineSecret("LEAP_API_KEY");
-export const LEAP_WEBHOOK_SECRET = defineSecret("LEAP_WEBHOOK_SECRET");
-export const RESEND_API_KEY = defineSecret("RESEND_API_KEY");
 export const GOOGLE_PLACES_API_KEY = defineSecret("GOOGLE_PLACES_API_KEY");
 export const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
 export const POSTMARK_SERVER_ID = defineSecret("POSTMARK_SERVER_ID");
@@ -94,7 +90,7 @@ export const MAILCHIMP_SERVER_PREFIX = defineSecret("MAILCHIMP_SERVER_PREFIX");
 
 export const starterCreditsTestPriceId = "price_1OE2ptDYybu1wznEqHNMGZax";
 export const basicCreditsTestPriceId = "price_1OE2rrDYybu1wznEqv4mmjoK";
-export const proCreditsTestPriceId = "price_1OE2tPDYybu1wznEZV2ZkUKk"
+export const proCreditsTestPriceId = "price_1OE2tPDYybu1wznEZV2ZkUKk";
 
 export const creditsPerTestPriceId: {
   [key: string]: number;
@@ -125,8 +121,8 @@ export const bucket = storage.bucket(`${projectId}.appspot.com`);
 
 export const getSecretValue = async (secretName: string): Promise<string | null> => {
   const fullName = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-  const [ version ] = await client.accessSecretVersion({ name: fullName })
+  const [version] = await client.accessSecretVersion({ name: fullName });
   const secretValue = version.payload?.data?.toString();
 
   return secretValue ?? null;
-}
+};
