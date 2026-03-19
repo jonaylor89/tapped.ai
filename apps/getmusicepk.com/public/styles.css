@@ -1,0 +1,134 @@
+html {
+  box-sizing: border-box;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+body {
+  margin: 0;
+  background-color: #010f16;
+  color: #ffffff;
+  font-family: "Rubik", sans-serif;
+}
+
+a {
+  color: inherit;
+}
+
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 10;
+  display: flex;
+  width: 100vw;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 0.75rem;
+  background-color: rgba(1, 15, 22, 0.3);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.brand-link {
+  display: inline-flex;
+  margin-right: 1rem;
+  align-items: center;
+  padding: 0.5rem;
+}
+
+.brand-link img {
+  display: block;
+}
+
+.hero {
+  display: flex;
+  height: 95vh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.hero h1 {
+  width: 75%;
+  margin: 0;
+  text-align: center;
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.hero h1 span {
+  color: transparent;
+  background: linear-gradient(to right, #1e40af, #7dd3fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.hero h2 {
+  margin: 0;
+  text-align: center;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.hero h2 a {
+  text-decoration: underline;
+  color: transparent;
+  background: linear-gradient(to right, #60a5fa, #7dd3fc);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.hero-spacer {
+  height: 2rem;
+}
+
+.cta-button {
+  appearance: none;
+  border: 0;
+  border-radius: 9999px;
+  background-color: #1d4ed8;
+  padding: 0.5rem 1rem;
+  color: #ffffff;
+  font: inherit;
+  font-weight: 800;
+  text-transform: lowercase;
+  cursor: default;
+  opacity: 1;
+}
+
+.tweet-section {
+  padding-bottom: 2rem;
+}
+
+.tweet-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .hero {
+    align-items: flex-start;
+    padding: 0 6rem;
+  }
+
+  .hero h1 {
+    text-align: left;
+    font-size: 8rem;
+    line-height: 1;
+  }
+
+  .hero h2 {
+    text-align: left;
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+}
