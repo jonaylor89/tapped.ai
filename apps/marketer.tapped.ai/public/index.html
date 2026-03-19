@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your Personal Marketer</title>
+    <meta
+      name="description"
+      content="Get Music Marketing | create a marketing plan for your album, ep, or single | by Tapped Ai"
+    />
+    <meta property="og:site_name" content="tapped.ai" />
+    <meta
+      property="og:description"
+      content="Get Music Marketing | create a marketing plan for your album, ep, or single | by Tapped Ai"
+    />
+    <meta property="og:title" content="Your Personal Marketer" />
+    <meta property="og:image" content="https://marketer.tapped.ai/og.png" />
+    <meta property="og:url" content="https://tapped.ai" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Your Personal Marketer" />
+    <meta
+      name="twitter:description"
+      content="Get Music Marketing | create a marketing plan for your album, ep, or single | by Tapped Ai"
+    />
+    <meta property="twitter:image" content="https://marketer.tapped.ai/og.png" />
+    <link rel="icon" href="./favicon.ico" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color: #fff;
+        background-color: #010f16;
+        font-family: "Rubik", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        min-height: 100%;
+      }
+
+      body {
+        color: #fff;
+        background-color: #010f16;
+      }
+
+      a,
+      button {
+        font: inherit;
+      }
+
+      .page {
+        position: relative;
+        z-index: 0;
+        display: flex;
+        height: 100vh;
+        flex-direction: column;
+        padding: 0.5rem;
+      }
+
+      .first-circle,
+      .second-circle,
+      .third-circle {
+        position: absolute;
+        z-index: -1;
+        border-radius: 9999px;
+        background-color: #63b2fd;
+        filter: blur(100px);
+      }
+
+      .third-circle {
+        top: 10%;
+        left: -10%;
+        width: 400px;
+        height: 400px;
+      }
+
+      .first-circle {
+        top: 40%;
+        right: 10%;
+        width: 175px;
+        height: 175px;
+      }
+
+      .second-circle {
+        bottom: 20%;
+        left: 50%;
+        width: 250px;
+        height: 250px;
+        transform: translateX(-50%);
+      }
+
+      .nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        padding: 0.75rem;
+      }
+
+      .brand-link {
+        display: inline-flex;
+        align-items: center;
+        margin-right: 1rem;
+        padding: 0.5rem;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .brand-gap {
+        width: 1.5rem;
+      }
+
+      .brand-text {
+        font-size: 1.25rem;
+        font-weight: 700;
+        letter-spacing: 0.025em;
+        text-transform: uppercase;
+      }
+
+      .hero {
+        display: flex;
+        flex: 1 1 auto;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .hero-title {
+        margin: 0.5rem 0;
+        text-align: center;
+        font-size: 2.25rem;
+        font-weight: 800;
+        line-height: 2.5rem;
+      }
+
+      .hero-word {
+        background: linear-gradient(to bottom right, #f472b6, #dc2626);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+      }
+
+      .hero-spacer {
+        height: 1rem;
+      }
+
+      .hero-subtitle {
+        margin: 0.5rem 0;
+        text-align: center;
+        font-size: 1.125rem;
+        line-height: 1.75rem;
+        font-weight: 300;
+      }
+
+      .cta-row {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+        margin: 0.5rem 0 2rem;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        padding: 0.5rem 1rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.75rem;
+        text-decoration: none;
+        transition: transform 0.2s ease-in-out;
+      }
+
+      .pill:hover {
+        transform: scale(1.05);
+      }
+
+      .pill-primary {
+        border: 0;
+        background: #fff;
+        color: #000;
+      }
+
+      .pill-primary[disabled] {
+        cursor: not-allowed;
+        opacity: 1;
+      }
+
+      .pill-primary[disabled]:hover {
+        transform: none;
+      }
+
+      .pill-secondary {
+        background: #000;
+        color: #fff;
+      }
+
+      .partners-wrap {
+        margin-bottom: 2rem;
+      }
+
+      .partners {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2rem;
+      }
+
+      .partners-label {
+        text-align: center;
+        font-weight: 700;
+        opacity: 0.8;
+      }
+
+      .partner-link {
+        display: inline-flex;
+      }
+
+      .partner-logo-round {
+        border-radius: 9999px;
+      }
+
+      @media (min-width: 768px) {
+        .page {
+          padding: 0;
+        }
+
+        .hero-title {
+          width: 50%;
+          font-size: 3rem;
+          line-height: 1;
+        }
+
+        .hero-spacer {
+          height: 1.5rem;
+        }
+
+        .hero-subtitle {
+          width: 33.333333%;
+          font-size: 1.5rem;
+          line-height: 2rem;
+        }
+
+        .cta-row {
+          flex-direction: row;
+          margin-top: 1rem;
+        }
+
+        .partners {
+          flex-direction: row;
+        }
+      }
+
+      @media (max-width: 767.98px) {
+        .third-circle {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <div class="first-circle" aria-hidden="true"></div>
+      <div class="second-circle" aria-hidden="true"></div>
+      <div class="third-circle" aria-hidden="true"></div>
+
+      <nav class="nav">
+        <a
+          class="brand-link"
+          href="https://tapped.ai"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <img src="./images/tapped_reverse.png" width="75" height="75" alt="tapped logo" />
+          <div class="brand-gap"></div>
+          <span class="brand-text">TAPPED AI</span>
+        </a>
+      </nav>
+
+      <div class="hero">
+        <h1 class="hero-title">
+          market your next <span class="hero-word" id="hero-word"></span>
+        </h1>
+        <div class="hero-spacer"></div>
+        <h2 class="hero-subtitle">
+          create a marketing plan for your next project just like the majors
+        </h2>
+        <div class="cta-row">
+          <button
+            class="pill pill-primary"
+            type="button"
+            disabled
+            aria-disabled="true"
+          >
+            start now
+          </button>
+          <a
+            class="pill pill-secondary"
+            href="https://www.loom.com/embed/ff089c94893f42219be46fb37bdfdfdf?sid=839ef7f2-a3fb-4585-9fca-75e38593d6a9"
+          >
+            tutorial
+          </a>
+        </div>
+      </div>
+
+      <div class="partners-wrap">
+        <div class="partners">
+          <div class="partners-label">IN COLLABORATION WITH:</div>
+          <a
+            class="partner-link"
+            href="https://tapped.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="./images/tapped_reverse.png" width="75" height="75" alt="tapped logo" />
+          </a>
+          <a
+            class="partner-link"
+            href="https://www.deathrowofficial.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="./images/drr_logo.png" width="75" height="75" alt="Death row records logo" />
+          </a>
+          <a
+            class="partner-link"
+            href="https://www.instagram.com/blankkanvaz/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img src="./images/bcm_logo.png" width="75" height="75" alt="Black canvaz logo" />
+          </a>
+          <a class="partner-link" href="https://www.instagram.com/playmakrsent/">
+            <img
+              class="partner-logo-round"
+              src="./images/pe_logo.png"
+              width="75"
+              height="75"
+              alt="Playmakrs entertainment logo"
+            />
+          </a>
+        </div>
+      </div>
+    </main>
+    <script>
+      const words = ["album", "ep", "single"];
+      const wordElement = document.getElementById("hero-word");
+      const len = words.length;
+      const skipDelay = 15;
+
+      let forwards = true;
+      let skipCount = 0;
+      let i = 0;
+      let offset = 0;
+
+      setInterval(() => {
+        if (forwards) {
+          if (offset >= words[i].length) {
+            ++skipCount;
+            if (skipCount === skipDelay) {
+              forwards = false;
+              skipCount = 0;
+            }
+          }
+        } else if (offset === 0) {
+          forwards = true;
+          ++i;
+          offset = 0;
+          if (i >= len) {
+            i = 0;
+          }
+        }
+
+        const part = words[i].substr(0, offset);
+        if (skipCount === 0) {
+          if (forwards) {
+            ++offset;
+          } else {
+            --offset;
+          }
+        }
+
+        wordElement.textContent = part;
+      }, 100);
+    </script>
+  </body>
+</html>
