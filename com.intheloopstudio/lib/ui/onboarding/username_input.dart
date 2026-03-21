@@ -18,11 +18,4 @@ class UsernameInput extends FormzInput<String, UsernameInputError> {
 // Define input validation errors
 enum UsernameInputError { empty }
 
-extension on UsernameInputError {
-  String text() {
-    return switch (this) {
-      UsernameInputError.empty =>
-        'Please ensure the email entered is valid',
-    };
-  }
-}
+

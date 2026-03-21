@@ -47,7 +47,6 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
     BuildContext context, {
     required UserModel currentUser,
   }) {
-    final database = context.database;
     return BlocBuilder<SafetyModeCubit, bool>(
       builder: (context, safeModeOn) {
         return Row(

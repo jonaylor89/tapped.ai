@@ -80,7 +80,7 @@ class ActionMenu extends StatelessWidget {
             SettingsButton(
               icon: const Icon(Icons.verified),
               label: 'get verified',
-              onTap: () => showModalBottomSheet(
+              onTap: () => showModalBottomSheet<void>(
                 context: context,
                 showDragHandle: true,
                 builder: (context) {

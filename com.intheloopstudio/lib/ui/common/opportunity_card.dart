@@ -1,4 +1,3 @@
-import 'package:badges/badges.dart' as badges;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
@@ -60,67 +59,6 @@ class _OpportunityCardState extends State<OpportunityCard> {
         })(),
       _ => null,
     };
-  }
-
-  Widget _buildAppliedBadge(BuildContext context, {
-    required Widget child,
-  }) {
-    final database = context.database;
-    return badges.Badge(
-      onTap: () => showDialog<AlertDialog>(
-        context: context,
-        builder: (_) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: TappedRadius.xlAll,
-          ),
-          elevation: 5,
-          title: const Text('are your sure?'),
-          content:
-          const Text('do you want to delete this opportunity'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                database
-                    .deleteOpportunity(widget.opportunity.id)
-                    .then((value) {
-                  widget.onOpportunityDeleted?.call();
-                  Navigator.of(context, rootNavigator: true).pop();
-                }).onError((error, stackTrace) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: TappedColors.error,
-                      content: Text('error deleting opportunity'),
-                    ),
-                  );
-                });
-              },
-              child: const Text('cancel'),
-            ),
-            TextButton(
-              onPressed: Navigator.of(
-                context,
-                rootNavigator: true,
-              ).pop,
-              child: const Text('confirm'),
-            ),
-          ],
-        ),
-      ),
-      position: badges.BadgePosition.custom(
-        top: 0,
-        end: 0,
-      ),
-      badgeStyle: const badges.BadgeStyle(
-        badgeColor: Colors.transparent,
-      ),
-      badgeContent: const Icon(
-        CupertinoIcons.xmark_circle_fill,
-        color: TappedColors.textOnImage,
-        size: 25,
-      ),
-      child: child,
-    );
   }
 
   @override

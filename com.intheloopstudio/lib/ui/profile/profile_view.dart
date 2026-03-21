@@ -244,7 +244,7 @@ class ProfileView extends StatelessWidget {
                       if (state.isVerified)
                         WidgetSpan(
                           child: GestureDetector(
-                            onTap: () => showModalBottomSheet(
+                            onTap: () => showModalBottomSheet<void>(
                               context: context,
                               showDragHandle: true,
                               builder: (context) {

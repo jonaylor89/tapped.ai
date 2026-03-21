@@ -8,7 +8,6 @@ import 'package:fpdart/fpdart.dart' hide State;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intheloopapp/data/places_repository.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
-import 'package:intheloopapp/domains/models/social_following.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -323,7 +322,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                   children: [
                     switch (socialFollowing.tiktokHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             // color:
                             // theme.colorScheme.onBackground.withOpacity(0.1),
@@ -351,7 +350,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.instagramHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             // color:
                             // theme.colorScheme.onBackground.withOpacity(0.1),
@@ -382,7 +381,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.twitterHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(15),
                           ),
@@ -411,7 +410,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.facebookHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(15),
                           ),
@@ -437,7 +436,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.youtubeHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(15),
                           ),
@@ -450,7 +449,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.twitchHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(15),
                           ),
@@ -463,7 +462,7 @@ class _ShareProfileViewState extends State<ShareProfileView> {
                     },
                     switch (socialFollowing.soundcloudHandle) {
                       None() => null,
-                      Some(:final value) => Container(
+                      Some(value: final _) => Container(
                           decoration: BoxDecoration(
                             // color:
                             // theme.colorScheme.onBackground.withOpacity(0.1),

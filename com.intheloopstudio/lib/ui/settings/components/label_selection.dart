@@ -36,7 +36,7 @@ class LabelSelection extends StatelessWidget {
                   ),
                   Text(
                     (state.label != 'None')
-                        ? state.label ?? 'Select a label'
+                        ? state.label
                         : 'Select a label',
                     style: const TextStyle(
                       color: tappedAccent,

@@ -43,7 +43,7 @@ class InstaImageViewer extends StatelessWidget {
         onTap: () {
           Navigator.push(
             context,
-            PageRouteBuilder(
+            PageRouteBuilder<void>(
               opaque: false,
               barrierColor: backgroundIsTransparent
                   ? Colors.white.withOpacity(0)
@@ -144,7 +144,7 @@ class _FullScreenViewerState extends State<FullScreenViewer> {
         _positionYDelta = 0;
       });
 
-      Future.delayed(_animationDuration).then((_) {
+      Future<void>.delayed(_animationDuration).then((_) {
         setState(() {
           _animationDuration = Duration.zero;
         });

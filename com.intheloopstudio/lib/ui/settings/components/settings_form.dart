@@ -342,12 +342,11 @@ class SettingsForm extends StatelessWidget {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 Text(
-                                  state.label != null && state.label != 'None'
-                                      ? state.label!
+                                  state.label != 'None'
+                                      ? state.label
                                       : 'Select a label',
                                   style: TextStyle(
-                                    color: state.label == null ||
-                                            state.label == 'None'
+                                    color: state.label == 'None'
                                         ? CupertinoColors.placeholderText
                                         : null,
                                   ),

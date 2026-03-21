@@ -25,7 +25,6 @@ class _ApplyButtonState extends State<ApplyButton> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = context.auth;
     final database = context.database;
     if (loading) {
       return const Column(

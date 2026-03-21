@@ -5,7 +5,7 @@ Map<String, dynamic> convertMap(Map<dynamic, dynamic> map) {
     if (map[key] is Map) {
       map[key] = convertMap(map[key] as Map<dynamic, dynamic>);
     } else if (map[key] is List) {
-      map[key] = map[key].map((e) {
+      map[key] = map[key].map((dynamic e) {
         if (e is Map) {
           return convertMap(e);
         }

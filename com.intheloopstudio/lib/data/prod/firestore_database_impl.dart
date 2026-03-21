@@ -45,8 +45,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       _firestore.collection('users');
   static final CollectionReference<Map<String, dynamic>> _activitiesRef =
       _firestore.collection('activities');
-  static final CollectionReference<Map<String, dynamic>> _badgesSentRef =
-      _firestore.collection('badgesSent');
   static final CollectionReference<Map<String, dynamic>> _bookingsRef =
       _firestore.collection('bookings');
   static final CollectionReference<Map<String, dynamic>> _servicesRef =
@@ -71,15 +69,6 @@ class FirestoreDatabaseImpl extends DatabaseRepository {
       _firestore.collection('userFeedback');
   static final CollectionReference<Map<String, dynamic>> _contactVenuesRef =
       _firestore.collection('contactVenues');
-
-  String _getFileFromURL(String fileURL) {
-    final fSlashes = fileURL.split('/');
-    final fQuery = fSlashes[fSlashes.length - 1].split('?');
-    final segments = fQuery[0].split('%2F');
-    final fileName = segments.join('/');
-
-    return fileName;
-  }
 
   @override
   Future<String> publishLatestAppVersion(String currentUserId) async {

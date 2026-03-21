@@ -79,7 +79,7 @@ class RequestToPerform extends StatelessWidget {
       builder: (context, currentUser) {
         return switch (bookingEmail) {
           None() => const SizedBox.shrink(),
-          Some(:final value) => FutureBuilder(
+          Some(value: final _) => FutureBuilder(
               future: database.hasUserSentContactRequest(
                 user: currentUser,
                 venue: venue,

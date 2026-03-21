@@ -74,8 +74,8 @@ class VenueCard extends StatelessWidget {
           return cat.suggestedMaxCapacity >= cap;
         }).getOrElse(() => false);
         final genreFit = venue.venueInfo.map((t) {
-          final one = Set.from(t.genres);
-          final two = Set.from(userGenres);
+          final one = Set<String>.from(t.genres);
+          final two = Set<String>.from(userGenres);
           final intersect = one.intersection(two);
           return intersect.isNotEmpty;
         }).getOrElse(() => false);

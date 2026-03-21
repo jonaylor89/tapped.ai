@@ -11,7 +11,6 @@ class FeedbackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final database = context.database;
     final storage = context.storage;
     final scaffoldMessenger = ScaffoldMessenger.of(context);

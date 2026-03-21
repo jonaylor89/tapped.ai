@@ -76,5 +76,5 @@ class OnboardingFlowState extends Equatable with FormzMixin {
   }
 
   @override
-  List<FormzInput> get inputs => [];
+  List<FormzInput<dynamic, dynamic>> get inputs => [];
 }

@@ -9,7 +9,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:intheloopapp/data/auth_repository.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/social_following.dart';
 import 'package:intheloopapp/domains/models/venue_info.dart';
@@ -74,8 +73,6 @@ class InfoSliver extends StatelessWidget {
           builder: (context, currentUser) {
             return CustomClaimsBuilder(
               builder: (context, claims) {
-                final isAdmin = claims.contains(CustomClaim.admin);
-                final isBooker = claims.contains(CustomClaim.booker);
                 return PremiumBuilder(
                   builder: (context, isPremium) {
                     return Column(
@@ -176,7 +173,7 @@ class InfoSliver extends StatelessWidget {
                               ),
                             switch (performerInfo) {
                               None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
+                              Some(value: final _) => CupertinoListTile(
                                   leading: const Icon(
                                     CupertinoIcons.person_2_alt,
                                   ),
@@ -418,7 +415,7 @@ class InfoSliver extends StatelessWidget {
                                   ),
                                   onTap: switch (value.pressKitUrl) {
                                     None() => () {
-                                        showCupertinoModalBottomSheet(
+                                        showCupertinoModalBottomSheet<void>(
                                           context: context,
                                           builder: (context) {
                                             return ShareProfileView(
@@ -514,7 +511,7 @@ class InfoSliver extends StatelessWidget {
                           ],
                         ),
                         switch ((venueInfo, state.visitedUser.unclaimed)) {
-                          (Some(:final value), true) => GestureDetector(
+                          (Some(value: final _), true) => GestureDetector(
                               onTap: () {
                                 final scaffoldMessenger =
                                     ScaffoldMessenger.of(context);

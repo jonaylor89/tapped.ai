@@ -32,7 +32,6 @@ class MoreOptionsButton extends StatelessWidget {
       builder: (BuildContext context) => FutureBuilder(
         future: database.isVerified(user.id),
         builder: (context, snapshot) {
-          final isVerified = snapshot.data ?? false;
           return CupertinoActionSheet(
             title: Text(user.displayName),
             // message: Text(user.username.username),

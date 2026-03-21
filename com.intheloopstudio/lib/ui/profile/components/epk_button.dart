@@ -74,7 +74,7 @@ class EPKButton extends StatelessWidget {
             ],
           ),
         ),
-      Some(:final value) => Row(
+      Some(value: final _) => Row(
           children: [
             Expanded(
               child: Container(

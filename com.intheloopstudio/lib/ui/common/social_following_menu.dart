@@ -14,26 +14,6 @@ class SocialFollowingMenu extends StatelessWidget {
 
   final UserModel user;
 
-  Widget _buildSocialRow(
-    IconData icon,
-    String label,
-    int count,
-  ) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 40,
-          height: 40,
-          child: Icon(
-            icon,
-            color: Colors.grey.withOpacity(0.5),
-          ),
-        ),
-        Text('$count $label'),
-      ],
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -111,7 +91,7 @@ class SocialFollowingMenu extends StatelessWidget {
             ),
             trailing: switch (instagramHandle) {
               None() => null,
-              Some(:final value) => Icon(
+              Some(value: final _) => Icon(
                 CupertinoIcons.chevron_forward,
                 color: theme.colorScheme.onSurface,
               ),
@@ -138,7 +118,7 @@ class SocialFollowingMenu extends StatelessWidget {
             },
             trailing: switch (twitterHandle) {
               None() => null,
-              Some(:final value) => Icon(
+              Some(value: final _) => Icon(
                 CupertinoIcons.chevron_forward,
                 color: theme.colorScheme.onSurface,
               ),
@@ -168,7 +148,7 @@ class SocialFollowingMenu extends StatelessWidget {
             },
             trailing: switch (tiktokHandle) {
               None() => null,
-              Some(:final value) => Icon(
+              Some(value: final _) => Icon(
                 CupertinoIcons.chevron_forward,
                 color: theme.colorScheme.onSurface,
               ),

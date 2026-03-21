@@ -16,7 +16,7 @@ class ShareButton extends StatelessWidget {
       builder: (context, state) {
         return CupertinoButton(
           onPressed: () =>
-              showCupertinoModalBottomSheet(
+              showCupertinoModalBottomSheet<void>(
                 context: context,
                 builder: (context) => ShareProfileView(
                   userId: state.visitedUser.id,

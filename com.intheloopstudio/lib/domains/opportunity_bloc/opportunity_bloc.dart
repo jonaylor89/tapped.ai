@@ -82,7 +82,7 @@ class OpportunityBloc extends Bloc<OpportunityEvent, OpportunityState> {
 
       final callable =
       _functions.httpsCallable('notifyVenueOfInterestedOpportunities');
-      await callable.call({
+      await callable.call<void>({
         'opportunityIds': [op.id],
         'userId': currentUserId,
         'note': userComment,

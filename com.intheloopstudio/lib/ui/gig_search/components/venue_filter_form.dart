@@ -236,7 +236,7 @@ class VenueFilterForm extends StatelessWidget {
                                               context
                                                   .read<GigSearchCubit>()
                                                   .searchVenues()
-                                                  .catchError((error) {
+                                                  .catchError((Object error) {
                                                 ScaffoldMessenger.of(context)
                                                     .showSnackBar(
                                                   SnackBar(

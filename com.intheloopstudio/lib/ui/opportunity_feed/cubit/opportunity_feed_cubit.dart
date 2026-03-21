@@ -109,9 +109,6 @@ class OpportunityFeedCubit extends Cubit<OpportunityFeedState> {
     );
 
     try {
-      // remove first from list
-      final curOpportunity = state.opportunities[state.curOp];
-
       final opQuota = opBloc.state.opQuota;
       if (opQuota > 0) {
         await nextOpportunity();

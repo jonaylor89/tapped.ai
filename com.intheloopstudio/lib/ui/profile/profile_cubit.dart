@@ -120,10 +120,6 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
-  Booking _getLatestBooking(Booking b1, Booking b2) {
-    return b1.startTime.isAfter(b2.startTime) ? b1 : b2;
-  }
-
   Future<void> getLatestReview() async {
     final trace = logger.createTrace('getLatestReview');
     await trace.start();

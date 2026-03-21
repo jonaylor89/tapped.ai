@@ -118,7 +118,6 @@ class _ChannelList extends State<ChannelList> {
   Timer? _debounce;
 
   void _channelQueryListener() {
-    final client = StreamChat.of(context).client;
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
       if (mounted) {

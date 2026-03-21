@@ -2,13 +2,11 @@ import 'dart:async';
 
 import 'package:app_links/app_links.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/data/deep_link_repository.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 
-final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
 final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
 final CollectionReference<Map<String, dynamic>> _usersRef = _firestore.collection('users');

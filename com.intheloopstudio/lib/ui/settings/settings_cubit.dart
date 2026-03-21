@@ -327,12 +327,12 @@ class SettingsCubit extends Cubit<SettingsState> {
         final newPerformerInfo = switch (currentUser.performerInfo) {
           None() => PerformerInfo(
               genres: state.genres.map((e) => e.name).toList(),
-              label: state.label ?? 'Independent',
+              label: state.label,
               pressKitUrl: pressKitUrl,
             ),
           Some(:final value) => value.copyWith(
               genres: state.genres.map((e) => e.name).toList(),
-              label: state.label ?? 'Independent',
+              label: state.label,
               pressKitUrl: pressKitUrl,
             ),
         };
