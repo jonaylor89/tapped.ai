@@ -5,7 +5,6 @@ import { debug, error, info } from "firebase-functions/logger";
 // import { getFoundersDeviceTokens } from "./utils";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall } from "firebase-functions/v2/https";
-import * as postmark from "postmark";
 import { StreamChat, type User } from "stream-chat";
 import { contactVenueTemplate } from "../../email_templates/contact_venue";
 import type { Opportunity, UserModel, VenueContactRequest } from "../../types/models";
@@ -20,6 +19,7 @@ import {
   streamSecret,
   usersRef,
 } from "../firebase";
+import * as postmark from "../mail_client";
 import { slackNotification } from "../notifications";
 import { authenticatedRequest, imageUrlToBase64 } from "../utils";
 import { composeVenueEmail } from "./compose_email";

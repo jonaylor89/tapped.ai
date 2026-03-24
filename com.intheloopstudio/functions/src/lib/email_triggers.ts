@@ -6,7 +6,6 @@ import { debug, error, info } from "firebase-functions/logger";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
 import { onCall, onRequest } from "firebase-functions/v2/https";
 import { marked } from "marked";
-import * as postmark from "postmark";
 import type { User } from "stream-chat";
 import Stripe from "stripe";
 import { labelApplied } from "../email_templates/label_applied";
@@ -26,6 +25,7 @@ import {
   stripeTestKey,
   usersRef,
 } from "./firebase";
+import * as postmark from "./mail_client";
 // import { venueContacted } from "../email_templates/venue_contacted";
 
 export const sendWelcomeEmailOnUserCreated = functions

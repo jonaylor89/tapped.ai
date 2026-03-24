@@ -1,6 +1,10 @@
 use crate::{
     data::{database::Firestore, search::Typesense},
     docs::docs_routes,
+    domain::mail_bridge::{
+        MailBridge, SqliteMailStore, StreamHttpGateway, create_email_thread, enqueue_service_email,
+        inbound_email, stream_before_message,
+    },
     errors::AppError,
     routes::v1_routes,
     state::AppStateDyn,
@@ -17,7 +21,7 @@ use axum::{
     extract::MatchedPath,
     http::{Request, StatusCode},
     response::Html,
-    routing::get,
+    routing::{get, post},
 };
 use axum_swagger_ui::swagger_ui;
 use color_eyre::eyre::Result;
@@ -35,7 +39,7 @@ pub struct Application {
     server: Serve<Router, Router>,
 }
 
-const CREDENTIALS_PATH: &str = "./credentials.json";
+const DEFAULT_CREDENTIALS_PATH: &str = "./credentials.json";
 
 impl Application {
     pub async fn build(port: u16, project_id: String) -> Result<Self> {
@@ -43,19 +47,44 @@ impl Application {
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
         )?;
 
-        let firestore_instance = if std::path::Path::new(CREDENTIALS_PATH).exists() {
+        let credentials_path = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
+            .unwrap_or_else(|_| DEFAULT_CREDENTIALS_PATH.into());
+        let firestore_instance = if std::path::Path::new(&credentials_path).exists() {
             FirestoreDb::with_options_service_account_key_file(
-                FirestoreDbOptions::new(project_id),
-                CREDENTIALS_PATH.into(),
+                FirestoreDbOptions::new(project_id.clone()),
+                credentials_path.into(),
             )
             .await?
         } else {
-            FirestoreDb::new(project_id).await?
+            FirestoreDb::new(project_id.clone()).await?
         };
 
+        let mail_store_path =
+            std::env::var("MAIL_STORE_PATH").unwrap_or_else(|_| "tapped-mail.sqlite3".into());
+        let stream_secret = std::env::var("STREAM_SECRET").wrap_err("STREAM_SECRET is required")?;
+        let stream_key = std::env::var("STREAM_KEY").wrap_err("STREAM_KEY is required")?;
+        let mail = MailBridge {
+            store: Arc::new(
+                SqliteMailStore::open(&mail_store_path)
+                    .map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?,
+            ),
+            stream: Arc::new(
+                StreamHttpGateway::new(stream_key, &stream_secret)
+                    .map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?,
+            ),
+            stream_webhook_secret: stream_secret,
+            ingress_secret: std::env::var("MAIL_INGRESS_SECRET")
+                .wrap_err("MAIL_INGRESS_SECRET is required")?,
+            service_secret: std::env::var("MAIL_API_SECRET")
+                .wrap_err("MAIL_API_SECRET is required")?,
+            booking_domain: std::env::var("BOOKING_EMAIL_DOMAIN")
+                .unwrap_or_else(|_| "booking.tapped.ai".into()),
+        };
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
             search: Arc::new(Typesense::from_env()),
+            firebase_project_id: project_id,
+            mail,
         };
 
         let server = run(listener, state).await?;
@@ -100,6 +129,22 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
         .route("/", get(root))
         .route("/version", get(version))
         .route("/health", get(health))
+        .route(
+            "/webhooks/stream/before-message",
+            axum::routing::post(stream_before_message),
+        )
+        .route("/internal/mail/inbound", post(inbound_email))
+        .route("/internal/mail/outbound", post(enqueue_service_email))
+        .nest(
+            "/app/v1",
+            Router::new()
+                .route("/venue-email-threads", post(create_email_thread))
+                .route_layer(axum::middleware::from_fn_with_state(
+                    state.clone(),
+                    crate::domain::firebase_auth::verify_firebase_token,
+                ))
+                .into(),
+        )
         .nest_api_service("/v1", v1_routes(state.clone()))
         .nest_api_service("/docs", docs_routes(state.clone()))
         .finish_api_with(&mut api, api_docs)

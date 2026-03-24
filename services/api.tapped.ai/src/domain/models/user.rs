@@ -194,6 +194,12 @@ impl UserModel {
         }
     }
 
+    pub fn booking_email(&self) -> Option<&str> {
+        self.venue_info
+            .as_ref()
+            .and_then(|info| info.booking_email.as_deref())
+    }
+
     pub fn total_audience_size(&self) -> u32 {
         let social_following = &self.social_following;
 

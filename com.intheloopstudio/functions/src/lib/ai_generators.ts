@@ -5,7 +5,6 @@ import * as functions from "firebase-functions";
 import { error, info } from "firebase-functions/logger";
 import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
 import { marked } from "marked";
-import * as postmark from "postmark";
 import Stripe from "stripe";
 import { v4 as uuidv4 } from "uuid";
 import type { MarketingPlan, UserModel } from "../types/models";
@@ -26,6 +25,7 @@ import {
   stripeTestKey,
   usersRef,
 } from "./firebase";
+import * as postmark from "./mail_client";
 import { slackNotification } from "./notifications";
 import { basicEnhancedBio, generateBasicMarketingPlan, generateSingleBasicMarketingPlan } from "./openai";
 import { authenticatedRequest } from "./utils";

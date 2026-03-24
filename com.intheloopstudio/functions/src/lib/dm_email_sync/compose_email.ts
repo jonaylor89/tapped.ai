@@ -1,6 +1,6 @@
-import type * as postmark from "postmark";
 import type { Booking, Opportunity, UserModel } from "../../types/models";
 import { bookingsRef, usersRef } from "../firebase";
+import type * as postmark from "../mail_client";
 import { chatGpt } from "../openai";
 
 async function buildOpportunitySnippet(opportunities: Opportunity[]): Promise<string> {

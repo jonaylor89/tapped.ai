@@ -1,0 +1,73 @@
+services:
+  api:
+    build: ../api.tapped.ai
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials.json
+      STREAM_KEY: ${STREAM_KEY}
+      STREAM_SECRET: ${STREAM_SECRET}
+      MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}
+      MAIL_API_SECRET: ${MAIL_API_SECRET}
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      BOOKING_EMAIL_DOMAIN: ${BOOKING_EMAIL_DOMAIN:-booking.tapped.ai}
+      TYPESENSE_HOST: ${TYPESENSE_HOST}
+      TYPESENSE_PORT: ${TYPESENSE_PORT:-443}
+      TYPESENSE_PROTOCOL: ${TYPESENSE_PROTOCOL:-https}
+      TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_SEARCH_API_KEY}
+    volumes:
+      - mail-data:/data
+      - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials.json}:/run/secrets/firebase-credentials.json:ro
+    ports:
+      - "127.0.0.1:${API_PORT:-3000}:3000"
+    networks: [private]
+
+  mail-worker:
+    build: ../api.tapped.ai
+    command: ["mail_worker"]
+    restart: unless-stopped
+    environment:
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      SMTP_ADDRESS: postfix:25
+    volumes:
+      - mail-data:/data
+    depends_on: [postfix]
+    networks: [private]
+
+  haraka:
+    build: .
+    restart: unless-stopped
+    environment:
+      BOOKING_EMAIL_DOMAIN: ${BOOKING_EMAIL_DOMAIN:-booking.tapped.ai}
+      MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}
+      MAIL_INGRESS_URL: http://api:3000/internal/mail/inbound
+    ports:
+      - "25:25"
+    volumes:
+      - ${MAIL_TLS_KEY:-./tls_key.pem}:/app/haraka/config/tls_key.pem:ro
+      - ${MAIL_TLS_CERT:-./tls_cert.pem}:/app/haraka/config/tls_cert.pem:ro
+    depends_on: [api]
+    networks: [private]
+
+  postfix:
+    image: boky/postfix@sha256:aafc772384232497bed875e1eb66b4d3e54ba1ebc86e2e185a6dc1dbc48182ef
+    restart: unless-stopped
+    environment:
+      HOSTNAME: ${MAIL_HOSTNAME:-mail.tapped.ai}
+      ALLOWED_SENDER_DOMAINS: ${BOOKING_EMAIL_DOMAIN:-booking.tapped.ai} tapped.ai
+      DKIM_AUTOGENERATE: "true"
+      PERMIT_DOCKER: network
+    volumes:
+      - postfix-spool:/var/spool/postfix
+      - postfix-dkim:/etc/opendkim/keys
+    networks: [private]
+
+networks:
+  private:
+    internal: false
+
+volumes:
+  mail-data:
+  postfix-spool:
+  postfix-dkim:
