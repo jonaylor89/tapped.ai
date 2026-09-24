@@ -1,5 +1,35 @@
 # Contributing
 
+## Setup
+
+Requires [just](https://github.com/casey/just), Node 22 + pnpm (via Corepack, version from `packageManager`), Rust stable, and Flutter 3.41.5 for the mobile app.
+
+```bash
+just install        # pnpm install (frozen lockfile)
+just lint           # Biome across all Node packages
+just typecheck
+just build-node     # all apps/ and Node services/
+just build-api      # Rust API
+just dev-app        # app.tapped.ai dev server
+just dev <package>  # any other package
+just flutter-ios / flutter-android
+```
+
+Run `just --list` for everything else (Typesense, Docker, migrations).
+
+## Code style
+
+- TypeScript: Biome (`biome.json`) — 2-space indent, 120 cols, double quotes, semicolons. `just lint-fix` before committing.
+- Rust: `cargo fmt` + `cargo clippy` clean.
+- Flutter: `flutter analyze` clean of warnings/errors (info-level lints are non-fatal in CI).
+- Shared TS code goes in `packages/`; Flutter code only under `com.intheloopstudio/`.
+
+## Pull requests
+
+- Branch from `main`, keep PRs small and single-purpose.
+- CI (`node.yml`, `rust.yml`, `flutter.yml`) must be green; `pubspec.lock` / `pnpm-lock.yaml` / `Cargo.lock` changes are committed alongside the manifest change.
+- Never commit secrets: `key.properties`, `*.jks`, `.env*`, service-account JSON. CI reads them from GitHub Actions secrets.
+
 ## Dependency pinning
 
 Every dependency and every toolchain version in this repo is pinned to an exact version. Floating ranges (`^1.2.3`, `~1.2.3`, `>=1.2.3`, `*`, `latest`) and moving branches (`stable`, `main`) are not allowed. A build that resolves differently today than it did yesterday is a bug.
