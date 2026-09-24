@@ -38,6 +38,11 @@ void main() {
   testWidgets('app finishes initialising and can log in', (tester) async {
     await app.main();
 
+    // iOS keeps Firebase Auth state in the keychain across reinstalls.
+    if (FirebaseAuth.instance.currentUser != null) {
+      await FirebaseAuth.instance.signOut();
+    }
+
     await pumpUntilFound(tester, find.byType(SplashView));
     expect(find.text('get started'), findsOneWidget);
     expect(find.text('login'), findsOneWidget);
