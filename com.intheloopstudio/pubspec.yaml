@@ -131,6 +131,8 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   freezed: ^3.1.0
+  integration_test:
+    sdk: flutter
   json_serializable: ^6.3.1
   mockito: ^5.0.16
   pubspec_dependency_sorter: ^1.0.3
