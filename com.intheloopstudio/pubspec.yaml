@@ -158,4 +158,5 @@ flutter:
     - assets/cities/
     - assets/layers/
     - assets/default_images/
+    - assets/google_fonts/
   uses-material-design: true
