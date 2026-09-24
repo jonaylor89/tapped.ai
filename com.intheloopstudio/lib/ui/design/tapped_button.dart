@@ -35,7 +35,10 @@ class TappedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveOnPressed = isLoading ? null : onPressed;
+    // Keep the enabled look while loading so the spinner stays legible;
+    // taps are swallowed below.
+    final effectiveOnPressed =
+        isLoading && onPressed != null ? () {} : onPressed;
 
     final content = isLoading
         ? SizedBox.square(
@@ -84,12 +87,14 @@ class TappedButton extends StatelessWidget {
       child: expand ? SizedBox(width: double.infinity, child: button) : button,
     );
 
-    if (semanticsLabel == null) return sized;
+    final interactive = isLoading ? IgnorePointer(child: sized) : sized;
+
+    if (semanticsLabel == null) return interactive;
     return Semantics(
       label: semanticsLabel,
       button: true,
-      enabled: effectiveOnPressed != null,
-      child: sized,
+      enabled: onPressed != null && !isLoading,
+      child: interactive,
     );
   }
 }
