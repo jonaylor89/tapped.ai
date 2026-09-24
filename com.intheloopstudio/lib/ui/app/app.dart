@@ -92,18 +92,17 @@ class App extends StatelessWidget {
         child: BlocBuilder<PremiumThemeCubit, bool>(
           builder: (context, isPremium) {
             // final accentColor = isPremium ? Colors.purple : tappedAccent;
-            return BlocBuilder<AppThemeCubit, bool>(
-              builder: (context, isDark) {
-                final appTheme = isDark ? buildDarkTheme() : buildLightTheme();
-
-                final defaultStreamTheme =
-                    StreamChatThemeData.fromTheme(appTheme);
-                final streamTheme = defaultStreamTheme;
+            return BlocBuilder<AppThemeCubit, ThemeMode>(
+              builder: (context, themeMode) {
+                final lightTheme = buildLightTheme();
+                final darkTheme = buildDarkTheme();
 
                 return MaterialApp(
                   debugShowCheckedModeBanner: false,
                   title: 'tapped',
-                  theme: appTheme,
+                  theme: lightTheme,
+                  darkTheme: darkTheme,
+                  themeMode: themeMode,
                   navigatorObservers: <NavigatorObserver>[
                     _observer,
                     PosthogObserver(),
@@ -114,7 +113,9 @@ class App extends StatelessWidget {
                       try {
                         return StreamChat(
                           client: streamClient,
-                          streamChatThemeData: streamTheme,
+                          streamChatThemeData: StreamChatThemeData.fromTheme(
+                            Theme.of(context),
+                          ),
                           child: widget,
                         );
                       } catch (e, s) {

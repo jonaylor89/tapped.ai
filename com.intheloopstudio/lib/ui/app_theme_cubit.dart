@@ -1,27 +1,39 @@
+import 'package:flutter/material.dart';
 import 'package:hydrated_bloc/hydrated_bloc.dart';
-import 'package:intheloopapp/utils/app_logger.dart';
 
-/// The Cubit responsible for changing the app's theme
-class AppThemeCubit extends HydratedCubit<bool> {
-  /// The default theme is dark mode
-  AppThemeCubit() : super(true);
-
-  @override
-  bool fromJson(Map<String, dynamic> json) => json['isDark'] as bool;
+/// The Cubit responsible for choosing the app's [ThemeMode].
+///
+/// Defaults to [ThemeMode.system] so the app follows the OS setting until the
+/// user explicitly picks light or dark.
+class AppThemeCubit extends HydratedCubit<ThemeMode> {
+  AppThemeCubit() : super(ThemeMode.system);
 
   @override
-  Map<String, dynamic> toJson(bool state) => {'isDark': state};
+  ThemeMode fromJson(Map<String, dynamic> json) {
+    final mode = json['mode'];
+    if (mode is String) {
+      return ThemeMode.values.firstWhere(
+        (m) => m.name == mode,
+        orElse: () => ThemeMode.system,
+      );
+    }
 
-  /// changes the app theme to be either dark mode
-  /// with [isDarkMode] being `true` or
-  /// light mode with [isDarkMode] being `false`
-  void updateTheme({required bool isDarkMode}) {
-    logger.debug('updating dark theme to $isDarkMode');
-    emit(isDarkMode);
+    // Legacy payload from when the cubit stored a bare `isDark` flag.
+    final isDark = json['isDark'];
+    if (isDark is bool) {
+      return isDark ? ThemeMode.dark : ThemeMode.light;
+    }
+
+    return ThemeMode.system;
   }
 
-  /// Whether the app is dark mode
-  bool isDark() {
-    return state;
+  @override
+  Map<String, dynamic> toJson(ThemeMode state) => {'mode': state.name};
+
+  void updateThemeMode(ThemeMode mode) => emit(mode);
+
+  /// Convenience for callers that only know about light/dark.
+  void updateTheme({required bool isDarkMode}) {
+    updateThemeMode(isDarkMode ? ThemeMode.dark : ThemeMode.light);
   }
 }

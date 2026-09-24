@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
 
 class DownForMainenanceView extends StatelessWidget {
   const DownForMainenanceView({super.key});
@@ -12,8 +13,8 @@ class DownForMainenanceView extends StatelessWidget {
             begin: Alignment.bottomCenter,
             end: Alignment.topCenter,
             colors: <Color>[
-              Color(0xff343434),
-              Color(0xff6200EE),
+              TappedColors.backgroundDark,
+              TappedColors.accent,
             ],
           ),
         ),
@@ -29,8 +30,8 @@ class DownForMainenanceView extends StatelessWidget {
                   'Tapped is down for maintenance \n👷‍♂️👷‍♀️',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 48,
+                    color: TappedColors.textOnImage,
+                    fontSize: 36,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

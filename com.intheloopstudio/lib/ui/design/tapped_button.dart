@@ -1,9 +1,11 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
 
 enum TappedButtonVariant { filled, outline, text }
 
+/// The one button. Wraps Material's [FilledButton] / [OutlinedButton] /
+/// [TextButton] so the styling lives in `themes.dart`, and guarantees a
+/// 44pt minimum tap target plus a semantics label.
 class TappedButton extends StatelessWidget {
   const TappedButton({
     required this.onPressed,
@@ -11,71 +13,83 @@ class TappedButton extends StatelessWidget {
     this.variant = TappedButtonVariant.filled,
     this.color,
     this.isLoading = false,
+    this.expand = false,
+    this.semanticsLabel,
     super.key,
   });
 
   final VoidCallback? onPressed;
   final Widget child;
   final TappedButtonVariant variant;
+
+  /// Overrides the accent for this button only. Prefer the theme default.
   final Color? color;
   final bool isLoading;
+
+  /// Stretch to the full available width.
+  final bool expand;
+
+  /// Read by screen readers instead of the child's text when provided.
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final effectiveColor = color ?? theme.colorScheme.primary;
+    final effectiveOnPressed = isLoading ? null : onPressed;
 
-    if (isLoading) {
-      return const CupertinoButton(
-        onPressed: null,
-        child: CupertinoActivityIndicator(),
-      );
-    }
+    final content = isLoading
+        ? SizedBox.square(
+            dimension: 18,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: variant == TappedButtonVariant.filled
+                  ? theme.colorScheme.onPrimary
+                  : color ?? theme.colorScheme.primary,
+            ),
+          )
+        : child;
 
-    return switch (variant) {
-      TappedButtonVariant.filled => CupertinoButton(
-          onPressed: onPressed,
-          color: effectiveColor,
-          borderRadius: TappedRadius.lgAll,
-          child: DefaultTextStyle(
-            style: TextStyle(
-              color: theme.colorScheme.onPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-            child: child,
-          ),
+    final button = switch (variant) {
+      TappedButtonVariant.filled => FilledButton(
+          onPressed: effectiveOnPressed,
+          style: color == null
+              ? null
+              : FilledButton.styleFrom(backgroundColor: color),
+          child: content,
         ),
-      TappedButtonVariant.outline => CupertinoButton(
-          onPressed: onPressed,
-          borderRadius: TappedRadius.lgAll,
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: TappedRadius.lgAll,
-              border: Border.all(color: effectiveColor),
-            ),
-            padding: const EdgeInsets.symmetric(
-              horizontal: TappedSpacing.lg,
-              vertical: TappedSpacing.sm,
-            ),
-            child: DefaultTextStyle(
-              style: TextStyle(
-                color: effectiveColor,
-                fontWeight: FontWeight.w600,
-              ),
-              child: child,
-            ),
-          ),
+      TappedButtonVariant.outline => OutlinedButton(
+          onPressed: effectiveOnPressed,
+          style: color == null
+              ? null
+              : OutlinedButton.styleFrom(
+                  foregroundColor: color,
+                  side: BorderSide(color: color!),
+                ),
+          child: content,
         ),
-      TappedButtonVariant.text => CupertinoButton(
-          onPressed: onPressed,
-          child: DefaultTextStyle(
-            style: TextStyle(
-              color: effectiveColor,
-              fontWeight: FontWeight.w600,
-            ),
-            child: child,
-          ),
+      TappedButtonVariant.text => TextButton(
+          onPressed: effectiveOnPressed,
+          style: color == null
+              ? null
+              : TextButton.styleFrom(foregroundColor: color),
+          child: content,
         ),
     };
+
+    final sized = ConstrainedBox(
+      constraints: const BoxConstraints(
+        minHeight: TappedSizes.minTapTarget,
+        minWidth: TappedSizes.minTapTarget,
+      ),
+      child: expand ? SizedBox(width: double.infinity, child: button) : button,
+    );
+
+    if (semanticsLabel == null) return sized;
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      enabled: effectiveOnPressed != null,
+      child: sized,
+    );
   }
 }

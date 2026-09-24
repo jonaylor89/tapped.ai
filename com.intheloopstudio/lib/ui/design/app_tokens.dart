@@ -36,6 +36,8 @@ abstract final class TappedColors {
   // Surfaces
   static const Color backgroundLight = Color(0xfff8f6Fb);
   static const Color backgroundDark = Color(0xff010F16);
+  static const Color surfaceLight = Colors.white;
+  static const Color surfaceDark = Color(0xff1C2B33);
 
   // On-image overlays (use instead of Colors.white / Colors.black.withOpacity)
   static const Color textOnImage = Colors.white;
@@ -44,6 +46,13 @@ abstract final class TappedColors {
   static const Color scrimLight = Color(0x33000000);
 }
 
+abstract final class TappedSizes {
+  /// Minimum interactive target (Apple HIG 44pt / Material 48dp, we use 44).
+  static const double minTapTarget = 44;
+}
+
+/// Fixed type ramp. Prefer `Theme.of(context).textTheme`, which is built from
+/// these values by `buildTextTheme` so brightness-aware colors are applied.
 abstract final class TappedTypography {
   // Display — hero text on profile, onboarding
   static const TextStyle displayLg = TextStyle(
@@ -69,12 +78,20 @@ abstract final class TappedTypography {
     fontWeight: FontWeight.w600,
   );
 
+  static const TextStyle headingXs = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+  );
+
   // Body
   static const TextStyle bodyLg = TextStyle(fontSize: 16);
   static const TextStyle bodyMd = TextStyle(fontSize: 14);
   static const TextStyle bodySm = TextStyle(fontSize: 12);
 
   // Labels — chips, badges, captions
-  static const TextStyle label = TextStyle(fontSize: 13);
-  static const TextStyle caption = TextStyle(fontSize: 10);
+  static const TextStyle label = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+  );
+  static const TextStyle caption = TextStyle(fontSize: 11);
 }

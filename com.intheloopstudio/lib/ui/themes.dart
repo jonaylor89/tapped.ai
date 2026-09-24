@@ -2,237 +2,188 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 
-// const itlAccent = Color(0xff6200ee);
-const tappedAccent = Color(0xff0086CC);
+export 'package:intheloopapp/ui/design/tapped_theme_extension.dart'
+    show TappedThemeContext;
 
-// const primaryColor = Colors.deepPurple;
-// const secondaryColor = Colors.deepPurple;
-const backgroundLightColor = Color(0xfff8f6Fb);
-const backgroundDarkColor = Color(0xff010F16);
-const navigationBarLightColor = Color(0xfff8f6Fb);
-const navigationBarDarkColor = Color(0xff010F16);
+const Color tappedAccent = TappedColors.accent;
+
+const Color backgroundLightColor = TappedColors.backgroundLight;
+const Color backgroundDarkColor = TappedColors.backgroundDark;
+const Color navigationBarLightColor = TappedColors.backgroundLight;
+const Color navigationBarDarkColor = TappedColors.backgroundDark;
 
 ThemeData buildLightTheme({
   Color accentColor = tappedAccent,
-}) {
-  final primaryColor = accentColor;
-  final secondaryColor = accentColor;
-
-  return ThemeData.light().copyWith(
-    textTheme: GoogleFonts.titilliumWebTextTheme(
-      ThemeData.light().textTheme,
-    ),
-
-    // selected color
-    primaryColor: primaryColor,
-
-    colorScheme: const ColorScheme.light().copyWith(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      surface: backgroundLightColor,
-      error: TappedColors.error,
-    ),
-
-    // floating action button
-    floatingActionButtonTheme: FloatingActionButtonThemeData(
-      backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
-    ),
-
-    // bottom bar
-    bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: navigationBarLightColor,
-      selectedItemColor: primaryColor,
-      unselectedItemColor: Colors.black,
-    ),
-    // switch active color
-    canvasColor: backgroundLightColor,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: backgroundLightColor,
-      foregroundColor: Colors.black,
-    ),
-
-    tabBarTheme: const TabBarThemeData(
-      labelColor: Colors.black,
-      unselectedLabelColor: Colors.black,
-      indicatorColor: tappedAccent,
-    ),
-
-    sliderTheme: const SliderThemeData(
-      activeTrackColor: tappedAccent,
-      inactiveTrackColor: tappedAccent,
-      thumbColor: tappedAccent,
-      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-      trackHeight: 2,
-    ),
-
-    cupertinoOverrideTheme: const CupertinoThemeData(
-      scaffoldBackgroundColor: backgroundLightColor,
-      primaryColor: tappedAccent,
-      textTheme: CupertinoTextThemeData(
-        textStyle: TextStyle(
-          fontFamily: 'TitilliumWeb',
-        ),
-      ),
-    ),
-
-    // ── Component themes ──────────────────────────────────────────────
-
-    cardTheme: CardThemeData(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
-      color: Colors.white,
-      margin: const EdgeInsets.symmetric(
-        horizontal: TappedSpacing.lg,
-        vertical: TappedSpacing.sm,
-      ),
-    ),
-
-    inputDecorationTheme: InputDecorationTheme(
-      filled: true,
-      fillColor: Colors.grey.shade100,
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: TappedSpacing.lg,
-        vertical: TappedSpacing.md,
-      ),
-      border: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
-        borderSide: BorderSide.none,
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
-        borderSide: BorderSide.none,
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
-        borderSide: const BorderSide(color: tappedAccent, width: 1.5),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
-        borderSide: const BorderSide(color: TappedColors.error),
-      ),
-    ),
-
-    filledButtonTheme: FilledButtonThemeData(
-      style: FilledButton.styleFrom(
-        backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
-        padding: const EdgeInsets.symmetric(
-          horizontal: TappedSpacing.xl,
-          vertical: TappedSpacing.md,
-        ),
-      ),
-    ),
-
-    textButtonTheme: TextButtonThemeData(
-      style: TextButton.styleFrom(
-        foregroundColor: primaryColor,
-        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
-        padding: const EdgeInsets.symmetric(
-          horizontal: TappedSpacing.lg,
-          vertical: TappedSpacing.sm,
-        ),
-      ),
-    ),
-
-    chipTheme: ChipThemeData(
-      backgroundColor: Colors.grey.shade100,
-      selectedColor: primaryColor.withValues(alpha: 0.15),
-      labelStyle: const TextStyle(fontSize: 13),
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.smAll),
-      side: BorderSide.none,
-      padding: const EdgeInsets.symmetric(
-        horizontal: TappedSpacing.sm,
-        vertical: TappedSpacing.xs,
-      ),
-    ),
-
-    bottomSheetTheme: const BottomSheetThemeData(
-      showDragHandle: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(TappedRadius.xl),
-        ),
-      ),
-    ),
-
-    dialogTheme: DialogThemeData(
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.xlAll),
-    ),
-
-    listTileTheme: ListTileThemeData(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: TappedSpacing.lg,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
-    ),
-
-    snackBarTheme: SnackBarThemeData(
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
-    ),
-  );
-}
+}) =>
+    buildTheme(brightness: Brightness.light, accentColor: accentColor);
 
 ThemeData buildDarkTheme({
   Color accentColor = tappedAccent,
+}) =>
+    buildTheme(brightness: Brightness.dark, accentColor: accentColor);
+
+/// Maps the [TappedTypography] ramp onto Material's `TextTheme` slots so
+/// `theme.textTheme.*` is the single typography source for views.
+TextTheme buildTextTheme(Brightness brightness) {
+  final base = brightness == Brightness.dark
+      ? ThemeData.dark().textTheme
+      : ThemeData.light().textTheme;
+
+  final ramp = base.copyWith(
+    displayLarge: base.displayLarge?.merge(TappedTypography.displayLg),
+    displayMedium: base.displayMedium?.merge(TappedTypography.displayMd),
+    headlineLarge: base.headlineLarge?.merge(TappedTypography.headingLg),
+    headlineMedium: base.headlineMedium?.merge(TappedTypography.headingMd),
+    headlineSmall: base.headlineSmall?.merge(TappedTypography.headingSm),
+    titleLarge: base.titleLarge?.merge(TappedTypography.headingMd),
+    titleMedium: base.titleMedium?.merge(TappedTypography.headingSm),
+    titleSmall: base.titleSmall?.merge(TappedTypography.headingXs),
+    bodyLarge: base.bodyLarge?.merge(TappedTypography.bodyLg),
+    bodyMedium: base.bodyMedium?.merge(TappedTypography.bodyMd),
+    bodySmall: base.bodySmall?.merge(TappedTypography.bodySm),
+    labelLarge: base.labelLarge?.merge(TappedTypography.bodyMd),
+    labelMedium: base.labelMedium?.merge(TappedTypography.label),
+    labelSmall: base.labelSmall?.merge(TappedTypography.caption),
+  );
+
+  return GoogleFonts.titilliumWebTextTheme(ramp);
+}
+
+ThemeData buildTheme({
+  required Brightness brightness,
+  Color accentColor = tappedAccent,
 }) {
+  final isDark = brightness == Brightness.dark;
   final primaryColor = accentColor;
-  final secondaryColor = accentColor;
 
-  return ThemeData.dark().copyWith(
-    textTheme: GoogleFonts.titilliumWebTextTheme(
-      ThemeData.dark().textTheme,
-    ),
+  final background = isDark ? backgroundDarkColor : backgroundLightColor;
+  final surface = isDark ? TappedColors.surfaceDark : TappedColors.surfaceLight;
+  final onBackground = isDark ? Colors.white : Colors.black;
+  final tokens =
+      isDark ? TappedThemeExtension.dark() : TappedThemeExtension.light();
 
-    // selected color
+  final baseScheme =
+      isDark ? const ColorScheme.dark() : const ColorScheme.light();
+  final colorScheme = baseScheme.copyWith(
+    primary: primaryColor,
+    onPrimary: Colors.white,
+    secondary: primaryColor,
+    onSecondary: Colors.white,
+    surface: background,
+    onSurface: onBackground,
+    surfaceContainer: surface,
+    surfaceContainerHighest: surface,
+    error: TappedColors.error,
+    outline: tokens.divider,
+    outlineVariant: tokens.divider,
+  );
+
+  final textTheme = buildTextTheme(brightness);
+  final base = ThemeData(
+    useMaterial3: true,
+    brightness: brightness,
+    colorScheme: colorScheme,
+  );
+
+  return base.copyWith(
+    textTheme: textTheme,
     primaryColor: primaryColor,
-    colorScheme: const ColorScheme.dark().copyWith(
-      primary: primaryColor,
-      secondary: secondaryColor,
-      surface: backgroundDarkColor,
-      error: TappedColors.error,
-    ),
-    // floating action button
+    scaffoldBackgroundColor: background,
+    canvasColor: background,
+    cardColor: surface,
+    dividerColor: tokens.divider,
+    extensions: <ThemeExtension<dynamic>>[tokens],
+
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       backgroundColor: primaryColor,
-      foregroundColor: Colors.white,
+      foregroundColor: colorScheme.onPrimary,
     ),
-    // bottom bar
+
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
-      backgroundColor: navigationBarDarkColor,
+      backgroundColor: background,
       selectedItemColor: primaryColor,
-      unselectedItemColor: const Color(0xFF757575),
-    ),
-    // switch active color
-    canvasColor: backgroundDarkColor,
-    appBarTheme: const AppBarTheme(
-      backgroundColor: navigationBarDarkColor,
+      unselectedItemColor: tokens.mutedText,
     ),
 
-    tabBarTheme: const TabBarThemeData(
-      indicatorColor: tappedAccent,
-      labelColor: Colors.white,
-      unselectedLabelColor: Colors.white,
-    ),
-
-    sliderTheme: const SliderThemeData(
-      activeTrackColor: tappedAccent,
-      inactiveTrackColor: tappedAccent,
-      thumbColor: tappedAccent,
-      thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6),
-      trackHeight: 2,
-    ),
-
-    cupertinoOverrideTheme: const CupertinoThemeData(
-      scaffoldBackgroundColor: backgroundDarkColor,
-      primaryColor: tappedAccent,
-      textTheme: CupertinoTextThemeData(
-        textStyle: TextStyle(
-          fontFamily: 'TitilliumWeb',
+    navigationBarTheme: NavigationBarThemeData(
+      backgroundColor: background,
+      indicatorColor: primaryColor.withValues(alpha: 0.15),
+      iconTheme: WidgetStateProperty.resolveWith(
+        (states) => IconThemeData(
+          color: states.contains(WidgetState.selected)
+              ? primaryColor
+              : tokens.mutedText,
         ),
+      ),
+      labelTextStyle: WidgetStateProperty.resolveWith(
+        (states) => textTheme.labelMedium?.copyWith(
+          color: states.contains(WidgetState.selected)
+              ? primaryColor
+              : tokens.mutedText,
+        ),
+      ),
+    ),
+
+    appBarTheme: AppBarTheme(
+      backgroundColor: background,
+      foregroundColor: onBackground,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: false,
+      titleTextStyle: textTheme.titleMedium?.copyWith(color: onBackground),
+    ),
+
+    tabBarTheme: TabBarThemeData(
+      indicatorColor: primaryColor,
+      labelColor: onBackground,
+      unselectedLabelColor: tokens.mutedText,
+      labelStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+      unselectedLabelStyle: textTheme.labelLarge,
+      dividerColor: Colors.transparent,
+    ),
+
+    sliderTheme: SliderThemeData(
+      activeTrackColor: primaryColor,
+      inactiveTrackColor: primaryColor.withValues(alpha: 0.24),
+      thumbColor: primaryColor,
+      overlayColor: primaryColor.withValues(alpha: 0.12),
+      thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+      trackHeight: 3,
+    ),
+
+    switchTheme: SwitchThemeData(
+      thumbColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected)
+            ? colorScheme.onPrimary
+            : null,
+      ),
+      trackColor: WidgetStateProperty.resolveWith(
+        (states) => states.contains(WidgetState.selected) ? primaryColor : null,
+      ),
+    ),
+
+    progressIndicatorTheme: ProgressIndicatorThemeData(
+      color: primaryColor,
+    ),
+
+    iconTheme: IconThemeData(color: onBackground),
+    iconButtonTheme: IconButtonThemeData(
+      style: IconButton.styleFrom(
+        minimumSize: const Size.square(TappedSizes.minTapTarget),
+        foregroundColor: onBackground,
+      ),
+    ),
+
+    cupertinoOverrideTheme: CupertinoThemeData(
+      brightness: brightness,
+      scaffoldBackgroundColor: background,
+      barBackgroundColor: background,
+      primaryColor: primaryColor,
+      textTheme: CupertinoTextThemeData(
+        primaryColor: primaryColor,
+        textStyle: textTheme.bodyLarge?.copyWith(color: onBackground),
       ),
     ),
 
@@ -240,8 +191,9 @@ ThemeData buildDarkTheme({
 
     cardTheme: CardThemeData(
       elevation: 0,
+      color: surface,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
-      color: const Color(0xff1C2B33),
       margin: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.lg,
         vertical: TappedSpacing.sm,
@@ -250,7 +202,8 @@ ThemeData buildDarkTheme({
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: const Color(0xff1C2B33),
+      fillColor: surface,
+      hintStyle: textTheme.bodyLarge?.copyWith(color: tokens.mutedText),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.lg,
         vertical: TappedSpacing.md,
@@ -265,19 +218,43 @@ ThemeData buildDarkTheme({
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: TappedRadius.mdAll,
-        borderSide: const BorderSide(color: tappedAccent, width: 1.5),
+        borderSide: BorderSide(color: primaryColor, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: TappedRadius.mdAll,
         borderSide: const BorderSide(color: TappedColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: TappedRadius.mdAll,
+        borderSide: const BorderSide(color: TappedColors.error, width: 1.5),
       ),
     ),
 
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         backgroundColor: primaryColor,
-        foregroundColor: Colors.white,
+        foregroundColor: colorScheme.onPrimary,
+        disabledBackgroundColor: primaryColor.withValues(alpha: 0.38),
+        disabledForegroundColor: colorScheme.onPrimary.withValues(alpha: 0.7),
+        minimumSize:
+            const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
         shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+        padding: const EdgeInsets.symmetric(
+          horizontal: TappedSpacing.xl,
+          vertical: TappedSpacing.md,
+        ),
+      ),
+    ),
+
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: primaryColor,
+        side: BorderSide(color: primaryColor),
+        minimumSize:
+            const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
+        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(
           horizontal: TappedSpacing.xl,
           vertical: TappedSpacing.md,
@@ -288,7 +265,10 @@ ThemeData buildDarkTheme({
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: primaryColor,
+        minimumSize:
+            const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
         shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(
           horizontal: TappedSpacing.lg,
           vertical: TappedSpacing.sm,
@@ -297,9 +277,9 @@ ThemeData buildDarkTheme({
     ),
 
     chipTheme: ChipThemeData(
-      backgroundColor: const Color(0xff1C2B33),
-      selectedColor: primaryColor.withValues(alpha: 0.25),
-      labelStyle: const TextStyle(fontSize: 13),
+      backgroundColor: surface,
+      selectedColor: primaryColor.withValues(alpha: isDark ? 0.25 : 0.15),
+      labelStyle: textTheme.labelMedium?.copyWith(color: onBackground),
       shape: RoundedRectangleBorder(borderRadius: TappedRadius.smAll),
       side: BorderSide.none,
       padding: const EdgeInsets.symmetric(
@@ -308,9 +288,12 @@ ThemeData buildDarkTheme({
       ),
     ),
 
-    bottomSheetTheme: const BottomSheetThemeData(
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: background,
+      surfaceTintColor: Colors.transparent,
       showDragHandle: true,
-      shape: RoundedRectangleBorder(
+      dragHandleColor: tokens.mutedText,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(TappedRadius.xl),
         ),
@@ -318,18 +301,30 @@ ThemeData buildDarkTheme({
     ),
 
     dialogTheme: DialogThemeData(
+      backgroundColor: background,
+      surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: TappedRadius.xlAll),
     ),
 
     listTileTheme: ListTileThemeData(
+      iconColor: onBackground,
+      textColor: onBackground,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.lg,
       ),
       shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
     ),
 
+    dividerTheme: DividerThemeData(
+      color: tokens.divider,
+      thickness: 1,
+      space: 1,
+    ),
+
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
+      backgroundColor: isDark ? TappedColors.surfaceDark : Colors.black87,
+      contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
     ),
   );
