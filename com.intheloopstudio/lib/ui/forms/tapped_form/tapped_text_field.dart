@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 
 class TappedTextField extends StatefulWidget {
   const TappedTextField({
@@ -74,7 +75,7 @@ class _TappedTextFieldState extends State<TappedTextField> {
     );
   }
 
-  Widget get _buildExamples => Column(
+  Widget _buildExamples(BuildContext context) => Column(
         children: [
           const SizedBox(height: 10),
           Row(
@@ -83,14 +84,14 @@ class _TappedTextFieldState extends State<TappedTextField> {
                 child: Divider(
                   height: 0,
                   thickness: 0.5,
-                  color: Colors.white.withOpacity(0.3),
+                  color: context.tokens.divider,
                 ),
               ),
               const SizedBox(width: 5),
               Text(
                 'or',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
+                  color: context.tokens.mutedText,
                 ),
               ),
               const SizedBox(width: 5),
@@ -98,7 +99,7 @@ class _TappedTextFieldState extends State<TappedTextField> {
                 child: Divider(
                   height: 0,
                   thickness: 0.5,
-                  color: Colors.white.withOpacity(0.3),
+                  color: context.tokens.divider,
                 ),
               ),
             ],
@@ -146,7 +147,7 @@ class _TappedTextFieldState extends State<TappedTextField> {
               ),
             ),
           ),
-          if (widget.examples.isNotEmpty) _buildExamples,
+          if (widget.examples.isNotEmpty) _buildExamples(context),
         ],
       ),
     );

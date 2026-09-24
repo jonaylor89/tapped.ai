@@ -5,7 +5,7 @@ import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/genre.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
-import 'package:intheloopapp/ui/app_theme_cubit.dart';
+import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 import 'package:intheloopapp/ui/forms/location_text_field.dart';
 import 'package:intheloopapp/ui/gig_search/gig_search_cubit.dart';
 import 'package:intheloopapp/ui/settings/components/genre_selection.dart';
@@ -24,8 +24,9 @@ class VenueFilterForm extends StatelessWidget {
       builder: (context, currentUser) {
         return PremiumBuilder(
           builder: (context, isPremium) {
-            return BlocBuilder<AppThemeCubit, bool>(
-              builder: (context, isDark) {
+            return Builder(
+              builder: (context) {
+                final isDark = context.isDarkMode;
                 return BlocBuilder<GigSearchCubit, GigSearchState>(
                   builder: (context, state) {
                     return Scaffold(

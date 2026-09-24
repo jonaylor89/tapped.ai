@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 
 class TappedCard extends StatelessWidget {
   const TappedCard({
@@ -7,6 +8,7 @@ class TappedCard extends StatelessWidget {
     this.padding,
     this.borderRadius,
     this.onTap,
+    this.semanticsLabel,
     super.key,
   });
 
@@ -15,28 +17,40 @@ class TappedCard extends StatelessWidget {
   final BorderRadius? borderRadius;
   final VoidCallback? onTap;
 
+  /// Announced by screen readers when the card is tappable.
+  final String? semanticsLabel;
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final effectiveRadius = borderRadius ?? TappedRadius.lgAll;
 
-    final card = Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: effectiveRadius,
-      ),
-      padding: padding ??
-          const EdgeInsets.all(TappedSpacing.lg),
+    final content = Padding(
+      padding: padding ?? const EdgeInsets.all(TappedSpacing.lg),
       child: child,
     );
 
-    if (onTap != null) {
-      return GestureDetector(
-        onTap: onTap,
-        child: card,
-      );
-    }
+    final card = Material(
+      color: context.tokens.elevatedSurface,
+      borderRadius: effectiveRadius,
+      clipBehavior: Clip.antiAlias,
+      child: onTap == null
+          ? content
+          : InkWell(
+              onTap: onTap,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minHeight: TappedSizes.minTapTarget,
+                ),
+                child: content,
+              ),
+            ),
+    );
 
-    return card;
+    if (onTap == null || semanticsLabel == null) return card;
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      child: card,
+    );
   }
 }

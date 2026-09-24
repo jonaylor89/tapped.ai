@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_map_tile_caching/flutter_map_tile_caching.dart';
-import 'package:intheloopapp/ui/app_theme_cubit.dart';
+import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 import 'package:intheloopapp/ui/discover/components/current_location_layer.dart';
 import 'package:intheloopapp/ui/discover/components/opportunities_cluster_layer.dart';
 import 'package:intheloopapp/ui/discover/components/venue_marker_layer.dart';
@@ -54,9 +54,9 @@ class MapBase extends StatelessWidget {
                 },
               ),
               children: [
-                BlocBuilder<AppThemeCubit, bool>(
-                  builder: (context, isDark) {
-                    final theme = isDark ? mapboxDarkStyle : mapboxLightStyle;
+                Builder(
+                  builder: (context) {
+                    final theme = context.isDarkMode ? mapboxDarkStyle : mapboxLightStyle;
                     return TileLayer(
                       urlTemplate:
                           'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
