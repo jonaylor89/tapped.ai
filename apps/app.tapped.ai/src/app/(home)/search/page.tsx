@@ -3,6 +3,8 @@ import SearchBar from "@/components/search/SearchBar";
 import UnauthHeader from "@/components/unauth_header";
 import { getFeaturedPerformers } from "@/data/database";
 
+export const dynamic = "force-dynamic";
+
 export default async function Page() {
 	const performers = await getFeaturedPerformers();
 

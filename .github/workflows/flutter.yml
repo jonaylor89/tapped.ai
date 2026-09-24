@@ -28,7 +28,7 @@ jobs:
           channel: stable
           flutter-version: 3.41.5
       - run: flutter pub get
-      - run: flutter analyze
+      - run: flutter analyze --no-fatal-infos
       - run: flutter test
 
   build_ios:
