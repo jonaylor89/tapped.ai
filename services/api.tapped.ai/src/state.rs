@@ -5,4 +5,5 @@ use std::sync::Arc;
 pub struct AppStateDyn {
     pub database: Arc<dyn Database>,
     pub search: Arc<dyn Search>,
+    pub firebase_project_id: String,
 }

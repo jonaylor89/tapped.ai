@@ -45,17 +45,18 @@ impl Application {
 
         let firestore_instance = if std::path::Path::new(CREDENTIALS_PATH).exists() {
             FirestoreDb::with_options_service_account_key_file(
-                FirestoreDbOptions::new(project_id),
+                FirestoreDbOptions::new(project_id.clone()),
                 CREDENTIALS_PATH.into(),
             )
             .await?
         } else {
-            FirestoreDb::new(project_id).await?
+            FirestoreDb::new(project_id.clone()).await?
         };
 
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
             search: Arc::new(Typesense::from_env()),
+            firebase_project_id: project_id,
         };
 
         let server = run(listener, state).await?;

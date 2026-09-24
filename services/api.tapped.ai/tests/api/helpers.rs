@@ -34,6 +34,7 @@ pub async fn spawn_app() -> TestApp {
     let state = AppStateDyn {
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
+        firebase_project_id: "test-project".to_string(),
     };
 
     let application = Application::build_with_state(0, state)
