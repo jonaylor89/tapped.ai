@@ -3,7 +3,8 @@ version: 1.2.116+128
 publish_to: none
 description: mobile app for tapped.
 environment:
-  sdk: ">=3.0.0 <4.0.0"
+  sdk: 3.11.3
+  flutter: 3.41.5
 
 dependencies:
   animations: 2.0.11
@@ -99,20 +100,20 @@ dependencies:
   skeletons:
     git:
       url: https://github.com/makslara/skeletons
-      ref: fix-path-apptheme
+      ref: 18b87256b21e129f4ac8a50645d878e641696494
   stack_trace: 1.12.1
   #  stream_chat_flutter:
   #    git:
   #      url: https://github.com/easyhour/stream-chat-flutter
   #      path: packages/stream_chat_flutter
   #      ref: beta
-  stream_chat_flutter: ^9.16.0
+  stream_chat_flutter: 9.16.0
   timeago: 3.7.1
   timelines: 0.1.0
   transparent_pointer: 1.0.1
   app_links: 6.4.1
   upgrader: 12.1.0
-  url_launcher: ^6.3.2
+  url_launcher: 6.3.2
   uuid: 4.2.1
   visibility_detector: 0.4.0+2
   modal_bottom_sheet: 3.0.0
@@ -124,19 +125,19 @@ dependencies:
   typesense: 0.5.2
 
 dev_dependencies:
-  bloc_test: ^10.0.0
-  build_runner: ^2.4.8
+  bloc_test: 10.0.0
+  build_runner: 2.11.1
   flutter_launcher_icons: 0.14.1
   flutter_lints: 6.0.0
   flutter_test:
     sdk: flutter
-  freezed: ^3.1.0
+  freezed: 3.2.3
   integration_test:
     sdk: flutter
-  json_serializable: ^6.3.1
-  mockito: ^5.0.16
-  pubspec_dependency_sorter: ^1.0.3
-  very_good_analysis: ^10.0.0
+  json_serializable: 6.11.2
+  mockito: 5.6.3
+  pubspec_dependency_sorter: 1.0.5
+  very_good_analysis: 10.0.0
 
 dependency_overrides:
   audio_video_progress_bar: 2.0.3

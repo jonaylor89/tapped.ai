@@ -46,6 +46,15 @@ This is a Turborepo monorepo. Frontend apps live in `apps/`, backend services in
 - **Quotes**: Double quotes, semicolons always
 - **Linting**: Biome with recommended rules
 
+## Dependency Pinning
+
+Every dependency and toolchain version is pinned exactly — no `^`, `~`, `>=`, `stable`, or `latest`. See CONTRIBUTING.md for the full rule. In short:
+
+- Flutter (`com.intheloopstudio/pubspec.yaml`): exact versions for every dep, `environment.sdk`/`environment.flutter` pinned, git deps pinned to a commit SHA. `pubspec.lock` is committed.
+- Flutter toolchain: `3.41.5` in `.github/workflows/flutter.yml`, `com.intheloopstudio/ios/ci_scripts/ci_post_clone.sh`, and `pubspec.yaml`. Bump all three together.
+- Node: `pnpm install --frozen-lockfile`; `packageManager` in `package.json` and `node-version` in `.github/workflows/node.yml` are exact.
+- Rust: `Cargo.lock` is committed.
+
 ## CI/CD
 
 - `node.yml` - Lint, typecheck, build all Node.js packages

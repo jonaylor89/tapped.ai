@@ -2584,7 +2584,7 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: fix-path-apptheme
+      ref: "18b87256b21e129f4ac8a50645d878e641696494"
       resolved-ref: "18b87256b21e129f4ac8a50645d878e641696494"
       url: "https://github.com/makslara/skeletons"
     source: git
@@ -3251,5 +3251,5 @@ packages:
     source: hosted
     version: "2.1.0"
 sdks:
-  dart: ">=3.9.0 <4.0.0"
-  flutter: ">=3.35.0"
+  dart: "3.11.3"
+  flutter: "3.41.5"
