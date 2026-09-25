@@ -6,9 +6,9 @@ import 'package:intheloopapp/domains/models/activity.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
+import 'package:intheloopapp/ui/activity/components/activity_row.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
-import 'package:timeago/timeago.dart' as timeago;
 
 class FollowActivityTile extends StatelessWidget {
   const FollowActivityTile({
@@ -61,49 +61,18 @@ class FollowActivityTile extends StatelessWidget {
                     builder: (context, snapshot) {
                       final isVerified = snapshot.data ?? false;
 
-                      return Column(
-                        children: [
-                          GestureDetector(
-                            onTap: () => onClick(
-                              context,
-                              user,
-                            ),
-                            child: ListTile(
-                              tileColor: markedRead ? null : Colors.grey[900],
-                              leading: UserAvatar(
-                                radius: 20,
-                                pushUser: user,
-                                imageUrl: value.profilePicture,
-                                verified: isVerified,
-                              ),
-                              trailing: Text(
-                                timeago.format(
-                                  activity.timestamp,
-                                  locale: 'en_short',
-                                ),
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontWeight:
-                                      markedRead ? null : FontWeight.bold,
-                                ),
-                              ),
-                              title: Text(
-                                value.displayName,
-                                style: TextStyle(
-                                  fontWeight:
-                                      markedRead ? null : FontWeight.bold,
-                                ),
-                              ),
-                              subtitle: Text(
-                                'followed you 🤝',
-                                style: TextStyle(
-                                  fontWeight:
-                                      markedRead ? null : FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      return ActivityRow(
+                        onTap: () => onClick(context, user),
+                        leading: UserAvatar(
+                          radius: 22,
+                          pushUser: user,
+                          imageUrl: value.profilePicture,
+                          verified: isVerified,
+                        ),
+                        title: value.displayName,
+                        message: 'followed you 🤝',
+                        timestamp: activity.timestamp,
+                        unread: !activity.markedRead,
                       );
                     },
                   );

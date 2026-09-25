@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:readmore/readmore.dart';

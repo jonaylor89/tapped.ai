@@ -4,7 +4,6 @@ import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/booking/booking_view.dart';
-import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/hero_image.dart';
