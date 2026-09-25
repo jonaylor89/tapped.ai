@@ -2,6 +2,8 @@ import 'package:feedback/feedback.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
@@ -16,7 +18,11 @@ class FeedbackButton extends StatelessWidget {
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        return CupertinoButton(
+        return GlassButton(
+          label: 'feedback',
+          icon: CupertinoIcons.bubble_left,
+          foreground: TappedColors.warning,
+          compact: true,
           onPressed: () {
             HapticFeedback.lightImpact();
             BetterFeedback.of(context).show((UserFeedback feedback) {
@@ -37,7 +43,7 @@ class FeedbackButton extends StatelessWidget {
                 scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.green,
+                    backgroundColor: TappedColors.success,
                     content: Text('feedback sent'),
                   ),
                 );
@@ -50,22 +56,13 @@ class FeedbackButton extends StatelessWidget {
                 scaffoldMessenger.showSnackBar(
                   const SnackBar(
                     behavior: SnackBarBehavior.floating,
-                    backgroundColor: Colors.red,
+                    backgroundColor: TappedColors.error,
                     content: Text('error sending feedback'),
                   ),
                 );
               }
             });
           },
-          color: Colors.deepOrange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(15),
-          child: const Text(
-            'feedback',
-            style: TextStyle(
-              color: Colors.deepOrange,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
         );
       },
     );

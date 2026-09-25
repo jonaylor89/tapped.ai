@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class ReauthenticateButton extends StatelessWidget {
   const ReauthenticateButton({this.onPressed, super.key});
@@ -7,9 +8,10 @@ class ReauthenticateButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoButton.filled(
+    return GlassButton.primary(
+      label: 'reauthenticate',
+      icon: CupertinoIcons.lock_shield,
       onPressed: onPressed,
-      child: const Text('Reauth'),
     );
   }
 }

@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
 
@@ -26,43 +28,21 @@ class _ApplyButtonState extends State<ApplyButton> {
   @override
   Widget build(BuildContext context) {
     final database = context.database;
-    if (loading) {
-      return const Column(
-        children: [
-          CupertinoActivityIndicator(),
-          SizedBox(
-            width: double.infinity,
-            height: 8,
-          ),
-        ],
-      );
-    }
 
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         if (currentUser.id == _opportunity.userId) {
-          // TODO: turn this into a widget like partiful
-          return SizedBox(
-            width: double.infinity,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 4,
-                horizontal: 32,
-              ),
-              child: CupertinoButton(
-                onPressed: () => context.push(
-                  InterestedUsersPage(
-                    opportunity: _opportunity,
-                  ),
-                ),
-                borderRadius: BorderRadius.circular(15),
-                child: const Text(
-                  "see who's interested",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.grey,
-                  ),
-                ),
+          return Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: TappedSpacing.xs,
+              horizontal: GlassMetrics.edgeInset,
+            ),
+            child: GlassButton(
+              label: "see who's interested",
+              icon: CupertinoIcons.person_2,
+              expand: true,
+              onPressed: () => context.push(
+                InterestedUsersPage(opportunity: _opportunity),
               ),
             ),
           );
@@ -74,42 +54,31 @@ class _ApplyButtonState extends State<ApplyButton> {
             opportunityId: _opportunity.id,
           ),
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const CupertinoActivityIndicator();
-            }
-
-            final applied = snapshot.data!;
-            if (applied) {
-              return SizedBox(
-                width: double.infinity,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 4,
-                    horizontal: 32,
-                  ),
-                  child: CupertinoButton(
-                    onPressed: null,
-                    borderRadius: BorderRadius.circular(15),
-                    child: const Text(
-                      'applied',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: Colors.green,
-                      ),
-                    ),
-                  ),
+            final applied = snapshot.data;
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: TappedSpacing.xs,
+                horizontal: GlassMetrics.edgeInset,
+              ),
+              child: switch (applied) {
+                null => const GlassButton.primary(
+                  label: 'apply',
+                  expand: true,
+                  isLoading: true,
+                  onPressed: null,
                 ),
-              );
-            }
-
-            return SizedBox(
-              width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 4,
-                  horizontal: 32,
+                true => const GlassButton(
+                  label: 'applied',
+                  icon: CupertinoIcons.checkmark_alt,
+                  foreground: TappedColors.success,
+                  expand: true,
+                  onPressed: null,
                 ),
-                child: CupertinoButton.filled(
+                false => GlassButton.primary(
+                  label: 'apply',
+                  icon: CupertinoIcons.paperplane_fill,
+                  expand: true,
+                  isLoading: loading,
                   onPressed: () {
                     setState(() {
                       loading = true;
@@ -121,21 +90,14 @@ class _ApplyButtonState extends State<ApplyButton> {
                           userId: currentUser.id,
                         )
                         .then((value) {
+                          if (!mounted) return;
                           setState(() {
                             loading = false;
                           });
                         });
                   },
-                  borderRadius: BorderRadius.circular(15),
-                  child: const Text(
-                    'apply',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
                 ),
-              ),
+              },
             );
           },
         );

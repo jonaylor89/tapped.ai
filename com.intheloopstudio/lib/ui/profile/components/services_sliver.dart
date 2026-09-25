@@ -44,14 +44,9 @@ class ServicesSliver extends StatelessWidget {
                     )
                   : null,
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: GlassMetrics.edgeInset,
-              ),
-              child: ServicesList(
-                services: state.services,
-                isCurrentUser: isCurrentUser,
-              ),
+            ServicesList(
+              services: state.services,
+              isCurrentUser: isCurrentUser,
             ),
             const SizedBox(height: TappedSpacing.sm),
           ],
