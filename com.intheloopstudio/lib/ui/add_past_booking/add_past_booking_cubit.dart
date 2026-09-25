@@ -119,12 +119,13 @@ class AddPastBookingCubit extends Cubit<AddPastBookingState> {
     final requesterId = venue.map((user) => user.id);
     final flierUrl = await switch (flierFile) {
       None() => Future<None>.value(const None()),
-      Some(:final value) => storage
-          .uploadBookingFlier(
-            bookingId: uuid,
-            imageFile: value,
-          )
-          .then(Option.of),
+      Some(:final value) =>
+        storage
+            .uploadBookingFlier(
+              bookingId: uuid,
+              imageFile: value,
+            )
+            .then(Option.of),
     };
 
     final location = venue.map((t) => t.location).getOrElse(() {
@@ -175,7 +176,9 @@ class AddPastBookingCubit extends Cubit<AddPastBookingState> {
 
     await database.createBooking(booking);
 
-    final newCategory = (await database.classifyPerformer(user.id)).toNullable();
+    final newCategory = (await database.classifyPerformer(
+      user.id,
+    )).toNullable();
     if (newCategory == null) {
       return;
     }

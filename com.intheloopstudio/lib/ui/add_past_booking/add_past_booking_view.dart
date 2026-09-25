@@ -13,7 +13,6 @@ class AddPastBookingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final database = context.read<DatabaseRepository>();
     final storage = context.read<StorageRepository>();
     final onboardingBloc = context.read<OnboardingBloc>();
@@ -26,10 +25,7 @@ class AddPastBookingView extends StatelessWidget {
             database: database,
             currentUserId: currentUser.id,
           ),
-          child: Scaffold(
-            backgroundColor: theme.colorScheme.surface,
-            body: const ImportForm(),
-          ),
+          child: const ImportForm(),
         );
       },
     );

@@ -9,4 +9,3 @@ class BookingHistoryState with _$BookingHistoryState {
     @Default(<Booking>[]) List<Booking> bookings,
   }) = _BookingHistoryState;
 }
-

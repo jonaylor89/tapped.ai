@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -7,7 +8,9 @@ import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/booking_history/booking_history_cubit.dart';
 import 'package:intheloopapp/ui/booking_history/components/booking_bottom_sheet.dart';
 import 'package:intheloopapp/ui/booking_history/components/booking_map.dart';
-import 'package:intheloopapp/ui/common/tapped_app_bar.dart';
+import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 
 class BookingHistoryView extends StatelessWidget {
@@ -18,40 +21,23 @@ class BookingHistoryView extends StatelessWidget {
 
   final UserModel user;
 
-  Widget _buildMapButton(BuildContext context, {
-    required String heroTag,
-    required IconData icon,
-    required VoidCallback onPressed,
-  }) {
-    final theme = Theme.of(context);
-    return FloatingActionButton(
-      elevation: 2,
-      heroTag: heroTag,
-      highlightElevation: 3,
-      backgroundColor: theme.colorScheme.surface,
-      mini: true,
-      onPressed: onPressed,
-      splashColor: Colors.transparent,
-      child: Icon(
-        icon,
-        color: theme.colorScheme.onSurface,
-      ),
-    );
-  }
-
-  Widget _buildControlButtons(BuildContext context,
-      MapController mapController,) {
+  Widget _buildControlButtons(
+    BuildContext context,
+    MapController mapController,
+  ) {
     return BlocBuilder<BookingHistoryCubit, BookingHistoryState>(
       builder: (context, state) {
         return Positioned(
-          bottom: 110 + 10,
-          right: 10,
+          bottom: MediaQuery.sizeOf(context).height * 0.12 + TappedSpacing.md,
+          right: GlassMetrics.edgeInset,
           child: Column(
             children: [
-              _buildMapButton(
-                context,
-                icon: state.showFlierMarkers ? Icons.image_not_supported : Icons.image,
-                heroTag: 'toggle-flier-markers',
+              GlassIconButton(
+                icon: state.showFlierMarkers
+                    ? CupertinoIcons.photo_fill
+                    : CupertinoIcons.photo,
+                variant: GlassVariant.clear,
+                semanticsLabel: 'toggle flier markers',
                 onPressed: () {
                   FirebaseAnalytics.instance.logEvent(
                     name: 'toggle_flier_markers',
@@ -60,30 +46,32 @@ class BookingHistoryView extends StatelessWidget {
                   context.read<BookingHistoryCubit>().toggleFlierMarkers();
                 },
               ),
-              if (kDebugMode)
-                _buildMapButton(
-                  context,
-                  icon: Icons.add,
+              if (kDebugMode) ...[
+                const SizedBox(height: TappedSpacing.sm),
+                GlassIconButton(
+                  icon: CupertinoIcons.plus,
+                  variant: GlassVariant.clear,
+                  semanticsLabel: 'zoom in',
                   onPressed: () {
                     mapController.move(
                       mapController.camera.center,
                       mapController.camera.zoom + 1,
                     );
                   },
-                  heroTag: 'zoom-in',
                 ),
-              if (kDebugMode)
-                _buildMapButton(
-                  context,
-                  icon: Icons.remove,
+                const SizedBox(height: TappedSpacing.sm),
+                GlassIconButton(
+                  icon: CupertinoIcons.minus,
+                  variant: GlassVariant.clear,
+                  semanticsLabel: 'zoom out',
                   onPressed: () {
                     mapController.move(
                       mapController.camera.center,
                       mapController.camera.zoom - 1,
                     );
                   },
-                  heroTag: 'zoom-out',
                 ),
+              ],
             ],
           ),
         );
@@ -95,26 +83,43 @@ class BookingHistoryView extends StatelessWidget {
   Widget build(BuildContext context) {
     final mapController = MapController();
     return BlocProvider(
-      create: (context) =>
-      BookingHistoryCubit(
+      create: (context) => BookingHistoryCubit(
         database: context.database,
         userId: user.id,
-      )
-        ..initBookings(),
+      )..initBookings(),
       child: Scaffold(
-        appBar: const TappedAppBar(
-          title: 'bookings',
-        ),
         extendBodyBehindAppBar: true,
-        body: LayoutBuilder(
-          builder: (context, contraints) {
-            return Stack(
-              children: [
-                BookingMap(mapController: mapController),
-                _buildControlButtons(context, mapController),
-              ],
-            );
-          },
+        extendBody: true,
+        body: Stack(
+          children: [
+            BookingMap(mapController: mapController),
+            _buildControlButtons(context, mapController),
+            Positioned(
+              top: MediaQuery.paddingOf(context).top + TappedSpacing.sm,
+              left: GlassMetrics.edgeInset,
+              right: GlassMetrics.edgeInset,
+              child: Row(
+                children: [
+                  GlassIconButton(
+                    icon: CupertinoIcons.chevron_back,
+                    variant: GlassVariant.clear,
+                    semanticsLabel: 'back',
+                    onPressed: () => context.pop(),
+                  ),
+                  const SizedBox(width: TappedSpacing.sm),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: GlassPill(
+                        label: '${user.displayName} · bookings',
+                        variant: GlassVariant.clear,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         bottomSheet: BookingBottomSheet(user: user),
       ),

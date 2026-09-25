@@ -18,7 +18,8 @@ class CreateBookingState extends Equatable with FormzMixin {
     GlobalKey<FormState>? formKey,
   }) {
     this.rate = rate ?? service.fold(() => 0, (a) => a.rate);
-    this.rateType = rateType ?? service.fold(() => RateType.fixed, (a) => a.rateType);
+    this.rateType =
+        rateType ?? service.fold(() => RateType.fixed, (a) => a.rateType);
     this.startTime = startTime ?? StartTime.pure();
     this.endTime = endTime ?? EndTime.pure();
     this.formKey = formKey ?? GlobalKey<FormState>(debugLabel: 'settings');
@@ -42,29 +43,29 @@ class CreateBookingState extends Equatable with FormzMixin {
 
   @override
   List<Object?> get props => [
-        currentUserId,
-        requesteeId,
-        service,
-        bookingFee,
-        name,
-        note,
-        status,
-        startTime,
-        endTime,
-        rate,
-        rateType,
-        formKey,
-        place,
-        placeId,
-      ];
+    currentUserId,
+    requesteeId,
+    service,
+    bookingFee,
+    name,
+    note,
+    status,
+    startTime,
+    endTime,
+    rate,
+    rateType,
+    formKey,
+    place,
+    placeId,
+  ];
 
   @override
   List<FormzInput<dynamic, dynamic>> get inputs => [
-        name,
-        note,
-        startTime,
-        endTime,
-      ];
+    name,
+    note,
+    startTime,
+    endTime,
+  ];
 
   CreateBookingState copyWith({
     String? currentUserId,

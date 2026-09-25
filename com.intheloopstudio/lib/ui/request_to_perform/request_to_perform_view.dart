@@ -10,6 +10,8 @@ import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/ui/common/social_following_menu.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/request_to_perform/components/past_bookings_slider.dart';
 import 'package:intheloopapp/ui/safety_mode_cubit.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
@@ -43,225 +45,247 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
     _collaborators = List.from(widget.collaborators);
   }
 
+  Future<void> _send(
+    BuildContext context, {
+    required UserModel currentUser,
+    required bool safeModeOn,
+  }) async {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final nav = context.nav;
+
+    if (_venues.isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('no venues selected'),
+        ),
+      );
+      return;
+    }
+
+    if (_note.isEmpty) {
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('message cannot be empty'),
+        ),
+      );
+      return;
+    }
+
+    await EasyLoading.show(status: 'sending request');
+    if (safeModeOn) {
+      await Future<void>.delayed(const Duration(seconds: 1));
+      await EasyLoading.dismiss();
+      nav.push(RequestToPerformConfirmationPage(venues: _venues));
+      return;
+    }
+
+    try {
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('genericContactVenues');
+      await callable<void>({
+        'userId': currentUser.id,
+        'venueIds': _venues.map((venue) => venue.id).toList(),
+        'note': _note,
+        'collaborators': _collaborators.map((collaborator) {
+          return collaborator.id;
+        }).toList(),
+      });
+      await EasyLoading.dismiss();
+      nav.push(RequestToPerformConfirmationPage(venues: _venues));
+    } catch (error, stackTrace) {
+      await EasyLoading.dismiss();
+      logger.error(
+        'error sending the request',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      scaffoldMessenger.showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('error sending the request'),
+        ),
+      );
+    }
+  }
+
   Widget _buildSendButton(
     BuildContext context, {
     required UserModel currentUser,
   }) {
     return BlocBuilder<SafetyModeCubit, bool>(
       builder: (context, safeModeOn) {
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Expanded(
-              child: CupertinoButton.filled(
-                onPressed: () async {
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  final nav = context.nav;
-
-                  if (_venues.isEmpty) {
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        backgroundColor: Colors.red,
-                        content: Text(
-                          'no venues selected',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  if (_note.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        backgroundColor: Colors.red,
-                        content: Text(
-                          'message cannot be empty',
-                        ),
-                      ),
-                    );
-                    return;
-                  }
-
-                  await EasyLoading.show(status: 'sending request');
-                  if (safeModeOn) {
-                    await Future<void>.delayed(const Duration(seconds: 1));
-                    await EasyLoading.dismiss();
-                    nav.push(
-                      RequestToPerformConfirmationPage(
-                        venues: _venues,
-                      ),
-                    );
-                    return;
-                  }
-
-                  try {
-                    final functions = FirebaseFunctions.instance;
-                    final callable =
-                        functions.httpsCallable('genericContactVenues');
-                    await callable<void>({
-                      'userId': currentUser.id,
-                      'venueIds': _venues.map((venue) => venue.id).toList(),
-                      'note': _note,
-                      'collaborators': _collaborators.map((collaborator) {
-                        return collaborator.id;
-                      }).toList(),
-                    });
-                    await EasyLoading.dismiss();
-                    nav.push(RequestToPerformConfirmationPage(venues: _venues));
-                  } catch (error, stackTrace) {
-                    await EasyLoading.dismiss();
-                    logger.error(
-                      'error sending the request',
-                      error: error,
-                      stackTrace: stackTrace,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        backgroundColor: Colors.red,
-                        content: Text('error sending the request'),
-                      ),
-                    );
-                  }
-                },
-                borderRadius: BorderRadius.circular(15),
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 12,
+        return GlassButton.primary(
+          label: safeModeOn ? 'send request (safe mode on)' : 'send request',
+          icon: CupertinoIcons.paperplane_fill,
+          expand: true,
+          onPressed: _note.isEmpty
+              ? null
+              : () => _send(
+                  context,
+                  currentUser: currentUser,
+                  safeModeOn: safeModeOn,
                 ),
-                child: Text(
-                  safeModeOn ? 'send request (safe mode on)' : 'send request',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+        );
+      },
+    );
+  }
+
+  void _showPreview(BuildContext context, UserModel currentUser) {
+    showGlassSheet<void>(
+      context: context,
+      title: 'what venues will see',
+      scrollable: true,
+      showClose: true,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: GlassMetrics.edgeInset,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  UserAvatar(
+                    imageUrl: currentUser.profilePicture,
+                    radius: 24,
                   ),
+                  const SizedBox(width: TappedSpacing.md),
+                  Expanded(
+                    child: Text(
+                      currentUser.displayName,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: TappedSpacing.lg),
+              const GlassSectionTitle(
+                'socials',
+                padding: EdgeInsets.only(bottom: TappedSpacing.sm),
+              ),
+              SocialFollowingMenu(user: currentUser),
+              const SizedBox(height: TappedSpacing.lg),
+              const GlassSectionTitle(
+                'booking history',
+                padding: EdgeInsets.only(bottom: TappedSpacing.sm),
+              ),
+              PastBookingsSlider(user: currentUser),
+              const SizedBox(height: TappedSpacing.xl),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _venueStack(ThemeData theme) {
+    return SizedBox(
+      height: 56,
+      child: WidgetStack(
+        positions: RestrictedPositions(
+          infoItem: const InfoItem(indent: 5),
+        ),
+        stackedWidgets: _venues
+            .map(
+              (venue) => UserAvatar(
+                pushUser: Option.of(venue),
+                pushId: Option.of(venue.id),
+                imageUrl: venue.profilePicture,
+                radius: 28,
+              ),
+            )
+            .toList(),
+        buildInfoWidget: (surplus, context) {
+          return LiquidGlass.circle(
+            width: 56,
+            height: 56,
+            child: Center(
+              child: Text(
+                '+$surplus',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-          ],
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          appBar: AppBar(
-            actions: [
-              IconButton(
-                onPressed: () {
-                  showModalBottomSheet<void>(
-                    context: context,
-                    showDragHandle: true,
-                    builder: (context) {
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 12),
-                              Text(
-                                currentUser.displayName,
-                                style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'socials',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              SocialFollowingMenu(
-                                user: currentUser,
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'booking history',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              PastBookingsSlider(
-                                user: currentUser,
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-                icon: const Icon(Icons.info_outline),
-              ),
-            ],
+        final venueLabel = switch (_venues.length) {
+          0 => 'no venues selected',
+          1 => _venues.first.displayName,
+          final n => '$n venues',
+        };
+        return GlassPage(
+          title: 'request to perform',
+          subtitle: venueLabel,
+          actions: [
+            GlassIconButton(
+              icon: CupertinoIcons.info,
+              semanticsLabel: 'preview what venues will see',
+              onPressed: () => _showPreview(context, currentUser),
+            ),
+          ],
+          bottomBar: GlassBottomBar(
+            child: _buildSendButton(context, currentUser: currentUser),
           ),
-          body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 18),
-                  SizedBox(
-                    height: 50,
-                    child: WidgetStack(
-                      positions: RestrictedPositions(
-                        infoItem: const InfoItem(indent: 5),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: GlassMetrics.edgeInset,
+                  vertical: TappedSpacing.md,
+                ),
+                child: Row(
+                  children: [
+                    _venueStack(theme),
+                    const SizedBox(width: TappedSpacing.md),
+                    Expanded(
+                      child: Text(
+                        'these venues will get your pitch, your socials, '
+                        'and your booking history.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: muted,
+                        ),
                       ),
-                      stackedWidgets: _venues
-                          .map(
-                            (venue) => UserAvatar(
-                              pushUser: Option.of(venue),
-                              pushId: Option.of(venue.id),
-                              imageUrl: venue.profilePicture,
-                              radius: 25,
-                            ),
-                          )
-                          .toList(),
-                      buildInfoWidget: (surplus, context) {
-                        return CircleAvatar(
-                          radius: 25,
-                          child: Text(
-                            '+$surplus',
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        );
-                      },
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Divider(
-                    color: theme.colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
+                  ],
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: GlassMetrics.edgeInset,
+                  vertical: TappedSpacing.sm,
+                ),
+                child: GlassCard(
+                  child: TextFormField(
                     keyboardType: TextInputType.multiline,
                     maxLines: null,
-                    decoration: const InputDecoration.collapsed(
-                      hintText: 'What else should the venue know about you?',
+                    decoration: InputDecoration.collapsed(
+                      hintText: 'what else should the venue know about you?',
+                      hintStyle: TextStyle(color: muted),
                     ),
                     textInputAction: TextInputAction.done,
-                    style: const TextStyle(
+                    style: theme.textTheme.bodyLarge?.copyWith(
                       letterSpacing: 0,
+                      height: 1.4,
                     ),
                     maxLength: 512,
                     minLines: 8,
@@ -274,7 +298,49 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
                       });
                     },
                   ),
-                  GestureDetector(
+                ),
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: GlassSection(
+                header: 'collaborators',
+                footer:
+                    "you're far more likely to get booked when you're "
+                    'on a bill with a local act.',
+                children: [
+                  for (final collaborator in _collaborators)
+                    GlassListTile(
+                      leading: UserAvatar(
+                        pushId: Option.of(collaborator.id),
+                        pushUser: Option.of(collaborator),
+                        imageUrl: collaborator.profilePicture,
+                        radius: 18,
+                      ),
+                      title: collaborator.displayName,
+                      subtitle: '@${collaborator.username}',
+                      showChevron: false,
+                      trailing: GlassIconButton(
+                        icon: CupertinoIcons.xmark,
+                        size: 32,
+                        iconSize: 14,
+                        semanticsLabel: 'remove ${collaborator.displayName}',
+                        onPressed: () {
+                          setState(() {
+                            _collaborators.remove(collaborator);
+                          });
+                        },
+                      ),
+                    ),
+                  GlassListTile(
+                    leadingIcon: CupertinoIcons.person_add_solid,
+                    leadingColor: theme.colorScheme.primary,
+                    titleWidget: Text(
+                      'add collaborators',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     onTap: () {
                       context.push(
                         AddCollaboratorsPage(
@@ -292,100 +358,14 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
                         ),
                       );
                     },
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.add,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'add collaborators',
-                          style: TextStyle(
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_collaborators.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _collaborators
-                          .map(
-                            (collaborator) => Chip(
-                              avatar: UserAvatar(
-                                pushId: Option.of(collaborator.id),
-                                pushUser: Option.of(collaborator),
-                                imageUrl: collaborator.profilePicture,
-                              ),
-                              label: Text(collaborator.displayName),
-                              onDeleted: () {
-                                setState(() {
-                                  _collaborators.remove(collaborator);
-                                });
-                              },
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  // SizedBox(
-                  //   height: 50,
-                  //   child: WidgetStack(
-                  //     positions: RestrictedPositions(
-                  //       infoIndent: 5,
-                  //     ),
-                  //     stackedWidgets: _collaborators
-                  //         .map(
-                  //           (collaborator) => UserAvatar(
-                  //             pushUser: Option.of(collaborator),
-                  //             pushId: Option.of(collaborator.id),
-                  //             imageUrl: collaborator.profilePicture,
-                  //             radius: 25,
-                  //           ),
-                  //         )
-                  //         .toList(),
-                  //     buildInfoWidget: (surplus) {
-                  //       return CircleAvatar(
-                  //         radius: 25,
-                  //         child: Text(
-                  //           '+$surplus',
-                  //           style: TextStyle(
-                  //             color: theme.colorScheme.onSurface,
-                  //             fontWeight: FontWeight.bold,
-                  //           ),
-                  //         ),
-                  //       );
-                  //     },
-                  //   ),
-                  // ),
-                  const Spacer(),
-                  _buildSendButton(
-                    context,
-                    currentUser: currentUser,
-                  ),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Expanded(
-                        child: CupertinoButton(
-                          onPressed: () => context.pop(),
-                          child: const Text(
-                            'cancel',
-                            style: TextStyle(
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ],
               ),
             ),
-          ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: GlassMetrics.bottomBarClearance),
+            ),
+          ],
         );
       },
     );

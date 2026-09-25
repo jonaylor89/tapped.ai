@@ -471,3 +471,50 @@ class GlassTextField extends StatelessWidget {
     );
   }
 }
+
+/// Layout for one step of a [TappedForm]-style questionnaire: a large
+/// conversational title, optional caption, and the input below.
+class GlassQuestion extends StatelessWidget {
+  const GlassQuestion({
+    required this.title,
+    required this.child,
+    this.caption,
+    super.key,
+  });
+
+  final String title;
+  final String? caption;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: GlassMetrics.edgeInset),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.6,
+            ),
+          ),
+          if (caption != null) ...[
+            const SizedBox(height: TappedSpacing.xs),
+            Text(
+              caption!,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+          const SizedBox(height: TappedSpacing.xl),
+          child,
+        ],
+      ),
+    );
+  }
+}

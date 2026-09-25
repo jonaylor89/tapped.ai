@@ -43,7 +43,9 @@ class BookingMap extends StatelessWidget {
           children: [
             Builder(
               builder: (context) {
-                final theme = context.isDarkMode ? mapboxDarkStyle : mapboxLightStyle;
+                final theme = context.isDarkMode
+                    ? mapboxDarkStyle
+                    : mapboxLightStyle;
                 return TileLayer(
                   urlTemplate:
                       'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
@@ -51,8 +53,7 @@ class BookingMap extends StatelessWidget {
                     'accessToken': defaultMapboxToken,
                     'id': theme,
                   },
-                  tileProvider: const FMTCStore('mapStore')
-                    .getTileProvider(),
+                  tileProvider: const FMTCStore('mapStore').getTileProvider(),
                 );
               },
             ),

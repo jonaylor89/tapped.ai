@@ -3,9 +3,14 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_easyloading/flutter_easyloading.dart';
-import 'package:intheloopapp/ui/themes.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 
+/// Multi-step questionnaire. One question fills the screen at a time over an
+/// ambient glass backdrop; a segmented capsule at the top tracks progress and
+/// back/next float in a glass bottom bar. Steps slide in from the direction
+/// of travel.
 class TappedForm extends StatefulWidget {
   const TappedForm({
     required this.questions,
@@ -28,6 +33,7 @@ class TappedForm extends StatefulWidget {
 
 class _TappedFormState extends State<TappedForm> {
   int _index = 0;
+  bool _forward = true;
 
   int get _numQuestions => widget.questions.length;
 
@@ -36,166 +42,196 @@ class _TappedFormState extends State<TappedForm> {
   FutureOr<bool> Function() get _currValidator =>
       widget.questions[_index].validator ?? () => true;
 
+  Future<void> _next() async {
+    final localOnNext = widget.questions[_index].onNext;
+    await EasyLoading.show();
+    await localOnNext?.call();
+    await widget.onNext?.call(_index);
+    if (mounted) {
+      setState(() {
+        _forward = true;
+        _index++;
+      });
+    }
+    await EasyLoading.dismiss();
+  }
+
+  void _submit() {
+    try {
+      widget.onSubmit?.call();
+    } catch (e, s) {
+      logger.error('error submitting form', error: e, stackTrace: s);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+          content: Text('something went wrong'),
+        ),
+      );
+    }
+  }
+
   Widget _buildNextButton(bool? isValid) {
     final isLast = _index == _numQuestions - 1;
-    final localOnNext = widget.questions[_index].onNext;
 
     if (isValid == null) {
-      return const CupertinoButton(
+      return const GlassButton.primary(
+        label: 'next',
+        isLoading: true,
         onPressed: null,
-        child: CupertinoActivityIndicator(),
       );
     }
 
-    return switch (isLast) {
-      false => CupertinoButton(
-          onPressed: isValid
-              ? () async {
-                  await EasyLoading.show();
-                  await localOnNext?.call();
-                  await widget.onNext?.call(_index);
+    return GlassButton.primary(
+      label: isLast ? 'finish' : 'next',
+      icon: isLast ? CupertinoIcons.checkmark_alt : CupertinoIcons.arrow_right,
+      onPressed: !isValid
+          ? null
+          : isLast
+          ? _submit
+          : _next,
+    );
+  }
 
-                  setState(() {
-                    _index++;
-                  });
-                  await EasyLoading.dismiss();
-                }
-              : null,
-          borderRadius: BorderRadius.circular(12),
-          color: tappedAccent,
-          child: Text(
-            'next',
-            style: TextStyle(
-              color: isValid ? Colors.white : Colors.black,
-              fontWeight: FontWeight.w700,
+  Widget _progress(ThemeData theme) {
+    return Row(
+      children: [
+        for (var i = 0; i < _numQuestions; i++) ...[
+          if (i > 0) const SizedBox(width: 4),
+          Expanded(
+            child: AnimatedContainer(
+              duration: GlassMotion.reveal,
+              curve: GlassMotion.ease,
+              height: 4,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(2),
+                color: i <= _index
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withValues(alpha: 0.15),
+              ),
             ),
           ),
-        ),
-      true => CupertinoButton(
-          onPressed: isValid
-              ? () {
-                  try {
-                    widget.onSubmit?.call();
-                  } catch (e, s) {
-                    logger.error(
-                      'error submitting form',
-                      error: e,
-                      stackTrace: s,
-                    );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: Colors.red,
-                        content: Text('something went wrong'),
-                      ),
-                    );
-                  }
-                }
-              : null,
-          borderRadius: BorderRadius.circular(12),
-          color: tappedAccent,
-          child: Text(
-            'finish',
-            style: TextStyle(
-              color: isValid ? Colors.white : Colors.black,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-    };
+        ],
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final numQuestions = widget.questions.length;
 
     if (widget.questions.isEmpty) {
-      return const Center(
-        child: Text('No questions'),
+      return const GlassAmbientBackground(
+        child: Center(child: Text('No questions')),
       );
     }
 
-    const horizPadding = 16.0;
-    const segmentPadding = 4;
-    final segmentWidth =
-        (MediaQuery.of(context).size.width - (horizPadding * 2)) /
-            numQuestions -
-            (segmentPadding * 2);
-
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: horizPadding,
-            vertical: 12,
-          ),
-          child: Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: widget.questions.map((e) {
-                  return SizedBox(
-                    width: segmentWidth,
-                    height: 4,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: widget.questions.indexOf(e) <= _index
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.primary.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(10),
+      resizeToAvoidBottomInset: false,
+      body: GlassAmbientBackground(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: SafeArea(
+                bottom: false,
+                child: Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: GlassMetrics.edgeInset,
+                        vertical: TappedSpacing.md,
                       ),
-                    ),
-                  );
-                }).toList(),
-              ),
-              Expanded(
-                child: Center(
-                  child: _currQuestion,
-                ),
-              ),
-              const SizedBox(height: 16),
-              FutureBuilder(
-                future: Future.value(_currValidator()),
-                builder: (context, snapshot) {
-                  final isValid = snapshot.data;
-                  return Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      if (_index != 0)
-                        CupertinoButton(
-                          onPressed: () {
-                            setState(() {
-                              _index--;
-                            });
-                            widget.onPrevious?.call(_index);
-                          },
-                          child: const Text(
-                            'back',
-                          ),
-                        ),
-                      if (_index == 0 && widget.cancelButton)
-                        CupertinoButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: const Text(
-                            'cancel',
-                            style: TextStyle(
-                              color: Colors.red,
+                      child: Row(
+                        children: [
+                          Expanded(child: _progress(theme)),
+                          const SizedBox(width: TappedSpacing.md),
+                          Text(
+                            '${_index + 1}/$_numQuestions',
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.55,
+                              ),
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
-                        )
-                      else
-                        const SizedBox.shrink(),
-                      _buildNextButton(isValid),
-                    ],
-                  );
-                },
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: AnimatedSwitcher(
+                        duration: GlassMotion.release,
+                        switchInCurve: GlassMotion.ease,
+                        switchOutCurve: GlassMotion.ease,
+                        transitionBuilder: (child, animation) {
+                          final offset = Tween<Offset>(
+                            begin: Offset(_forward ? 0.08 : -0.08, 0),
+                            end: Offset.zero,
+                          ).animate(animation);
+                          return FadeTransition(
+                            opacity: animation,
+                            child: SlideTransition(
+                              position: offset,
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: KeyedSubtree(
+                          key: ValueKey(_index),
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              bottom:
+                                  GlassMetrics.bottomBarClearance +
+                                  MediaQuery.viewInsetsOf(context).bottom,
+                            ),
+                            child: Center(child: _currQuestion),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ],
-          ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: MediaQuery.viewInsetsOf(context).bottom,
+              child: GlassBottomBar(
+                child: FutureBuilder(
+                  future: Future.value(_currValidator()),
+                  builder: (context, snapshot) {
+                    final isValid = snapshot.data;
+                    return Row(
+                      children: [
+                        if (_index != 0)
+                          GlassButton(
+                            label: 'back',
+                            icon: CupertinoIcons.arrow_left,
+                            onPressed: () {
+                              setState(() {
+                                _forward = false;
+                                _index--;
+                              });
+                              widget.onPrevious?.call(_index);
+                            },
+                          )
+                        else if (widget.cancelButton)
+                          GlassButton.plain(
+                            label: 'cancel',
+                            onPressed: () => Navigator.of(context).pop(),
+                          ),
+                        const Spacer(),
+                        _buildNextButton(isValid),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

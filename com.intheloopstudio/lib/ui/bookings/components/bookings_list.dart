@@ -1,7 +1,10 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/bookings_bloc/bookings_bloc.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/ui/booking_container/booking_container.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 
 class BookingsList extends StatelessWidget {
@@ -16,27 +19,15 @@ class BookingsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = Theme.of(context).primaryIconTheme.color ?? Colors.black;
-
     return bookings.isEmpty
-        ? Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  'Nothing Yet',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                    color: themeColor,
-                  ),
-                ),
-              ),
-            ],
+        ? const GlassEmptyState(
+            icon: CupertinoIcons.calendar,
+            title: 'nothing yet',
           )
         : ListView(
             controller: scrollController,
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: TappedSpacing.sm),
             children: bookings.map((e) {
               return BookingContainer(
                 booking: e,
