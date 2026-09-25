@@ -7,6 +7,7 @@ import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/onboarding_bloc/onboarding_bloc.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/opportunity_feed/components/opportunity_view.dart';
 import 'package:intheloopapp/utils/admin_builder.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -96,7 +97,7 @@ class _OpportunityCardState extends State<OpportunityCard> {
                   final heroTitleTag =
                       'op-title-${widget.opportunity.id}-$uuid';
                   final provider = snapshot.data!;
-                  return ListTile(
+                  return GlassListTile(
                     onTap: () => showCupertinoModalBottomSheet<void>(
                       context: context,
                       builder: (context) => OpportunityView(
@@ -123,26 +124,27 @@ class _OpportunityCardState extends State<OpportunityCard> {
                         onDismiss: () => context.pop(),
                       ),
                     ),
-                    leading: Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        borderRadius: TappedRadius.smAll,
-                        image: DecorationImage(
-                          image: provider,
-                          fit: BoxFit.contain,
+                    leading: Hero(
+                      tag: heroImageTag,
+                      child: Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          image: DecorationImage(
+                            image: provider,
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ),
-                    title: Text(
+                    titleWidget: Text(
                       widget.opportunity.title,
-                      style: const TextStyle(
-                        overflow: TextOverflow.ellipsis,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                    subtitle: FutureBuilder(
+                    subtitleWidget: FutureBuilder(
                       future: places.getPlaceById(
                         widget.opportunity.location.placeId,
                       ),
@@ -155,40 +157,25 @@ class _OpportunityCardState extends State<OpportunityCard> {
                             formattedShortAddress(
                               value.addressComponents,
                             ).toLowerCase(),
-                            style: const TextStyle(
-                              overflow: TextOverflow.ellipsis,
-                              fontSize: 14,
-                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         };
                       },
                     ),
                     trailing: _isApplied
-                        ? Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: TappedSpacing.xs + 1,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: TappedColors.success,
-                              borderRadius: TappedRadius.smAll,
-                            ),
-                            child: const Text(
-                              'applied',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: TappedColors.textOnImage,
-                              ),
-                            ),
+                        ? const GlassPill(
+                            label: 'applied',
+                            icon: CupertinoIcons.checkmark_alt,
+                            tint: TappedColors.success,
+                            foreground: TappedColors.textOnImage,
                           )
                         : Text(
-                            DateFormat(
-                              'MM/dd',
-                            ).format(
-                              widget.opportunity.startTime,
-                            ),
+                            DateFormat('MMM d')
+                                .format(widget.opportunity.startTime)
+                                .toLowerCase(),
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 12,
                               color: Theme.of(context).hintColor,
                             ),
                           ),

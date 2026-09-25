@@ -69,10 +69,14 @@ class GlassImageCard extends StatelessWidget {
     this.topLeft,
     this.borderRadius,
     this.semanticsLabel,
+    this.heroTag,
     super.key,
   });
 
   final ImageProvider image;
+
+  /// When set, the image participates in a [Hero] transition.
+  final Object? heroTag;
   final Widget child;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
@@ -96,7 +100,13 @@ class GlassImageCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image(image: image, fit: BoxFit.cover),
+            if (heroTag != null)
+              Hero(
+                tag: heroTag!,
+                child: Image(image: image, fit: BoxFit.cover),
+              )
+            else
+              Image(image: image, fit: BoxFit.cover),
             DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(

@@ -114,6 +114,7 @@ class GlassListTile extends StatelessWidget {
     this.title,
     this.titleWidget,
     this.subtitle,
+    this.subtitleWidget,
     this.leading,
     this.leadingIcon,
     this.leadingColor,
@@ -131,6 +132,9 @@ class GlassListTile extends StatelessWidget {
   /// Custom title content; takes precedence over [title].
   final Widget? titleWidget;
   final String? subtitle;
+
+  /// Custom subtitle content; takes precedence over [subtitle].
+  final Widget? subtitleWidget;
   final Widget? leading;
   final IconData? leadingIcon;
   final Color? leadingColor;
@@ -195,17 +199,19 @@ class GlassListTile extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                   ),
-                  if (subtitle != null) ...[
+                  if (subtitle != null || subtitleWidget != null) ...[
                     const SizedBox(height: 2),
                     DefaultTextStyle(
                       style: theme.textTheme.bodySmall!.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.55),
                       ),
-                      child: Text(
-                        subtitle!,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child:
+                          subtitleWidget ??
+                          Text(
+                            subtitle!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                     ),
                   ],
                 ],
