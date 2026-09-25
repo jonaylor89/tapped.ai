@@ -7,12 +7,12 @@ import 'package:intheloopapp/utils/bloc_utils.dart';
 class BookingsList extends StatelessWidget {
   const BookingsList({
     required this.bookings,
-    required this.scrollController,
+    this.scrollController,
     super.key,
   });
 
   final List<Booking> bookings;
-  final ScrollController scrollController;
+  final ScrollController? scrollController;
 
   @override
   Widget build(BuildContext context) {

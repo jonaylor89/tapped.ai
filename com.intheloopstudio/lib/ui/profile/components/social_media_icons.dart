@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fpdart/fpdart.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -14,22 +16,27 @@ class SocialMediaIcons extends StatelessWidget {
     required Widget icon,
     void Function()? onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 16,
-        ),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: color.withOpacity(0.1),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: icon,
-          ),
+    return Center(
+      child: GlassPressable(
+        onPressed: onTap,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: color.withValues(alpha: 0.35),
+              ),
+            ),
+            LiquidGlass.circle(
+              width: GlassMetrics.control,
+              height: GlassMetrics.control,
+              variant: GlassVariant.regular,
+              child: Center(child: icon),
+            ),
+          ],
         ),
       ),
     );
@@ -43,8 +50,14 @@ class SocialMediaIcons extends StatelessWidget {
         final spotifyUrl = socialFollowing.spotifyId.map(
           (spotifyId) => 'https://open.spotify.com/artist/$spotifyId',
         );
-        return SliverGrid.count(
+        return SliverPadding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: GlassMetrics.edgeInset,
+            vertical: TappedSpacing.md,
+          ),
+          sliver: SliverGrid.count(
           crossAxisCount: 4,
+          mainAxisSpacing: TappedSpacing.sm,
           children: [
             switch (socialFollowing.facebookHandle) {
               None() => null,
@@ -224,6 +237,7 @@ class SocialMediaIcons extends StatelessWidget {
                 ),
             },
           ].where((element) => element != null).whereType<Widget>().toList(),
+          ),
         );
       },
     );

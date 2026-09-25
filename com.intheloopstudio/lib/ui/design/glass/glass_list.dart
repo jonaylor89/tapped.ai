@@ -100,7 +100,8 @@ class GlassSection extends StatelessWidget {
 /// disclosure chevron when tappable.
 class GlassListTile extends StatelessWidget {
   const GlassListTile({
-    required this.title,
+    this.title,
+    this.titleWidget,
     this.subtitle,
     this.leading,
     this.leadingIcon,
@@ -114,8 +115,11 @@ class GlassListTile extends StatelessWidget {
     super.key,
   });
 
-  final Widget title;
-  final Widget? subtitle;
+  final String? title;
+
+  /// Custom title content; takes precedence over [title].
+  final Widget? titleWidget;
+  final String? subtitle;
   final Widget? leading;
   final IconData? leadingIcon;
   final Color? leadingColor;
@@ -172,7 +176,12 @@ class GlassListTile extends StatelessWidget {
                       color: foreground,
                       fontWeight: FontWeight.w500,
                     ),
-                    child: title,
+                    child: titleWidget ??
+                        Text(
+                          title ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
@@ -180,7 +189,11 @@ class GlassListTile extends StatelessWidget {
                       style: theme.textTheme.bodySmall!.copyWith(
                         color: scheme.onSurface.withValues(alpha: 0.55),
                       ),
-                      child: subtitle!,
+                      child: Text(
+                        subtitle!,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ],
@@ -229,8 +242,8 @@ class GlassSwitchTile extends StatelessWidget {
     super.key,
   });
 
-  final Widget title;
-  final Widget? subtitle;
+  final String title;
+  final String? subtitle;
   final bool value;
   final ValueChanged<bool>? onChanged;
   final IconData? leadingIcon;

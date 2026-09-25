@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/admin_builder.dart';
@@ -194,21 +195,19 @@ class MoreOptionsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
         return AdminBuilder(
           builder: (context, isAdmin) {
-            return IconButton(
+            return GlassIconButton(
+              icon: CupertinoIcons.ellipsis,
+              variant: GlassVariant.clear,
+              semanticsLabel: 'more options',
               onPressed: () => _showActionSheet(
                 context,
                 user: state.visitedUser,
                 currentUser: state.currentUser,
                 isAdmin: isAdmin,
-              ),
-              icon: Icon(
-                CupertinoIcons.ellipsis,
-                color: theme.colorScheme.onSurface,
               ),
             );
           },

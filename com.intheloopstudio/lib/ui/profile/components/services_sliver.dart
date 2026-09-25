@@ -4,7 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
-import 'package:intheloopapp/ui/conditional_parent_widget.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:intheloopapp/ui/settings/components/services_list.dart';
 
@@ -20,69 +21,40 @@ class ServicesSliver extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 12),
-              ConditionalParentWidget(
-                condition: isCurrentUser,
-                conditionalBuilder: ({required child}) => GestureDetector(
-                  onTap: () {
-                    context.push(
-                      CreateServicePage(
-                        onSubmit: context.read<ProfileCubit>().onServiceCreated,
-                        service: const None(),
-                      ),
-                    );
-                  },
-                  child: child,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8,
-                  ),
-                  child: Row(
-                    children: [
-                      const Text(
-                        'services',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      if (isCurrentUser)
-                        GestureDetector(
-                          onTap: () {
-                            context.push(
-                              CreateServicePage(
-                                onSubmit: context
-                                    .read<ProfileCubit>()
-                                    .onServiceCreated,
-                                service: const None(),
-                              ),
-                            );
-                          },
-                          child: Icon(
-                            CupertinoIcons.add_circled,
-                            size: 20,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+        void createService() {
+          context.push(
+            CreateServicePage(
+              onSubmit: context.read<ProfileCubit>().onServiceCreated,
+              service: const None(),
+            ),
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            GlassSectionTitle(
+              'services',
+              trailing: isCurrentUser
+                  ? GlassIconButton(
+                      icon: CupertinoIcons.add,
+                      size: 36,
+                      semanticsLabel: 'add service',
+                      onPressed: createService,
+                    )
+                  : null,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: GlassMetrics.edgeInset,
               ),
-              ServicesList(
+              child: ServicesList(
                 services: state.services,
                 isCurrentUser: isCurrentUser,
               ),
-              const SizedBox(height: 12),
-            ],
-          ),
+            ),
+            const SizedBox(height: TappedSpacing.sm),
+          ],
         );
       },
     );

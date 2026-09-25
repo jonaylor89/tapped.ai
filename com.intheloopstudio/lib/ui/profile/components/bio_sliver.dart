@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
-import 'package:intheloopapp/ui/themes.dart';
 import 'package:readmore/readmore.dart';
 
 class BioSliver extends StatelessWidget {
@@ -9,6 +10,7 @@ class BioSliver extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
         final bio = state.visitedUser.bio;
@@ -16,35 +18,25 @@ class BioSliver extends StatelessWidget {
           return const SizedBox.shrink();
         }
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'about',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24,
-                ),
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const GlassSectionTitle('about'),
+            GlassCard(
+              margin: const EdgeInsets.symmetric(
+                horizontal: GlassMetrics.edgeInset,
               ),
-              ReadMoreText(
+              child: ReadMoreText(
                 bio,
-                colorClickableText: tappedAccent,
+                colorClickableText: theme.colorScheme.primary,
                 trimMode: TrimMode.Line,
-                trimCollapsedText: ' show more',
-                trimExpandedText: ' show less',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.normal,
-                  // color: Color(0xFF757575),
-                ),
+                trimLines: 4,
+                trimCollapsedText: ' more',
+                trimExpandedText: ' less',
+                style: theme.textTheme.bodyLarge?.copyWith(height: 1.4),
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );
