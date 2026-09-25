@@ -8,8 +8,9 @@ import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/ui/admin/create_opportunity_cubit.dart';
-import 'package:intheloopapp/ui/common/form_item.dart';
 import 'package:intheloopapp/ui/common/venue_search_bar.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/location_text_field.dart';
 import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/utils/default_image.dart';
@@ -17,24 +18,23 @@ import 'package:intheloopapp/utils/default_image.dart';
 class CreateOpportunityForm extends StatelessWidget {
   const CreateOpportunityForm({super.key});
 
-  // This function displays a CupertinoModalPopup with a reasonable fixed height
   void _showDialog(BuildContext context, Widget child) {
-    showCupertinoModalPopup<void>(
+    showGlassSheet<void>(
       context: context,
-      builder:
-          (BuildContext context) => Container(
-            height: 216,
-            padding: const EdgeInsets.only(top: 6),
-            // The Bottom margin is provided to align the popup above the system
-            // navigation bar.
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
+      builder: (BuildContext context) => SizedBox(
+        height: 216,
+        child: CupertinoTheme(
+          data: CupertinoTheme.of(context).copyWith(
+            textTheme: CupertinoTextThemeData(
+              dateTimePickerTextStyle: TextStyle(
+                fontSize: 20,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-            // Provide a background color for the popup.
-            color: CupertinoColors.systemBackground.resolveFrom(context),
-            // Use a SafeArea widget to avoid system overlaps.
-            child: SafeArea(top: false, child: child),
           ),
+          child: child,
+        ),
+      ),
     );
   }
 
@@ -51,284 +51,259 @@ class CreateOpportunityForm extends StatelessWidget {
     };
   }
 
-  Widget _buildDivider({required Color color}) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Expanded(child: Divider(color: color)),
-      const SizedBox(width: 16),
-      Text('or', style: TextStyle(color: color)),
-      const SizedBox(width: 16),
-      Expanded(child: Divider(color: color)),
-    ],
-  );
+  Widget _flier(BuildContext context, CreateOpportunityState state) {
+    final theme = Theme.of(context);
+    final cubit = context.read<CreateOpportunityCubit>();
+    return GlassPressable(
+      semanticsLabel: 'upload flier',
+      onPressed: cubit.handleImageFromGallery,
+      child: LiquidGlass(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(GlassRadius.card),
+        ),
+        padding: const EdgeInsets.all(5),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(GlassRadius.card - 5),
+          child: AspectRatio(
+            aspectRatio: 16 / 10,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image(
+                  image: _displayPickedImage(state.pickedPhoto, const None()),
+                  fit: BoxFit.cover,
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                  ),
+                ),
+                Center(
+                  child: LiquidGlass.capsule(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: TappedSpacing.lg,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          CupertinoIcons.camera_fill,
+                          size: 18,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: TappedSpacing.sm),
+                        Text(
+                          state.pickedPhoto.isSome()
+                              ? 'change flier'
+                              : 'upload flier',
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submit(
+    BuildContext context,
+    CreateOpportunityState state,
+  ) async {
+    if (state.loading) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    final value = await context.read<CreateOpportunityCubit>().submit().onError(
+      (error, stackTrace) {
+        messenger.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: TappedColors.error,
+            content: Text('error: $error'),
+          ),
+        );
+
+        return const None();
+      },
+    );
+
+    if (!context.mounted) return;
+    switch (value) {
+      case None():
+        context.pop();
+      case Some(:final value):
+        context
+          ..pop()
+          ..push(
+            OpportunityPage(
+              opportunityId: value.id,
+              opportunity: Option.of(value),
+            ),
+          );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<CreateOpportunityCubit, CreateOpportunityState>(
       builder: (context, state) {
         final cubit = context.read<CreateOpportunityCubit>();
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              const SizedBox(width: double.infinity),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  GestureDetector(
-                    onTap:
-                        () =>
-                            context
-                                .read<CreateOpportunityCubit>()
-                                .handleImageFromGallery(),
-                    child: Stack(
-                      children: [
-                        CircleAvatar(
-                          radius: 45,
-                          backgroundImage: _displayPickedImage(
-                            state.pickedPhoto,
-                            const None(),
-                          ),
-                        ),
-                        const CircleAvatar(
-                          radius: 45,
-                          backgroundColor: Colors.black54,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Icon(
-                                Icons.camera_alt,
-                                size: 50,
-                                color: Colors.white,
-                              ),
-                              Text(
-                                'Upload Flier',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: GlassMetrics.edgeInset,
               ),
-              TextFormField(
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.title),
-                  labelText: 'opportunity title',
+              child: _flier(context, state),
+            ),
+            const SizedBox(height: TappedSpacing.lg),
+            GlassFormGroup(
+              header: 'details',
+              children: [
+                GlassTextField(
+                  label: 'title',
                   hintText: 'open mic night',
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: cubit.updateTitle,
                 ),
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                onChanged: cubit.updateTitle,
-              ),
-              TextFormField(
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
+                GlassTextField(
                   hintText: 'add a description',
+                  textInputAction: TextInputAction.newline,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 5,
+                  maxLength: 256,
+                  onChanged: cubit.updateDescription,
                 ),
-                textInputAction: TextInputAction.newline,
-                keyboardType: TextInputType.multiline,
-                maxLines: 5,
-                maxLength: 256,
-                onChanged:
-                    (input) => context
-                        .read<CreateOpportunityCubit>()
-                        .updateDescription(input),
-              ),
-              switch (state.venue) {
-                None() => Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    VenueSearchBar(
-                      onSelected: (venue) {
-                        cubit.updateVenue(Option.of(venue));
-                      },
+              ],
+            ),
+            GlassSection(
+              header: 'where',
+              footer: state.venue.isNone()
+                  ? 'pick a venue on tapped, or drop a pin if they’re not '
+                        'on here yet'
+                  : null,
+              children: [
+                switch (state.venue) {
+                  None() => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(TappedSpacing.md),
+                        child: VenueSearchBar(
+                          onSelected: (venue) {
+                            cubit.updateVenue(Option.of(venue));
+                          },
+                        ),
+                      ),
+                      LocationTextField(
+                        initialPlace: state.placeData,
+                        onChanged: cubit.onLocationChanged,
+                      ),
+                    ],
+                  ),
+                  Some(:final value) => UserTile(
+                    user: state.venue,
+                    userId: value.id,
+                    trailing: GlassIconButton(
+                      icon: CupertinoIcons.xmark,
+                      semanticsLabel: 'remove venue',
+                      onPressed: () => cubit.updateVenue(const None()),
                     ),
-                    const SizedBox(height: 32),
-                    _buildDivider(
-                      color: theme.colorScheme.onSurface.withOpacity(0.5),
-                    ),
-                    const SizedBox(height: 32),
-                    LocationTextField(
-                      initialPlace: state.placeData,
-                      onChanged: cubit.onLocationChanged,
-                    ),
-                  ],
-                ),
-                Some(:final value) => UserTile(
-                  user: state.venue,
-                  userId: value.id,
-                  trailing: IconButton(
-                    icon: Icon(Icons.close, color: theme.colorScheme.onSurface),
-                    onPressed: () {
-                      cubit.updateVenue(const None());
+                  ),
+                },
+              ],
+            ),
+            GlassSection(
+              header: 'pay',
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(TappedSpacing.md),
+                  child: GlassSegmentedControl<bool>(
+                    segments: const {
+                      false: GlassSegment(
+                        label: 'unpaid',
+                        icon: CupertinoIcons.xmark,
+                      ),
+                      true: GlassSegment(
+                        label: 'paid',
+                        icon: CupertinoIcons.money_dollar,
+                      ),
                     },
+                    selected: state.isPaid,
+                    onChanged: (value) => cubit.updatePaid(isPaid: value),
                   ),
                 ),
-              },
-              CupertinoSlidingSegmentedControl(
-                groupValue: state.isPaid,
-                onValueChanged: (bool? value) {
-                  cubit.updatePaid(isPaid: value ?? false);
-                },
-                children: const {
-                  false: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Icon(CupertinoIcons.xmark),
-                        Text(
-                          'unpaid',
-                          style: TextStyle(
-                            // color: tappedAccent,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
+              ],
+            ),
+            GlassSection(
+              header: 'when',
+              footer:
+                  "if you don't know the exact start and end time, just "
+                  'get the date right',
+              children: [
+                GlassListTile(
+                  leadingIcon: CupertinoIcons.play_fill,
+                  leadingColor: TappedColors.success,
+                  title: 'start time',
+                  value: state.formattedStartTime,
+                  showChevron: false,
+                  onTap: () => _showDialog(
+                    context,
+                    CupertinoDatePicker(
+                      initialDateTime: state.startTime.value,
+                      minimumDate: DateTime.now().subtract(
+                        const Duration(hours: 1),
+                      ),
+                      use24hFormat: true,
+                      onDateTimeChanged: cubit.updateStartTime,
                     ),
                   ),
-                  true: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Icon(
-                          CupertinoIcons.money_dollar,
-                          // color: tappedAccent,
-                        ),
-                        Text(
-                          'paid',
-                          style: TextStyle(
-                            // color: tappedAccent,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                },
-              ),
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "if you don't know the exact start and end time then just get the date correct",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
                 ),
-              ),
-              FormItem(
-                children: [
-                  const Text('Start Time'),
-                  CupertinoButton(
-                    onPressed:
-                        () => _showDialog(
-                          context,
-                          CupertinoDatePicker(
-                            initialDateTime: state.startTime.value,
-                            minimumDate: DateTime.now().subtract(
-                              const Duration(hours: 1),
-                            ),
-                            use24hFormat: true,
-                            onDateTimeChanged: (DateTime newDateTime) {
-                              context
-                                  .read<CreateOpportunityCubit>()
-                                  .updateStartTime(newDateTime);
-                            },
-                          ),
-                        ),
-                    child: Text(
-                      state.formattedStartTime,
-                      style: const TextStyle(fontSize: 22),
+                GlassListTile(
+                  leadingIcon: CupertinoIcons.stop_fill,
+                  leadingColor: TappedColors.error,
+                  title: 'end time',
+                  value: state.formattedEndTime,
+                  showChevron: false,
+                  onTap: () => _showDialog(
+                    context,
+                    CupertinoDatePicker(
+                      initialDateTime: state.endTime.value,
+                      minimumDate: state.startTime.value,
+                      use24hFormat: true,
+                      onDateTimeChanged: cubit.updateEndTime,
                     ),
                   ),
-                ],
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                GlassMetrics.edgeInset,
+                TappedSpacing.md,
+                GlassMetrics.edgeInset,
+                GlassMetrics.bottomBarClearance,
               ),
-              FormItem(
-                children: <Widget>[
-                  const Text('End Time'),
-                  CupertinoButton(
-                    onPressed:
-                        () => _showDialog(
-                          context,
-                          CupertinoDatePicker(
-                            initialDateTime: state.endTime.value,
-                            minimumDate: state.startTime.value,
-                            use24hFormat: true,
-                            onDateTimeChanged: (DateTime newDateTime) {
-                              context
-                                  .read<CreateOpportunityCubit>()
-                                  .updateEndTime(newDateTime);
-                            },
-                          ),
-                        ),
-                    child: Text(
-                      state.formattedEndTime,
-                      style: const TextStyle(fontSize: 22),
-                    ),
-                  ),
-                ],
+              child: GlassButton.primary(
+                label: 'full send',
+                icon: CupertinoIcons.paperplane_fill,
+                expand: true,
+                isLoading: state.loading,
+                onPressed: () => _submit(context, state),
               ),
-              const SizedBox(height: 12),
-              CupertinoButton.filled(
-                onPressed: () {
-                  if (state.loading) {
-                    return;
-                  }
-
-                  context
-                      .read<CreateOpportunityCubit>()
-                      .submit()
-                      .onError((error, stackTrace) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            behavior: SnackBarBehavior.floating,
-                            backgroundColor: Colors.red,
-                            content: Text('error: $error'),
-                          ),
-                        );
-
-                        return const None();
-                      })
-                      .then((value) {
-                        return switch (value) {
-                          None() => context.pop(),
-                          Some(:final value) =>
-                            context
-                              ..pop()
-                              ..push(
-                                OpportunityPage(
-                                  opportunityId: value.id,
-                                  opportunity: Option.of(value),
-                                ),
-                              ),
-                        };
-                      });
-                },
-                borderRadius: BorderRadius.circular(15),
-                child:
-                    state.loading
-                        ? const CupertinoActivityIndicator()
-                        : const Text(
-                          'full send',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-              ),
-            ],
-          ),
+            ),
+          ],
         );
       },
     );

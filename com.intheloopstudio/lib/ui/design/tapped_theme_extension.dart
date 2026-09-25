@@ -23,36 +23,36 @@ class TappedThemeExtension extends ThemeExtension<TappedThemeExtension> {
   });
 
   factory TappedThemeExtension.light() => const TappedThemeExtension(
-        success: TappedColors.success,
-        onSuccess: Colors.white,
-        warning: TappedColors.warning,
-        onWarning: Colors.black,
-        info: TappedColors.accent,
-        onInfo: Colors.white,
-        mutedText: Color(0x99000000),
-        divider: Color(0x33000000),
-        elevatedSurface: Colors.white,
-        textOnImage: TappedColors.textOnImage,
-        textOnImageMuted: TappedColors.textOnImageMuted,
-        scrim: TappedColors.scrim,
-        scrimLight: TappedColors.scrimLight,
-      );
+    success: TappedColors.success,
+    onSuccess: Colors.white,
+    warning: TappedColors.warning,
+    onWarning: Colors.black,
+    info: TappedColors.accent,
+    onInfo: Colors.white,
+    mutedText: Color(0x99000000),
+    divider: Color(0x33000000),
+    elevatedSurface: Colors.white,
+    textOnImage: TappedColors.textOnImage,
+    textOnImageMuted: TappedColors.textOnImageMuted,
+    scrim: TappedColors.scrim,
+    scrimLight: TappedColors.scrimLight,
+  );
 
   factory TappedThemeExtension.dark() => const TappedThemeExtension(
-        success: TappedColors.success,
-        onSuccess: Colors.black,
-        warning: TappedColors.warning,
-        onWarning: Colors.black,
-        info: TappedColors.accent,
-        onInfo: Colors.white,
-        mutedText: Color(0x99FFFFFF),
-        divider: Color(0x33FFFFFF),
-        elevatedSurface: TappedColors.surfaceDark,
-        textOnImage: TappedColors.textOnImage,
-        textOnImageMuted: TappedColors.textOnImageMuted,
-        scrim: TappedColors.scrim,
-        scrimLight: TappedColors.scrimLight,
-      );
+    success: TappedColors.success,
+    onSuccess: Colors.black,
+    warning: TappedColors.warning,
+    onWarning: Colors.black,
+    info: TappedColors.accent,
+    onInfo: Colors.white,
+    mutedText: Color(0x99FFFFFF),
+    divider: Color(0x33FFFFFF),
+    elevatedSurface: TappedColors.surfaceDark,
+    textOnImage: TappedColors.textOnImage,
+    textOnImageMuted: TappedColors.textOnImageMuted,
+    scrim: TappedColors.scrim,
+    scrimLight: TappedColors.scrimLight,
+  );
 
   final Color success;
   final Color onSuccess;
@@ -125,8 +125,11 @@ class TappedThemeExtension extends ThemeExtension<TappedThemeExtension> {
       divider: Color.lerp(divider, other.divider, t)!,
       elevatedSurface: Color.lerp(elevatedSurface, other.elevatedSurface, t)!,
       textOnImage: Color.lerp(textOnImage, other.textOnImage, t)!,
-      textOnImageMuted:
-          Color.lerp(textOnImageMuted, other.textOnImageMuted, t)!,
+      textOnImageMuted: Color.lerp(
+        textOnImageMuted,
+        other.textOnImageMuted,
+        t,
+      )!,
       scrim: Color.lerp(scrim, other.scrim, t)!,
       scrimLight: Color.lerp(scrimLight, other.scrimLight, t)!,
     );

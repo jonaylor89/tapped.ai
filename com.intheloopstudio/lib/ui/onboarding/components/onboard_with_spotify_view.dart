@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:formz/formz.dart';
 import 'package:fpdart/fpdart.dart' hide State;
 import 'package:intheloopapp/domains/models/spotify_artist.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/spotify_text_field.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -34,287 +36,288 @@ class _OnboardWithSpotifyViewState extends State<OnboardWithSpotifyView> {
     super.initState();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  Future<void> _fetch() async {
     final spotify = context.spotify;
-    return switch (_status) {
-      FormzSubmissionStatus.failure => const Center(child: Text('oops')),
-      FormzSubmissionStatus.canceled => const Center(child: Text('oops')),
-      FormzSubmissionStatus.success => Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          body: switch (_spotifyArtist) {
-            None() => const Center(
-                child: Text('something went wrong'),
-              ),
-            Some(:final value) => Padding(
-                padding: const EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  top: 46,
-                  bottom: 52,
-                ),
-                child: Column(
-                  children: [
-                    const SizedBox(width: double.infinity),
-                    if (value.images.isNotEmpty)
-                      Container(
-                        height: 200,
-                        width: 200,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(100),
-                          image: DecorationImage(
-                            image: CachedNetworkImageProvider(
-                              value.images.first.url,
-                            ),
-                          ),
-                        ),
-                      ),
-                    Text(
-                      value.name.getOrElse(() => '<artist name unknown>'),
-                      style: const TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                    Expanded(
-                      child: Wrap(
-                        spacing: 6,
-                        children: value.genres.map((genre) {
-                          return Chip(label: Text(genre));
-                        }).toList(),
-                      ),
-                    ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoButton.filled(
-                            onPressed: () {
-                              widget.onChanged?.call(value);
-                              Navigator.pop(context);
-                            },
-                            borderRadius: BorderRadius.circular(15),
-                            child: const Text(
-                              'confirm',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    CupertinoButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text(
-                        'cancel',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          },
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      if (_spotifyUrl.isEmpty) {
+        throw Exception("spotify url can't be empty");
+      }
+
+      final uri = Uri.tryParse(_spotifyUrl);
+      if (uri == null) {
+        throw Exception("url isn't formatted correctly");
+      }
+
+      final spotifyId = uri.pathSegments.lastOrNull;
+      if (spotifyId == null) {
+        throw Exception("url isn't formatted correctly");
+      }
+
+      setState(() {
+        _status = FormzSubmissionStatus.inProgress;
+      });
+
+      final res = await spotify.getArtistById(spotifyId);
+
+      switch (res) {
+        case None():
+          setState(() {
+            _status = FormzSubmissionStatus.failure;
+          });
+        case Some(:final value):
+          setState(() {
+            _spotifyArtist = Option.of(value);
+            _status = FormzSubmissionStatus.success;
+          });
+      }
+    } catch (e, s) {
+      logger.e(
+        'error fetching spotify',
+        error: e,
+        stackTrace: s,
+      );
+      setState(() {
+        _status = FormzSubmissionStatus.failure;
+      });
+      messenger.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text(e.toString()),
         ),
-      FormzSubmissionStatus.inProgress => Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          body: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 20,
+      );
+    }
+  }
+
+  Widget _shell({required List<Widget> children, Widget? bottom}) {
+    return GlassAmbientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(
+              GlassMetrics.edgeInset,
+              TappedSpacing.md,
+              GlassMetrics.edgeInset,
+              TappedSpacing.lg,
             ),
-            child: Stack(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(
-                  child: Container(
-                    height: MediaQuery.of(context).size.height * 0.9,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      image: const DecorationImage(
-                        image: AssetImage(
-                          'assets/edm_loop.gif',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                const Center(
-                  child: ColoredBox(
-                    color: Colors.black,
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 4,
-                      ),
-                      child: Text(
-                        'fetching your info from spotify...',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 24,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                const Center(child: GlassGrabber()),
+                const SizedBox(height: TappedSpacing.xl),
+                ...children,
+                if (bottom != null) ...[
+                  const Spacer(),
+                  bottom,
+                ],
               ],
             ),
           ),
         ),
-      FormzSubmissionStatus.initial => SafeArea(
-          child: Scaffold(
-            backgroundColor: theme.colorScheme.surface,
-            appBar: AppBar(
-              title: const Text('onboard with spotify'),
-            ),
-            body: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
+      ),
+    );
+  }
+
+  Widget _cancel() {
+    return GlassButton.plain(
+      label: 'cancel',
+      expand: true,
+      onPressed: () => Navigator.pop(context),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    return switch (_status) {
+      FormzSubmissionStatus.failure || FormzSubmissionStatus.canceled => _shell(
+        children: [
+          GlassEmptyState(
+            icon: CupertinoIcons.exclamationmark_triangle,
+            title: "couldn't reach spotify",
+            message: 'double-check the artist url and try again',
+            actionLabel: 'try again',
+            onAction: () => setState(() {
+              _status = FormzSubmissionStatus.initial;
+            }),
+          ),
+        ],
+        bottom: _cancel(),
+      ),
+      FormzSubmissionStatus.inProgress => _shell(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(GlassRadius.sheet),
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  const Spacer(),
-                  SpotifyTextField(
-                    initialValue: widget.initialValue,
-                    onChanged: (value) => setState(() {
-                      _spotifyUrl = value;
-                    }),
+                  const Image(
+                    image: AssetImage('assets/edm_loop.gif'),
+                    fit: BoxFit.cover,
                   ),
-                  GestureDetector(
-                    onTap: () => launchUrl(
-                      Uri.parse(
-                        'https://tappedapp.notion.site/how-do-i-get-my-spotify-url-2d1250547a044071becbe43763a77583',
-                      ),
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: 5,
+                  Center(
+                    child: LiquidGlass(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: TappedSpacing.xl,
+                        vertical: TappedSpacing.lg,
                       ),
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            'how do I find my spotify artist url?',
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 12,
-                            ),
+                          const CupertinoActivityIndicator(
+                            color: Colors.white,
                           ),
-                          SizedBox(width: 5),
-                          Icon(
-                            Icons.open_in_new,
-                            color: Colors.blue,
-                            size: 12,
+                          const SizedBox(width: TappedSpacing.md),
+                          Text(
+                            'fetching your info from spotify…',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CupertinoButton.filled(
-                          onPressed: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            try {
-                              if (_spotifyUrl.isEmpty) {
-                                throw Exception(
-                                  "spotify url can't be empty",
-                                );
-                              }
-
-                              final uri = Uri.tryParse(_spotifyUrl);
-                              if (uri == null) {
-                                throw Exception(
-                                  "url isn't formatted correctly",
-                                );
-                              }
-
-                              final spotifyId =
-                                  Uri.parse(_spotifyUrl).pathSegments.lastOrNull;
-                              if (spotifyId == null) {
-                                throw Exception(
-                                  "url isn't formatted correctly",
-                                );
-                              }
-
-                              setState(() {
-                                _status = FormzSubmissionStatus.inProgress;
-                              });
-
-                              final res =
-                                  await spotify.getArtistById(spotifyId);
-
-                              return switch (res) {
-                                None() => setState(() {
-                                    _status = FormzSubmissionStatus.failure;
-                                  }),
-                                Some(:final value) => (() {
-                                    setState(() {
-                                      _spotifyArtist = Option.of(value);
-                                      _status = FormzSubmissionStatus.success;
-                                    });
-                                    // widget.onChanged?.call(value);
-                                  })(),
-                              };
-                            } catch (e, s) {
-                              logger.e(
-                                'error fetching spotify',
-                                error: e,
-                                stackTrace: s,
-                              );
-                              setState(() {
-                                _status = FormzSubmissionStatus.failure;
-                              });
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    e.toString(),
-                                  ),
-                                ),
-                              );
-                            }
-                          },
-                          borderRadius: BorderRadius.circular(15),
-                          child: const Text(
-                            'done',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CupertinoButton(
-                          onPressed: () {
-                            Navigator.pop(context);
-                          },
-                          borderRadius: BorderRadius.circular(15),
-                          child: const Text(
-                            'cancel',
-                            style: TextStyle(
-                              color: Colors.red,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
           ),
+        ],
+      ),
+      FormzSubmissionStatus.success => switch (_spotifyArtist) {
+        None() => _shell(
+          children: const [
+            GlassEmptyState(
+              icon: CupertinoIcons.exclamationmark_triangle,
+              title: 'something went wrong',
+            ),
+          ],
+          bottom: _cancel(),
         ),
+        Some(:final value) => _shell(
+          children: [
+            const SizedBox(height: TappedSpacing.xl),
+            Center(
+              child: LiquidGlass.circle(
+                width: 200,
+                height: 200,
+                padding: const EdgeInsets.all(6),
+                child: ClipOval(
+                  child: value.images.isNotEmpty
+                      ? Image(
+                          image: CachedNetworkImageProvider(
+                            value.images.first.url,
+                          ),
+                          fit: BoxFit.cover,
+                        )
+                      : Icon(
+                          CupertinoIcons.music_mic,
+                          size: 64,
+                          color: muted,
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: TappedSpacing.xl),
+            Text(
+              value.name.getOrElse(() => 'artist name unknown'),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: TappedSpacing.sm),
+            Text(
+              'is this you?',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyLarge?.copyWith(color: muted),
+            ),
+            if (value.genres.isNotEmpty) ...[
+              const SizedBox(height: TappedSpacing.lg),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: TappedSpacing.sm,
+                runSpacing: TappedSpacing.sm,
+                children: [
+                  for (final genre in value.genres) GlassPill(label: genre),
+                ],
+              ),
+            ],
+          ],
+          bottom: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              GlassButton.primary(
+                label: "yes, that's me",
+                icon: CupertinoIcons.checkmark,
+                expand: true,
+                onPressed: () {
+                  widget.onChanged?.call(value);
+                  Navigator.pop(context);
+                },
+              ),
+              const SizedBox(height: TappedSpacing.sm),
+              _cancel(),
+            ],
+          ),
+        ),
+      },
+      FormzSubmissionStatus.initial => _shell(
+        children: [
+          Text(
+            'import from Spotify',
+            style: theme.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.6,
+            ),
+          ),
+          const SizedBox(height: TappedSpacing.xs),
+          Text(
+            "paste your artist page url and we'll pull your name, photo "
+            'and genres',
+            style: theme.textTheme.bodyMedium?.copyWith(color: muted),
+          ),
+          const SizedBox(height: TappedSpacing.xl),
+          SpotifyTextField(
+            initialValue: widget.initialValue,
+            onChanged: (value) => setState(() {
+              _spotifyUrl = value;
+            }),
+          ),
+          const SizedBox(height: TappedSpacing.sm),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: GlassButton.plain(
+              label: 'how do I find my spotify artist url?',
+              icon: CupertinoIcons.question_circle,
+              compact: true,
+              onPressed: () => launchUrl(
+                Uri.parse(
+                  'https://tappedapp.notion.site/how-do-i-get-my-spotify-url-2d1250547a044071becbe43763a77583',
+                ),
+              ),
+            ),
+          ),
+        ],
+        bottom: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GlassButton.primary(
+              label: 'look me up',
+              icon: CupertinoIcons.search,
+              expand: true,
+              onPressed: _fetch,
+            ),
+            const SizedBox(height: TappedSpacing.sm),
+            _cancel(),
+          ],
+        ),
+      ),
     };
   }
 }

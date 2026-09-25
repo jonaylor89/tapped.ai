@@ -13,6 +13,7 @@ class GenreFilter extends StatelessWidget {
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, state) {
         return GenreSelection(
+          standalone: false,
           initialValue: state.genres,
           onConfirm: (values) {
             context.search.add(

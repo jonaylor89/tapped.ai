@@ -7,6 +7,8 @@ import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/domains/opportunity_bloc/opportunity_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/opportunity_feed/components/opportunity_view.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -16,7 +18,6 @@ import 'package:intheloopapp/utils/premium_builder.dart';
 import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:quiver/iterables.dart';
-import 'package:skeletons/skeletons.dart';
 
 class OpportunitiesResultsView extends StatefulWidget {
   const OpportunitiesResultsView({
@@ -49,257 +50,253 @@ class _OpportunitiesResultsViewState extends State<OpportunitiesResultsView> {
     }).toList();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+  void _setAll(bool selected) {
+    setState(() {
+      selectableResults = selectableResults
+          .map((r) => SelectableResult(op: r.op, selected: selected))
+          .toList();
+    });
+  }
+
+  void _toggle(Opportunity op, bool selected) {
+    setState(() {
+      selectableResults = selectableResults
+          .map(
+            (r) => r.op.id == op.id
+                ? SelectableResult(op: r.op, selected: selected)
+                : r,
+          )
+          .toList();
+    });
+  }
+
+  Future<void> _apply(
+    BuildContext context, {
+    required bool hasEnoughQuota,
+    required String currentUserId,
+  }) async {
     final nav = context.nav;
     final opBloc = context.opportunities;
     final database = context.database;
+
+    if (!hasEnoughQuota) {
+      context
+        ..pop()
+        ..push(PaywallPage());
+      return;
+    }
+
+    final selected = selectableResults.where((r) => r.selected).toList();
+    final isAppliedBatch = await Future.wait(
+      selected.map(
+        (result) => database.isUserAppliedForOpportunity(
+          opportunityId: result.op.id,
+          userId: currentUserId,
+        ),
+      ),
+    );
+
+    final resultsToApply = zip([selected, isAppliedBatch])
+        .where((zipped) {
+          final result = zipped[0] as SelectableResult;
+          final isApplied = zipped[1] as bool;
+          return !isApplied && result.selected;
+        })
+        .map((zipped) => (zipped[0] as SelectableResult).op)
+        .toList();
+
+    await EasyLoading.show(
+      status: 'applying to opportunities...',
+      maskType: EasyLoadingMaskType.black,
+    );
+    try {
+      opBloc.add(
+        BatchApplyForOpportunities(
+          opportunities: resultsToApply,
+          userComment: '',
+        ),
+      );
+      nav.pop();
+    } catch (e, s) {
+      await EasyLoading.showError(e.toString());
+      logger.error(
+        'error applying to opportunities',
+        error: e,
+        stackTrace: s,
+      );
+    } finally {
+      await EasyLoading.dismiss();
+    }
+  }
+
+  Widget _row(
+    BuildContext context, {
+    required SelectableResult result,
+    required String currentUserId,
+  }) {
+    final theme = Theme.of(context);
+    final database = context.database;
+    final op = result.op;
+    final startTime = DateFormat(
+      DateFormat.YEAR_ABBR_MONTH_WEEKDAY_DAY,
+    ).format(op.startTime);
+
+    return FutureBuilder(
+      future: database.isUserAppliedForOpportunity(
+        opportunityId: op.id,
+        userId: currentUserId,
+      ),
+      builder: (context, snapshot) {
+        final isApplied = snapshot.data;
+        return GlassListTile(
+          leading: FutureBuilder(
+            future: getOpImage(context, op),
+            builder: (context, snapshot) {
+              final provider = snapshot.data;
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: SizedBox(
+                  width: 52,
+                  height: 52,
+                  child: provider == null
+                      ? const LiquidGlass(
+                          variant: GlassVariant.clear,
+                          shadow: false,
+                          child: SizedBox.expand(),
+                        )
+                      : Image(image: provider, fit: BoxFit.cover),
+                ),
+              );
+            },
+          ),
+          title: op.title,
+          subtitle: startTime,
+          showChevron: false,
+          onTap: () {
+            showCupertinoModalBottomSheet<void>(
+              context: context,
+              builder: (context) => OpportunityView(
+                opportunityId: op.id,
+                opportunity: Option.of(op),
+                onDislike: context.pop,
+              ),
+            );
+          },
+          trailing: switch (isApplied) {
+            null => const CupertinoActivityIndicator(),
+            true => const GlassPill(
+              label: 'applied',
+              tint: TappedColors.success,
+              foreground: TappedColors.success,
+            ),
+            false => GlassPressable(
+              semanticsLabel:
+                  '${result.selected ? 'deselect' : 'select'} ${op.title}',
+              onPressed: () => _toggle(op, !result.selected),
+              child: Padding(
+                padding: const EdgeInsets.all(TappedSpacing.xs),
+                child: Icon(
+                  result.selected
+                      ? CupertinoIcons.checkmark_circle_fill
+                      : CupertinoIcons.circle,
+                  color: result.selected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+                ),
+              ),
+            ),
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         return PremiumBuilder(
           builder: (context, isPremium) {
             return BlocBuilder<OpportunityBloc, OpportunityState>(
               builder: (context, state) {
-                final hasEnoughQuota = isPremium ||
-                    state.opQuota >=
-                        selectableResults
-                            .where(
-                              (result) => result.selected,
-                        )
-                            .length;
-                return Scaffold(
-                  backgroundColor: theme.colorScheme.surface,
-                  appBar: AppBar(
-                    leading: const SizedBox.shrink(),
-                    actions: const [],
-                    bottom: PreferredSize(
-                      preferredSize: const Size.fromHeight(50),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
+                final selectedCount = selectableResults
+                    .where((r) => r.selected)
+                    .length;
+                final hasEnoughQuota =
+                    isPremium || state.opQuota >= selectedCount;
+                return GlassPage(
+                  title: 'opportunities',
+                  subtitle: 'found ${selectableResults.length}',
+                  showBack: false,
+                  actions: [
+                    GlassButton.plain(
+                      label: allSelected ? 'deselect all' : 'select all',
+                      compact: true,
+                      onPressed: selectableResults.isEmpty
+                          ? null
+                          : () => _setAll(!allSelected),
+                    ),
+                  ],
+                  bottomBar: GlassBottomBar(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            selectedCount == 0
+                                ? 'select gigs to apply in one go'
+                                : '$selectedCount selected'
+                                      '${isPremium ? '' : ' · ${state.opQuota} left'}',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                          ),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        GlassButton.primary(
+                          label: hasEnoughQuota ? 'apply' : 'upgrade',
+                          icon: hasEnoughQuota
+                              ? CupertinoIcons.paperplane_fill
+                              : CupertinoIcons.lock_fill,
+                          onPressed: anySelected
+                              ? () => _apply(
+                                  context,
+                                  hasEnoughQuota: hasEnoughQuota,
+                                  currentUserId: currentUser.id,
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  slivers: [
+                    if (selectableResults.isEmpty)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: GlassEmptyState(
+                          icon: CupertinoIcons.sparkles,
+                          title: 'no opportunities here',
+                          message: 'try another area on the map',
+                        ),
+                      )
+                    else
+                      SliverToBoxAdapter(
+                        child: GlassSection(
                           children: [
-                            Row(
-                              children: [
-                                Checkbox(
-                                  value: allSelected,
-                                  onChanged: (selected) {
-                                    setState(() {
-                                      selectableResults =
-                                          selectableResults.map((r) {
-                                            return SelectableResult(
-                                              op: r.op,
-                                              selected: selected ?? false,
-                                            );
-                                          }).toList();
-                                    });
-                                  },
-                                ),
-                                const SizedBox(width: 4),
-                                const Text('select all'),
-                              ],
-                            ),
-                            Text(
-                              'found ${selectableResults
-                                  .length} gig opportunities',
-                              style: theme.textTheme.titleMedium,
-                            ),
+                            for (final result in selectableResults)
+                              _row(
+                                context,
+                                result: result,
+                                currentUserId: currentUser.id,
+                              ),
                           ],
                         ),
                       ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(height: GlassMetrics.bottomBarClearance),
                     ),
-                  ),
-                  floatingActionButton: anySelected
-                      ? FloatingActionButton.extended(
-                    onPressed: () async {
-                      if (!hasEnoughQuota) {
-                        context
-                          ..pop()
-                          ..push(
-                            PaywallPage(),
-                          );
-                        return;
-                      }
-
-                      final isAppliedBatch = await Future.wait(
-                        selectableResults
-                            .where(
-                              (result) => result.selected,
-                        )
-                            .map(
-                              (result) =>
-                              database.isUserAppliedForOpportunity(
-                                opportunityId: result.op.id,
-                                userId: currentUser.id,
-                              ),
-                        )
-                            .toList(),
-                      );
-
-                      final zippedAppliedResults = zip([
-                        selectableResults
-                            .where(
-                              (result) => result.selected,
-                        )
-                            .toList(),
-                        isAppliedBatch,
-                      ]);
-
-                      final resultsToApply = zippedAppliedResults
-                          .where(
-                            (zipped) {
-                          final result = zipped[0] as SelectableResult;
-                          final isApplied = zipped[1] as bool;
-
-                          return !isApplied && result.selected;
-                        },
-                      )
-                          .map(
-                            (zipped) => (zipped[0] as SelectableResult).op,)
-                          .toList();
-
-                      await EasyLoading.show(
-                        status: 'applying to opportunities...',
-                        maskType: EasyLoadingMaskType.black,
-                      );
-                      try {
-                        opBloc.add(
-                          BatchApplyForOpportunities(
-                            opportunities: resultsToApply,
-                            userComment: '',
-                          ),
-                        );
-                        nav.pop();
-                      } catch (e, s) {
-                        await EasyLoading.showError(e.toString());
-                        logger.error(
-                          'error applying to opportunities',
-                          error: e,
-                          stackTrace: s,
-                        );
-                      } finally {
-                        await EasyLoading.dismiss();
-                      }
-                    },
-                    backgroundColor: hasEnoughQuota
-                        ? theme.colorScheme.primary
-                        : Colors.grey.withOpacity(0.8),
-                    label: hasEnoughQuota
-                        ? const Text('apply')
-                        : const Text('upgrade'),
-                    icon: hasEnoughQuota
-                        ? const Icon(Icons.check)
-                        : const Icon(Icons.lock),
-                  )
-                      : null,
-                  body: ListView(
-                    children: selectableResults.map(
-                          (result) {
-                        final op = result.op;
-                        final startTime = DateFormat(
-                          DateFormat.YEAR_ABBR_MONTH_WEEKDAY_DAY,
-                        ).format(op.startTime);
-                        return FutureBuilder(
-                          future: getOpImage(context, op),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
-                              return SkeletonListTile();
-                            }
-
-                            final provider = snapshot.data!;
-                            return FutureBuilder(
-                              future: database.isUserAppliedForOpportunity(
-                                opportunityId: op.id,
-                                userId: currentUser.id,
-                              ),
-                              builder: (context, snapshot) {
-                                final isApplied = snapshot.data;
-                                return ListTile(
-                                  onTap: () {
-                                    showCupertinoModalBottomSheet<void>(
-                                      context: context,
-                                      builder: (context) {
-                                        return OpportunityView(
-                                          opportunityId: op.id,
-                                          opportunity: Option.of(op),
-                                          onDislike: () {
-                                            context.pop();
-                                          },
-                                        );
-                                      },
-                                    );
-                                  },
-                                  leading: Container(
-                                    width: 50,
-                                    height: 50,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      image: DecorationImage(
-                                        image: provider,
-                                        fit: BoxFit.contain,
-                                      ),
-                                    ),
-                                  ),
-                                  title: Text(
-                                    op.title,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.titleMedium,
-                                  ),
-                                  subtitle: Text(
-                                    startTime,
-                                  ),
-                                  trailing: switch (isApplied) {
-                                    null => const CupertinoActivityIndicator(),
-                                    false =>
-                                        Checkbox(
-                                          value: result.selected,
-                                          onChanged: (selected) {
-                                            setState(() {
-                                              selectableResults =
-                                                  selectableResults.map((r) {
-                                                    return r.op.id == op.id
-                                                        ? SelectableResult(
-                                                      op: r.op,
-                                                      selected:
-                                                      selected ?? false,
-                                                    )
-                                                        : r;
-                                                  }).toList();
-                                            });
-                                          },
-                                        ),
-                                    true =>
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: Colors.green,
-                                            borderRadius:
-                                            BorderRadius.circular(4),
-                                          ),
-                                          child: const Text(
-                                            'applied',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
-                    ).toList(),
-                  ),
+                  ],
                 );
               },
             );

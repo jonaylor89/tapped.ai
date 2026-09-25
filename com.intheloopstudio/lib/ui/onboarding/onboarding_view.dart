@@ -28,18 +28,18 @@ class OnboardingView extends StatelessWidget {
         return switch (user) {
           None() => const ErrorView(),
           Some(:final value) => BlocProvider(
-              create: (context) => OnboardingFlowCubit(
-                currentAuthUser: value,
-                onboardingBloc: context.onboarding,
-                navigationBloc: context.nav,
-                authenticationBloc: context.authentication,
-                storageRepository: context.storage,
-                databaseRepository: context.database,
-                spotify: context.spotify,
-              ),
-              // ..initFollowRecommendations(),
-              child: const OnboardingForm(),
+            create: (context) => OnboardingFlowCubit(
+              currentAuthUser: value,
+              onboardingBloc: context.onboarding,
+              navigationBloc: context.nav,
+              authenticationBloc: context.authentication,
+              storageRepository: context.storage,
+              databaseRepository: context.database,
+              spotify: context.spotify,
             ),
+            // ..initFollowRecommendations(),
+            child: const OnboardingForm(),
+          ),
         };
       },
     );

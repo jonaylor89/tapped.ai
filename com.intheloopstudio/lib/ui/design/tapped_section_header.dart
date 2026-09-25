@@ -16,7 +16,8 @@ class TappedSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: padding ??
+      padding:
+          padding ??
           const EdgeInsets.symmetric(
             vertical: TappedSpacing.lg,
             horizontal: TappedSpacing.sm,

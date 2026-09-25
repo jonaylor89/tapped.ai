@@ -20,7 +20,8 @@ class LocationCubit extends Cubit<LocationState> {
   final void Function(
     Option<PlaceData> placeData,
     String placeId,
-  ) onSelected;
+  )
+  onSelected;
 
   final NavigationBloc navigationBloc;
 

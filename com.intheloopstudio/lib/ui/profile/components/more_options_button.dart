@@ -6,6 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/admin_builder.dart';
@@ -39,44 +40,44 @@ class MoreOptionsButton extends StatelessWidget {
               if (isAdmin && user.id != currentUser.id)
                 switch (user.unclaimed) {
                   true => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: const Text('unclaimed account'),
-                    ),
+                    onPressed: () {},
+                    child: const Text('unclaimed account'),
+                  ),
                   false => CupertinoActionSheetAction(
-                      onPressed: () {
-                        // Copy to clipboard
-                        Clipboard.setData(
-                          ClipboardData(
-                            text: user.latestAppVersion.getOrElse(() => ''),
-                          ),
-                        ).then((value) {
-                          Navigator.pop(context);
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: tappedAccent,
-                              content: Text(
-                                'latest app version copied to clipboard',
-                              ),
+                    onPressed: () {
+                      // Copy to clipboard
+                      Clipboard.setData(
+                        ClipboardData(
+                          text: user.latestAppVersion.getOrElse(() => ''),
+                        ),
+                      ).then((value) {
+                        Navigator.pop(context);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: tappedAccent,
+                            content: Text(
+                              'latest app version copied to clipboard',
                             ),
-                          );
-                        });
-                      },
-                      child: Text(
-                        'latest app version ${user.latestAppVersion.getOrElse(() => 'unknown')}',
-                      ),
+                          ),
+                        );
+                      });
+                    },
+                    child: Text(
+                      'latest app version ${user.latestAppVersion.getOrElse(() => 'unknown')}',
                     ),
+                  ),
                 },
               if (isAdmin)
                 switch (user.timestamp) {
                   None() => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: const Text('joined unknown'),
-                    ),
+                    onPressed: () {},
+                    child: const Text('joined unknown'),
+                  ),
                   Some(:final value) => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: Text('joined ${dateFormat.format(value)}'),
-                    ),
+                    onPressed: () {},
+                    child: Text('joined ${dateFormat.format(value)}'),
+                  ),
                 },
               if (isAdmin)
                 CupertinoActionSheetAction(
@@ -110,21 +111,22 @@ class MoreOptionsButton extends StatelessWidget {
 
                   Share.share('https://app.tapped.ai/u/${user.username}')
                       .then((results) {
-                    logger.info('Shared profile');
-                  }).onError((error, stackTrace) {
-                    logger.error(
-                      'Error sharing profile',
-                      error: error,
-                      stackTrace: stackTrace,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: Colors.red,
-                        content: Text('Error sharing profile'),
-                      ),
-                    );
-                  });
+                        logger.info('Shared profile');
+                      })
+                      .onError((error, stackTrace) {
+                        logger.error(
+                          'Error sharing profile',
+                          error: error,
+                          stackTrace: stackTrace,
+                        );
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.red,
+                            content: Text('Error sharing profile'),
+                          ),
+                        );
+                      });
                 },
                 child: const Text('share profile'),
               ),
@@ -134,18 +136,18 @@ class MoreOptionsButton extends StatelessWidget {
                     nav.pop();
                     database
                         .reportUser(
-                      reported: user,
-                      reporter: currentUser,
-                    )
+                          reported: user,
+                          reporter: currentUser,
+                        )
                         .then((value) {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: tappedAccent,
-                          content: Text('User Reported'),
-                        ),
-                      );
-                    });
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: tappedAccent,
+                              content: Text('User Reported'),
+                            ),
+                          );
+                        });
                   },
                   child: const Text('report user'),
                 ),
@@ -194,21 +196,19 @@ class MoreOptionsButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
         return AdminBuilder(
           builder: (context, isAdmin) {
-            return IconButton(
+            return GlassIconButton(
+              icon: CupertinoIcons.ellipsis,
+              variant: GlassVariant.clear,
+              semanticsLabel: 'more options',
               onPressed: () => _showActionSheet(
                 context,
                 user: state.visitedUser,
                 currentUser: state.currentUser,
                 isAdmin: isAdmin,
-              ),
-              icon: Icon(
-                CupertinoIcons.ellipsis,
-                color: theme.colorScheme.onSurface,
               ),
             );
           },

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
-import 'package:intheloopapp/ui/loading/logo_wave.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/opportunity_feed/components/apply_animation_view.dart';
 import 'package:intheloopapp/ui/opportunity_feed/components/opportunity_view.dart';
 import 'package:intheloopapp/ui/opportunity_feed/cubit/opportunity_feed_cubit.dart';
@@ -10,87 +11,67 @@ class OpportunityFeed extends StatelessWidget {
   const OpportunityFeed({super.key});
 
   Widget _buildEmptyFeed(BuildContext context) {
+    final theme = Theme.of(context);
     return SafeArea(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 12,
-          ),
-          child: Container(
-            height: double.infinity,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(15),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 10,
-                  spreadRadius: 5,
-                ),
-              ],
-              image: const DecorationImage(
+      child: Padding(
+        padding: const EdgeInsets.all(GlassMetrics.edgeInset),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(GlassRadius.sheet),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const Image(
                 image: AssetImage('assets/classic_edm.gif'),
                 fit: BoxFit.cover,
               ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 12,
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.1),
+                      Colors.black.withValues(alpha: 0.7),
+                    ],
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      vertical: 12,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: Colors.black,
-                    ),
-                    child: const Column(
+                ),
+              ),
+              Positioned(
+                left: GlassMetrics.edgeInset,
+                right: GlassMetrics.edgeInset,
+                bottom: GlassMetrics.edgeInset,
+                child: LiquidGlass(
+                  variant: GlassVariant.clear,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(GlassRadius.card),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(TappedSpacing.xl),
+                    child: Column(
                       children: [
                         Text(
-                          "YOU'RE OUT",
+                          "you're all caught up",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 32,
+                          style: theme.textTheme.headlineSmall?.copyWith(
                             fontFamily: 'Rubik One',
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                           ),
                         ),
+                        const SizedBox(height: TappedSpacing.sm),
                         Text(
-                          "you've gone thru all the gig opportunities in your area!",
+                          "you've gone through every gig opportunity in your area. check back soon.",
                           textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white.withValues(alpha: 0.8),
                           ),
                         ),
-                        // const SizedBox(height: 20),
-                        // CupertinoButton(
-                        //   color: Theme.of(context).colorScheme.primary,
-                        //   borderRadius: BorderRadius.circular(15),
-                        //   child: const Text(
-                        //     'want more?',
-                        //     style: TextStyle(
-                        //       color: Colors.white,
-                        //       fontSize: 18,
-                        //       fontWeight: FontWeight.bold,
-                        //     ),
-                        //   ),
-                        //   onPressed: () => context.push(
-                        //     PaywallPage(),
-                        //   ),
-                        // ),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -102,12 +83,7 @@ class OpportunityFeed extends StatelessWidget {
     return BlocBuilder<OpportunityFeedCubit, OpportunityFeedState>(
       builder: (context, state) {
         if (state.loading) {
-          return const Center(
-            child: LogoWave(
-              height: 100,
-              width: 100,
-            ),
-          );
+          return const GlassLoading();
         }
 
         if (state.showApplyAnimation) {

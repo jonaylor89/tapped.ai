@@ -1,6 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
+import 'package:intheloopapp/ui/login/components/auth_scaffold.dart';
 import 'package:intheloopapp/ui/login/login_cubit.dart';
 
 class ConfirmSignUpButton extends StatelessWidget {
@@ -10,30 +11,18 @@ class ConfirmSignUpButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<LoginCubit, LoginState>(
       builder: (context, state) {
-        final scaffoldMessenger = ScaffoldMessenger.of(context);
-        return CupertinoButton.filled(
-          borderRadius: BorderRadius.circular(15),
+        return GlassButton.primary(
+          label: 'create account',
+          expand: true,
           onPressed: () {
-            context
-                .read<LoginCubit>()
-                .signUpWithCredentials()
-                .onError((error, stackTrace) {
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(
-                  behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.red,
-                  content: Text('something went wrong :/'),
-                ),
-              );
+            context.read<LoginCubit>().signUpWithCredentials().onError((
+              error,
+              stackTrace,
+            ) {
+              if (!context.mounted) return;
+              showAuthError(context, 'something went wrong :/');
             });
           },
-          child: const Text(
-            'sign up',
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
         );
       },
     );

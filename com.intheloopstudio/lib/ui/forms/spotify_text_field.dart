@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class SpotifyTextField extends StatelessWidget {
   const SpotifyTextField({
@@ -13,16 +14,14 @@ class SpotifyTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return GlassTextField(
       initialValue: initialValue,
-      decoration: const InputDecoration(
-        prefixIcon: Icon(FontAwesomeIcons.spotify),
-        labelText: 'spotify url',
-        hintText: 'https://open.spotify.com/artist/4tZwfgrHOc3mvqYlEYSvVi',
-      ),
-      onChanged: (input) {
-        onChanged?.call(input);
-      },
+      label: 'spotify artist url',
+      prefixIcon: FontAwesomeIcons.spotify,
+      hintText: 'https://open.spotify.com/artist/…',
+      keyboardType: TextInputType.url,
+      autocorrect: false,
+      onChanged: (input) => onChanged?.call(input),
     );
   }
 }

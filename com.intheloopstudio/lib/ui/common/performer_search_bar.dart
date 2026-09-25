@@ -74,23 +74,23 @@ class _PerformerSearchBarState extends State<PerformerSearchBar> {
         return _searchResults.isEmpty
             ? const Center(child: Text('No performers found'))
             : ListView.builder(
-          itemCount: _searchResults.length,
-          itemBuilder: (context, index) {
-            final user = _searchResults[index];
-            return UserTile(
-              userId: user.id,
-              user: Option.of(user),
-              onTap: () {
-                widget.onSelected?.call(user);
-                _searchController.closeView(null);
-              },
-            );
-          },
-        );
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final user = _searchResults[index];
+                  return UserTile(
+                    userId: user.id,
+                    user: Option.of(user),
+                    onTap: () {
+                      widget.onSelected?.call(user);
+                      _searchController.closeView(null);
+                    },
+                  );
+                },
+              );
       },
       suggestionsBuilder: (context, searchController) {
         return _searchResults.map(
-              (user) => UserTile(
+          (user) => UserTile(
             userId: user.id,
             user: Option.of(user),
             onTap: () {

@@ -37,56 +37,56 @@ class DaysOfTheWeekChart extends StatelessWidget {
         return switch (groupedData) {
           None() => const SizedBox.shrink(),
           Some(:final value) => Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 4,
-                horizontal: 20,
+            padding: const EdgeInsets.symmetric(
+              vertical: 4,
+              horizontal: 20,
+            ),
+            child: Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.onSurface.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: AspectRatio(
-                  aspectRatio: 1.5,
-                  child: Stack(
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: <Widget>[
-                            const Text(
-                              'when are the shows',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
+              child: AspectRatio(
+                aspectRatio: 1.5,
+                child: Stack(
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          const Text(
+                            'when are the shows',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(
+                            height: 12,
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                              child: BarChart(
+                                mainBarData(value),
                               ),
                             ),
-                            const SizedBox(
-                              height: 12,
-                            ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                child: BarChart(
-                                  mainBarData(value),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(
-                              height: 12,
-                            ),
-                          ],
-                        ),
+                          ),
+                          const SizedBox(
+                            height: 12,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
+          ),
         };
       },
     );

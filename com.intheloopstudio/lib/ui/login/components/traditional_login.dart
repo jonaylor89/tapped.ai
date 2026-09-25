@@ -1,5 +1,7 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/email_text_field.dart';
 import 'package:intheloopapp/ui/forms/password_text_field.dart';
 import 'package:intheloopapp/ui/login/components/forgot_password_button.dart';
@@ -15,32 +17,29 @@ class TraditionalLogin extends StatelessWidget {
     return BlocBuilder<LoginCubit, LoginState>(
       builder: (context, state) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            EmailTextField(
-              onChanged: (input) =>
-                  context.read<LoginCubit>().updateEmail(input ?? ''),
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            PasswordTextField(
-              onChanged: (input) =>
-                  context.read<LoginCubit>().updatePassword(input ?? ''),
-            ),
-            const SizedBox(
-              height: 20,
-            ),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            GlassFormGroup(
+              margin: EdgeInsets.zero,
               children: [
-                Expanded(child: SignUpButton()),
-                Expanded(child: LoginButton()),
+                EmailTextField(
+                  onChanged: (input) =>
+                      context.read<LoginCubit>().updateEmail(input ?? ''),
+                ),
+                PasswordTextField(
+                  onChanged: (input) =>
+                      context.read<LoginCubit>().updatePassword(input ?? ''),
+                ),
               ],
             ),
-            const ForgotPasswordButton(),
-            const SizedBox(
-              height: 20,
+            const Align(
+              alignment: Alignment.centerRight,
+              child: ForgotPasswordButton(),
             ),
+            const SizedBox(height: TappedSpacing.sm),
+            const LoginButton(),
+            const SizedBox(height: TappedSpacing.sm),
+            const SignUpButton(),
           ],
         );
       },

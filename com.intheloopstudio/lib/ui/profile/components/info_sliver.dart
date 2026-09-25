@@ -11,12 +11,11 @@ import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/social_following.dart';
-import 'package:intheloopapp/domains/models/venue_info.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/components/category_gauge.dart';
 import 'package:intheloopapp/ui/profile/components/days_of_the_week_chart.dart';
-import 'package:intheloopapp/ui/profile/components/more_options_button.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
 import 'package:intheloopapp/ui/share_profile/share_profile_view.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
@@ -30,28 +29,66 @@ import 'package:maps_launcher/maps_launcher.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+/// Grouped glass "details" and "contact" sections for a profile.
 class InfoSliver extends StatelessWidget {
   const InfoSliver({super.key});
+
+  Future<void> _copy(
+    BuildContext context, {
+    required bool isPremium,
+    required String value,
+    required String toast,
+  }) async {
+    if (!isPremium) {
+      context.push(PaywallPage());
+      return;
+    }
+
+    await Clipboard.setData(ClipboardData(text: value));
+    await HapticFeedback.mediumImpact();
+    await EasyLoading.showSuccess(
+      toast,
+      duration: const Duration(milliseconds: 500),
+    );
+  }
+
+  Widget _locked(BuildContext context, String placeholder) {
+    return ImageFiltered(
+      imageFilter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+      child: Text(
+        placeholder,
+        style: Theme.of(context).textTheme.bodyLarge,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
-        final audience = state.visitedUser.socialFollowing.audienceSize;
-        final performerInfo = state.visitedUser.performerInfo;
-        final venueInfo = state.visitedUser.venueInfo;
-        final bookerInfo = state.visitedUser.bookerInfo;
-        final genres = performerInfo.map((t) => t.genres).getOrElse(
+        final user = state.visitedUser;
+        final audience = user.socialFollowing.audienceSize;
+        final performerInfo = user.performerInfo;
+        final venueInfo = user.venueInfo;
+        final bookerInfo = user.bookerInfo;
+        final genres = performerInfo
+            .map((t) => t.genres)
+            .getOrElse(
               () => venueInfo.map((t) => t.genres).getOrElse(() => []),
             );
-        final rating = performerInfo.map((t) => t.rating).getOrElse(
-              () => bookerInfo.map((t) => t.rating).getOrElse(
+        final rating = performerInfo
+            .map((t) => t.rating)
+            .getOrElse(
+              () => bookerInfo
+                  .map((t) => t.rating)
+                  .getOrElse(
                     () => const None(),
                   ),
             );
-        final averagePerformerTicketPrice =
-            performerInfo.map((t) => t.formattedPriceRange);
+        final averagePerformerTicketPrice = performerInfo.map(
+          (t) => t.formattedPriceRange,
+        );
         final averageAttendance = performerInfo
             .map(
               (t) => t.averageAttendance.fold(
@@ -63,520 +100,238 @@ class InfoSliver extends StatelessWidget {
         final label = performerInfo.map((t) => t.label).getOrElse(() => 'None');
         final bookingAgency = performerInfo.flatMap((t) => t.bookingAgency);
         final currPlace = state.place;
-        final idealPerformerProfile =
-            state.visitedUser.venueInfo.flatMap((t) => t.idealPerformerProfile);
-        final bookingEmail = state.visitedUser.venueInfo
+        final idealPerformerProfile = venueInfo.flatMap(
+          (t) => t.idealPerformerProfile,
+        );
+        final bookingEmail = venueInfo
             .flatMap((t) => t.bookingEmail)
             .toNullable();
+        final phone = user.phoneNumber.toNullable();
+        final capacity = venueInfo.flatMap((t) => t.capacity).toNullable();
         final formatted = NumberFormat.compactLong();
+        final compact = NumberFormat.compactCurrency(
+          decimalDigits: 0,
+          symbol: '',
+        );
+
         return CurrentUserBuilder(
           builder: (context, currentUser) {
             return CustomClaimsBuilder(
               builder: (context, claims) {
                 return PremiumBuilder(
                   builder: (context, isPremium) {
+                    final details = <Widget>[
+                      if (currPlace case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.location_solid,
+                          title: formattedShortAddress(
+                            value.addressComponents,
+                          ).toLowerCase(),
+                          trailing: Icon(
+                            CupertinoIcons.map,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onTap: () => MapsLauncher.launchQuery(
+                            value.shortFormattedAddress,
+                          ),
+                        ),
+                      if (capacity != null)
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.person_3_fill,
+                          title: 'capacity',
+                          value: formatted.format(capacity),
+                        ),
+                      if (genres.isNotEmpty)
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.music_note_2,
+                          title: 'genres',
+                          subtitle: genres
+                              .map((e) => e.toLowerCase())
+                              .join(', '),
+                        ),
+                      if (performerInfo.isSome())
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.person_2_fill,
+                          title: 'followers',
+                          value: compact.format(audience),
+                        ),
+                      if (averagePerformerTicketPrice case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.money_dollar_circle,
+                          title: 'avg. ticket price',
+                          trailing: isPremium
+                              ? Text(value, style: theme.textTheme.bodyLarge)
+                              : _locked(context, r'$??'),
+                          onTap: isPremium
+                              ? null
+                              : () => context.push(PaywallPage()),
+                        ),
+                      if (venueInfo.isNone() && averageAttendance > 0)
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.chart_bar_alt_fill,
+                          title: 'avg. attendance',
+                          trailing: isPremium
+                              ? Text(
+                                  formatted.format(averageAttendance),
+                                  style: theme.textTheme.bodyLarge,
+                                )
+                              : _locked(context, '???'),
+                          onTap: isPremium
+                              ? null
+                              : () => context.push(PaywallPage()),
+                        ),
+                      if (label != 'None')
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.tag_fill,
+                          title: 'label',
+                          value: label.toLowerCase(),
+                        ),
+                      if (bookingAgency case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.briefcase_fill,
+                          title: 'booking agency',
+                          value: value,
+                        ),
+                      if (rating case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.star_circle_fill,
+                          title: 'rating',
+                          trailing: RatingBarIndicator(
+                            rating: value,
+                            itemBuilder: (context, index) => const Icon(
+                              CupertinoIcons.star_fill,
+                              color: Colors.amber,
+                            ),
+                            itemSize: 18,
+                          ),
+                        ),
+                      if (performerInfo case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.doc_person_fill,
+                          title: 'press kit',
+                          showChevron: true,
+                          onTap: switch (value.pressKitUrl) {
+                            None() => () => showCupertinoModalBottomSheet<void>(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => ShareProfileView(
+                                userId: user.id,
+                                user: Option.of(user),
+                              ),
+                            ),
+                            Some(:final value) => () => launchUrl(
+                              Uri.parse(value),
+                            ),
+                          },
+                        ),
+                      if (idealPerformerProfile case Some(:final value))
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.sparkles,
+                          title: 'who they book',
+                          showChevron: true,
+                          onTap: () {
+                            FirebaseAnalytics.instance.logEvent(
+                              name: 'ideal_performer_profile',
+                              parameters: {
+                                'venue_id': user.id,
+                                'is_premium': isPremium,
+                              },
+                            );
+
+                            if (!isPremium) {
+                              context.push(PaywallPage());
+                              return;
+                            }
+
+                            showGlassSheet<void>(
+                              context: context,
+                              title: 'who they normally book',
+                              scrollable: true,
+                              builder: (context) => Text(
+                                value,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  height: 1.45,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                    ];
+
+                    final contact = <Widget>[
+                      if (bookingEmail != null)
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.envelope_fill,
+                          title: 'booking email',
+                          subtitle: isPremium
+                              ? bookingEmail
+                              : '•••••@email.com',
+                          trailing: Icon(
+                            isPremium
+                                ? CupertinoIcons.doc_on_doc
+                                : CupertinoIcons.lock_fill,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onTap: () => _copy(
+                            context,
+                            isPremium: isPremium,
+                            value: bookingEmail,
+                            toast: 'copied email',
+                          ),
+                        ),
+                      if (phone != null)
+                        GlassListTile(
+                          leadingIcon: CupertinoIcons.phone_fill,
+                          title: 'phone',
+                          subtitle: isPremium ? phone : '•••-•••-••••',
+                          trailing: Icon(
+                            isPremium
+                                ? CupertinoIcons.doc_on_doc
+                                : CupertinoIcons.lock_fill,
+                            size: 18,
+                            color: theme.colorScheme.primary,
+                          ),
+                          onTap: () => _copy(
+                            context,
+                            isPremium: isPremium,
+                            value: phone,
+                            toast: 'copied phone',
+                          ),
+                        ),
+                    ];
+
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        CupertinoListSection.insetGrouped(
-                          backgroundColor: theme.colorScheme.surface,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withOpacity(0.1),
-                            border: Border(
-                              bottom: BorderSide(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.1),
-                                width: 0.5,
-                              ),
+                        if (details.isNotEmpty)
+                          GlassSection(
+                            header: 'details',
+                            children: details,
+                          ),
+                        if (contact.isNotEmpty)
+                          GlassSection(
+                            header: 'contact',
+                            footer: isPremium
+                                ? null
+                                : 'upgrade to tapped premium to unlock '
+                                      'contact details',
+                            children: contact,
+                          ),
+                        if (venueInfo.isSome() && user.unclaimed)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: GlassMetrics.edgeInset,
+                            ),
+                            child: GlassButton.plain(
+                              label: 'something incorrect? let us know',
+                              icon: CupertinoIcons.exclamationmark_bubble,
+                              compact: true,
+                              onPressed: () =>
+                                  _reportIncorrect(context, currentUser.id),
                             ),
                           ),
-                          children: [
-                            CupertinoListTile(
-                              leading: const Icon(
-                                CupertinoIcons.at,
-                              ),
-                              title: Text(
-                                state.visitedUser.username.toString(),
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                            switch (currPlace) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => GestureDetector(
-                                  onLongPress: () => MapsLauncher.launchQuery(
-                                    value.shortFormattedAddress,
-                                  ),
-                                  child: CupertinoListTile(
-                                    leading: const Icon(
-                                      CupertinoIcons.location,
-                                    ),
-                                    title: Text(
-                                      formattedShortAddress(
-                                        value.addressComponents,
-                                      ).toLowerCase(),
-                                      style: TextStyle(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            },
-                            switch (venueInfo) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
-                                  leading: const Icon(
-                                    CupertinoIcons.building_2_fill,
-                                  ),
-                                  title: Text(
-                                    value.type.formattedName.toLowerCase(),
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                            },
-                            switch (venueInfo) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => switch (value.capacity) {
-                                  None() => const SizedBox.shrink(),
-                                  Some(:final value) => CupertinoListTile(
-                                      leading: const Icon(
-                                        CupertinoIcons.person_2_alt,
-                                      ),
-                                      title: Text(
-                                        '${formatted.format(value)} capacity',
-                                        style: TextStyle(
-                                          color: theme.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                },
-                            },
-                            if (genres.isNotEmpty)
-                              CupertinoListTile(
-                                leading: const Icon(
-                                  CupertinoIcons.music_note,
-                                ),
-                                title: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Text(
-                                    genres
-                                        .map((e) => e.toLowerCase())
-                                        .join(', '),
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            switch (performerInfo) {
-                              None() => const SizedBox.shrink(),
-                              Some(value: final _) => CupertinoListTile(
-                                  leading: const Icon(
-                                    CupertinoIcons.person_2_alt,
-                                  ),
-                                  title: Text(
-                                    '${NumberFormat.compactCurrency(
-                                      decimalDigits: 0,
-                                      symbol: '',
-                                    ).format(audience)} followers',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                            },
-                            switch (averagePerformerTicketPrice) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
-                                  onTap: () {
-                                    if (!isPremium) {
-                                      context.push(PaywallPage());
-                                      return;
-                                    }
-                                  },
-                                  leading: const Icon(
-                                    CupertinoIcons.money_dollar,
-                                  ),
-                                  title: RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        if (isPremium)
-                                          TextSpan(
-                                            text: value,
-                                            style: TextStyle(
-                                              color:
-                                                  theme.colorScheme.onSurface,
-                                            ),
-                                          )
-                                        else
-                                          WidgetSpan(
-                                            child: ImageFiltered(
-                                              imageFilter: ImageFilter.blur(
-                                                sigmaX: 10,
-                                                sigmaY: 10,
-                                              ),
-                                              child: Text(
-                                                r'$???',
-                                                style: TextStyle(
-                                                  color: theme
-                                                      .colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        TextSpan(
-                                          text: ' avg. ticket price',
-                                          style: TextStyle(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                            },
-                            switch ((venueInfo, averageAttendance)) {
-                              (Some(), _) => const SizedBox.shrink(),
-                              (_, <= 0) => const SizedBox.shrink(),
-                              (_, _) => CupertinoListTile(
-                                  onTap: () {
-                                    if (!isPremium) {
-                                      context.push(PaywallPage());
-                                      return;
-                                    }
-                                  },
-                                  leading: const Icon(
-                                    CupertinoIcons.person_3_fill,
-                                  ),
-                                  title: RichText(
-                                    text: TextSpan(
-                                      children: [
-                                        if (isPremium)
-                                          TextSpan(
-                                            text: formatted
-                                                .format(averageAttendance),
-                                            style: TextStyle(
-                                              color:
-                                                  theme.colorScheme.onSurface,
-                                            ),
-                                          )
-                                        else
-                                          WidgetSpan(
-                                            child: ImageFiltered(
-                                              imageFilter: ImageFilter.blur(
-                                                sigmaX: 10,
-                                                sigmaY: 10,
-                                              ),
-                                              child: Text(
-                                                '???',
-                                                style: TextStyle(
-                                                  color: theme
-                                                      .colorScheme.onSurface,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        TextSpan(
-                                          text: ' avg. attendance',
-                                          style: TextStyle(
-                                            color: theme.colorScheme.onSurface,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                            },
-                            if (bookingEmail != null)
-                              GestureDetector(
-                                onTap: () async {
-                                  if (!isPremium) {
-                                    context.push(PaywallPage());
-                                    return;
-                                  }
-
-                                  await Clipboard.setData(
-                                    ClipboardData(text: bookingEmail),
-                                  );
-                                  await HapticFeedback.mediumImpact();
-                                  await EasyLoading.showSuccess(
-                                    'copied email',
-                                    duration: const Duration(milliseconds: 500),
-                                  );
-                                },
-                                child: CupertinoListTile(
-                                  leading: const Icon(
-                                    CupertinoIcons.mail,
-                                  ),
-                                  title: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Text(
-                                      isPremium
-                                          ? bookingEmail
-                                          : '*****@email.com',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            switch (state.visitedUser.phoneNumber) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => GestureDetector(
-                                  onTap: () async {
-                                    if (!isPremium) {
-                                      context.push(PaywallPage());
-                                      return;
-                                    }
-
-                                    await Clipboard.setData(
-                                      ClipboardData(text: value),
-                                    );
-                                    await HapticFeedback.mediumImpact();
-                                    await EasyLoading.showSuccess(
-                                      'copied phone',
-                                      duration:
-                                          const Duration(milliseconds: 500),
-                                    );
-                                  },
-                                  child: CupertinoListTile(
-                                    leading: const Icon(
-                                      CupertinoIcons.phone,
-                                    ),
-                                    title: Text(
-                                      isPremium ? value : '***-***-****',
-                                      style: TextStyle(
-                                        color: theme.colorScheme.onSurface,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            },
-                            if (label != 'None')
-                              CupertinoListTile(
-                                leading: const Icon(
-                                  CupertinoIcons.tag,
-                                ),
-                                title: Text(
-                                  label.toLowerCase(),
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                            switch (bookingAgency) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
-                                  leading: const Icon(
-                                    CupertinoIcons.person_2_alt,
-                                  ),
-                                  title: Text(
-                                    value,
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                            },
-                            switch (rating) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
-                                  leading: const Icon(
-                                    CupertinoIcons.star_circle,
-                                  ),
-                                  title: RatingBarIndicator(
-                                    rating: value,
-                                    itemBuilder: (context, index) => const Icon(
-                                      Icons.star,
-                                      color: Colors.amber,
-                                    ),
-                                    itemSize: 20,
-                                  ),
-                                ),
-                            },
-                            switch (performerInfo) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile.notched(
-                                  leading: const Icon(
-                                    CupertinoIcons.doc_person_fill,
-                                  ),
-                                  title: Text(
-                                    'press kit',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  trailing: const Icon(
-                                    CupertinoIcons.chevron_forward,
-                                  ),
-                                  onTap: switch (value.pressKitUrl) {
-                                    None() => () {
-                                        showCupertinoModalBottomSheet<void>(
-                                          context: context,
-                                          builder: (context) {
-                                            return ShareProfileView(
-                                              userId: state.visitedUser.id,
-                                              user:
-                                                  Option.of(state.visitedUser),
-                                            );
-                                          },
-                                        );
-                                      },
-                                    Some(:final value) => () async {
-                                        await launchUrl(Uri.parse(value));
-                                      },
-                                  },
-                                ),
-                            },
-                            switch (idealPerformerProfile) {
-                              None() => const SizedBox.shrink(),
-                              Some(:final value) => CupertinoListTile(
-                                  title: Text(
-                                    'ideal performer profile',
-                                    style: TextStyle(
-                                      color: theme.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                  trailing: const Icon(
-                                    CupertinoIcons.chevron_forward,
-                                  ),
-                                  onTap: () {
-                                    FirebaseAnalytics.instance.logEvent(
-                                      name: 'ideal_performer_profile',
-                                      parameters: {
-                                        'venue_id': state.visitedUser.id,
-                                        'is_premium': isPremium,
-                                      },
-                                    );
-
-                                    if (!isPremium) {
-                                      context.push(PaywallPage());
-                                      return;
-                                    }
-
-                                    showModalBottomSheet<void>(
-                                      context: context,
-                                      builder: (context) {
-                                        return SafeArea(
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                              vertical: 16,
-                                              horizontal: 20,
-                                            ),
-                                            child: SingleChildScrollView(
-                                              child: Column(
-                                                children: [
-                                                  Text(
-                                                    'what kind of performers do they normally book?',
-                                                    style: TextStyle(
-                                                      color: theme.colorScheme
-                                                          .onSurface,
-                                                      fontSize: 24,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 12),
-                                                  Text(
-                                                    value,
-                                                    style: TextStyle(
-                                                      color: theme.colorScheme
-                                                          .onSurface,
-                                                      fontSize: 16,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                            },
-                            CupertinoListTile(
-                              title: Text(
-                                'more options',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              trailing: const MoreOptionsButton(),
-                            ),
-                          ],
-                        ),
-                        switch ((venueInfo, state.visitedUser.unclaimed)) {
-                          (Some(value: final _), true) => GestureDetector(
-                              onTap: () {
-                                final scaffoldMessenger =
-                                    ScaffoldMessenger.of(context);
-                                final storage = context.storage;
-                                final database = context.database;
-
-                                HapticFeedback.lightImpact();
-                                BetterFeedback.of(context)
-                                    .show((UserFeedback feedback) {
-                                  try {
-                                    logger.debug(
-                                      'feedback: ${feedback.text} and ${feedback.extra}',
-                                    );
-
-                                    storage
-                                        .uploadFeedbackScreenshot(
-                                      currentUser.id,
-                                      feedback.screenshot,
-                                    )
-                                        .then((imageUrl) {
-                                      database.sendFeedback(
-                                        currentUser.id,
-                                        feedback,
-                                        imageUrl,
-                                      );
-                                    });
-
-                                    scaffoldMessenger.showSnackBar(
-                                      const SnackBar(
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.green,
-                                        content: Text('feedback sent'),
-                                      ),
-                                    );
-                                  } catch (error, stackTrace) {
-                                    logger.error(
-                                      'error sending feedback',
-                                      error: error,
-                                      stackTrace: stackTrace,
-                                    );
-                                    scaffoldMessenger.showSnackBar(
-                                      const SnackBar(
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor: Colors.red,
-                                        content: Text('error sending feedback'),
-                                      ),
-                                    );
-                                  }
-                                });
-                              },
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                ),
-                                child: Text(
-                                  'something incorrect? contact us',
-                                  style: TextStyle(
-                                    color: Colors.blue,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          (_, _) => const SizedBox.shrink(),
-                        },
                         const CategoryGauge(),
                         const DaysOfTheWeekChart(),
                       ],
@@ -589,5 +344,54 @@ class InfoSliver extends StatelessWidget {
         );
       },
     );
+  }
+
+  void _reportIncorrect(BuildContext context, String currentUserId) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final storage = context.storage;
+    final database = context.database;
+
+    HapticFeedback.lightImpact();
+    BetterFeedback.of(context).show((UserFeedback feedback) {
+      try {
+        logger.debug(
+          'feedback: ${feedback.text} and ${feedback.extra}',
+        );
+
+        storage
+            .uploadFeedbackScreenshot(
+              currentUserId,
+              feedback.screenshot,
+            )
+            .then((imageUrl) {
+              database.sendFeedback(
+                currentUserId,
+                feedback,
+                imageUrl,
+              );
+            });
+
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.green,
+            content: Text('feedback sent'),
+          ),
+        );
+      } catch (error, stackTrace) {
+        logger.error(
+          'error sending feedback',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.red,
+            content: Text('error sending feedback'),
+          ),
+        );
+      }
+    });
   }
 }

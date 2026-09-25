@@ -1,7 +1,10 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/email_text_field.dart';
+import 'package:intheloopapp/ui/login/components/auth_scaffold.dart';
 import 'package:intheloopapp/ui/login/login_cubit.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 
@@ -17,47 +20,54 @@ class _ForgotPasswordViewState extends State<ForgotPasswordView> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        title: const Text('Password Reset'),
+    return BlocProvider(
+      create: (context) => LoginCubit(
+        auth: context.auth,
+        nav: context.nav,
       ),
-      body: BlocProvider(
-        create: (context) => LoginCubit(
-          auth: context.auth,
-          nav: context.nav,
-        ),
-        child: BlocBuilder<LoginCubit, LoginState>(
-          builder: (context, state) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 60),
-              child: Align(
-                child: linkSent
-                    ? const Text('Password reset link send to your email')
-                    : Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          EmailTextField(
-                            onChanged: context.read<LoginCubit>().updateEmail,
-                          ),
-                          const SizedBox(height: 30),
-                          CupertinoButton.filled(
-                            child: const Text('Send Reset Link'),
-                            onPressed: () {
-                              context
-                                  .read<LoginCubit>()
-                                  .sendResetPasswordLink();
-                              setState(() {
-                                linkSent = true;
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-              ),
+      child: BlocBuilder<LoginCubit, LoginState>(
+        builder: (context, state) {
+          if (linkSent) {
+            return AuthScaffold(
+              title: 'check your inbox',
+              subtitle: 'we sent a password reset link to ${state.email}',
+              children: [
+                GlassEmptyState(
+                  icon: CupertinoIcons.envelope_open,
+                  title: 'link sent',
+                  message: "didn't get it? check spam or try again",
+                  actionLabel: 'back to log in',
+                  onAction: () => Navigator.of(context).maybePop(),
+                ),
+              ],
             );
-          },
-        ),
+          }
+
+          return AuthScaffold(
+            title: 'reset password',
+            subtitle:
+                "enter the email on your account and we'll send you a "
+                'link to reset your password',
+            children: [
+              EmailTextField(
+                textInputAction: TextInputAction.done,
+                onChanged: context.read<LoginCubit>().updateEmail,
+              ),
+              const SizedBox(height: TappedSpacing.xl),
+              GlassButton.primary(
+                label: 'send reset link',
+                icon: CupertinoIcons.paperplane_fill,
+                expand: true,
+                onPressed: () {
+                  context.read<LoginCubit>().sendResetPasswordLink();
+                  setState(() {
+                    linkSent = true;
+                  });
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
   }

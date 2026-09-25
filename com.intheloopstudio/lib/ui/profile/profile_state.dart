@@ -42,20 +42,20 @@ class ProfileState extends Equatable {
 
   @override
   List<Object?> get props => [
-        isFollowing,
-        isBlocked,
-        isVerified,
-        latestBookings,
-        latestReview,
-        hasReachedMaxOpportunities,
-        opportunityStatus,
-        services,
-        opportunities,
-        topTracks,
-        visitedUser,
-        currentUser,
-        place,
-      ];
+    isFollowing,
+    isBlocked,
+    isVerified,
+    latestBookings,
+    latestReview,
+    hasReachedMaxOpportunities,
+    opportunityStatus,
+    services,
+    opportunities,
+    topTracks,
+    visitedUser,
+    currentUser,
+    place,
+  ];
 
   ProfileState copyWith({
     bool? isFollowing,
@@ -80,7 +80,8 @@ class ProfileState extends Equatable {
       isVerified: isVerified ?? this.isVerified,
       latestBookings: latestBookings ?? this.latestBookings,
       latestReview: latestReview ?? this.latestReview,
-      hasReachedMaxOpportunities: hasReachedMaxOpportunities ?? this.hasReachedMaxOpportunities,
+      hasReachedMaxOpportunities:
+          hasReachedMaxOpportunities ?? this.hasReachedMaxOpportunities,
       opportunityStatus: opportunityStatus ?? this.opportunityStatus,
       services: services ?? this.services,
       opportunities: opportunities ?? this.opportunities,

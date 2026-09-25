@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class BookingConfirmationView extends StatelessWidget {
   const BookingConfirmationView({
@@ -14,64 +16,61 @@ class BookingConfirmationView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 30,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.check_circle_outline,
-              size: 200,
-            ),
-            const SizedBox(height: 50),
-            const Text(
-              'Booking Requested!',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w400,
+    return GlassAmbientBackground(
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(TappedSpacing.xl),
+          child: Column(
+            children: [
+              const Spacer(),
+              LiquidGlass.circle(
+                width: 128,
+                height: 128,
+                tint: TappedColors.success,
+                child: const Center(
+                  child: Icon(
+                    CupertinoIcons.checkmark_alt,
+                    size: 64,
+                    color: TappedColors.success,
+                  ),
+                ),
               ),
-            ),
-            const SizedBox(height: 50),
-            const Text(
-          'Your bookings will be confirmed once the Performer accepts!\n\n'
-
-          ' In the meantime, a DM channel has been created' 
-          
-          ' for you and the Performer and'
-
-          ' an email containing additional steps has been sent to you.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
+              const SizedBox(height: TappedSpacing.xl),
+              Text(
+                'booking requested',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
               ),
-            ),
-            const SizedBox(height: 30),
-            SizedBox(
-              width: double.infinity,
-              child: CupertinoButton.filled(
+              const SizedBox(height: TappedSpacing.lg),
+              GlassCard(
+                child: Text(
+                  'your booking will be confirmed once the performer accepts.'
+                  '\n\nin the meantime, a dm channel has been created for you '
+                  'and the performer, and an email containing additional '
+                  'steps has been sent to you.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              const Spacer(),
+              GlassButton.primary(
+                label: 'okay',
+                expand: true,
                 onPressed: () {
                   context
                     ..pop()
                     ..pop()
                     ..pop();
                 },
-                borderRadius: BorderRadius.circular(15),
-                child: const Text(
-                  'Okay',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                  ),
-                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

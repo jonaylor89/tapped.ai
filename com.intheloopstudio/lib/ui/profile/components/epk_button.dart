@@ -17,15 +17,15 @@ class EPKButton extends StatelessWidget {
     return switch (pressKitUrl) {
       None() => const SizedBox.shrink(),
       Some(:final value) => Container(
-          padding: const EdgeInsets.all(8),
-          child: TextButton(
-            onPressed: () {
-              final uri = Uri.parse(value);
-              launchUrl(uri);
-            },
-            child: const Text('view current epk'),
-          ),
+        padding: const EdgeInsets.all(8),
+        child: TextButton(
+          onPressed: () {
+            final uri = Uri.parse(value);
+            launchUrl(uri);
+          },
+          child: const Text('view current epk'),
         ),
+      ),
     };
   }
 
@@ -36,82 +36,82 @@ class EPKButton extends StatelessWidget {
     final theme = Theme.of(context);
     return switch (pressKitFile) {
       None() => GestureDetector(
-          onTap: () {
-            context.read<SettingsCubit>().pickPressKit();
-          },
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: theme.colorScheme.onSurface.withOpacity(0.1),
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(width: 16),
-                      Icon(
-                        Icons.upload_file,
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
-                      ),
-                      const SizedBox(width: 16),
-                      Text(
-                        'upload new epk',
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      Some(value: final _) => Row(
+        onTap: () {
+          context.read<SettingsCubit>().pickPressKit();
+        },
+        child: Row(
           children: [
             Expanded(
               child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.4),
+                  border: Border.all(
+                    color: theme.colorScheme.onSurface.withOpacity(0.1),
+                  ),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 4,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const SizedBox(width: 16),
-                      const Text(
-                        '✅ EPK Uploaded',
-                        style: TextStyle(
-                          color: Colors.white,
-                        ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const SizedBox(width: 16),
+                    Icon(
+                      Icons.upload_file,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'upload new epk',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
                       ),
-                      IconButton(
-                        onPressed: () {
-                          context.read<SettingsCubit>().removePressKit();
-                        },
-                        icon: const Icon(
-                          Icons.cancel,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ],
         ),
+      ),
+      Some(value: final _) => Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 4,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 16),
+                    const Text(
+                      '✅ EPK Uploaded',
+                      style: TextStyle(
+                        color: Colors.white,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        context.read<SettingsCubit>().removePressKit();
+                      },
+                      icon: const Icon(
+                        Icons.cancel,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     };
   }
 
@@ -119,8 +119,9 @@ class EPKButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        final currentPressKitUrl =
-            currentUser.performerInfo.flatMap((t) => t.pressKitUrl);
+        final currentPressKitUrl = currentUser.performerInfo.flatMap(
+          (t) => t.pressKitUrl,
+        );
         return BlocBuilder<SettingsCubit, SettingsState>(
           builder: (context, state) {
             return Column(

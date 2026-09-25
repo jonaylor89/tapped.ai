@@ -5,186 +5,104 @@ import 'package:intheloopapp/domains/bookings_bloc/bookings_bloc.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/ui/bookings/components/bookings_list.dart';
 import 'package:intheloopapp/ui/common/opportunity_card.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/components/venue_card.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
-import 'package:intheloopapp/utils/custom_claims_builder.dart';
 import 'package:intheloopapp/utils/premium_builder.dart';
 
+/// The signed-in user's booking inbox, as an inset grouped glass list.
 class BookingControlsSliver extends StatelessWidget {
   const BookingControlsSliver({super.key});
 
-  Widget _buildPendingBookingsSheet(
+  void _showBookings(
     BuildContext context, {
-    required List<Booking> pendingBookings,
+    required String title,
+    required List<Booking> bookings,
   }) {
-    return SizedBox(
-      width: double.infinity,
-      child: DraggableScrollableSheet(
-        expand: false,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              Expanded(
-                child: BookingsList(
-                  bookings: pendingBookings,
-                  scrollController: scrollController,
-                ),
-              ),
-            ],
-          );
-        },
+    showGlassSheet<void>(
+      context: context,
+      title: title,
+      builder: (context) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.6,
+        child: BookingsList(bookings: bookings),
       ),
     );
   }
 
-  Widget _buildCanceledBookingsSheet(
-    BuildContext context, {
-    required List<Booking> canceledBookings,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: DraggableScrollableSheet(
-        expand: false,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              Expanded(
-                child: BookingsList(
-                  bookings: canceledBookings,
-                  scrollController: scrollController,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildUpcomingBookingsSheet(
-    BuildContext context, {
-    required List<Booking> upcomingBookings,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: DraggableScrollableSheet(
-        expand: false,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Column(
-            children: [
-              Expanded(
-                child: BookingsList(
-                  bookings: upcomingBookings,
-                  scrollController: scrollController,
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildGigsAppliedSheet(
-    BuildContext context, {
-    required String currentUserId,
-  }) {
+  void _showGigsApplied(BuildContext context, String currentUserId) {
     final database = context.database;
-    return SizedBox(
-      width: double.infinity,
-      height: MediaQuery.of(context).size.height * 0.4,
-      child: FutureBuilder(
-        future: database.getAppliedOpportunitiesByUserId(
-          currentUserId,
+    showGlassSheet<void>(
+      context: context,
+      title: 'gigs applied',
+      builder: (context) => SizedBox(
+        height: 300,
+        child: FutureBuilder(
+          future: database.getAppliedOpportunitiesByUserId(currentUserId),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const GlassLoading();
+            final ops = snapshot.data ?? [];
+            if (ops.isEmpty) {
+              return const GlassEmptyState(
+                icon: CupertinoIcons.tickets,
+                title: 'nothing yet',
+                message: 'gigs you apply to will show up here',
+              );
+            }
+            return ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: ops.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: TappedSpacing.sm),
+              itemBuilder: (context, i) => OpportunityCard(opportunity: ops[i]),
+            );
+          },
         ),
-        builder: (context, snapshot) {
-          final ops = snapshot.data ?? [];
-
-          return switch (ops.isEmpty) {
-            true => const Center(
-                child: Text(
-                  'Nothing Yet',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            false => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: ops.map((e) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                      ),
-                      child: OpportunityCard(
-                        opportunity: e,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-          };
-        },
       ),
     );
   }
 
-  Widget _buildVenuesContactedSheet(
-    BuildContext context, {
-    required String currentUserId,
-  }) {
+  void _showContactedVenues(BuildContext context, String currentUserId) {
     final database = context.database;
-    return SizedBox(
-      width: double.infinity,
-      height: MediaQuery.of(context).size.height * 0.35,
-      child: FutureBuilder(
-        future: database.getContactedVenues(currentUserId),
-        builder: (context, snapshot) {
-          final venues = snapshot.data ?? [];
-
-          return switch (venues.isEmpty) {
-            true => const Center(
-                child: Text(
-                  'Nothing Yet',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-            false => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: venues.map((e) {
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                      ),
-                      child: VenueCard(
-                        venue: e,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-          };
-        },
+    showGlassSheet<void>(
+      context: context,
+      title: 'contacted venues',
+      builder: (context) => SizedBox(
+        height: 260,
+        child: FutureBuilder(
+          future: database.getContactedVenues(currentUserId),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) return const GlassLoading();
+            final venues = snapshot.data ?? [];
+            if (venues.isEmpty) {
+              return const GlassEmptyState(
+                icon: CupertinoIcons.bubble_left,
+                title: 'nothing yet',
+                message: 'venues you reach out to will show up here',
+              );
+            }
+            return ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: venues.length,
+              separatorBuilder: (_, __) =>
+                  const SizedBox(width: TappedSpacing.sm),
+              itemBuilder: (context, i) => VenueCard(venue: venues[i]),
+            );
+          },
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<BookingsBloc, BookingsState>(
       builder: (context, state) {
-        final anyBookings = state.pendingBookings.isNotEmpty ||
+        final anyBookings =
+            state.pendingBookings.isNotEmpty ||
             state.upcomingBookings.isNotEmpty ||
             state.canceledBookings.isNotEmpty;
 
@@ -194,140 +112,66 @@ class BookingControlsSliver extends StatelessWidget {
 
         return CurrentUserBuilder(
           builder: (context, currentUser) {
-            return CustomClaimsBuilder(
-              builder: (context, claims) {
-                return PremiumBuilder(
-                  builder: (context, isPremium) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CupertinoListSection.insetGrouped(
-                          backgroundColor: theme.colorScheme.surface,
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.onSurface.withOpacity(0.1),
-                            border: Border(
-                              bottom: BorderSide(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.1),
-                                width: 0.5,
-                              ),
-                            ),
-                          ),
-                          children: [
-                            if (state.pendingBookings.isNotEmpty)
-                              CupertinoListTile.notched(
-                                leading: const Icon(CupertinoIcons.clock_fill),
-                                title: Text(
-                                  'booking requests (${state.pendingBookings.length})',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                                trailing:
-                                    const Icon(CupertinoIcons.chevron_forward),
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  showDragHandle: true,
-                                  builder: (context) {
-                                    return _buildPendingBookingsSheet(
-                                      context,
-                                      pendingBookings: state.pendingBookings,
-                                    );
-                                  },
-                                ),
-                              ),
-                            if (state.upcomingBookings.isNotEmpty)
-                              CupertinoListTile.notched(
-                                leading: const Icon(CupertinoIcons.calendar),
-                                title: Text(
-                                  'upcoming bookings (${state.upcomingBookings.length})',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                                trailing:
-                                    const Icon(CupertinoIcons.chevron_forward),
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  showDragHandle: true,
-                                  builder: (context) {
-                                    return _buildUpcomingBookingsSheet(
-                                      context,
-                                      upcomingBookings: state.upcomingBookings,
-                                    );
-                                  },
-                                ),
-                              ),
-                            if (state.canceledBookings.isNotEmpty)
-                              CupertinoListTile.notched(
-                                leading: const Icon(CupertinoIcons.xmark),
-                                title: Text(
-                                  'canceled bookings (${state.canceledBookings.length})',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                                trailing:
-                                    const Icon(CupertinoIcons.chevron_forward),
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  showDragHandle: true,
-                                  builder: (context) {
-                                    return _buildCanceledBookingsSheet(
-                                      context,
-                                      canceledBookings: state.canceledBookings,
-                                    );
-                                  },
-                                ),
-                              ),
-                            if (isPremium)
-                              CupertinoListTile.notched(
-                                leading: const Icon(CupertinoIcons.chat_bubble),
-                                title: Text(
-                                  'contacted venues',
-                                  style: TextStyle(
-                                    color: theme.colorScheme.onSurface,
-                                  ),
-                                ),
-                                trailing:
-                                    const Icon(CupertinoIcons.chevron_forward),
-                                onTap: () => showModalBottomSheet(
-                                  context: context,
-                                  showDragHandle: true,
-                                  builder: (context) {
-                                    return _buildVenuesContactedSheet(
-                                      context,
-                                      currentUserId: currentUser.id,
-                                    );
-                                  },
-                                ),
-                              ),
-                            CupertinoListTile.notched(
-                              leading: const Icon(CupertinoIcons.tickets),
-                              title: Text(
-                                'gigs applied',
-                                style: TextStyle(
-                                  color: theme.colorScheme.onSurface,
-                                ),
-                              ),
-                              trailing:
-                                  const Icon(CupertinoIcons.chevron_forward),
-                              onTap: () => showModalBottomSheet(
-                                context: context,
-                                showDragHandle: true,
-                                builder: (context) {
-                                  return _buildGigsAppliedSheet(
-                                    context,
-                                    currentUserId: currentUser.id,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+            return PremiumBuilder(
+              builder: (context, isPremium) {
+                return GlassSection(
+                  header: 'bookings',
+                  children: [
+                    if (state.pendingBookings.isNotEmpty)
+                      GlassListTile(
+                        leadingIcon: CupertinoIcons.clock_fill,
+                        leadingColor: Colors.orange,
+                        title: 'requests',
+                        trailing: GlassBadge(
+                          count: state.pendingBookings.length,
                         ),
-                      ],
-                    );
-                  },
+                        showChevron: true,
+                        onTap: () => _showBookings(
+                          context,
+                          title: 'booking requests',
+                          bookings: state.pendingBookings,
+                        ),
+                      ),
+                    if (state.upcomingBookings.isNotEmpty)
+                      GlassListTile(
+                        leadingIcon: CupertinoIcons.calendar,
+                        title: 'upcoming',
+                        value: '${state.upcomingBookings.length}',
+                        showChevron: true,
+                        onTap: () => _showBookings(
+                          context,
+                          title: 'upcoming bookings',
+                          bookings: state.upcomingBookings,
+                        ),
+                      ),
+                    if (state.canceledBookings.isNotEmpty)
+                      GlassListTile(
+                        leadingIcon: CupertinoIcons.xmark_circle_fill,
+                        leadingColor: Colors.redAccent,
+                        title: 'canceled',
+                        value: '${state.canceledBookings.length}',
+                        showChevron: true,
+                        onTap: () => _showBookings(
+                          context,
+                          title: 'canceled bookings',
+                          bookings: state.canceledBookings,
+                        ),
+                      ),
+                    if (isPremium)
+                      GlassListTile(
+                        leadingIcon: CupertinoIcons.bubble_left_fill,
+                        title: 'contacted venues',
+                        showChevron: true,
+                        onTap: () =>
+                            _showContactedVenues(context, currentUser.id),
+                      ),
+                    GlassListTile(
+                      leadingIcon: CupertinoIcons.tickets_fill,
+                      title: 'gigs applied',
+                      showChevron: true,
+                      onTap: () => _showGigsApplied(context, currentUser.id),
+                    ),
+                  ],
                 );
               },
             );

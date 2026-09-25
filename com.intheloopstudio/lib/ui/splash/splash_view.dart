@@ -1,7 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class SplashView extends StatelessWidget {
   const SplashView({super.key});
@@ -12,67 +13,69 @@ class SplashView extends StatelessWidget {
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       body: Stack(
+        fit: StackFit.expand,
         children: [
           Image.asset(
             'assets/splash.gif',
             fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
+          ),
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0.5, 1],
+                colors: [
+                  Colors.transparent,
+                  Colors.black.withValues(alpha: 0.75),
+                ],
+              ),
+            ),
           ),
           SafeArea(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Spacer(),
-                Column(
-                  children: [
-                    SizedBox(
-                      width: double.infinity,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 20,
-                        ),
-                        child: CupertinoButton.filled(
-                          onPressed: () => context.push(SignUpPage()),
-                          borderRadius: BorderRadius.circular(15),
-                          child: const Text(
-                            'get started',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                GlassMetrics.edgeInset,
+                0,
+                GlassMetrics.edgeInset,
+                TappedSpacing.xl,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Spacer(),
+                  Text(
+                    'get booked.\nget paid.',
+                    style: theme.textTheme.displayMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1.5,
+                      height: 1,
                     ),
-                    SizedBox(
-                      width: double.infinity,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 4,
-                          horizontal: 20,
-                        ),
-                        child: CupertinoButton(
-                          onPressed: () => context.push(LoginPage()),
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(15),
-                          child: const Text(
-                            'login',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
+                  ),
+                  const SizedBox(height: TappedSpacing.sm),
+                  Text(
+                    'the booking network for performers and venues',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.75),
                     ),
-                  ],
-                ),
-                const SizedBox(
-                  height: 34,
-                ),
-              ],
+                  ),
+                  const SizedBox(height: TappedSpacing.xxl),
+                  GlassButton.primary(
+                    label: 'get started',
+                    expand: true,
+                    onPressed: () => context.push(SignUpPage()),
+                  ),
+                  const SizedBox(height: TappedSpacing.md),
+                  GlassButton(
+                    label: 'log in',
+                    expand: true,
+                    variant: GlassVariant.clear,
+                    foreground: Colors.white,
+                    onPressed: () => context.push(LoginPage()),
+                  ),
+                ],
+              ),
             ),
           ),
         ],

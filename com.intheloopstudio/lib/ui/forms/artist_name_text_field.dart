@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class ArtistNameTextField extends StatelessWidget {
   const ArtistNameTextField({
@@ -14,37 +16,22 @@ class ArtistNameTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(
-          18,
-        ),
-        child: TextFormField(
-          initialValue: initialValue,
-          decoration: const InputDecoration.collapsed(
-            hintText: 'performer name (e.g. Doja Cat)',
-          ),
-          validator: (input) {
-            if (input!.trim().isEmpty) {
-              return 'please enter a valid name';
-            }
-
-            return null;
-          },
-          onSaved: (input) async {
-            if (input == null || input.isEmpty) return;
-
-            input = input.trim();
-            onSaved?.call(input);
-          },
-          onChanged: (input) async {
-            if (input.isEmpty) return;
-
-            input = input.trim();
-            onChanged?.call(input);
-          },
-        ),
-      ),
+    return GlassTextField(
+      initialValue: initialValue,
+      hintText: 'performer name (e.g. Doja Cat)',
+      prefixIcon: CupertinoIcons.music_mic,
+      textCapitalization: TextCapitalization.words,
+      textInputAction: TextInputAction.done,
+      validator: (input) {
+        if ((input ?? '').trim().isEmpty) {
+          return 'please enter a valid name';
+        }
+        return null;
+      },
+      onChanged: (input) {
+        if (input.isEmpty) return;
+        onChanged?.call(input.trim());
+      },
     );
   }
 }

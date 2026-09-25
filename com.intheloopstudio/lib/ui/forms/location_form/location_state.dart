@@ -12,7 +12,11 @@ class LocationState extends Equatable {
   final List<AutocompletePrediction> locationResults;
 
   @override
-  List<Object> get props => [loading, query, locationResults,];
+  List<Object> get props => [
+    loading,
+    query,
+    locationResults,
+  ];
 
   LocationState copyWith({
     bool? loading,

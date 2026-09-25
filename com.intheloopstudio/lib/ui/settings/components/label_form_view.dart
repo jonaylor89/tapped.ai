@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart' hide RadioGroup;
-import 'package:group_radio_button/group_radio_button.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/models/label.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class LabelFormView extends StatefulWidget {
   const LabelFormView({
@@ -21,36 +22,42 @@ class _LabelFormViewState extends State<LabelFormView> {
 
   @override
   void initState() {
-    setState(() {
-      _groupValue = widget.initialValue ?? '';
-    });
     super.initState();
+    _groupValue = widget.initialValue ?? '';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
+    final theme = Theme.of(context);
+    return GlassPage(
+      title: 'label',
+      padding: EdgeInsets.zero,
+      slivers: [
+        SliverToBoxAdapter(
+          child: GlassSection(
+            children: [
+              for (final label in labels)
+                GlassListTile(
+                  title: label,
+                  showChevron: false,
+                  trailing: label == _groupValue
+                      ? Icon(
+                          CupertinoIcons.checkmark_alt,
+                          color: theme.colorScheme.primary,
+                          size: 20,
+                        )
+                      : null,
+                  onTap: () {
+                    setState(() {
+                      _groupValue = label;
+                    });
+                    widget.onChange.call(label);
+                  },
+                ),
+            ],
+          ),
         ),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SingleChildScrollView(
-        child: RadioGroup<String>.builder(
-          groupValue: _groupValue,
-          onChanged: (value) {
-            setState(() {
-              _groupValue = value ?? '';
-            });
-            widget.onChange.call(value);
-          },
-          items: labels,
-          itemBuilder: RadioButtonBuilder.new,
-        ),
-      ),
+      ],
     );
   }
 }

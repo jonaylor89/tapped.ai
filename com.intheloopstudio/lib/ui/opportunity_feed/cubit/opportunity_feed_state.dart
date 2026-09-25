@@ -15,11 +15,11 @@ class OpportunityFeedState extends Equatable {
 
   @override
   List<Object> get props => [
-        loading,
-        showApplyAnimation,
-        opportunities,
-        curOp,
-      ];
+    loading,
+    showApplyAnimation,
+    opportunities,
+    curOp,
+  ];
 
   OpportunityFeedState copyWith({
     bool? loading,

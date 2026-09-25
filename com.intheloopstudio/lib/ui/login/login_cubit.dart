@@ -15,26 +15,26 @@ class LoginCubit extends Cubit<LoginState> {
   final NavigationBloc nav;
 
   void resetStatus() => emit(
-        state.copyWith(
-          status: FormzSubmissionStatus.initial,
-        ),
-      );
+    state.copyWith(
+      status: FormzSubmissionStatus.initial,
+    ),
+  );
 
   void updateEmail(String? input) => emit(
-        state.copyWith(
-          email: input,
-        ),
-      );
+    state.copyWith(
+      email: input,
+    ),
+  );
   void updatePassword(String? input) => emit(
-        state.copyWith(
-          password: input,
-        ),
-      );
+    state.copyWith(
+      password: input,
+    ),
+  );
   void updateConfirmPassword(String input) => emit(
-        state.copyWith(
-          confirmPassword: input,
-        ),
-      );
+    state.copyWith(
+      confirmPassword: input,
+    ),
+  );
 
   Future<void> signInWithCredentials() async {
     emit(
@@ -50,7 +50,6 @@ class LoginCubit extends Cubit<LoginState> {
       if (uid.isNone()) {
         throw Exception('failed to create user');
       }
-
     } catch (e) {
       rethrow;
     }
@@ -86,7 +85,6 @@ class LoginCubit extends Cubit<LoginState> {
       if (uid.isNone()) {
         throw Exception('failed to create user');
       }
-
     } catch (e) {
       rethrow;
     }

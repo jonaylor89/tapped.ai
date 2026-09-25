@@ -12,8 +12,10 @@ class ReviewCount extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
-        final performerReviews = state.visitedUser.performerInfo.toNullable()?.reviewCount ?? 0;
-        final bookerReviews = state.visitedUser.bookerInfo.toNullable()?.reviewCount ?? 0;
+        final performerReviews =
+            state.visitedUser.performerInfo.toNullable()?.reviewCount ?? 0;
+        final bookerReviews =
+            state.visitedUser.bookerInfo.toNullable()?.reviewCount ?? 0;
         final allReviewCount = performerReviews + bookerReviews;
         return GestureDetector(
           onTap: () {

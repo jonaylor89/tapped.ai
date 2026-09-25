@@ -7,6 +7,7 @@ import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_view.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
@@ -51,106 +52,72 @@ class UserCard extends StatelessWidget {
         final uuid = const Uuid().v4();
         final heroImageTag = 'user-image-${user.id}-$uuid';
         final heroTitleTag = 'user-title-${user.id}-$uuid';
+        final tint = category.fold(() => Colors.black, (t) => t.color);
         return SizedBox(
           width: 150,
           height: 150,
           child: ConditionalParentWidget(
             condition: blur,
             conditionalBuilder: ({required child}) => ClipRRect(
-              borderRadius: TappedRadius.mdAll,
+              borderRadius: BorderRadius.circular(GlassRadius.card),
               child: ImageFiltered(
                 imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: child,
               ),
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    if (onTap != null) {
-                      onTap?.call();
-                      return;
-                    }
+            child: GlassImageCard(
+              height: 150,
+              width: 150,
+              semanticsLabel: user.displayName,
+              image: provider,
+              heroTag: heroImageTag,
+              onTap: () {
+                if (onTap != null) {
+                  onTap?.call();
+                  return;
+                }
 
-                    showCupertinoModalBottomSheet<void>(
-                      context: context,
-                      builder: (context) {
-                        return ProfileView(
-                          visitedUserId: user.id,
-                          visitedUser: Option.of(user),
-                          heroImage: HeroImage(
-                            imageProvider: provider,
-                            heroTag: heroImageTag,
-                          ),
-                          titleHeroTag: heroTitleTag,
-                        );
-                      },
+                showCupertinoModalBottomSheet<void>(
+                  context: context,
+                  builder: (context) {
+                    return ProfileView(
+                      visitedUserId: user.id,
+                      visitedUser: Option.of(user),
+                      heroImage: HeroImage(
+                        imageProvider: provider,
+                        heroTag: heroImageTag,
+                      ),
+                      titleHeroTag: heroTitleTag,
                     );
                   },
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      Hero(
-                        tag: heroImageTag,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: TappedRadius.mdAll,
-                            image: DecorationImage(
-                              fit: BoxFit.cover,
-                              image: provider,
-                            ),
-                          ),
-                        ),
-                      ),
-                      Container(
-                        decoration: BoxDecoration(
-                          borderRadius: TappedRadius.mdAll,
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [
-                              Colors.transparent,
-                              category.fold(
-                                () => Colors.black,
-                                (t) => t.color,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(TappedSpacing.sm),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            RichText(
-                              text: TextSpan(
-                                text: user.displayName,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: TappedColors.textOnImage,
-                                ),
-                                children: const [],
-                              ),
-                            ),
-                            switch (category) {
-                              Some(:final value) => Text(
-                                  value.formattedName.toLowerCase(),
-                                  style: const TextStyle(
-                                    color: TappedColors.textOnImage,
-                                  ),
-                                ),
-                              None() => const SizedBox.shrink(),
-                            },
-                          ],
-                        ),
-                      ),
-                    ],
+                );
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    user.displayName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: TappedColors.textOnImage,
+                    ),
                   ),
-                ),
-              ],
+                  switch (category) {
+                    Some(:final value) => Padding(
+                      padding: const EdgeInsets.only(top: TappedSpacing.xs),
+                      child: GlassPill(
+                        label: value.formattedName.toLowerCase(),
+                        tint: tint,
+                        foreground: TappedColors.textOnImage,
+                      ),
+                    ),
+                    None() => const SizedBox.shrink(),
+                  },
+                ],
+              ),
             ),
           ),
         );

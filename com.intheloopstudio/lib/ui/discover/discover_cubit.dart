@@ -34,11 +34,11 @@ class DiscoverCubit extends Cubit<DiscoverState> {
     required this.places,
     this.suggestedMaxCapacity = 1000,
   }) : super(
-    DiscoverState(
-      genreFilters: initGenres,
-      capacityRange: RangeValues(0, suggestedMaxCapacity.toDouble()),
-    ),
-  );
+         DiscoverState(
+           genreFilters: initGenres,
+           capacityRange: RangeValues(0, suggestedMaxCapacity.toDouble()),
+         ),
+       );
 
   final UserModel currentUser;
   final SearchRepository search;
@@ -120,8 +120,8 @@ class DiscoverCubit extends Cubit<DiscoverState> {
       }
 
       return (
-      position?.latitude ?? Location.nyc.lat,
-      position?.longitude ?? Location.nyc.lng,
+        position?.latitude ?? Location.nyc.lat,
+        position?.longitude ?? Location.nyc.lng,
       );
     } catch (e) {
       return (Location.nyc.lat, Location.nyc.lng);
@@ -237,7 +237,8 @@ class DiscoverCubit extends Cubit<DiscoverState> {
     return hits;
   }
 
-  void onMapOverlayChange(MapOverlay overlay, {
+  void onMapOverlayChange(
+    MapOverlay overlay, {
     List<Genre>? genres,
     int? minCapacity,
     int? maxCapacity,
@@ -249,7 +250,6 @@ class DiscoverCubit extends Cubit<DiscoverState> {
       minCapacity: minCapacity,
       maxCapacity: maxCapacity,
     );
-
 
     emit(state.copyWith(mapOverlay: overlay));
   }
@@ -297,8 +297,7 @@ class DiscoverCubit extends Cubit<DiscoverState> {
     );
 
     return (switch (mapType) {
-      MapOverlay.venues =>
-          () async {
+      MapOverlay.venues => () async {
         final hits = await search.queryUsersInBoundingBox(
           '',
           occupations: ['Venue', 'venue'],
@@ -312,8 +311,7 @@ class DiscoverCubit extends Cubit<DiscoverState> {
         );
         emit(state.copyWith(venueHits: hits));
       },
-      MapOverlay.opportunities =>
-          () async {
+      MapOverlay.opportunities => () async {
         final hits = await search.queryOpportunitiesInBoundingBox(
           '',
           swLatitude: searchBounds.southWest.latitude,

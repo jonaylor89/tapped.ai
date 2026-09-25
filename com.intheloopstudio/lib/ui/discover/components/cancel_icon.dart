@@ -1,7 +1,7 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/domains/search_bloc/search_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 
 class CancelIcon extends StatefulWidget {
@@ -49,9 +49,9 @@ class _CancelIconState extends State<CancelIcon> {
           return const SizedBox.shrink();
         }
 
-        return IconButton(
-          icon: const Icon(CupertinoIcons.xmark),
-          // child: const Text('Cancel'),
+        return GlassButton.plain(
+          label: 'cancel',
+          compact: true,
           onPressed: () {
             widget.focusNode.unfocus();
             widget.searchController.clear();

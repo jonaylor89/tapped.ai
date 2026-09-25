@@ -3,6 +3,8 @@ import 'package:fpdart/fpdart.dart' hide State;
 import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/social_following.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_view.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
@@ -36,9 +38,7 @@ class UserTile extends StatefulWidget {
 class _UserTileState extends State<UserTile> {
   bool followingOverride = false;
 
-  Widget _buildSubtitle(
-    UserModel user,
-  ) {
+  Widget? _buildSubtitle(UserModel user) {
     final widgetSubtitle = widget.subtitle;
     if (widgetSubtitle != null) return widgetSubtitle;
 
@@ -46,22 +46,41 @@ class _UserTileState extends State<UserTile> {
     final socialFollowing = user.socialFollowing;
     final category = user.performerInfo.map((t) => t.category);
     return switch ((capacity, category)) {
-      (None(), None()) => socialFollowing.audienceSize == 0
-          ? const SizedBox.shrink()
-          : Text('${NumberFormat.compactCurrency(
-              decimalDigits: 0,
-              symbol: '',
-            ).format(socialFollowing.audienceSize)} followers'),
+      (None(), None()) =>
+        socialFollowing.audienceSize == 0
+            ? null
+            : Text(
+                '${NumberFormat.compactCurrency(
+                  decimalDigits: 0,
+                  symbol: '',
+                ).format(socialFollowing.audienceSize)} followers',
+              ),
       (None(), Some(:final value)) => Text(
-          '${value.formattedName} performer'.toLowerCase(),
-          style: TextStyle(
-            color: value.color,
-          ),
-        ),
-      (Some(:final value), _) => Text(
-          '$value capacity venue',
-        ),
+        '${value.formattedName} performer'.toLowerCase(),
+        style: TextStyle(color: value.color),
+      ),
+      (Some(:final value), _) => Text('$value capacity venue'),
     };
+  }
+
+  Widget _newBadge(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: TappedSpacing.sm),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary,
+        borderRadius: BorderRadius.circular(GlassRadius.capsule),
+      ),
+      child: const Text(
+        'new',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
   }
 
   Widget _buildUserTile(
@@ -72,12 +91,10 @@ class _UserTileState extends State<UserTile> {
 
     final database = context.database;
     return CurrentUserBuilder(
-      errorWidget: const ListTile(
-        leading: UserAvatar(
-          radius: 25,
-        ),
-        title: Text('ERROR'),
-        subtitle: Text("something isn't working right :/"),
+      errorWidget: const GlassListTile(
+        leading: UserAvatar(radius: 25),
+        title: 'ERROR',
+        subtitle: "something isn't working right :/",
       ),
       builder: (context, currentUser) {
         return FutureBuilder<bool>(
@@ -87,52 +104,12 @@ class _UserTileState extends State<UserTile> {
             final isNew = user.timestamp.fold(
               () => false,
               (timestamp) => timestamp.isAfter(
-                DateTime.now().subtract(
-                  const Duration(days: 7),
-                ),
+                DateTime.now().subtract(const Duration(days: 7)),
               ),
             );
-            final isNewWidget = Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 4,
-              ),
-              child: Container(
-                width: 40,
-                decoration: BoxDecoration(
-                  color: Colors.deepPurpleAccent,
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 5,
-                  vertical: 2,
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.new_releases,
-                      color: Colors.white,
-                      size: 8,
-                    ),
-                    SizedBox(width: 2),
-                    Text(
-                      'new',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 8,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
+            final isVenue = user.venueInfo.isSome();
 
-            final isVenue = user.venueInfo.fold(
-              () => false,
-              (venueInfo) => true,
-            );
-            return ListTile(
+            return GlassListTile(
               leading: UserAvatar(
                 radius: 25,
                 pushUser: Option.of(user),
@@ -140,30 +117,24 @@ class _UserTileState extends State<UserTile> {
                 verified: verified,
                 square: isVenue,
               ),
-              title: RichText(
-                maxLines: 2,
-                overflow: TextOverflow.fade,
-                text: TextSpan(
-                  text: user.displayName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
+              titleWidget: Row(
+                children: [
+                  Flexible(
+                    child: Text(
+                      user.displayName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
                   ),
-                  children: [
-                    if (isNew) ...[
-                      const WidgetSpan(
-                        child: SizedBox(width: 4),
-                      ),
-                      WidgetSpan(
-                        child: isNewWidget,
-                      ),
-                    ],
-                  ],
-                ),
+                  if (isNew) _newBadge(context),
+                ],
               ),
-              subtitle: _buildSubtitle(user),
+              subtitleWidget: _buildSubtitle(user),
               trailing: widget.trailing,
-              onTap: widget.onTap ??
+              showChevron: widget.trailing == null,
+              onTap:
+                  widget.onTap ??
                   () {
                     showCupertinoModalBottomSheet<void>(
                       context: context,
@@ -186,19 +157,17 @@ class _UserTileState extends State<UserTile> {
   Widget build(BuildContext context) {
     final database = context.database;
     return switch (widget.user) {
-      None() => () {
-          return FutureBuilder<Option<UserModel>>(
-            future: database.getUserById(widget.userId),
-            builder: (context, snapshot) {
-              final data = snapshot.data;
-              return switch (data) {
-                null => SkeletonListTile(),
-                None() => SkeletonListTile(),
-                Some(:final value) => _buildUserTile(context, value),
-              };
-            },
-          );
-        }(),
+      None() => FutureBuilder<Option<UserModel>>(
+        future: database.getUserById(widget.userId),
+        builder: (context, snapshot) {
+          final data = snapshot.data;
+          return switch (data) {
+            null => SkeletonListTile(),
+            None() => SkeletonListTile(),
+            Some(:final value) => _buildUserTile(context, value),
+          };
+        },
+      ),
       Some(:final value) => _buildUserTile(context, value),
     };
   }

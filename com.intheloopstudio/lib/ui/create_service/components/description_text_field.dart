@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/ui/create_service/create_service_cubit.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class DescriptionTextField extends StatelessWidget {
   const DescriptionTextField({super.key});
@@ -9,24 +10,20 @@ class DescriptionTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateServiceCubit, CreateServiceState>(
       builder: (context, state) {
-        return TextFormField(
+        return GlassTextField(
+          hintText: 'what does this service include?',
           keyboardType: TextInputType.multiline,
+          textCapitalization: TextCapitalization.sentences,
           maxLines: null,
-          decoration: const InputDecoration.collapsed(
-            hintText: 'Describe the service...',
-          ),
-          style: const TextStyle(
-            letterSpacing: 0,
-          ),
           maxLength: 1024,
-          minLines: 12,
+          minLines: 6,
           initialValue: state.description.value,
           validator: (value) =>
               value!.isEmpty ? 'Description cannot be empty' : null,
           onChanged: (input) =>
               context.read<CreateServiceCubit>().onDescriptionChange(
-                    input.trim(),
-                  ),
+                input.trim(),
+              ),
         );
       },
     );

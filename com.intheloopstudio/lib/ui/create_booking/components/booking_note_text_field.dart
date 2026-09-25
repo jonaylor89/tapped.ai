@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/create_booking/create_booking_cubit.dart';
 
 class BookingNoteTextField extends StatelessWidget {
@@ -14,12 +15,9 @@ class BookingNoteTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateBookingCubit, CreateBookingState>(
       builder: (context, state) {
-        return TextFormField(
+        return GlassTextField(
           controller: controller,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            hintText: 'add a note for the performer',
-          ),
+          hintText: 'add a note for the performer',
           textInputAction: TextInputAction.newline,
           keyboardType: TextInputType.multiline,
           maxLines: 5,

@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 class DraggableHeader extends StatelessWidget {
@@ -28,7 +27,7 @@ class DraggableHeader extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.symmetric(
               vertical:
-              bottomSheetDraggableAreaHeight / 2 - indicatorHeight / 2,
+                  bottomSheetDraggableAreaHeight / 2 - indicatorHeight / 2,
             ),
             child: Container(
               height: indicatorHeight,

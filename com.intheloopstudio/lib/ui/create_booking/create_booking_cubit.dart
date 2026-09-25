@@ -36,13 +36,13 @@ class CreateBookingCubit extends Cubit<CreateBookingState> {
     required this.payments,
     required this.bookingFee,
   }) : super(
-          CreateBookingState(
-            currentUserId: currentUser.id,
-            requesteeId: requesteeId,
-            service: service,
-            bookingFee: bookingFee,
-          ),
-        );
+         CreateBookingState(
+           currentUserId: currentUser.id,
+           requesteeId: requesteeId,
+           service: service,
+           bookingFee: bookingFee,
+         ),
+       );
 
   final UserModel currentUser;
   final String requesteeId;
@@ -56,55 +56,56 @@ class CreateBookingCubit extends Cubit<CreateBookingState> {
   final PaymentRepository payments;
 
   void updateStartTime(DateTime value) => emit(
-        state.copyWith(
-          startTime: StartTime.dirty(value),
-          endTime: value.isAfter(state.endTime.value)
-              ? EndTime.dirty(value)
-              : state.endTime,
-        ),
-      );
+    state.copyWith(
+      startTime: StartTime.dirty(value),
+      endTime: value.isAfter(state.endTime.value)
+          ? EndTime.dirty(value)
+          : state.endTime,
+    ),
+  );
 
   void updateEndTime(DateTime value) => emit(
-        state.copyWith(
-          endTime: EndTime.dirty(value),
-        ),
-      );
+    state.copyWith(
+      endTime: EndTime.dirty(value),
+    ),
+  );
 
   void updateName(String value) => emit(
-        state.copyWith(
-          name: BookingName.dirty(value),
-        ),
-      );
+    state.copyWith(
+      name: BookingName.dirty(value),
+    ),
+  );
 
   void updateNote(String value) => emit(
-        state.copyWith(
-          note: BookingNote.dirty(value),
-        ),
-      );
+    state.copyWith(
+      note: BookingNote.dirty(value),
+    ),
+  );
 
   void updateRate(int? value) => emit(
-        state.copyWith(
-          rate: value,
-        ),
-      );
+    state.copyWith(
+      rate: value,
+    ),
+  );
 
   void updatePlace({
     required Option<PlaceData> place,
     required Option<String> placeId,
-  }) =>
-      emit(
-        state.copyWith(
-          place: place,
-          placeId: placeId,
-        ),
-      );
+  }) => emit(
+    state.copyWith(
+      place: place,
+      placeId: placeId,
+    ),
+  );
 
   Future<Booking> createBooking() async {
     if (!state.isValid) {
       throw Exception('Form is not valid');
     }
 
-    final note = state.note.value.isNotEmpty ? state.note.value : 'booking sent';
+    final note = state.note.value.isNotEmpty
+        ? state.note.value
+        : 'booking sent';
     final nullablePlace = state.place.toNullable();
 
     final placeId = nullablePlace?.placeId;
@@ -113,13 +114,13 @@ class CreateBookingCubit extends Cubit<CreateBookingState> {
     // final geohash = nullablePlace?.geohash;
 
     final location = (lat != null && lng != null && placeId != null)
-      ? Location(
-          lat: lat,
-          lng: lng,
-          // geohash: geohash,
-          placeId: placeId,
-        )
-      : null;
+        ? Location(
+            lat: lat,
+            lng: lng,
+            // geohash: geohash,
+            placeId: placeId,
+          )
+        : null;
 
     final booking = Booking(
       id: const Uuid().v4(),
@@ -168,7 +169,9 @@ class CreateBookingCubit extends Cubit<CreateBookingState> {
         await payments.confirmPaymentSheetPayment();
       }
 
-      final channel = await streamRepo.createSimpleChat(state.requesteeId); // state.service.userId;
+      final channel = await streamRepo.createSimpleChat(
+        state.requesteeId,
+      ); // state.service.userId;
       await channel.sendMessage(
         Message(
           text: note,

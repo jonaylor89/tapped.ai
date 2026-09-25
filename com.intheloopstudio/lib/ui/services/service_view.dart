@@ -5,13 +5,16 @@ import 'package:intheloopapp/domains/models/service.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
-import 'package:intheloopapp/ui/common/tapped_app_bar.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/error/error_view.dart';
 import 'package:intheloopapp/ui/profile/components/request_to_book.dart';
 import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
 
+/// Service detail: price-forward glass card, description, and either the
+/// owner's edit/delete controls or a request-to-book action.
 class ServiceView extends StatelessWidget {
   const ServiceView({
     required this.service,
@@ -22,53 +25,33 @@ class ServiceView extends StatelessWidget {
   final Service service;
   final Option<UserModel> serviceUser;
 
-  Widget _editServiceButton(BuildContext context) {
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-    return SizedBox(
-      width: double.infinity,
-      child: CupertinoButton(
-        onPressed: () {
-          context
-            ..pop()
-            ..push(
-              CreateServicePage(
-                onSubmit: (Service service) {},
-                service: Option.of(service),
-              ),
-            );
-        },
-        borderRadius: BorderRadius.circular(15),
-        color: onSurfaceColor.withOpacity(0.1),
-        child: Text(
-          'Save',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: onSurfaceColor,
-          ),
+  String get _price =>
+      '\$${(service.rate / 100).toStringAsFixed(2)}'
+      '${service.rateType == RateType.hourly ? '/hr' : ''}';
+
+  void _edit(BuildContext context) {
+    context
+      ..pop()
+      ..push(
+        CreateServicePage(
+          onSubmit: (Service service) {},
+          service: Option.of(service),
         ),
-      ),
-    );
+      );
   }
 
-  Widget _deleteServiceButton(BuildContext context) {
+  Future<void> _delete(BuildContext context) async {
     final database = context.database;
-    return SizedBox(
-      width: double.infinity,
-      child: CupertinoButton(
-        onPressed: () async {
-          context.pop();
-          await database.deleteService(service.userId, service.id);
-        },
-        borderRadius: BorderRadius.circular(15),
-        child: const Text(
-          'Delete Service',
-          style: TextStyle(
-            fontWeight: FontWeight.w700,
-            color: Colors.red,
-          ),
-        ),
-      ),
+    final confirmed = await showGlassConfirm(
+      context: context,
+      title: 'delete this service?',
+      message: 'people will no longer be able to book "${service.title}".',
+      confirmLabel: 'delete',
+      destructive: true,
     );
+    if (!confirmed || !context.mounted) return;
+    context.pop();
+    await database.deleteService(service.userId, service.id);
   }
 
   @override
@@ -77,91 +60,109 @@ class ServiceView extends StatelessWidget {
     final database = context.database;
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          appBar: const TappedAppBar(
-            title: 'Service',
-          ),
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 16,
-                horizontal: 16,
+        final isOwner = currentUser.id == service.userId;
+        return GlassPage(
+          title: 'service',
+          largeTitle: false,
+          actions: [
+            if (isOwner)
+              GlassIconButton(
+                icon: CupertinoIcons.pencil,
+                semanticsLabel: 'edit service',
+                onPressed: () => _edit(context),
               ),
-              child: Column(
+          ],
+          bottomBar: GlassBottomBar(
+            child: isOwner
+                ? GlassButton.destructive(
+                    label: 'delete service',
+                    icon: CupertinoIcons.trash,
+                    expand: true,
+                    onPressed: () => _delete(context),
+                  )
+                : FutureBuilder<Option<UserModel>>(
+                    future: database.getUserById(service.userId),
+                    builder: (context, snapshot) {
+                      final data = snapshot.data;
+                      return switch (data) {
+                        null => const GlassLoading(),
+                        None() => const ErrorView(),
+                        Some(:final value) => RequestToBookButton(user: value),
+                      };
+                    },
+                  ),
+          ),
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: GlassMetrics.edgeInset,
+              ),
+              sliver: SliverList.list(
                 children: [
-                  const SizedBox(
-                    height: 14,
-                  ),
-                  UserTile(userId: service.userId, user: serviceUser),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  Text(
-                    service.title,
-                    maxLines: 2,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      overflow: TextOverflow.ellipsis,
-                      fontSize: 34,
-                      fontWeight: FontWeight.w700,
+                  GlassCard(
+                    tint: TappedColors.success,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          service.title,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.4,
+                          ),
+                        ),
+                        const SizedBox(height: TappedSpacing.md),
+                        Text(
+                          _price,
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            color: TappedColors.success,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -1,
+                          ),
+                        ),
+                        Text(
+                          service.rateType == RateType.hourly
+                              ? 'hourly rate'
+                              : 'flat rate',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(
+                              alpha: 0.6,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  Text(
-                    '\$${(service.rate / 100).toStringAsFixed(2)}${service.rateType == RateType.hourly ? '/hr' : ''}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 30,
-                      fontWeight: FontWeight.w700,
+                  if (service.description.trim().isNotEmpty) ...[
+                    const GlassSectionTitle(
+                      'about',
+                      padding: EdgeInsets.only(
+                        top: TappedSpacing.xl,
+                        bottom: TappedSpacing.sm,
+                      ),
                     ),
-                  ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  Text(
-                    service.description,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(
-                    height: 22,
-                  ),
-                  if (currentUser.id == service.userId)
-                    _editServiceButton(context)
-                  else
-                    FutureBuilder<Option<UserModel>>(
-                      future: database.getUserById(service.userId),
-                      builder: (context, snapshot) {
-                        final data = snapshot.data;
-                        return switch (data) {
-                          null => const CupertinoActivityIndicator(),
-                          None() => const ErrorView(),
-                          Some(:final value) => () {
-                              return SizedBox(
-                                width: double.infinity,
-                                child: RequestToBookButton(
-                                  user: value,
-                                  // service: Option.of(service),
-                                ),
-                              );
-                            }(),
-                        };
-                      },
+                    Text(
+                      service.description,
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
                     ),
-                  if (currentUser.id == service.userId)
-                    _deleteServiceButton(
-                      context,
-                    ),
-                  const SizedBox(
-                    height: 34,
-                  ),
+                  ],
                 ],
               ),
             ),
-          ),
+            const SliverToBoxAdapter(child: GlassSectionTitle('offered by')),
+            SliverToBoxAdapter(
+              child: GlassSection(
+                children: [
+                  UserTile(userId: service.userId, user: serviceUser),
+                ],
+              ),
+            ),
+            const SliverToBoxAdapter(
+              child: SizedBox(height: GlassMetrics.bottomBarClearance),
+            ),
+          ],
         );
       },
     );

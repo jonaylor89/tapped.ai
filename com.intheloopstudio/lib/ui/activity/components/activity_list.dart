@@ -1,12 +1,13 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/domains/activity_bloc/activity_bloc.dart';
 import 'package:intheloopapp/domains/models/activity.dart';
 import 'package:intheloopapp/ui/activity/components/activity_tile.dart';
-import 'package:intheloopapp/ui/common/easter_egg_placeholder.dart';
-import 'package:skeletons/skeletons.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class ActivityList extends StatefulWidget {
   const ActivityList({super.key});
@@ -53,43 +54,50 @@ class _ActivityListState extends State<ActivityList> {
   Widget _activityListBuilder(BuildContext context, List<Activity> activities) {
     context.read<ActivityBloc>().add(const MarkAllAsReadEvent());
     return CustomScrollView(
-      physics: const ClampingScrollPhysics(
-        parent: AlwaysScrollableScrollPhysics(),
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
       controller: _scrollController,
-      slivers: activities.isEmpty
-          ? <Widget>[
-              SliverList(
-                delegate: SliverChildListDelegate([
-                  const SizedBox(height: 150),
-                  const EasterEggPlaceholder(
-                    text: 'No New Activities',
+      slivers: [
+        CupertinoSliverRefreshControl(
+          onRefresh: () async =>
+              context.read<ActivityBloc>().add(InitListenerEvent()),
+        ),
+        ...activities.isEmpty
+            ? const <Widget>[
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: GlassEmptyState(
+                    icon: CupertinoIcons.bell,
+                    title: "you're all caught up",
+                    message:
+                        'booking requests, reminders, and new followers '
+                        'will show up here',
                   ),
-                ]),
-              ),
-            ]
-          : <Widget>[
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (BuildContext context, int index) {
-                    return index >= activities.length
-                        ? const Center(
-                            child: SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 1.5,
-                              ),
-                            ),
-                          )
-                        : ActivityTile(
-                            activity: activities[index],
-                          );
-                  },
-                  childCount: activities.length + 1,
                 ),
-              ),
-            ],
+              ]
+            : <Widget>[
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: TappedSpacing.sm),
+                ),
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (BuildContext context, int index) {
+                      return index >= activities.length
+                          ? const Padding(
+                              padding: EdgeInsets.all(TappedSpacing.lg),
+                              child: Center(child: GlassLoading()),
+                            )
+                          : ActivityTile(
+                              activity: activities[index],
+                            );
+                    },
+                    childCount: activities.length + 1,
+                  ),
+                ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: GlassMetrics.bottomBarClearance),
+                ),
+              ],
+      ],
     );
   }
 
@@ -97,18 +105,17 @@ class _ActivityListState extends State<ActivityList> {
   Widget build(BuildContext context) {
     return BlocBuilder<ActivityBloc, ActivityState>(
       builder: (context, state) {
-        return RefreshIndicator(
-          onRefresh: () async =>
-              context.read<ActivityBloc>().add(InitListenerEvent()),
-          child: switch (state) {
-            ActivityInitial() => SkeletonListView(),
-            ActivityFailure() =>
-              const Center(child: Text('failed to fetch activities')),
-            ActivitySuccess(:final activities) ||
-            ActivityEnd(:final activities) =>
-              _activityListBuilder(context, activities),
-          },
-        );
+        return switch (state) {
+          ActivityInitial() => const Center(child: GlassLoading()),
+          ActivityFailure() => const GlassEmptyState(
+            icon: CupertinoIcons.exclamationmark_triangle,
+            title: 'failed to fetch activities',
+          ),
+          ActivitySuccess(:final activities) ||
+          ActivityEnd(
+            :final activities,
+          ) => _activityListBuilder(context, activities),
+        };
       },
     );
   }

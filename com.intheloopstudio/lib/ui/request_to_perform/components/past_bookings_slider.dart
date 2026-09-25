@@ -26,17 +26,17 @@ class _PastBookingsSliderState extends State<PastBookingsSlider> {
     super.initState();
     context.database
         .getBookingsByRequestee(
-      _user.id,
-      status: BookingStatus.confirmed,
-      limit: 5,
-    )
+          _user.id,
+          status: BookingStatus.confirmed,
+          limit: 5,
+        )
         .then(
-      (bookings) {
-        setState(() {
-          _latestBookings = bookings;
-        });
-      },
-    );
+          (bookings) {
+            setState(() {
+              _latestBookings = bookings;
+            });
+          },
+        );
   }
 
   @override

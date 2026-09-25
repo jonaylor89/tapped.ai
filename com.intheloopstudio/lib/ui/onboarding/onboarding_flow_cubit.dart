@@ -35,11 +35,11 @@ class OnboardingFlowCubit extends Cubit<OnboardingFlowState> {
     required this.storageRepository,
     required this.databaseRepository,
   }) : super(
-          OnboardingFlowState(
-            currentUserId: currentAuthUser.uid,
-            artistName: currentAuthUser.displayName ?? '',
-          ),
-        );
+         OnboardingFlowState(
+           currentUserId: currentAuthUser.uid,
+           artistName: currentAuthUser.displayName ?? '',
+         ),
+       );
 
   final SpotifyRepository spotify;
   final OnboardingBloc onboardingBloc;
@@ -50,72 +50,72 @@ class OnboardingFlowCubit extends Cubit<OnboardingFlowState> {
   final User currentAuthUser;
 
   void spotifyArtistChange(Option<SpotifyArtist> input) => switch (input) {
-        None() => emit(
-            state.copyWith(spotifyArtist: const None()),
-          ),
-        Some(:final value) => (() async {
-            // get username from santitized spotify artist name
-            final artistName = value.name;
+    None() => emit(
+      state.copyWith(spotifyArtist: const None()),
+    ),
+    Some(:final value) => (() async {
+      // get username from santitized spotify artist name
+      final artistName = value.name;
 
-            // get profile picture from spotify artist images
-            final profilePicture = value.images.isNotEmpty
-                ? Option.of(value.images.first.url)
-                : const None();
+      // get profile picture from spotify artist images
+      final profilePicture = value.images.isNotEmpty
+          ? Option.of(value.images.first.url)
+          : const None();
 
-            final profilePicFile = await switch (profilePicture) {
-              Some(:final value) => () async {
-                  final file = await downloadImage(value);
-                  return file;
-                }(),
-              None() => Future.value(const None()),
-            };
-
-            emit(
-              state.copyWith(
-                spotifyArtist: Option.of(value),
-                artistName: artistName.toNullable(),
-                pickedPhoto: profilePicFile,
-              ),
-            );
-          })()
+      final profilePicFile = await switch (profilePicture) {
+        Some(:final value) => () async {
+          final file = await downloadImage(value);
+          return file;
+        }(),
+        None() => Future.value(const None()),
       };
 
-  void artistNameChange(String input) => emit(
+      emit(
         state.copyWith(
-          artistName: input,
+          spotifyArtist: Option.of(value),
+          artistName: artistName.toNullable(),
+          pickedPhoto: profilePicFile,
         ),
       );
+    })(),
+  };
+
+  void artistNameChange(String input) => emit(
+    state.copyWith(
+      artistName: input,
+    ),
+  );
 
   void tiktokHandleChange(String input) => emit(
-        state.copyWith(
-          tiktokHandle: input,
-        ),
-      );
+    state.copyWith(
+      tiktokHandle: input,
+    ),
+  );
 
   void tiktokFollowersChange(int input) => emit(
-        state.copyWith(
-          tiktokFollowers: input,
-        ),
-      );
+    state.copyWith(
+      tiktokFollowers: input,
+    ),
+  );
 
   void instagramHandleChange(String input) => emit(
-        state.copyWith(
-          instagramHandle: input,
-        ),
-      );
+    state.copyWith(
+      instagramHandle: input,
+    ),
+  );
 
   void instagramFollowersChange(int input) => emit(
-        state.copyWith(
-          instagramFollowers: input,
-        ),
-      );
+    state.copyWith(
+      instagramFollowers: input,
+    ),
+  );
 
   // ignore: avoid_positional_boolean_parameters
   void eulaChange(bool input) => emit(
-        state.copyWith(
-          eula: input,
-        ),
-      );
+    state.copyWith(
+      eula: input,
+    ),
+  );
 
   Future<void> fetchSpotifyInfo(Option<String> spotifyUrl) async {
     emit(
@@ -128,14 +128,14 @@ class OnboardingFlowCubit extends Cubit<OnboardingFlowState> {
     final res = await switch (spotifyUrl) {
       None() => Future<Option<SpotifyArtist>>.value(const None()),
       Some(:final value) => (() async {
-          if (value.isEmpty) {
-            return const None();
-          }
+        if (value.isEmpty) {
+          return const None();
+        }
 
-          final spotifyId = Uri.parse(value).pathSegments.last;
-          final spotifyArtist = await spotify.getArtistById(spotifyId);
-          return spotifyArtist;
-        })(),
+        final spotifyId = Uri.parse(value).pathSegments.last;
+        final spotifyArtist = await spotify.getArtistById(spotifyId);
+        return spotifyArtist;
+      })(),
     };
 
     if (res.isNone()) {
@@ -187,18 +187,18 @@ class OnboardingFlowCubit extends Cubit<OnboardingFlowState> {
     final username = await switch (usernameCandidate.isEmpty) {
       true => Future.value(''),
       false => (() async {
-          final usernameAvailable =
-              await databaseRepository.checkUsernameAvailability(
-            usernameCandidate,
-            currentAuthUser.uid,
-          );
+        final usernameAvailable = await databaseRepository
+            .checkUsernameAvailability(
+              usernameCandidate,
+              currentAuthUser.uid,
+            );
 
-          final sinceEpoch = DateTime.now().millisecondsSinceEpoch.toString();
-          final lastFour = sinceEpoch.substring(sinceEpoch.length - 4);
-          return usernameAvailable
-              ? usernameCandidate
-              : '$usernameCandidate$lastFour';
-        })(),
+        final sinceEpoch = DateTime.now().millisecondsSinceEpoch.toString();
+        final lastFour = sinceEpoch.substring(sinceEpoch.length - 4);
+        return usernameAvailable
+            ? usernameCandidate
+            : '$usernameCandidate$lastFour';
+      })(),
     };
 
     emit(state.copyWith(status: FormzSubmissionStatus.inProgress));
@@ -206,12 +206,12 @@ class OnboardingFlowCubit extends Cubit<OnboardingFlowState> {
     try {
       final profilePictureUrl = await switch (state.pickedPhoto) {
         Some(:final value) => () async {
-            final url = await storageRepository.uploadProfilePicture(
-              currentAuthUser.uid,
-              value,
-            );
-            return Option.of(url);
-          }(),
+          final url = await storageRepository.uploadProfilePicture(
+            currentAuthUser.uid,
+            value,
+          );
+          return Option.of(url);
+        }(),
         None() => Future.value(const None()),
       };
 

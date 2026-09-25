@@ -1,5 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/settings/components/settings_switch.dart';
 import 'package:intheloopapp/ui/settings/settings_cubit.dart';
 
@@ -10,54 +12,42 @@ class NotificationSettingsForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<SettingsCubit, SettingsState>(
       builder: (context, state) {
+        final cubit = context.read<SettingsCubit>();
         return Column(
           children: [
-            const SizedBox(height: 10),
-            const Row(
+            GlassSection(
+              header: 'push notifications',
               children: [
-                Text(
-                  'push notifications',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                SettingsSwitch(
+                  icon: CupertinoIcons.bubble_left_fill,
+                  iconColor: Colors.green,
+                  label: 'new direct messages',
+                  activated: state.pushNotificationsDirectMessages,
+                  onChanged: (selected) =>
+                      cubit.changeDirectMsgPush(selected: selected),
                 ),
               ],
             ),
-            SettingsSwitch(
-              label: 'new direct messages',
-              activated: state.pushNotificationsDirectMessages,
-              onChanged: (selected) =>
-                  context.read<SettingsCubit>().changeDirectMsgPush(
-                        selected: selected,
-                      ),
-            ),
-            const SizedBox(height: 10),
-            const Row(
+            GlassSection(
+              header: 'emails',
               children: [
-                Text(
-                  'emails',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                SettingsSwitch(
+                  icon: CupertinoIcons.sparkles,
+                  iconColor: Colors.purple,
+                  label: 'new app releases',
+                  activated: state.emailNotificationsAppReleases,
+                  onChanged: (selected) =>
+                      cubit.changeAppReleaseEmail(selected: selected),
+                ),
+                SettingsSwitch(
+                  icon: CupertinoIcons.envelope_fill,
+                  iconColor: Colors.blue,
+                  label: 'new direct messages',
+                  activated: state.emailNotificationsDirectMessages,
+                  onChanged: (selected) =>
+                      cubit.changeDirectMessagesEmail(selected: selected),
                 ),
               ],
-            ),
-            SettingsSwitch(
-                label: 'new app releases',
-                activated: state.emailNotificationsAppReleases,
-                onChanged: (selected) =>
-                    context.read<SettingsCubit>().changeAppReleaseEmail(
-                          selected: selected,
-                        ),),
-            SettingsSwitch(
-              label: 'new direct messages',
-              activated: state.emailNotificationsDirectMessages,
-              onChanged: (selected) =>
-                  context.read<SettingsCubit>().changeDirectMessagesEmail(
-                        selected: selected,
-                      ),
             ),
           ],
         );

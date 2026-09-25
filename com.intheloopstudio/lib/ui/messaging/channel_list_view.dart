@@ -5,8 +5,7 @@ import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/ui/loading/loading_view.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
-import 'package:stream_chat_flutter/stream_chat_flutter.dart'
-    hide ChannelName;
+import 'package:stream_chat_flutter/stream_chat_flutter.dart' hide ChannelName;
 
 class ChannelListView extends StatefulWidget {
   const ChannelListView({
@@ -58,16 +57,17 @@ class _ChannelListViewState extends State<ChannelListView> {
               child: StreamChannelListView(
                 controller: _controller,
                 // emptyBuilder: _buildEmptyFeed,
-                itemBuilder: (
-                  BuildContext context,
-                  List<Channel> channels,
-                  int index,
-                  StreamChannelListTile defaultChannelTile,
-                ) {
-                  // final channel = channels[index];
-                  // return ChannelPreview(channel: channel);
-                  return defaultChannelTile;
-                },
+                itemBuilder:
+                    (
+                      BuildContext context,
+                      List<Channel> channels,
+                      int index,
+                      StreamChannelListTile defaultChannelTile,
+                    ) {
+                      // final channel = channels[index];
+                      // return ChannelPreview(channel: channel);
+                      return defaultChannelTile;
+                    },
                 onChannelTap: (channel) {
                   context.push(StreamChannelPage(channel: channel));
                 },

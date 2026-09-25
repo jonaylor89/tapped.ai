@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/ui/discover/components/by_username_results_list.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/components/cancel_icon.dart';
 import 'package:intheloopapp/ui/discover/components/tapped_search_bar.dart';
 
@@ -52,16 +54,45 @@ class _SearchViewState extends State<SearchView> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        centerTitle: true,
-        elevation: 0.5,
+    return GlassAmbientBackground(
+      child: Scaffold(
         backgroundColor: Colors.transparent,
-        title: const TappedSearchBar(),
-        actions: _buildActions(),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  GlassMetrics.edgeInset,
+                  TappedSpacing.sm,
+                  GlassMetrics.edgeInset,
+                  TappedSpacing.sm,
+                ),
+                child: Row(
+                  children: [
+                    const Expanded(child: TappedSearchBar()),
+                    ..._buildActions(),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.06,
+                        ),
+                      ),
+                    ),
+                  ),
+                  child: const ByUsernameResultsList(),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      body: const ByUsernameResultsList(),
     );
   }
 }

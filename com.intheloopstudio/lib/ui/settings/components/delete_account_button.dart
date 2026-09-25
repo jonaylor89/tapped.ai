@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/apple_login_button.dart';
 import 'package:intheloopapp/ui/forms/email_text_field.dart';
 import 'package:intheloopapp/ui/forms/google_login_button.dart';
@@ -13,85 +16,62 @@ import 'package:intheloopapp/ui/settings/settings_cubit.dart';
 class DeleteAccountButton extends StatelessWidget {
   const DeleteAccountButton({super.key});
 
+  void _showReauth(BuildContext context) {
+    final cubit = context.read<SettingsCubit>();
+    showGlassSheet<void>(
+      context: context,
+      title: 'delete account',
+      scrollable: true,
+      builder: (_) => BlocProvider.value(
+        value: cubit,
+        child: BlocBuilder<SettingsCubit, SettingsState>(
+          builder: (context, state) {
+            if (state.status.isInProgress) {
+              return const Padding(
+                padding: EdgeInsets.all(TappedSpacing.xl),
+                child: GlassLoading(),
+              );
+            }
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const GlassBanner(
+                  icon: CupertinoIcons.exclamationmark_triangle_fill,
+                  tint: TappedColors.error,
+                  title: 'this cannot be undone',
+                  message:
+                      'reauthenticate to permanently delete your '
+                      'account and all of its data',
+                ),
+                const SizedBox(height: TappedSpacing.lg),
+                EmailTextField(onChanged: cubit.updateEmail),
+                const SizedBox(height: TappedSpacing.md),
+                PasswordTextField(onChanged: cubit.updatePassword),
+                const SizedBox(height: TappedSpacing.lg),
+                ReauthenticateButton(onPressed: cubit.reauthWithCredentials),
+                const SizedBox(height: TappedSpacing.lg),
+                GoogleLoginButton(onPressed: cubit.reauthWithGoogle),
+                if (Platform.isIOS) ...[
+                  const SizedBox(height: TappedSpacing.sm),
+                  AppleLoginButton(onPressed: cubit.reauthWithApple),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SettingsCubit, SettingsState>(
-      builder: (context, state) {
-        return TextButton(
-          onPressed: () => showDialog<AlertDialog>(
-            context: context,
-            builder: (_) => AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(25),
-              ),
-              elevation: 5,
-              title: const Text('Reauthenticate'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: state.status.isInProgress
-                    ? [
-                        const CircularProgressIndicator(),
-                      ]
-                    : [
-                        const Text(
-                          'Warning: this cannot be undone',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 20),
-                        EmailTextField(
-                          onChanged: context.read<SettingsCubit>().updateEmail,
-                        ),
-                        const SizedBox(height: 20),
-                        PasswordTextField(
-                          onChanged:
-                              context.read<SettingsCubit>().updatePassword,
-                        ),
-                        const SizedBox(height: 20),
-                        ReauthenticateButton(
-                          onPressed: context
-                              .read<SettingsCubit>()
-                              .reauthWithCredentials,
-                        ),
-                        const SizedBox(height: 20),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            GoogleLoginButton(
-                              onPressed: context
-                                  .read<SettingsCubit>()
-                                  .reauthWithGoogle,
-                            ),
-                            const SizedBox(height: 10),
-                            if (Platform.isIOS)
-                              AppleLoginButton(
-                                onPressed: context
-                                    .read<SettingsCubit>()
-                                    .reauthWithApple,
-                              )
-                            else
-                              const SizedBox.shrink(),
-                          ],
-                        ),
-                      ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: Navigator.of(context).pop,
-                  child: const Text('Cancel'),
-                ),
-              ],
-            ),
-          ),
-          child: Text(
-            'Delete Account',
-            style: TextStyle(
-              color: Colors.red[300],
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        );
-      },
+    return Center(
+      child: GlassButton.plain(
+        label: 'delete account',
+        icon: CupertinoIcons.trash,
+        compact: true,
+        onPressed: () => _showReauth(context),
+      ),
     );
   }
 }

@@ -76,46 +76,46 @@ class _TappedTextFieldState extends State<TappedTextField> {
   }
 
   Widget _buildExamples(BuildContext context) => Column(
+    children: [
+      const SizedBox(height: 10),
+      Row(
         children: [
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: Divider(
-                  height: 0,
-                  thickness: 0.5,
-                  color: context.tokens.divider,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                'or',
-                style: TextStyle(
-                  color: context.tokens.mutedText,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Divider(
-                  height: 0,
-                  thickness: 0.5,
-                  color: context.tokens.divider,
-                ),
-              ),
-            ],
+          Expanded(
+            child: Divider(
+              height: 0,
+              thickness: 0.5,
+              color: context.tokens.divider,
+            ),
           ),
-          const SizedBox(height: 10),
-          Column(
-            children: widget.examples
-                .map(
-                  (e) => _exampleChip(
-                    text: e,
-                  ),
-                )
-                .toList(),
+          const SizedBox(width: 5),
+          Text(
+            'or',
+            style: TextStyle(
+              color: context.tokens.mutedText,
+            ),
+          ),
+          const SizedBox(width: 5),
+          Expanded(
+            child: Divider(
+              height: 0,
+              thickness: 0.5,
+              color: context.tokens.divider,
+            ),
           ),
         ],
-      );
+      ),
+      const SizedBox(height: 10),
+      Column(
+        children: widget.examples
+            .map(
+              (e) => _exampleChip(
+                text: e,
+              ),
+            )
+            .toList(),
+      ),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {

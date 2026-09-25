@@ -12,7 +12,8 @@ part of 'discover_cubit.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 /// @nodoc
 mixin _$DiscoverState {
@@ -37,21 +38,23 @@ mixin _$DiscoverState {
 /// @nodoc
 abstract class $DiscoverStateCopyWith<$Res> {
   factory $DiscoverStateCopyWith(
-          DiscoverState value, $Res Function(DiscoverState) then) =
-      _$DiscoverStateCopyWithImpl<$Res, DiscoverState>;
+    DiscoverState value,
+    $Res Function(DiscoverState) then,
+  ) = _$DiscoverStateCopyWithImpl<$Res, DiscoverState>;
   @useResult
-  $Res call(
-      {List<UserModel> venueHits,
-      List<Booking> userBookings,
-      List<Booking> bookingHits,
-      List<Opportunity> opportunityHits,
-      MapOverlay mapOverlay,
-      List<Genre> genreFilters,
-      RangeValues capacityRange,
-      double userLat,
-      double userLng,
-      bool resultsExpired,
-      LatLngBounds? bounds});
+  $Res call({
+    List<UserModel> venueHits,
+    List<Booking> userBookings,
+    List<Booking> bookingHits,
+    List<Opportunity> opportunityHits,
+    MapOverlay mapOverlay,
+    List<Genre> genreFilters,
+    RangeValues capacityRange,
+    double userLat,
+    double userLng,
+    bool resultsExpired,
+    LatLngBounds? bounds,
+  });
 }
 
 /// @nodoc
@@ -79,52 +82,55 @@ class _$DiscoverStateCopyWithImpl<$Res, $Val extends DiscoverState>
     Object? resultsExpired = null,
     Object? bounds = freezed,
   }) {
-    return _then(_value.copyWith(
-      venueHits: null == venueHits
-          ? _value.venueHits
-          : venueHits // ignore: cast_nullable_to_non_nullable
-              as List<UserModel>,
-      userBookings: null == userBookings
-          ? _value.userBookings
-          : userBookings // ignore: cast_nullable_to_non_nullable
-              as List<Booking>,
-      bookingHits: null == bookingHits
-          ? _value.bookingHits
-          : bookingHits // ignore: cast_nullable_to_non_nullable
-              as List<Booking>,
-      opportunityHits: null == opportunityHits
-          ? _value.opportunityHits
-          : opportunityHits // ignore: cast_nullable_to_non_nullable
-              as List<Opportunity>,
-      mapOverlay: null == mapOverlay
-          ? _value.mapOverlay
-          : mapOverlay // ignore: cast_nullable_to_non_nullable
-              as MapOverlay,
-      genreFilters: null == genreFilters
-          ? _value.genreFilters
-          : genreFilters // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      capacityRange: null == capacityRange
-          ? _value.capacityRange
-          : capacityRange // ignore: cast_nullable_to_non_nullable
-              as RangeValues,
-      userLat: null == userLat
-          ? _value.userLat
-          : userLat // ignore: cast_nullable_to_non_nullable
-              as double,
-      userLng: null == userLng
-          ? _value.userLng
-          : userLng // ignore: cast_nullable_to_non_nullable
-              as double,
-      resultsExpired: null == resultsExpired
-          ? _value.resultsExpired
-          : resultsExpired // ignore: cast_nullable_to_non_nullable
-              as bool,
-      bounds: freezed == bounds
-          ? _value.bounds
-          : bounds // ignore: cast_nullable_to_non_nullable
-              as LatLngBounds?,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            venueHits: null == venueHits
+                ? _value.venueHits
+                : venueHits // ignore: cast_nullable_to_non_nullable
+                      as List<UserModel>,
+            userBookings: null == userBookings
+                ? _value.userBookings
+                : userBookings // ignore: cast_nullable_to_non_nullable
+                      as List<Booking>,
+            bookingHits: null == bookingHits
+                ? _value.bookingHits
+                : bookingHits // ignore: cast_nullable_to_non_nullable
+                      as List<Booking>,
+            opportunityHits: null == opportunityHits
+                ? _value.opportunityHits
+                : opportunityHits // ignore: cast_nullable_to_non_nullable
+                      as List<Opportunity>,
+            mapOverlay: null == mapOverlay
+                ? _value.mapOverlay
+                : mapOverlay // ignore: cast_nullable_to_non_nullable
+                      as MapOverlay,
+            genreFilters: null == genreFilters
+                ? _value.genreFilters
+                : genreFilters // ignore: cast_nullable_to_non_nullable
+                      as List<Genre>,
+            capacityRange: null == capacityRange
+                ? _value.capacityRange
+                : capacityRange // ignore: cast_nullable_to_non_nullable
+                      as RangeValues,
+            userLat: null == userLat
+                ? _value.userLat
+                : userLat // ignore: cast_nullable_to_non_nullable
+                      as double,
+            userLng: null == userLng
+                ? _value.userLng
+                : userLng // ignore: cast_nullable_to_non_nullable
+                      as double,
+            resultsExpired: null == resultsExpired
+                ? _value.resultsExpired
+                : resultsExpired // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            bounds: freezed == bounds
+                ? _value.bounds
+                : bounds // ignore: cast_nullable_to_non_nullable
+                      as LatLngBounds?,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -132,22 +138,24 @@ class _$DiscoverStateCopyWithImpl<$Res, $Val extends DiscoverState>
 abstract class _$$DiscoverStateImplCopyWith<$Res>
     implements $DiscoverStateCopyWith<$Res> {
   factory _$$DiscoverStateImplCopyWith(
-          _$DiscoverStateImpl value, $Res Function(_$DiscoverStateImpl) then) =
-      __$$DiscoverStateImplCopyWithImpl<$Res>;
+    _$DiscoverStateImpl value,
+    $Res Function(_$DiscoverStateImpl) then,
+  ) = __$$DiscoverStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {List<UserModel> venueHits,
-      List<Booking> userBookings,
-      List<Booking> bookingHits,
-      List<Opportunity> opportunityHits,
-      MapOverlay mapOverlay,
-      List<Genre> genreFilters,
-      RangeValues capacityRange,
-      double userLat,
-      double userLng,
-      bool resultsExpired,
-      LatLngBounds? bounds});
+  $Res call({
+    List<UserModel> venueHits,
+    List<Booking> userBookings,
+    List<Booking> bookingHits,
+    List<Opportunity> opportunityHits,
+    MapOverlay mapOverlay,
+    List<Genre> genreFilters,
+    RangeValues capacityRange,
+    double userLat,
+    double userLng,
+    bool resultsExpired,
+    LatLngBounds? bounds,
+  });
 }
 
 /// @nodoc
@@ -155,8 +163,9 @@ class __$$DiscoverStateImplCopyWithImpl<$Res>
     extends _$DiscoverStateCopyWithImpl<$Res, _$DiscoverStateImpl>
     implements _$$DiscoverStateImplCopyWith<$Res> {
   __$$DiscoverStateImplCopyWithImpl(
-      _$DiscoverStateImpl _value, $Res Function(_$DiscoverStateImpl) _then)
-      : super(_value, _then);
+    _$DiscoverStateImpl _value,
+    $Res Function(_$DiscoverStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -173,75 +182,77 @@ class __$$DiscoverStateImplCopyWithImpl<$Res>
     Object? resultsExpired = null,
     Object? bounds = freezed,
   }) {
-    return _then(_$DiscoverStateImpl(
-      venueHits: null == venueHits
-          ? _value._venueHits
-          : venueHits // ignore: cast_nullable_to_non_nullable
-              as List<UserModel>,
-      userBookings: null == userBookings
-          ? _value._userBookings
-          : userBookings // ignore: cast_nullable_to_non_nullable
-              as List<Booking>,
-      bookingHits: null == bookingHits
-          ? _value._bookingHits
-          : bookingHits // ignore: cast_nullable_to_non_nullable
-              as List<Booking>,
-      opportunityHits: null == opportunityHits
-          ? _value._opportunityHits
-          : opportunityHits // ignore: cast_nullable_to_non_nullable
-              as List<Opportunity>,
-      mapOverlay: null == mapOverlay
-          ? _value.mapOverlay
-          : mapOverlay // ignore: cast_nullable_to_non_nullable
-              as MapOverlay,
-      genreFilters: null == genreFilters
-          ? _value._genreFilters
-          : genreFilters // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      capacityRange: null == capacityRange
-          ? _value.capacityRange
-          : capacityRange // ignore: cast_nullable_to_non_nullable
-              as RangeValues,
-      userLat: null == userLat
-          ? _value.userLat
-          : userLat // ignore: cast_nullable_to_non_nullable
-              as double,
-      userLng: null == userLng
-          ? _value.userLng
-          : userLng // ignore: cast_nullable_to_non_nullable
-              as double,
-      resultsExpired: null == resultsExpired
-          ? _value.resultsExpired
-          : resultsExpired // ignore: cast_nullable_to_non_nullable
-              as bool,
-      bounds: freezed == bounds
-          ? _value.bounds
-          : bounds // ignore: cast_nullable_to_non_nullable
-              as LatLngBounds?,
-    ));
+    return _then(
+      _$DiscoverStateImpl(
+        venueHits: null == venueHits
+            ? _value._venueHits
+            : venueHits // ignore: cast_nullable_to_non_nullable
+                  as List<UserModel>,
+        userBookings: null == userBookings
+            ? _value._userBookings
+            : userBookings // ignore: cast_nullable_to_non_nullable
+                  as List<Booking>,
+        bookingHits: null == bookingHits
+            ? _value._bookingHits
+            : bookingHits // ignore: cast_nullable_to_non_nullable
+                  as List<Booking>,
+        opportunityHits: null == opportunityHits
+            ? _value._opportunityHits
+            : opportunityHits // ignore: cast_nullable_to_non_nullable
+                  as List<Opportunity>,
+        mapOverlay: null == mapOverlay
+            ? _value.mapOverlay
+            : mapOverlay // ignore: cast_nullable_to_non_nullable
+                  as MapOverlay,
+        genreFilters: null == genreFilters
+            ? _value._genreFilters
+            : genreFilters // ignore: cast_nullable_to_non_nullable
+                  as List<Genre>,
+        capacityRange: null == capacityRange
+            ? _value.capacityRange
+            : capacityRange // ignore: cast_nullable_to_non_nullable
+                  as RangeValues,
+        userLat: null == userLat
+            ? _value.userLat
+            : userLat // ignore: cast_nullable_to_non_nullable
+                  as double,
+        userLng: null == userLng
+            ? _value.userLng
+            : userLng // ignore: cast_nullable_to_non_nullable
+                  as double,
+        resultsExpired: null == resultsExpired
+            ? _value.resultsExpired
+            : resultsExpired // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        bounds: freezed == bounds
+            ? _value.bounds
+            : bounds // ignore: cast_nullable_to_non_nullable
+                  as LatLngBounds?,
+      ),
+    );
   }
 }
 
 /// @nodoc
 
 class _$DiscoverStateImpl implements _DiscoverState {
-  const _$DiscoverStateImpl(
-      {final List<UserModel> venueHits = const [],
-      final List<Booking> userBookings = const [],
-      final List<Booking> bookingHits = const [],
-      final List<Opportunity> opportunityHits = const [],
-      this.mapOverlay = MapOverlay.venues,
-      final List<Genre> genreFilters = const [],
-      this.capacityRange = const RangeValues(0, 1000),
-      this.userLat = 37.5407246,
-      this.userLng = -77.4360481,
-      this.resultsExpired = false,
-      this.bounds})
-      : _venueHits = venueHits,
-        _userBookings = userBookings,
-        _bookingHits = bookingHits,
-        _opportunityHits = opportunityHits,
-        _genreFilters = genreFilters;
+  const _$DiscoverStateImpl({
+    final List<UserModel> venueHits = const [],
+    final List<Booking> userBookings = const [],
+    final List<Booking> bookingHits = const [],
+    final List<Opportunity> opportunityHits = const [],
+    this.mapOverlay = MapOverlay.venues,
+    final List<Genre> genreFilters = const [],
+    this.capacityRange = const RangeValues(0, 1000),
+    this.userLat = 37.5407246,
+    this.userLng = -77.4360481,
+    this.resultsExpired = false,
+    this.bounds,
+  }) : _venueHits = venueHits,
+       _userBookings = userBookings,
+       _bookingHits = bookingHits,
+       _opportunityHits = opportunityHits,
+       _genreFilters = genreFilters;
 
   final List<UserModel> _venueHits;
   @override
@@ -303,7 +314,7 @@ class _$DiscoverStateImpl implements _DiscoverState {
   @override
   @JsonKey()
   final bool resultsExpired;
-// @Default(false) bool showCurrentUser,
+  // @Default(false) bool showCurrentUser,
   @override
   final LatLngBounds? bounds;
 
@@ -317,18 +328,28 @@ class _$DiscoverStateImpl implements _DiscoverState {
     return identical(this, other) ||
         (other.runtimeType == runtimeType &&
             other is _$DiscoverStateImpl &&
-            const DeepCollectionEquality()
-                .equals(other._venueHits, _venueHits) &&
-            const DeepCollectionEquality()
-                .equals(other._userBookings, _userBookings) &&
-            const DeepCollectionEquality()
-                .equals(other._bookingHits, _bookingHits) &&
-            const DeepCollectionEquality()
-                .equals(other._opportunityHits, _opportunityHits) &&
+            const DeepCollectionEquality().equals(
+              other._venueHits,
+              _venueHits,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._userBookings,
+              _userBookings,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._bookingHits,
+              _bookingHits,
+            ) &&
+            const DeepCollectionEquality().equals(
+              other._opportunityHits,
+              _opportunityHits,
+            ) &&
             (identical(other.mapOverlay, mapOverlay) ||
                 other.mapOverlay == mapOverlay) &&
-            const DeepCollectionEquality()
-                .equals(other._genreFilters, _genreFilters) &&
+            const DeepCollectionEquality().equals(
+              other._genreFilters,
+              _genreFilters,
+            ) &&
             (identical(other.capacityRange, capacityRange) ||
                 other.capacityRange == capacityRange) &&
             (identical(other.userLat, userLat) || other.userLat == userLat) &&
@@ -340,18 +361,19 @@ class _$DiscoverStateImpl implements _DiscoverState {
 
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      const DeepCollectionEquality().hash(_venueHits),
-      const DeepCollectionEquality().hash(_userBookings),
-      const DeepCollectionEquality().hash(_bookingHits),
-      const DeepCollectionEquality().hash(_opportunityHits),
-      mapOverlay,
-      const DeepCollectionEquality().hash(_genreFilters),
-      capacityRange,
-      userLat,
-      userLng,
-      resultsExpired,
-      bounds);
+    runtimeType,
+    const DeepCollectionEquality().hash(_venueHits),
+    const DeepCollectionEquality().hash(_userBookings),
+    const DeepCollectionEquality().hash(_bookingHits),
+    const DeepCollectionEquality().hash(_opportunityHits),
+    mapOverlay,
+    const DeepCollectionEquality().hash(_genreFilters),
+    capacityRange,
+    userLat,
+    userLng,
+    resultsExpired,
+    bounds,
+  );
 
   @JsonKey(ignore: true)
   @override
@@ -361,18 +383,19 @@ class _$DiscoverStateImpl implements _DiscoverState {
 }
 
 abstract class _DiscoverState implements DiscoverState {
-  const factory _DiscoverState(
-      {final List<UserModel> venueHits,
-      final List<Booking> userBookings,
-      final List<Booking> bookingHits,
-      final List<Opportunity> opportunityHits,
-      final MapOverlay mapOverlay,
-      final List<Genre> genreFilters,
-      final RangeValues capacityRange,
-      final double userLat,
-      final double userLng,
-      final bool resultsExpired,
-      final LatLngBounds? bounds}) = _$DiscoverStateImpl;
+  const factory _DiscoverState({
+    final List<UserModel> venueHits,
+    final List<Booking> userBookings,
+    final List<Booking> bookingHits,
+    final List<Opportunity> opportunityHits,
+    final MapOverlay mapOverlay,
+    final List<Genre> genreFilters,
+    final RangeValues capacityRange,
+    final double userLat,
+    final double userLng,
+    final bool resultsExpired,
+    final LatLngBounds? bounds,
+  }) = _$DiscoverStateImpl;
 
   @override
   List<UserModel> get venueHits;

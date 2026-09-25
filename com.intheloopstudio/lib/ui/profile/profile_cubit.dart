@@ -26,11 +26,11 @@ class ProfileCubit extends Cubit<ProfileState> {
     required this.currentUser,
     required this.visitedUser,
   }) : super(
-          ProfileState(
-            currentUser: currentUser,
-            visitedUser: visitedUser,
-          ),
-        );
+         ProfileState(
+           currentUser: currentUser,
+           visitedUser: visitedUser,
+         ),
+       );
   final SpotifyRepository spotify;
   final DatabaseRepository database;
   final PlacesRepository places;
@@ -44,7 +44,8 @@ class ProfileCubit extends Cubit<ProfileState> {
   ) {
     emit(
       state.copyWith(
-        isCollapsed: scrollController.hasClients &&
+        isCollapsed:
+            scrollController.hasClients &&
             scrollController.offset > (expandedBarHeight - collapsedBarHeight),
       ),
     );
@@ -69,8 +70,9 @@ class ProfileCubit extends Cubit<ProfileState> {
         'refetchVisitedUser ${state.visitedUser} : ${newUserData ?? "null"}',
       );
       if (newUserData == null) {
-        final refreshedVisitedUser =
-            await database.getUserById(state.visitedUser.id);
+        final refreshedVisitedUser = await database.getUserById(
+          state.visitedUser.id,
+        );
         emit(state.copyWith(visitedUser: refreshedVisitedUser.toNullable()));
       } else {
         emit(state.copyWith(visitedUser: newUserData));
@@ -143,20 +145,21 @@ class ProfileCubit extends Cubit<ProfileState> {
 
       final _ = switch ((latestPerformerReview, latestBookerReview)) {
         (None(), None()) => emit(state.copyWith(latestReview: const None())),
-        (Some(:final value), None()) =>
-          emit(state.copyWith(latestReview: Option.of(value))),
+        (Some(:final value), None()) => emit(
+          state.copyWith(latestReview: Option.of(value)),
+        ),
         (None(), Some(:final value)) => emit(
-            state.copyWith(
-              latestReview: Option.of(value),
-            ),
+          state.copyWith(
+            latestReview: Option.of(value),
           ),
+        ),
         (Some(), Some()) => () {
-            final latest = _getLatestReview(
-              latestPerformerReview.toNullable()!,
-              latestBookerReview.toNullable()!,
-            );
-            emit(state.copyWith(latestReview: Option.of(latest)));
-          }(),
+          final latest = _getLatestReview(
+            latestPerformerReview.toNullable()!,
+            latestBookerReview.toNullable()!,
+          );
+          emit(state.copyWith(latestReview: Option.of(latest)));
+        }(),
       };
     } catch (e, s) {
       logger.error(
@@ -261,8 +264,8 @@ class ProfileCubit extends Cubit<ProfileState> {
       final place = await switch (visitedUser.location) {
         None() => Future<Option<PlaceData>>.value(const None()),
         Some(:final value) => (() {
-            return places.getPlaceById(value.placeId);
-          })(),
+          return places.getPlaceById(value.placeId);
+        })(),
       };
       emit(state.copyWith(place: place));
     } catch (e, s) {
@@ -278,20 +281,20 @@ class ProfileCubit extends Cubit<ProfileState> {
     return switch (spotifyId) {
       None() => Future<void>.value(),
       Some(:final value) => (() async {
-          final trace = logger.createTrace('initSpotifyTopTracks');
-          await trace.start();
-          try {
-            logger.d(
-              'initSpotifyTopTracks $value',
-            );
-            final topTracks = await spotify.getTopTracks(value);
-            emit(state.copyWith(topTracks: topTracks));
-          } catch (e, s) {
-            logger.error('initSpotifyTopTracks error', error: e, stackTrace: s);
-          } finally {
-            await trace.stop();
-          }
-        })(),
+        final trace = logger.createTrace('initSpotifyTopTracks');
+        await trace.start();
+        try {
+          logger.d(
+            'initSpotifyTopTracks $value',
+          );
+          final topTracks = await spotify.getTopTracks(value);
+          emit(state.copyWith(topTracks: topTracks));
+        } catch (e, s) {
+          logger.error('initSpotifyTopTracks error', error: e, stackTrace: s);
+        } finally {
+          await trace.stop();
+        }
+      })(),
     };
   }
 
@@ -358,16 +361,16 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
- Future<void> deleteUser() async {
+  Future<void> deleteUser() async {
     try {
       logger.debug('delete user ${state.visitedUser.id}');
       await database.deleteUser(
-       state.visitedUser.id,
+        state.visitedUser.id,
       );
     } catch (e, s) {
       logger.error('delete user error', error: e, stackTrace: s);
     }
- }
+  }
 
   Future<void> loadIsBlocked() async {
     try {

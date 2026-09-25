@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/onboarding/components/eula_button.dart';
 import 'package:intheloopapp/ui/onboarding/onboarding_flow_cubit.dart';
 
@@ -8,41 +10,62 @@ class OnboardingCompleteView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return BlocBuilder<OnboardingFlowCubit, OnboardingFlowState>(
       builder: (context, state) {
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 25),
-            Container(
-              height: MediaQuery.of(context).size.height / 2.5,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(25),
-                image: const DecorationImage(
-                  fit: BoxFit.cover,
-                  image: AssetImage('assets/splash.gif'),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(GlassRadius.sheet),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const Image(
+                      image: AssetImage('assets/splash.gif'),
+                      fit: BoxFit.cover,
+                    ),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.7),
+                          ],
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: TappedSpacing.xl,
+                      right: TappedSpacing.xl,
+                      bottom: TappedSpacing.xl,
+                      child: Text(
+                        "you're all set",
+                        style: theme.textTheme.displaySmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            const SizedBox(height: 25),
-            // const Spacer(),
-            const Text(
-              "you're all set!",
-              style: TextStyle(
-                fontSize: 24,
-                fontFamily: 'Rubik One',
-                fontWeight: FontWeight.bold,
+            const SizedBox(height: TappedSpacing.xl),
+            Text(
+              'you can edit your profile any time from settings. want to get '
+              'verified? post a screenshot of your profile to your instagram '
+              'story and tag @tappedai.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                height: 1.4,
               ),
             ),
-            const Text(
-              'you can edit your profile at any time by going to your settings and if you want to get verified, post a screenshot of your profile to your instagram story and tag us @tappedai',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-              ),
-            ),
-            const Spacer(),
+            const SizedBox(height: TappedSpacing.xl),
             EULAButton(
               initialValue: state.eula,
               onChanged: (input) => context

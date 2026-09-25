@@ -8,10 +8,13 @@ import 'package:intheloopapp/data/database_repository.dart';
 import 'package:intheloopapp/data/places_repository.dart';
 import 'package:intheloopapp/data/spotify_repository.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
+import 'package:intheloopapp/domains/models/venue_info.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/domains/onboarding_bloc/onboarding_bloc.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/error/error_view.dart';
 import 'package:intheloopapp/ui/loading/loading_view.dart';
 import 'package:intheloopapp/ui/profile/components/bio_sliver.dart';
@@ -20,19 +23,21 @@ import 'package:intheloopapp/ui/profile/components/bookings_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/claim_profile_button.dart';
 import 'package:intheloopapp/ui/profile/components/header_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/info_sliver.dart';
+import 'package:intheloopapp/ui/profile/components/more_options_button.dart';
 import 'package:intheloopapp/ui/profile/components/opportunities_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/reviews_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/social_media_icons.dart';
 import 'package:intheloopapp/ui/profile/components/top_performers_sliver.dart';
 import 'package:intheloopapp/ui/profile/components/top_tracks_sliver.dart';
 import 'package:intheloopapp/ui/profile/profile_cubit.dart';
-import 'package:intheloopapp/ui/design/app_tokens.dart';
-import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/default_image.dart';
+import 'package:intheloopapp/utils/geohash.dart';
 import 'package:intheloopapp/utils/hero_image.dart';
-import 'package:intheloopapp/utils/premium_builder.dart';
 
+/// Native-feeling profile: a full-bleed hero that stretches on pull, floating
+/// glass controls that stay put, and content that reads as inset grouped
+/// glass cards over an ambient background.
 class ProfileView extends StatelessWidget {
   ProfileView({
     required this.visitedUserId,
@@ -41,7 +46,7 @@ class ProfileView extends StatelessWidget {
     this.titleHeroTag,
     this.onQuit,
     this.collapsedBarHeight = 60.0,
-    this.expandedBarHeight = 300.0,
+    this.expandedBarHeight = 380.0,
     this.stretchable = false,
     super.key,
     ScrollController? scrollController,
@@ -70,6 +75,7 @@ class ProfileView extends StatelessWidget {
   Widget _profileImage(BuildContext context, String? profilePicture) {
     final hero = heroImage;
     final imageProvider = _getProfileImage(profilePicture);
+    final surface = Theme.of(context).colorScheme.surface;
     return ConditionalParentWidget(
       condition: hero != null,
       conditionalBuilder: ({required child}) {
@@ -81,7 +87,8 @@ class ProfileView extends StatelessWidget {
       child: GestureDetector(
         onTap: () => context.push(
           ImagePage(
-            heroImage: heroImage ??
+            heroImage:
+                heroImage ??
                 HeroImage(
                   heroTag: titleHeroTag ?? visitedUserId,
                   imageProvider: imageProvider,
@@ -89,23 +96,20 @@ class ProfileView extends StatelessWidget {
           ),
         ),
         child: Stack(
+          fit: StackFit.expand,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                image: DecorationImage(
-                  fit: BoxFit.cover,
-                  image: imageProvider,
-                ),
-              ),
-            ),
-            Container(
+            Image(image: imageProvider, fit: BoxFit.cover),
+            DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
+                  stops: const [0, 0.35, 0.75, 1],
                   colors: [
+                    Colors.black.withValues(alpha: 0.35),
                     Colors.transparent,
-                    TappedColors.scrim,
+                    surface.withValues(alpha: 0.55),
+                    surface,
                   ],
                 ),
               ),
@@ -122,15 +126,15 @@ class ProfileView extends StatelessWidget {
     DatabaseRepository databaseRepository,
     PlacesRepository places,
     SpotifyRepository spotify,
-  ) =>
-      BlocProvider(
-        create: (context) => ProfileCubit(
-          spotify: spotify,
-          places: places,
-          database: databaseRepository,
-          currentUser: currentUser,
-          visitedUser: visitedUser,
-        )
+  ) => BlocProvider(
+    create: (context) =>
+        ProfileCubit(
+            spotify: spotify,
+            places: places,
+            database: databaseRepository,
+            currentUser: currentUser,
+            visitedUser: visitedUser,
+          )
           ..getTopBookings()
           ..getLatestReview()
           ..initOpportunities()
@@ -138,329 +142,204 @@ class ProfileView extends StatelessWidget {
           ..loadIsBlocked()
           ..loadIsVerified(visitedUser.id)
           ..initPlace(),
-        child: BlocBuilder<ProfileCubit, ProfileState>(
-          builder: (context, state) {
-            return BlocListener<OnboardingBloc, OnboardingState>(
-              listener: (context, userState) {
-                if (userState is Onboarded) {
-                  if (userState.currentUser.id == visitedUser.id) {
-                    context
-                        .read<ProfileCubit>()
-                        .refetchVisitedUser(newUserData: userState.currentUser);
-                  }
-                }
-              },
-              child: ConditionalParentWidget(
-                condition: stretchable,
-                conditionalBuilder: ({required child}) {
-                  return NotificationListener<ScrollNotification>(
-                    onNotification: (notification) =>
-                        context.read<ProfileCubit>().onNotification(
-                              scrollController,
-                              expandedBarHeight,
-                              collapsedBarHeight,
-                            ),
-                    child: child,
-                  );
-                },
-                child: CustomScrollView(
-                  controller: scrollController,
-                  physics: stretchable
-                      ? const BouncingScrollPhysics()
-                      : const ClampingScrollPhysics(),
-                  slivers: state.isBlocked
-                      ? _blockedSlivers(
-                          context,
-                          state,
-                          visitedUser,
-                        )
-                      : _unblockedSlivers(
-                          context,
-                          state,
-                          currentUser,
-                          visitedUser,
-                        ),
-                ),
-              ),
-            );
-          },
-        ),
-      );
-
-  List<Widget> _unblockedSlivers(
-    BuildContext context,
-    ProfileState state,
-    UserModel currentUser,
-    UserModel visitedUser,
-  ) =>
-      [
-        SliverAppBar(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          expandedHeight: expandedBarHeight,
-          collapsedHeight: collapsedBarHeight,
-          automaticallyImplyLeading: false,
-          pinned: true,
-          stretch: stretchable,
-          onStretchTrigger: stretchable
-              ? () async {
-                  final cubit = context.read<ProfileCubit>();
-                  await Future.wait([
-                    HapticFeedback.mediumImpact(),
-                    cubit.getTopBookings(),
-                    cubit.getLatestReview(),
-                    cubit.initOpportunities(),
-                    cubit.initTopSpotifyTracks(),
-                    cubit.refetchVisitedUser(),
-                    cubit.loadIsVerified(visitedUser.id),
-                  ]);
-                }
-              : null,
-          actions: [
-            IconButton(
-              onPressed: onQuit ?? () => context.pop(),
-              icon: Icon(
-                CupertinoIcons.xmark_circle_fill,
-                color: TappedColors.textOnImageMuted,
-              ),
-            ),
-          ],
-          flexibleSpace: FlexibleSpaceBar(
-            stretchModes: const [
-              StretchMode.zoomBackground,
-              StretchMode.fadeTitle,
-            ],
-            titlePadding: const EdgeInsets.symmetric(
-              horizontal: TappedSpacing.md,
-              vertical: TappedSpacing.sm,
-            ),
-            centerTitle: false,
-            title: PremiumBuilder(
-              builder: (context, isPremium) {
-                final theme = Theme.of(context);
-                return Text.rich(
-                  TextSpan(
-                    text: visitedUser.displayName,
-                    children: [
-                      if (state.isVerified)
-                        WidgetSpan(
-                          child: GestureDetector(
-                            onTap: () => showModalBottomSheet<void>(
-                              context: context,
-                              showDragHandle: true,
-                              builder: (context) {
-                                return SizedBox(
-                                  width: double.infinity,
-                                  height: 300,
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                    ),
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.verified,
-                                          color: theme.colorScheme.primary,
-                                          size: 96,
-                                        ),
-                                        const SizedBox(height: 12),
-                                        Text(
-                                          '${state.visitedUser.displayName} has been verified',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 18),
-                                        Row(
-                                          children: [
-                                            const Icon(
-                                              Icons.lightbulb,
-                                              color: Colors.amber,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: Text(
-                                                'to get verified, post a screenshot of your profile to your instagram story and tag us @tappedai',
-                                                maxLines: 2,
-                                                style: TextStyle(
-                                                  color: theme
-                                                      .colorScheme.onSurface
-                                                      .withValues(alpha: 0.5),
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                            child: const Icon(
-                              Icons.verified,
-                              size: 18,
-                              color: tappedAccent,
-                            ),
-                          ),
-                          alignment: PlaceholderAlignment.middle,
-                        ),
-                    ],
-                  ),
-                  overflow: TextOverflow.fade,
-                  maxLines: 2,
-                  style: const TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w800,
-                  ),
+    child: BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        return BlocListener<OnboardingBloc, OnboardingState>(
+          listener: (context, userState) {
+            if (userState is Onboarded) {
+              if (userState.currentUser.id == visitedUser.id) {
+                context.read<ProfileCubit>().refetchVisitedUser(
+                  newUserData: userState.currentUser,
                 );
-              },
-            ),
-            background: _profileImage(
-              context,
-              visitedUser.profilePicture.toNullable(),
-            ),
-          ),
-        ),
-        const SliverToBoxAdapter(
-          child: HeaderSliver(),
-        ),
-        if (state.isCurrentUser)
-          const SliverToBoxAdapter(
-            child: BookingControlsSliver(),
-          ),
-        const SliverToBoxAdapter(
-          child: InfoSliver(),
-        ),
-        const SocialMediaIcons(),
-        const SliverToBoxAdapter(
-          child: OpportunitiesSliver(),
-        ),
-        const SliverToBoxAdapter(
-          child: TopPerformersSliver(),
-        ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: TappedSpacing.md),
-        ),
-        const SliverToBoxAdapter(
-          child: TopTracksSliver(),
-        ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: TappedSpacing.md),
-        ),
-        const SliverToBoxAdapter(
-          child: BookingsSliver(),
-        ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: TappedSpacing.md),
-        ),
-        const SliverToBoxAdapter(
-          child: ReviewsSliver(),
-        ),
-        const SliverToBoxAdapter(
-          child: BioSliver(),
-        ),
-        if (state.visitedUser.unclaimed)
-          const SliverToBoxAdapter(
-            child: ClaimProfileButton(),
-          ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 50),
-        ),
-      ];
-
-  List<Widget> _blockedSlivers(
-    BuildContext context,
-    ProfileState state,
-    UserModel visitedUser,
-  ) =>
-      [
-        SliverAppBar(
-          expandedHeight: expandedBarHeight,
-          collapsedHeight: collapsedBarHeight,
-          pinned: true,
-          stretch: stretchable,
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          onStretchTrigger: stretchable
-              ? () async {
-                  final cubit = context.read<ProfileCubit>();
-                  await Future.wait([
-                    cubit.getTopBookings(),
-                    cubit.initServices(),
-                    cubit.initOpportunities(),
-                    cubit.initTopSpotifyTracks(),
-                    cubit.refetchVisitedUser(),
-                    cubit.loadIsVerified(visitedUser.id),
-                  ]);
-                }
-              : null,
-          flexibleSpace: FlexibleSpaceBar(
-            stretchModes: const [
-              StretchMode.zoomBackground,
-              StretchMode.fadeTitle,
-            ],
-            titlePadding: const EdgeInsets.symmetric(
-              horizontal: TappedSpacing.md,
-              vertical: TappedSpacing.sm,
-            ),
-            centerTitle: false,
-            title: Text.rich(
-              TextSpan(
-                text: visitedUser.artistName,
-                style: const TextStyle(
-                  color: TappedColors.textOnImage,
-                  fontSize: 32,
-                ),
-                children: [
-                  if (state.isVerified)
-                    const WidgetSpan(
-                      child: Icon(
-                        Icons.verified,
-                        size: 18,
-                        color: tappedAccent,
-                      ),
-                      alignment: PlaceholderAlignment.middle,
-                    )
-                  else
-                    const WidgetSpan(
-                      child: SizedBox.shrink(),
+              }
+            }
+          },
+          child: ConditionalParentWidget(
+            condition: stretchable,
+            conditionalBuilder: ({required child}) {
+              return NotificationListener<ScrollNotification>(
+                onNotification: (notification) =>
+                    context.read<ProfileCubit>().onNotification(
+                      scrollController,
+                      expandedBarHeight,
+                      collapsedBarHeight,
                     ),
+                child: child,
+              );
+            },
+            child: GlassAmbientBackground(
+              child: CustomScrollView(
+                controller: scrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                slivers: [
+                  _heroSliver(context, state, visitedUser),
+                  if (state.isBlocked)
+                    ..._blockedSlivers(context)
+                  else
+                    ..._unblockedSlivers(context, state),
                 ],
               ),
-              overflow: TextOverflow.fade,
-              maxLines: 2,
-            ),
-            background: _profileImage(
-              context,
-              visitedUser.profilePicture.toNullable(),
             ),
           ),
+        );
+      },
+    ),
+  );
+
+  Widget _heroSliver(
+    BuildContext context,
+    ProfileState state,
+    UserModel visitedUser,
+  ) {
+    final theme = Theme.of(context);
+    final topPadding = MediaQuery.paddingOf(context).top;
+    return SliverAppBar(
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      expandedHeight: expandedBarHeight,
+      collapsedHeight: collapsedBarHeight,
+      toolbarHeight: collapsedBarHeight,
+      automaticallyImplyLeading: false,
+      pinned: true,
+      stretch: stretchable,
+      onStretchTrigger: stretchable
+          ? () async {
+              final cubit = context.read<ProfileCubit>();
+              await Future.wait([
+                HapticFeedback.mediumImpact(),
+                cubit.getTopBookings(),
+                cubit.getLatestReview(),
+                cubit.initOpportunities(),
+                cubit.initTopSpotifyTracks(),
+                cubit.refetchVisitedUser(),
+                cubit.loadIsVerified(visitedUser.id),
+              ]);
+            }
+          : null,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: GlassMetrics.edgeInset - 8),
+        child: Center(
+          child: GlassIconButton(
+            icon: onQuit != null
+                ? CupertinoIcons.xmark
+                : CupertinoIcons.chevron_back,
+            variant: GlassVariant.clear,
+            semanticsLabel: 'close profile',
+            onPressed: onQuit ?? () => context.pop(),
+          ),
         ),
-        SliverToBoxAdapter(
-          child: Column(
+      ),
+      leadingWidth: GlassMetrics.iconControl + GlassMetrics.edgeInset,
+      actions: const [
+        Padding(
+          padding: EdgeInsets.only(right: GlassMetrics.edgeInset - 8),
+          child: Center(child: MoreOptionsButton()),
+        ),
+      ],
+      flexibleSpace: LayoutBuilder(
+        builder: (context, constraints) {
+          final collapsedExtent = collapsedBarHeight + topPadding;
+          final t =
+              ((constraints.maxHeight - collapsedExtent) /
+                      (expandedBarHeight - collapsedBarHeight))
+                  .clamp(0.0, 1.0);
+          return Stack(
+            fit: StackFit.expand,
             children: [
-              const SizedBox(height: 50),
-              const Text(
-                'Blocked',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
+              FlexibleSpaceBar(
+                stretchModes: const [StretchMode.zoomBackground],
+                collapseMode: CollapseMode.parallax,
+                background: _profileImage(
+                  context,
+                  visitedUser.profilePicture.toNullable(),
                 ),
               ),
-              const Text(
-                'You have blocked this user, and they cannot see your profile.',
-                textAlign: TextAlign.center,
+              // Inline glass title fades in as the hero collapses.
+              Positioned(
+                top: topPadding,
+                left: 0,
+                right: 0,
+                height: collapsedBarHeight,
+                child: IgnorePointer(
+                  child: Center(
+                    child: AnimatedOpacity(
+                      duration: GlassMotion.press,
+                      opacity: 1 - t,
+                      child: LiquidGlass.capsule(
+                        variant: GlassVariant.clear,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: TappedSpacing.md,
+                          vertical: TappedSpacing.xs,
+                        ),
+                        child: Text(
+                          visitedUser.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
-              FilledButton(
-                onPressed: () => context.read<ProfileCubit>().unblock(),
-                child: const Text('Unblock'),
+              // Large name + meta anchored to the bottom of the hero.
+              Positioned(
+                left: GlassMetrics.edgeInset,
+                right: GlassMetrics.edgeInset,
+                bottom: TappedSpacing.sm,
+                child: Opacity(
+                  opacity: t,
+                  child: _HeroTitle(state: state),
+                ),
               ),
             ],
-          ),
+          );
+        },
+      ),
+    );
+  }
+
+  List<Widget> _unblockedSlivers(BuildContext context, ProfileState state) => [
+    const SliverToBoxAdapter(child: HeaderSliver()),
+    if (state.isCurrentUser)
+      const SliverToBoxAdapter(child: BookingControlsSliver()),
+    const SliverToBoxAdapter(child: InfoSliver()),
+    const SocialMediaIcons(),
+    const SliverToBoxAdapter(child: OpportunitiesSliver()),
+    const SliverToBoxAdapter(child: TopPerformersSliver()),
+    const SliverToBoxAdapter(child: TopTracksSliver()),
+    const SliverToBoxAdapter(child: BookingsSliver()),
+    const SliverToBoxAdapter(child: ReviewsSliver()),
+    const SliverToBoxAdapter(child: BioSliver()),
+    if (state.visitedUser.unclaimed)
+      const SliverToBoxAdapter(child: ClaimProfileButton()),
+    const SliverToBoxAdapter(
+      child: SizedBox(height: GlassMetrics.bottomBarClearance),
+    ),
+  ];
+
+  List<Widget> _blockedSlivers(BuildContext context) => [
+    SliverFillRemaining(
+      hasScrollBody: false,
+      child: Padding(
+        padding: const EdgeInsets.all(GlassMetrics.edgeInset),
+        child: GlassEmptyState(
+          icon: CupertinoIcons.hand_raised_fill,
+          title: 'blocked',
+          message:
+              'you blocked this user. they cannot see your '
+              'profile or message you.',
+          actionLabel: 'unblock',
+          onAction: () => context.read<ProfileCubit>().unblock(),
         ),
-      ];
+      ),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -468,7 +347,7 @@ class ProfileView extends StatelessWidget {
     final places = context.places;
     final spotify = context.spotify;
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      extendBodyBehindAppBar: true,
       body: BlocBuilder<OnboardingBloc, OnboardingState>(
         buildWhen: (previous, current) {
           if (previous is Onboarded && current is Onboarded) {
@@ -485,39 +364,154 @@ class ProfileView extends StatelessWidget {
 
           return switch ((visitedUser, currentUser.id == visitedUserId)) {
             (_, true) => _profilePage(
-                currentUser,
-                currentUser,
-                database,
-                places,
-                spotify,
-              ),
+              currentUser,
+              currentUser,
+              database,
+              places,
+              spotify,
+            ),
             (None(), false) => FutureBuilder<Option<UserModel>>(
-                future: database.getUserById(visitedUserId),
-                builder: (context, snapshot) {
-                  final user = snapshot.data;
+              future: database.getUserById(visitedUserId),
+              builder: (context, snapshot) {
+                final user = snapshot.data;
 
-                  return switch (user) {
-                    null => const LoadingView(),
-                    None() => const LoadingView(),
-                    Some(:final value) => _profilePage(
-                        currentUser,
-                        value,
-                        database,
-                        places,
-                        spotify,
-                      ),
-                  };
-                },
-              ),
+                return switch (user) {
+                  null => const LoadingView(),
+                  None() => const LoadingView(),
+                  Some(:final value) => _profilePage(
+                    currentUser,
+                    value,
+                    database,
+                    places,
+                    spotify,
+                  ),
+                };
+              },
+            ),
             (Some(:final value), false) => _profilePage(
-                currentUser,
-                value,
-                database,
-                places,
-                spotify,
-              ),
+              currentUser,
+              value,
+              database,
+              places,
+              spotify,
+            ),
           };
         },
+      ),
+    );
+  }
+}
+
+class _HeroTitle extends StatelessWidget {
+  const _HeroTitle({required this.state});
+
+  final ProfileState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final user = state.visitedUser;
+    final place = state.place.toNullable();
+    final venueType = user.venueInfo
+        .map((v) => v.type.formattedName.toLowerCase())
+        .toNullable();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Flexible(
+              child: Text(
+                user.displayName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                ),
+              ),
+            ),
+            if (state.isVerified)
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: TappedSpacing.xs,
+                  bottom: 6,
+                ),
+                child: GestureDetector(
+                  onTap: () => _showVerified(context),
+                  child: Icon(
+                    CupertinoIcons.checkmark_seal_fill,
+                    size: 22,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(height: TappedSpacing.sm),
+        Wrap(
+          spacing: TappedSpacing.xs,
+          runSpacing: TappedSpacing.xs,
+          children: [
+            GlassPill(
+              label: '@${user.username}',
+              variant: GlassVariant.clear,
+            ),
+            if (venueType != null)
+              GlassPill(
+                label: venueType,
+                icon: CupertinoIcons.building_2_fill,
+                variant: GlassVariant.clear,
+              ),
+            if (place != null)
+              GlassPill(
+                label: formattedShortAddress(
+                  place.addressComponents,
+                ).toLowerCase(),
+                icon: CupertinoIcons.location_solid,
+                variant: GlassVariant.clear,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  void _showVerified(BuildContext context) {
+    final theme = Theme.of(context);
+    showGlassSheet<void>(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: TappedSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              CupertinoIcons.checkmark_seal_fill,
+              color: theme.colorScheme.primary,
+              size: 72,
+            ),
+            const SizedBox(height: TappedSpacing.md),
+            Text(
+              '${state.visitedUser.displayName} is verified',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: TappedSpacing.sm),
+            Text(
+              'to get verified, post a screenshot of your profile to your '
+              'instagram story and tag @tappedai',
+              textAlign: TextAlign.center,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

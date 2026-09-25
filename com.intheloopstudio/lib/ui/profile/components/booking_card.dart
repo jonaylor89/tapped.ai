@@ -1,14 +1,17 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/booking/booking_view.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/hero_image.dart';
 import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:uuid/uuid.dart';
 
+/// Poster-style card for a single past gig.
 class BookingCard extends StatelessWidget {
   const BookingCard({
     required this.booking,
@@ -26,8 +29,7 @@ class BookingCard extends StatelessWidget {
       None() => false,
       Some(:final value) => visitedUser.id == value,
     };
-    final formatter = DateFormat.yMEd();
-    final formatted = formatter.format(booking.startTime);
+    final formatted = DateFormat.MMMd().format(booking.startTime);
 
     return FutureBuilder(
       future: switch ((booking.requesterId, isRequester)) {
@@ -44,72 +46,42 @@ class BookingCard extends StatelessWidget {
           () => user.fold(() => 'booking', (t) => t.displayName),
           (t) => t,
         );
-        return InkWell(
-          onTap: () {
-            showCupertinoModalBottomSheet<void>(
-              context: context,
-              builder: (context) => BookingView(
-                booking: booking,
-                flierImage: Option.of(
-                  HeroImage(
-                    imageProvider: imageProvider,
-                    heroTag: heroTag,
+
+        return Hero(
+          tag: heroTag,
+          child: GlassImageCard(
+            image: imageProvider,
+            width: 160,
+            height: 210,
+            semanticsLabel: '$titleText, $formatted',
+            topRight: GlassPill(
+              label: formatted,
+              icon: CupertinoIcons.calendar,
+            ),
+            onTap: () {
+              showCupertinoModalBottomSheet<void>(
+                context: context,
+                backgroundColor: Colors.transparent,
+                builder: (context) => BookingView(
+                  booking: booking,
+                  flierImage: Option.of(
+                    HeroImage(
+                      imageProvider: imageProvider,
+                      heroTag: heroTag,
+                    ),
                   ),
                 ),
+              );
+            },
+            child: Text(
+              titleText.isEmpty ? 'booking' : titleText,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
               ),
-            );
-          },
-          borderRadius: BorderRadius.circular(15),
-          child: SizedBox(
-            width: 150,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Hero(
-                    tag: heroTag,
-                    child: Container(
-                      height: 150,
-                      width: 150,
-                      decoration: BoxDecoration(
-                        color: Colors.grey,
-                        borderRadius: BorderRadius.circular(15),
-                        image: DecorationImage(
-                          image: imageProvider,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                if (titleText.isNotEmpty)
-                  Text(
-                    titleText,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                else
-                  const Text(
-                    'booking',
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                Text(
-                  formatted,
-                  style: const TextStyle(
-                    overflow: TextOverflow.ellipsis,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w300,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
             ),
           ),
         );

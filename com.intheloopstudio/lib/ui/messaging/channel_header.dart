@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/messaging/channel_name.dart';
 import 'package:stream_chat_flutter/stream_chat_flutter.dart' hide ChannelName;
 
@@ -133,13 +136,17 @@ class ChannelHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final channel = StreamChannel.of(context).channel;
 
-    final leadingWidget = leading ??
+    final leadingWidget =
+        leading ??
         (showBackButton
             ? StreamBackButton(
                 onPressed: onBackPressed,
                 showUnreadCount: true,
               )
             : const SizedBox());
+
+    final theme = Theme.of(context);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.55);
 
     return StreamConnectionStatusBuilder(
       statusBuilder: (context, status) {
@@ -159,42 +166,67 @@ class ChannelHeader extends StatelessWidget implements PreferredSizeWidget {
         return StreamInfoTile(
           showMessage: showConnectionStateTile && showStatus,
           message: statusString,
-          child: AppBar(
-            elevation: 1,
-            leading: leadingWidget,
-            actions: actions ??
-                [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 10),
-                    child: Center(
-                      child: StreamChannelAvatar(
-                        onTap: onImageTap,
-                        channel: channel,
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(
+                sigmaX: GlassBlur.regular,
+                sigmaY: GlassBlur.regular,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surface.withValues(alpha: 0.55),
+                  border: Border(
+                    bottom: BorderSide(
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.08,
                       ),
                     ),
                   ),
-                ],
-            centerTitle: true,
-            title: InkWell(
-              onTap: onTitleTap,
-              child: SizedBox(
-                height: preferredSize.height,
-                width: preferredSize.width,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    title ?? const ChannelName(),
-                    const SizedBox(height: 2),
-                    subtitle ??
-                        StreamChannelInfo(
-                          showTypingIndicator: showTypingIndicator,
-                          channel: channel,
-                          textStyle: TextStyle(
-                            color: Colors.white.withOpacity(.5),
-                            fontSize: 12,
+                ),
+                child: AppBar(
+                  elevation: 0,
+                  scrolledUnderElevation: 0,
+                  backgroundColor: Colors.transparent,
+                  surfaceTintColor: Colors.transparent,
+                  leading: leadingWidget,
+                  actions:
+                      actions ??
+                      [
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            right: GlassMetrics.edgeInset,
+                          ),
+                          child: Center(
+                            child: StreamChannelAvatar(
+                              onTap: onImageTap,
+                              channel: channel,
+                            ),
                           ),
                         ),
-                  ],
+                      ],
+                  centerTitle: true,
+                  title: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: onTitleTap,
+                    child: SizedBox(
+                      height: preferredSize.height,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          title ?? const ChannelName(),
+                          const SizedBox(height: 2),
+                          subtitle ??
+                              StreamChannelInfo(
+                                showTypingIndicator: showTypingIndicator,
+                                channel: channel,
+                                textStyle: theme.textTheme.labelSmall?.copyWith(
+                                  color: muted,
+                                ),
+                              ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),

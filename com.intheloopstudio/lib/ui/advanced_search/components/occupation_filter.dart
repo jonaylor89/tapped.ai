@@ -12,6 +12,7 @@ class OccupationFilter extends StatelessWidget {
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, state) {
         return OccupationSelection(
+          standalone: false,
           initialValue: state.occupations,
           onConfirm: (values) {
             context.search.add(

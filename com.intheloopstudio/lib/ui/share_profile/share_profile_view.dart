@@ -9,6 +9,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intheloopapp/data/places_repository.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/default_image.dart';
@@ -525,38 +527,27 @@ class _ShareProfileViewState extends State<ShareProfileView> {
   @override
   Widget build(BuildContext context) {
     final database = context.database;
-    final theme = Theme.of(context);
 
-    return Scaffold(
-      // backgroundColor: Colors.grey[700],
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(
-            CupertinoIcons.back,
-            color: Colors.white,
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: const Text(
-          'profile',
-          style: TextStyle(
-            color: Colors.white,
-          ),
-        ),
-        // backgroundColor: Colors.grey[700],
-        backgroundColor: theme.colorScheme.surface,
+    return GlassPage(
+      title: 'share profile',
+      largeTitle: false,
+      showBack: false,
+      leading: GlassIconButton(
+        icon: CupertinoIcons.xmark,
+        semanticsLabel: 'close',
+        onPressed: () => Navigator.of(context).pop(),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      bottomBar: GlassButton.primary(
+        label: 'share as image',
+        icon: CupertinoIcons.square_arrow_up,
+        expand: true,
+        isLoading: _shareLoading,
         onPressed: _shareWidgetAsImage,
-        label: const Text('share'),
-        icon: _shareLoading
-            ? const CupertinoActivityIndicator()
-            : const Icon(CupertinoIcons.share),
       ),
-      body: Padding(
+      child: Padding(
         padding: const EdgeInsets.symmetric(
-          horizontal: 20,
+          horizontal: GlassMetrics.edgeInset,
+          vertical: TappedSpacing.md,
         ),
         child: switch (widget.user) {
           None() => FutureBuilder(
@@ -564,8 +555,11 @@ class _ShareProfileViewState extends State<ShareProfileView> {
               builder: (context, snapshot) {
                 final user = snapshot.data;
                 return switch (user) {
-                  null => const CupertinoActivityIndicator(),
-                  None() => const Text('user not found?'),
+                  null => const Center(child: GlassLoading()),
+                  None() => const GlassEmptyState(
+                      icon: CupertinoIcons.person_crop_circle_badge_xmark,
+                      title: 'user not found',
+                    ),
                   Some(:final value) => _buildProfileCard(context, user: value),
                 };
               },

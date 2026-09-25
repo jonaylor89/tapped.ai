@@ -37,8 +37,9 @@ class TappedButton extends StatelessWidget {
     final theme = Theme.of(context);
     // Keep the enabled look while loading so the spinner stays legible;
     // taps are swallowed below.
-    final effectiveOnPressed =
-        isLoading && onPressed != null ? () {} : onPressed;
+    final effectiveOnPressed = isLoading && onPressed != null
+        ? () {}
+        : onPressed;
 
     final content = isLoading
         ? SizedBox.square(
@@ -54,29 +55,29 @@ class TappedButton extends StatelessWidget {
 
     final button = switch (variant) {
       TappedButtonVariant.filled => FilledButton(
-          onPressed: effectiveOnPressed,
-          style: color == null
-              ? null
-              : FilledButton.styleFrom(backgroundColor: color),
-          child: content,
-        ),
+        onPressed: effectiveOnPressed,
+        style: color == null
+            ? null
+            : FilledButton.styleFrom(backgroundColor: color),
+        child: content,
+      ),
       TappedButtonVariant.outline => OutlinedButton(
-          onPressed: effectiveOnPressed,
-          style: color == null
-              ? null
-              : OutlinedButton.styleFrom(
-                  foregroundColor: color,
-                  side: BorderSide(color: color!),
-                ),
-          child: content,
-        ),
+        onPressed: effectiveOnPressed,
+        style: color == null
+            ? null
+            : OutlinedButton.styleFrom(
+                foregroundColor: color,
+                side: BorderSide(color: color!),
+              ),
+        child: content,
+      ),
       TappedButtonVariant.text => TextButton(
-          onPressed: effectiveOnPressed,
-          style: color == null
-              ? null
-              : TextButton.styleFrom(foregroundColor: color),
-          child: content,
-        ),
+        onPressed: effectiveOnPressed,
+        style: color == null
+            ? null
+            : TextButton.styleFrom(foregroundColor: color),
+        child: content,
+      ),
     };
 
     final sized = ConstrainedBox(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/tapped_form/tapped_form.dart';
 import 'package:intheloopapp/ui/onboarding/components/onboarding_complete_view.dart';
 import 'package:intheloopapp/ui/onboarding/components/onboarding_name_view.dart';
@@ -14,7 +15,12 @@ class OnboardingForm extends StatelessWidget {
     return BlocBuilder<OnboardingFlowCubit, OnboardingFlowState>(
       builder: (context, state) {
         if (state.status.isInProgress) {
-          return const Center(child: CircularProgressIndicator());
+          return const GlassAmbientBackground(
+            child: Scaffold(
+              backgroundColor: Colors.transparent,
+              body: GlassLoading(),
+            ),
+          );
         }
 
         return TappedForm(
@@ -23,8 +29,10 @@ class OnboardingForm extends StatelessWidget {
           questions: [
             FormQuestion(
               validator: () async {
-                final artistName =
-                    context.read<OnboardingFlowCubit>().state.artistName;
+                final artistName = context
+                    .read<OnboardingFlowCubit>()
+                    .state
+                    .artistName;
 
                 return artistName.isNotEmpty;
               },

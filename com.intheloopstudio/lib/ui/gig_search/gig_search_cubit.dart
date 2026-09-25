@@ -26,14 +26,14 @@ class GigSearchCubit extends Cubit<GigSearchState> {
     required this.initialGenres,
     required this.category,
   }) : super(
-          GigSearchState(
-            genres: initialGenres,
-            capacityRange: RangeValues(
-              0,
-              category.suggestedMaxCapacity.toDouble().clamp(0, 1000),
-            ),
-          ),
-        );
+         GigSearchState(
+           genres: initialGenres,
+           capacityRange: RangeValues(
+             0,
+             category.suggestedMaxCapacity.toDouble().clamp(0, 1000),
+           ),
+         ),
+       );
 
   final DatabaseRepository database;
   final SearchRepository search;
@@ -41,7 +41,6 @@ class GigSearchCubit extends Cubit<GigSearchState> {
   final Option<Location> initialLocation;
   final List<Genre> initialGenres;
   final PerformerCategory category;
-
 
   Future<void> initPlace() async {
     final trace = logger.createTrace('initPlace');
@@ -108,8 +107,9 @@ class GigSearchCubit extends Cubit<GigSearchState> {
   void removeCollaborator(UserModel collaborator) {
     emit(
       state.copyWith(
-        collaborators:
-            state.collaborators.where((c) => c.id != collaborator.id).toList(),
+        collaborators: state.collaborators
+            .where((c) => c.id != collaborator.id)
+            .toList(),
       ),
     );
   }
@@ -140,8 +140,9 @@ class GigSearchCubit extends Cubit<GigSearchState> {
     );
 
     final minCap = state.capacityRangeStart;
-    final maxCap =
-        state.capacityRangeEnd == maxCapacity ? 100000 : state.capacityRangeEnd;
+    final maxCap = state.capacityRangeEnd == maxCapacity
+        ? 100000
+        : state.capacityRangeEnd;
 
     final hits = await search.queryUsers(
       '',

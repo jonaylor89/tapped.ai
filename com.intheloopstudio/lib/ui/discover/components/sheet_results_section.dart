@@ -4,6 +4,7 @@ import 'package:intheloopapp/domains/models/opportunity.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/common/opportunity_card.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/components/venue_fit_utils.dart';
 import 'package:intheloopapp/ui/discover/discover_cubit.dart';
 import 'package:intheloopapp/ui/opportunities/opportunities_results_view.dart';
@@ -43,12 +44,12 @@ class SheetResultsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (state.mapOverlay) {
       MapOverlay.venues => _VenueResults(
-          sortedVenueHits: sortedVenueHits,
-          venueTileBuilder: _venueTile,
-        ),
+        sortedVenueHits: sortedVenueHits,
+        venueTileBuilder: _venueTile,
+      ),
       MapOverlay.opportunities => _OpportunityResults(
-          opportunities: state.opportunityHits,
-        ),
+        opportunities: state.opportunityHits,
+      ),
     };
   }
 }
@@ -71,21 +72,22 @@ class _VenueResults extends StatelessWidget {
           _ViewAllButton(
             onTap: () => showCupertinoModalBottomSheet<void>(
               context: context,
-              builder: (context) => Scaffold(
-                appBar: AppBar(title: const Text('venues')),
-                body: Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: TappedSpacing.lg,
+              builder: (context) => GlassPage(
+                title: 'venues',
+                subtitle: '${sortedVenueHits.length} nearby',
+                padding: EdgeInsets.zero,
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.only(
+                      bottom: TappedSpacing.xxl,
+                    ),
+                    sliver: SliverList.builder(
+                      itemCount: sortedVenueHits.length,
+                      itemBuilder: (context, index) =>
+                          venueTileBuilder(sortedVenueHits[index]),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                  ),
-                  child: ListView.builder(
-                    itemCount: sortedVenueHits.length,
-                    itemBuilder: (context, index) =>
-                        venueTileBuilder(sortedVenueHits[index]),
-                  ),
-                ),
+                ],
               ),
             ),
           ),
@@ -103,7 +105,9 @@ class _OpportunityResults extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ...opportunities.take(3).map(
+        ...opportunities
+            .take(3)
+            .map(
               (op) => OpportunityCard(opportunity: op),
             ),
         _ViewAllButton(

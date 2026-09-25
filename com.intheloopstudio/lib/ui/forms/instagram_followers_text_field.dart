@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class InstagramFollowersTextField extends StatelessWidget {
   const InstagramFollowersTextField({
@@ -13,18 +14,14 @@ class InstagramFollowersTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final iVal = initialValue ?? 0;
-    return TextFormField(
+    return GlassTextField(
+      label: 'followers',
+      hintText: '0',
       initialValue: iVal.toString(),
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.people),
-        labelText: 'instagram followers',
-      ),
       keyboardType: TextInputType.number,
       onChanged: (input) {
         final value = double.tryParse(input) ?? 0;
-        final usdValue = value.toInt();
-
-        onChanged?.call(usdValue);
+        onChanged?.call(value.toInt());
       },
     );
   }

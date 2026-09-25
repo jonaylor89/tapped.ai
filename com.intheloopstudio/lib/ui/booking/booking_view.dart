@@ -10,6 +10,8 @@ import 'package:intheloopapp/domains/models/booking.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/profile/profile_view.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/ui/user_tile.dart';
@@ -22,7 +24,6 @@ import 'package:intheloopapp/utils/hero_image.dart';
 import 'package:intl/intl.dart';
 import 'package:maps_launcher/maps_launcher.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
-import 'package:skeletons/skeletons.dart';
 
 class BookingView extends StatelessWidget {
   const BookingView({
@@ -78,359 +79,373 @@ class BookingView extends StatelessWidget {
           ),
           (flier) => flier.imageProvider,
         );
+        final heroTag = flierImage.fold(
+          () => booking.id,
+          (flier) => flier.heroTag,
+        );
 
         final timeFormat = DateFormat.jm();
+        final dateFormat = DateFormat.yMMMMEEEEd();
+        final canConfirm =
+            booking.isPending && booking.requesteeId == currentUser.id;
+        final canCancel = isCurrentUserInvolved &&
+            !booking.isExpired &&
+            !booking.isCanceled;
+
         return AdminBuilder(
           builder: (context, isAdmin) {
+            final heroHeight = MediaQuery.sizeOf(context).height * 0.48;
             return Scaffold(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              appBar: AppBar(
-                actions: [
-                  if (isAdmin)
-                    IconButton(
-                      icon: const Icon(Icons.more_horiz),
-                      onPressed: () {
-                        final scaffoldMessenger = ScaffoldMessenger.of(context);
-                        showCupertinoModalPopup<void>(
-                          context: context,
-                          builder: (context) {
-                            return CupertinoActionSheet(
-                              actions: [
-                                CupertinoActionSheetAction(
-                                  onPressed: () async {
-                                    // Copy to clipboard
-                                    await Clipboard.setData(
-                                      ClipboardData(
-                                        text: booking.id,
+              backgroundColor: theme.colorScheme.surface,
+              extendBody: true,
+              body: Stack(
+                children: [
+                  CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverAppBar(
+                        expandedHeight: heroHeight,
+                        pinned: true,
+                        stretch: true,
+                        backgroundColor: Colors.transparent,
+                        automaticallyImplyLeading: false,
+                        flexibleSpace: FlexibleSpaceBar(
+                          stretchModes: const [StretchMode.zoomBackground],
+                          background: GestureDetector(
+                            onTap: () => context.push(
+                              ImagePage(
+                                heroImage: HeroImage(
+                                  imageProvider: imageProvider,
+                                  heroTag: heroTag,
+                                ),
+                              ),
+                            ),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Hero(
+                                  tag: heroTag,
+                                  child: Image(
+                                    image: imageProvider,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      stops: const [0.4, 1],
+                                      colors: [
+                                        Colors.transparent,
+                                        theme.colorScheme.surface,
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Positioned(
+                                  left: GlassMetrics.edgeInset,
+                                  right: GlassMetrics.edgeInset,
+                                  bottom: TappedSpacing.lg,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      GlassPill(
+                                        label: booking.status.formattedName
+                                            .toLowerCase(),
+                                        icon: switch (booking.status) {
+                                          BookingStatus.confirmed =>
+                                            CupertinoIcons.checkmark_seal_fill,
+                                          BookingStatus.pending =>
+                                            CupertinoIcons.clock_fill,
+                                          BookingStatus.canceled =>
+                                            CupertinoIcons.xmark_circle_fill,
+                                        },
+                                        tint: switch (booking.status) {
+                                          BookingStatus.confirmed =>
+                                            TappedColors.success,
+                                          BookingStatus.pending =>
+                                            Colors.orange,
+                                          BookingStatus.canceled =>
+                                            TappedColors.error,
+                                        },
                                       ),
-                                    );
-                                    Navigator.pop(context);
-                                    scaffoldMessenger.showSnackBar(
-                                      SnackBar(
-                                        behavior: SnackBarBehavior.floating,
-                                        backgroundColor:
-                                            theme.colorScheme.primary,
-                                        content: const Text(
-                                          'booking id copied to clipboard',
+                                      const SizedBox(height: TappedSpacing.sm),
+                                      Text(
+                                        booking.name.getOrElse(() => 'booking'),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: theme.textTheme.displaySmall
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.8,
+                                          height: 1.05,
                                         ),
                                       ),
-                                    );
-                                  },
-                                  child: Text(booking.id),
+                                      const SizedBox(height: TappedSpacing.xs),
+                                      Text(
+                                        '${dateFormat.format(booking.startTime)} · ${timeFormat.format(booking.startTime)}',
+                                        style:
+                                            theme.textTheme.bodyMedium?.copyWith(
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.7),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ],
-                            );
+                            ),
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: FutureBuilder<Option<UserModel>>(
+                          future: database.getUserById(booking.requesteeId),
+                          builder: (context, snapshot) {
+                            final requestee = snapshot.data;
+                            return switch (requestee) {
+                              null || None() => const SizedBox(
+                                  height: 72,
+                                  child: Center(child: GlassLoading()),
+                                ),
+                              Some(:final value) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: GlassMetrics.edgeInset,
+                                    vertical: TappedSpacing.sm,
+                                  ),
+                                  child: GlassCard(
+                                    padding: EdgeInsets.zero,
+                                    child: UserTile(
+                                      userId: value.id,
+                                      user: Option.of(value),
+                                      showFollowButton: false,
+                                    ),
+                                  ),
+                                ),
+                            };
                           },
-                        );
-                      },
-                    ),
-                ],
-              ),
-              body: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GestureDetector(
-                      onTap: () => context.push(
-                        ImagePage(
-                          heroImage: HeroImage(
-                            imageProvider: imageProvider,
-                            heroTag: flierImage.fold(
-                              () => booking.id,
-                              (flier) => flier.heroTag,
-                            ),
-                          ),
                         ),
                       ),
-                      child: Hero(
-                        tag: flierImage.fold(
-                          () => booking.id,
-                          (flier) => flier.heroTag,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                          ),
-                          child: Container(
-                            height: 300,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              image: DecorationImage(
-                                fit: BoxFit.cover,
-                                image: imageProvider,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    switch (booking.name) {
-                      None() => const SizedBox.shrink(),
-                      Some(:final value) => Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                          ),
-                          child: Text(
-                            value,
-                            style: const TextStyle(
-                              fontFamily: 'Rubik One',
-                              fontSize: 36,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                    },
-
-                    const SizedBox(height: 20),
-                    FutureBuilder<Option<UserModel>>(
-                      future: database.getUserById(booking.requesteeId),
-                      builder: (context, snapshot) {
-                        final requestee = snapshot.data;
-                        return switch (requestee) {
-                          null => SkeletonListTile(),
-                          None() => SkeletonListTile(),
-                          Some(:final value) => UserTile(
-                              userId: value.id,
-                              user: Option.of(value),
-                              showFollowButton: false,
-                            ),
-                        };
-                      },
-                    ),
-
-                    // const SizedBox(height: 20),
-                    // if (validService)
-                    //   const Text(
-                    //     'Service',
-                    //     style: TextStyle(
-                    //       fontSize: 28,
-                    //       fontWeight: FontWeight.bold,
-                    //     ),
-                    //   ),
-                    // if (validService)
-                    //   FutureBuilder<Option<Service>>(
-                    //     future: validService
-                    //         ? database.getServiceById(
-                    //             booking.requesteeId,
-                    //             booking.serviceId.toNullable()!,
-                    //           )
-                    //         : null,
-                    //     builder: (context, snapshot) {
-                    //       final service = snapshot.data;
-                    //       return switch (service) {
-                    //         null => SkeletonListTile(),
-                    //         None() => SkeletonListTile(),
-                    //         Some(:final value) => ListTile(
-                    //             leading: const Icon(Icons.work),
-                    //             title: Text(value.title),
-                    //             subtitle: Text(value.description),
-                    //             trailing: Text(
-                    //               // ignore: lines_longer_than_80_chars
-                    //               '\$${(value.rate / 100).toStringAsFixed(2)}${value.rateType == RateType.hourly ? '/hr' : ''}',
-                    //               style: const TextStyle(
-                    //                 color: Colors.green,
-                    //               ),
-                    //             ),
-                    //           ),
-                    //       };
-                    //     },
-                    //   ),
-                    CupertinoListSection.insetGrouped(
-                      backgroundColor: theme.colorScheme.surface,
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.onSurface.withOpacity(0.1),
-                        border: Border(
-                          bottom: BorderSide(
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.1),
-                            width: 0.5,
-                          ),
-                        ),
-                      ),
-                      children: [
-                        switch (booking.requesterId) {
-                          None() => const SizedBox.shrink(),
-                          Some(:final value) =>
-                            FutureBuilder<Option<UserModel>>(
-                              future: database.getUserById(value),
-                              builder: (context, snapshot) {
-                                final requester = snapshot.data;
-                                return switch (requester) {
-                                  null => SkeletonListTile(),
-                                  None() => SkeletonListTile(),
-                                  Some(:final value) => GestureDetector(
-                                      onTap: () =>
-                                          showCupertinoModalBottomSheet<void>(
-                                        context: context,
-                                        builder: (context) => ProfileView(
-                                          visitedUserId: value.id,
-                                          visitedUser: Option.of(value),
+                      SliverToBoxAdapter(
+                        child: GlassSection(
+                          header: 'details',
+                          children: [
+                            switch (booking.requesterId) {
+                              None() => const SizedBox.shrink(),
+                              Some(:final value) =>
+                                FutureBuilder<Option<UserModel>>(
+                                  future: database.getUserById(value),
+                                  builder: (context, snapshot) {
+                                    final requester = snapshot.data;
+                                    return switch (requester) {
+                                      null || None() => const SizedBox.shrink(),
+                                      Some(:final value) => GlassListTile(
+                                          leading: UserAvatar(
+                                            pushId: Option.of(value.id),
+                                            pushUser: Option.of(value),
+                                            imageUrl: value.profilePicture,
+                                            radius: 16,
+                                          ),
+                                          title: 'booked by',
+                                          value: value.displayName,
+                                          onTap: () =>
+                                              showCupertinoModalBottomSheet<
+                                                  void>(
+                                            context: context,
+                                            backgroundColor: Colors.transparent,
+                                            builder: (context) => ProfileView(
+                                              visitedUserId: value.id,
+                                              visitedUser: Option.of(value),
+                                            ),
+                                          ),
                                         ),
-                                      ),
-                                      child: CupertinoListTile(
-                                        leading: UserAvatar(
-                                          pushId: Option.of(value.id),
-                                          pushUser: Option.of(value),
-                                          imageUrl: value.profilePicture,
-                                          radius: 20,
-                                        ),
-                                        title: Text(
-                                          value.displayName,
-                                          style: TextStyle(
+                                    };
+                                  },
+                                ),
+                            },
+                            switch (booking.location) {
+                              None() => const SizedBox.shrink(),
+                              Some(:final value) =>
+                                FutureBuilder<Option<PlaceData>>(
+                                  future: context.places
+                                      .getPlaceById(value.placeId),
+                                  builder: (context, snapshot) {
+                                    final place = snapshot.data;
+                                    return switch (place) {
+                                      null || None() => const SizedBox.shrink(),
+                                      Some(:final value) => GlassListTile(
+                                          leadingIcon: CupertinoIcons.location_solid,
+                                          leadingColor: TappedColors.error,
+                                          title: 'location',
+                                          subtitle: formattedFullAddress(
+                                            value.addressComponents,
+                                          ),
+                                          trailing: Icon(
+                                            CupertinoIcons.map,
+                                            size: 18,
                                             color: theme.colorScheme.primary,
                                           ),
-                                        ),
-                                      ),
-                                    ),
-                                };
-                              },
-                            ),
-                        },
-                        switch (booking.location) {
-                          None() => const SizedBox.shrink(),
-                          Some(:final value) =>
-                            FutureBuilder<Option<PlaceData>>(
-                              future:
-                                  context.places.getPlaceById(value.placeId),
-                              builder: (context, snapshot) {
-                                final place = snapshot.data;
-
-                                return switch (place) {
-                                  null => const SizedBox.shrink(),
-                                  None() => const SizedBox.shrink(),
-                                  Some(:final value) => CupertinoListTile(
-                                      leading: const Icon(
-                                        CupertinoIcons.location,
-                                      ),
-                                      title: GestureDetector(
-                                        onLongPress: () => MapsLauncher.launchQuery(
-                                          value.shortFormattedAddress,
-                                        ),
-                                        child: SingleChildScrollView(
-                                          scrollDirection: Axis.horizontal,
-                                          child: Text(
-                                            formattedFullAddress(
-                                              value.addressComponents,
-                                            ),
-                                            style: TextStyle(
-                                              color: theme.colorScheme.onSurface,
-                                            ),
+                                          onTap: () => MapsLauncher.launchQuery(
+                                            value.shortFormattedAddress,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                };
-                              },
+                                    };
+                                  },
+                                ),
+                            },
+                            GlassListTile(
+                              leadingIcon: CupertinoIcons.calendar,
+                              leadingColor: theme.colorScheme.primary,
+                              title: 'date',
+                              value: formattedDate,
                             ),
-                        },
-                        CupertinoListTile(
-                          leading: const Icon(
-                            CupertinoIcons.calendar,
+                            GlassListTile(
+                              leadingIcon: CupertinoIcons.clock_fill,
+                              leadingColor: Colors.orange,
+                              title: 'time',
+                              value: timeFormat.format(booking.startTime),
+                            ),
+                            if (isCurrentUserInvolved || isAdmin)
+                              GlassListTile(
+                                leadingIcon: CupertinoIcons.money_dollar_circle_fill,
+                                leadingColor: TappedColors.success,
+                                title: 'rate',
+                                value:
+                                    '\$${(booking.rate / 100).toStringAsFixed(2)}',
+                              ),
+                          ],
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: TappedSpacing.xl,
+                            vertical: TappedSpacing.md,
                           ),
-                          title: Text(
-                            formattedDate,
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface,
+                          child: Text(
+                            'to modify the booking, please contact '
+                            'support@tapped.ai',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.5),
                             ),
                           ),
                         ),
-                        CupertinoListTile(
-                          leading: const Icon(
-                            CupertinoIcons.time,
-                          ),
-                          title: Text(
-                            timeFormat.format(booking.startTime),
-                            style: TextStyle(
-                              color: theme.colorScheme.onSurface,
-                            ),
-                          ),
+                      ),
+                      const SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: GlassMetrics.bottomBarClearance + 60,
                         ),
-                        if (isCurrentUserInvolved || isAdmin)
-                          CupertinoListTile(
-                            leading: const Icon(
-                              CupertinoIcons.money_dollar,
-                            ),
-                            title: Text(
-                              '\$${(booking.rate / 100).toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        if (isCurrentUserInvolved || isAdmin)
-                          CupertinoListTile(
-                            leading: const Icon(
-                              CupertinoIcons.info,
-                            ),
-                            title: Text(
-                              'booking ${booking.status.formattedName}'
-                                  .toLowerCase(),
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface,
-                              ),
-                            ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + TappedSpacing.sm,
+                    left: GlassMetrics.edgeInset,
+                    right: GlassMetrics.edgeInset,
+                    child: Row(
+                      children: [
+                        GlassIconButton(
+                          icon: CupertinoIcons.chevron_back,
+                          variant: GlassVariant.clear,
+                          semanticsLabel: 'back',
+                          onPressed: () => context.pop(),
+                        ),
+                        const Spacer(),
+                        if (isAdmin)
+                          GlassIconButton(
+                            icon: CupertinoIcons.ellipsis,
+                            variant: GlassVariant.clear,
+                            semanticsLabel: 'admin options',
+                            onPressed: () {
+                              final scaffoldMessenger =
+                                  ScaffoldMessenger.of(context);
+                              showGlassActionSheet(
+                                context: context,
+                                title: 'admin',
+                                actions: [
+                                  GlassAction(
+                                    label: 'copy id · ${booking.id}',
+                                    icon: CupertinoIcons.doc_on_doc,
+                                    onPressed: () async {
+                                      await Clipboard.setData(
+                                        ClipboardData(text: booking.id),
+                                      );
+                                      scaffoldMessenger.showSnackBar(
+                                        SnackBar(
+                                          behavior: SnackBarBehavior.floating,
+                                          backgroundColor:
+                                              theme.colorScheme.primary,
+                                          content: const Text(
+                                            'booking id copied to clipboard',
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                       ],
                     ),
-                    if (booking.isPending &&
-                        booking.requesteeId == currentUser.id)
-                      CupertinoButton.filled(
-                        onPressed: () {
-                          final updated = booking.copyWith(
-                            status: BookingStatus.confirmed,
-                          );
-                          database.updateBooking(updated).then((value) {
-                            onConfirm?.call(updated);
-                            context.pop();
-                          });
-                        },
-                        child: const Text('confirm booking'),
-                      ),
-
-                    if (isCurrentUserInvolved &&
-                        !booking.isExpired &&
-                        !booking.isCanceled)
-                      CupertinoButton(
-                        onPressed: () {
-                          final updated = booking.copyWith(
-                            status: BookingStatus.canceled,
-                          );
-                          database.updateBooking(updated).then((value) {
-                            onDeny?.call(updated);
-                            context.pop();
-                          });
-                        },
-                        child: const Text(
-                          'cancel booking',
-                          style: TextStyle(
-                            color: Colors.red,
-                          ),
+                  ),
+                  if (canConfirm || canCancel)
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      child: GlassBottomBar(
+                        child: Row(
+                          children: [
+                            if (canCancel)
+                              Expanded(
+                                child: GlassButton.destructive(
+                                  label: 'cancel booking',
+                                  onPressed: () async {
+                                    final ok = await showGlassConfirm(
+                                      context: context,
+                                      title: 'cancel this booking?',
+                                      message: 'the other party will be notified',
+                                      confirmLabel: 'cancel booking',
+                                      cancelLabel: 'keep it',
+                                      destructive: true,
+                                    );
+                                    if (!ok || !context.mounted) return;
+                                    final updated = booking.copyWith(
+                                      status: BookingStatus.canceled,
+                                    );
+                                    await database.updateBooking(updated);
+                                    onDeny?.call(updated);
+                                    if (context.mounted) context.pop();
+                                  },
+                                ),
+                              ),
+                            if (canConfirm && canCancel)
+                              const SizedBox(width: TappedSpacing.sm),
+                            if (canConfirm)
+                              Expanded(
+                                child: GlassButton.primary(
+                                  label: 'confirm booking',
+                                  icon: CupertinoIcons.checkmark_alt,
+                                  onPressed: () async {
+                                    final updated = booking.copyWith(
+                                      status: BookingStatus.confirmed,
+                                    );
+                                    await database.updateBooking(updated);
+                                    onConfirm?.call(updated);
+                                    if (context.mounted) context.pop();
+                                  },
+                                ),
+                              ),
+                          ],
                         ),
                       ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 20,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'to modify the booking, please contact support@tapped.ai',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                ],
               ),
             );
           },

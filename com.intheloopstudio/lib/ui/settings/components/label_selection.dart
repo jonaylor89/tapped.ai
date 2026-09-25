@@ -35,9 +35,7 @@ class LabelSelection extends StatelessWidget {
                     child: Icon(Icons.business),
                   ),
                   Text(
-                    (state.label != 'None')
-                        ? state.label
-                        : 'Select a label',
+                    (state.label != 'None') ? state.label : 'Select a label',
                     style: const TextStyle(
                       color: tappedAccent,
                       fontSize: 16,
