@@ -1,4 +1,4 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:formz/formz.dart';
 import 'package:fpdart/fpdart.dart';
@@ -7,6 +7,7 @@ import 'package:intheloopapp/data/places_repository.dart';
 import 'package:intheloopapp/data/search_repository.dart';
 import 'package:intheloopapp/domains/models/genre.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/gig_search/components/venue_filter_form.dart';
 import 'package:intheloopapp/ui/gig_search/gig_search_cubit.dart';
 import 'package:intheloopapp/ui/gig_search/gig_search_results_view.dart';
@@ -22,9 +23,9 @@ class GigSearchView extends StatelessWidget {
       builder: (context, state) {
         return switch (state.formStatus) {
           FormzSubmissionStatus.initial => const VenueFilterForm(),
-          FormzSubmissionStatus.inProgress => const Center(
-              child: CupertinoActivityIndicator(),
-            ),
+          FormzSubmissionStatus.inProgress => const GlassAmbientBackground(
+            child: GlassLoading(),
+          ),
           FormzSubmissionStatus.success => const GigSearchResultsView(),
           FormzSubmissionStatus.failure => const VenueFilterForm(),
           FormzSubmissionStatus.canceled => const VenueFilterForm(),

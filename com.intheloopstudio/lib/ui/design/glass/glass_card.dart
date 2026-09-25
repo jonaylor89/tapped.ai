@@ -112,9 +112,17 @@ class GlassImageCard extends StatelessWidget {
               ),
             ),
             if (topLeft != null)
-              Positioned(top: TappedSpacing.md, left: TappedSpacing.md, child: topLeft!),
+              Positioned(
+                top: TappedSpacing.md,
+                left: TappedSpacing.md,
+                child: topLeft!,
+              ),
             if (topRight != null)
-              Positioned(top: TappedSpacing.md, right: TappedSpacing.md, child: topRight!),
+              Positioned(
+                top: TappedSpacing.md,
+                right: TappedSpacing.md,
+                child: topRight!,
+              ),
             Positioned(
               left: TappedSpacing.sm,
               right: TappedSpacing.sm,

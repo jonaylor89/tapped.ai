@@ -15,7 +15,7 @@ class BookingsHeatmapLayer extends StatelessWidget {
       0.55: Colors.red,
       0.85: Colors.pink,
       1.0: Colors.purple,
-    }
+    },
   ];
 
   @override

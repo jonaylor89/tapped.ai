@@ -51,11 +51,13 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
               final place = await switch (currentUser.location) {
                 None() => Future<Option<PlaceData>>.value(const None()),
                 Some(:final value) => (() async {
-                    return places.getPlaceById(value.placeId);
-                  })(),
+                  return places.getPlaceById(value.placeId);
+                })(),
               };
 
-              final addressComponents = place.map((e) => e.addressComponents).getOrElse(() => []);
+              final addressComponents = place
+                  .map((e) => e.addressComponents)
+                  .getOrElse(() => []);
               final countryCode = addressComponents
                   .where(
                     (element) => element.types.contains('country'),
@@ -160,65 +162,65 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
       builder: (context, currentUser) {
         return switch (currentUser.stripeConnectedAccountId) {
           None() => _connectBankAccountButton(
-              context: context,
-              currentUser: currentUser,
-            ),
+            context: context,
+            currentUser: currentUser,
+          ),
           Some(:final value) => () {
-              if (value == '') {
-                return _connectBankAccountButton(
-                  context: context,
-                  currentUser: currentUser,
-                );
-              }
+            if (value == '') {
+              return _connectBankAccountButton(
+                context: context,
+                currentUser: currentUser,
+              );
+            }
 
-              return FutureBuilder<Option<PaymentUser>>(
-                future: payments.getAccountById(value),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
+            return FutureBuilder<Option<PaymentUser>>(
+              future: payments.getAccountById(value),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return CupertinoButton(
+                    onPressed: null,
+                    color: onSurfaceColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(15),
+                    child: const CupertinoActivityIndicator(),
+                  );
+                }
+
+                final paymentUser = snapshot.data;
+                return switch (paymentUser) {
+                  null => _connectBankAccountButton(
+                    context: context,
+                    currentUser: currentUser,
+                  ),
+                  None() => _connectBankAccountButton(
+                    context: context,
+                    currentUser: currentUser,
+                  ),
+                  Some(:final value) => () {
+                    if (!value.payoutsEnabled) {
+                      return _connectBankAccountButton(
+                        context: context,
+                        currentUser: currentUser,
+                        accountId: value.id,
+                      );
+                    }
+
                     return CupertinoButton(
                       onPressed: null,
                       color: onSurfaceColor.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(15),
-                      child: const CupertinoActivityIndicator(),
+                      child: const Text(
+                        '✅ Bank Connected',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
                     );
-                  }
-
-                  final paymentUser = snapshot.data;
-                  return switch (paymentUser) {
-                    null => _connectBankAccountButton(
-                        context: context,
-                        currentUser: currentUser,
-                      ),
-                    None() => _connectBankAccountButton(
-                        context: context,
-                        currentUser: currentUser,
-                      ),
-                    Some(:final value) => () {
-                        if (!value.payoutsEnabled) {
-                          return _connectBankAccountButton(
-                            context: context,
-                            currentUser: currentUser,
-                            accountId: value.id,
-                          );
-                        }
-
-                        return CupertinoButton(
-                          onPressed: null,
-                          color: onSurfaceColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(15),
-                          child: const Text(
-                            '✅ Bank Connected',
-                            style: TextStyle(
-                              color: Colors.grey,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        );
-                      }(),
-                  };
-                },
-              );
-            }(),
+                  }(),
+                };
+              },
+            );
+          }(),
         };
       },
     );

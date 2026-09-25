@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,10 +10,11 @@ import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/domains/opportunity_bloc/opportunity_bloc.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/components/user_slider.dart';
 import 'package:intheloopapp/ui/opportunities/interested_users_view.dart';
 import 'package:intheloopapp/ui/profile/profile_view.dart';
-import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/utils/admin_builder.dart';
@@ -27,9 +26,9 @@ import 'package:intheloopapp/utils/opportunity_image.dart';
 import 'package:intl/intl.dart';
 import 'package:modal_bottom_sheet/modal_bottom_sheet.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:skeleton_text/skeleton_text.dart';
-import 'package:skeletons/skeletons.dart';
 
+/// Immersive opportunity detail: full-bleed flier with glass chrome floating
+/// over it, then grouped facts, description, lineup and booker below.
 class OpportunityView extends StatelessWidget {
   const OpportunityView({
     required this.opportunityId,
@@ -56,26 +55,342 @@ class OpportunityView extends StatelessWidget {
   final void Function()? onDislike;
   final void Function()? onDismiss;
 
-  Future<Option<Image>> nothing() async {
-    return const None();
-  }
+  static const _heroHeight = 420.0;
 
-  Widget opImage(ImageProvider provider) => Container(
-        height: 400,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: provider,
-            fit: BoxFit.contain,
-          ),
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(
-            sigmaX: 600,
-            sigmaY: 1000,
-          ),
+  Widget _flier(ImageProvider provider) => Image(
+    image: provider,
+    height: _heroHeight,
+    width: double.infinity,
+    fit: BoxFit.cover,
+  );
+
+  Widget _hero(BuildContext context, Opportunity op) {
+    final hero = heroImage;
+    final Widget image;
+    if (hero == null) {
+      image = FutureBuilder<ImageProvider>(
+        future: getOpImage(context, op),
+        builder: (context, snapshot) {
+          final provider = snapshot.data;
+          if (provider == null) {
+            return const SizedBox(
+              height: _heroHeight,
+              width: double.infinity,
+              child: GlassLoading(),
+            );
+          }
+          return _flier(provider);
+        },
+      );
+    } else {
+      image = GestureDetector(
+        onTap: () => context.push(ImagePage(heroImage: hero)),
+        child: Hero(
+          tag: hero.heroTag,
+          child: _flier(hero.imageProvider),
         ),
       );
+    }
+
+    final theme = Theme.of(context);
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        image,
+        Positioned.fill(
+          child: IgnorePointer(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0, 0.55, 1],
+                  colors: [
+                    Colors.transparent,
+                    Colors.transparent,
+                    theme.colorScheme.surface,
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _title(BuildContext context, Opportunity op) {
+    final theme = Theme.of(context);
+    return ConditionalParentWidget(
+      condition: titleHeroTag != null,
+      conditionalBuilder: ({required child}) => Hero(
+        tag: titleHeroTag!,
+        child: child,
+      ),
+      child: Text(
+        op.title,
+        style: theme.textTheme.headlineMedium?.copyWith(
+          fontFamily: 'Rubik One',
+          fontWeight: FontWeight.w900,
+          letterSpacing: -0.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _facts(
+    BuildContext context, {
+    required Opportunity op,
+    required bool isAdmin,
+  }) {
+    final theme = Theme.of(context);
+    final places = context.places;
+    final database = context.database;
+    return GlassSection(
+      margin: EdgeInsets.zero,
+      children: [
+        switch (op.venueId) {
+          None() => FutureBuilder<Option<PlaceData>>(
+            future: places.getPlaceById(op.location.placeId),
+            builder: (context, snapshot) {
+              final placeData = snapshot.data;
+              return switch (placeData) {
+                null => const GlassListTile(
+                  leadingIcon: CupertinoIcons.location_fill,
+                  title: 'locating…',
+                  showChevron: false,
+                ),
+                None() => const SizedBox.shrink(),
+                Some(:final value) => GlassListTile(
+                  leadingIcon: CupertinoIcons.location_fill,
+                  leadingColor: TappedColors.accent,
+                  title: formattedShortAddress(value.addressComponents),
+                  showChevron: false,
+                ),
+              };
+            },
+          ),
+          Some(:final value) => FutureBuilder<Option<UserModel>>(
+            future: database.getUserById(value),
+            builder: (context, snapshot) {
+              final venue = snapshot.data;
+              return switch (venue) {
+                null => const GlassListTile(
+                  leadingIcon: CupertinoIcons.building_2_fill,
+                  title: 'loading venue…',
+                  showChevron: false,
+                ),
+                None() => const SizedBox.shrink(),
+                Some(:final value) => GlassListTile(
+                  leading: UserAvatar(
+                    pushId: Option.of(value.id),
+                    pushUser: Option.of(value),
+                    imageUrl: value.profilePicture,
+                    radius: 16,
+                  ),
+                  title: value.displayName,
+                  subtitle: 'venue',
+                  onTap: () => showCupertinoModalBottomSheet<void>(
+                    context: context,
+                    builder: (context) => ProfileView(
+                      visitedUserId: value.id,
+                      visitedUser: Option.of(value),
+                    ),
+                  ),
+                ),
+              };
+            },
+          ),
+        },
+        GlassListTile(
+          leadingIcon: CupertinoIcons.calendar,
+          leadingColor: TappedColors.warning,
+          title: DateFormat('EEEE, MMM d').format(op.startTime),
+          subtitle: DateFormat.jm().format(op.startTime),
+          showChevron: false,
+        ),
+        GlassListTile(
+          leadingIcon: CupertinoIcons.money_dollar_circle_fill,
+          leadingColor: op.isPaid ? TappedColors.success : TappedColors.error,
+          title: op.isPaid ? 'paid gig' : 'unpaid',
+          showChevron: false,
+        ),
+        if (isAdmin)
+          GlassListTile(
+            leadingIcon: CupertinoIcons.link,
+            title: op.id,
+            subtitle: 'tap to copy',
+            showChevron: false,
+            onTap: () {
+              Clipboard.setData(ClipboardData(text: op.id));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(GlassRadius.control),
+                  ),
+                  content: const Text('copied to clipboard'),
+                ),
+              );
+            },
+          ),
+        if (op.description.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              GlassMetrics.edgeInset,
+              TappedSpacing.md,
+              GlassMetrics.edgeInset,
+              GlassMetrics.edgeInset,
+            ),
+            child: Text(
+              op.description,
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _lineup(BuildContext context, Opportunity op) {
+    final theme = Theme.of(context);
+    final database = context.database;
+    return switch (op.referenceEventId) {
+      None() => const SizedBox.shrink(),
+      Some(:final value) => FutureBuilder<List<Booking>>(
+        future: database.getBookingsByEventId(value),
+        builder: (context, snapshot) {
+          final bookings = snapshot.data;
+          if (bookings == null || bookings.isEmpty) {
+            return const SizedBox.shrink();
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const GlassSectionTitle('current lineup'),
+              FutureBuilder(
+                future: Future.wait(
+                  bookings.map(
+                    (booking) => database.getUserById(booking.requesteeId),
+                  ),
+                ),
+                builder: (context, snapshot) {
+                  final users = snapshot.data;
+                  if (users == null) {
+                    return const GlassLoading();
+                  }
+
+                  final realUsers = users
+                      .whereType<Some<UserModel>>()
+                      .map((user) => user.value)
+                      .toList();
+
+                  if (realUsers.isEmpty) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: GlassMetrics.edgeInset,
+                      ),
+                      child: Text(
+                        'empty bill',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.5,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return UserSlider(users: realUsers);
+                },
+              ),
+            ],
+          );
+        },
+      ),
+    };
+  }
+
+  Widget _actions(
+    BuildContext context, {
+    required Opportunity op,
+    required bool? isApplied,
+    required UserModel currentUser,
+    required bool isAdmin,
+  }) {
+    final opBloc = context.opportunities;
+    final isOwner = op.userId == currentUser.id;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          children: [
+            GlassIconButton(
+              icon: CupertinoIcons.share,
+              semanticsLabel: 'share opportunity',
+              onPressed: () {
+                Share.share('https://app.tapped.ai/opportunity/${op.id}');
+              },
+            ),
+            if (!isOwner && showDislikeButton && isApplied == false) ...[
+              const SizedBox(width: TappedSpacing.sm),
+              GlassIconButton(
+                icon: CupertinoIcons.hand_thumbsdown,
+                semanticsLabel: 'not interested',
+                onPressed: () {
+                  opBloc.add(DislikeOpportunity(opportunity: op));
+                  onDislike?.call();
+                },
+              ),
+            ],
+            const SizedBox(width: TappedSpacing.sm),
+            Expanded(
+              child: switch ((isOwner || isAdmin, isApplied)) {
+                (true, _) => GlassButton.primary(
+                  label: 'see applicants',
+                  icon: CupertinoIcons.person_2_fill,
+                  expand: true,
+                  onPressed: () => showCupertinoModalBottomSheet<void>(
+                    context: context,
+                    builder: (context) => InterestedUsersView(opportunity: op),
+                  ),
+                ),
+                (false, null) => const GlassButton.primary(
+                  label: 'checking…',
+                  expand: true,
+                  onPressed: null,
+                ),
+                (false, false) => GlassButton.primary(
+                  label: 'apply',
+                  icon: CupertinoIcons.paperplane_fill,
+                  expand: true,
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    final quota = opBloc.state.opQuota;
+                    opBloc.add(
+                      ApplyForOpportunity(
+                        opportunity: op,
+                        userComment: '',
+                      ),
+                    );
+                    if (quota > 0) {
+                      onApply?.call();
+                    }
+                  },
+                ),
+                (false, true) => const GlassButton(
+                  label: 'applied',
+                  icon: CupertinoIcons.checkmark_seal_fill,
+                  expand: true,
+                  onPressed: null,
+                ),
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget buildOpportunityView(
     BuildContext context, {
@@ -83,442 +398,77 @@ class OpportunityView extends StatelessWidget {
     required bool? isApplied,
     required UserModel currentUser,
   }) {
-    final hero = heroImage;
-    final opBloc = context.opportunities;
-    final places = context.places;
-    final database = context.database;
-    final theme = Theme.of(context);
-
     return AdminBuilder(
       builder: (context, isAdmin) {
-        return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          appBar: showAppBar ? AppBar() : null,
-          floatingActionButtonLocation: FloatingActionButtonLocation.startFloat,
-          floatingActionButton: buildFloatingActionButton(
-            context,
-            opBloc: opBloc,
-            op: op,
-            isApplied: isApplied,
-          ),
-          body: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        return GlassAmbientBackground(
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            extendBodyBehindAppBar: true,
+            body: Stack(
               children: [
-                if (hero == null)
-                  FutureBuilder<ImageProvider>(
-                    future: getOpImage(context, op),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return SkeletonAnimation(
-                          child: const SizedBox(
-                            height: 400,
-                            width: double.infinity,
-                          ),
-                        );
-                      }
-
-                      final provider = snapshot.data!;
-                      return opImage(provider);
-                    },
-                  )
-                else
-                  GestureDetector(
-                    onTap: () => context.push(
-                      ImagePage(
-                        heroImage: hero,
+                CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    SliverToBoxAdapter(child: _hero(context, op)),
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: GlassMetrics.edgeInset,
+                      ),
+                      sliver: SliverList.list(
+                        children: [
+                          _title(context, op),
+                          const SizedBox(height: TappedSpacing.lg),
+                          _facts(context, op: op, isAdmin: isAdmin),
+                        ],
                       ),
                     ),
-                    child: Hero(
-                      tag: hero.heroTag,
-                      child: opImage(hero.imageProvider),
+                    SliverToBoxAdapter(child: _lineup(context, op)),
+                    const SliverToBoxAdapter(
+                      child: GlassSectionTitle('booker'),
+                    ),
+                    SliverToBoxAdapter(
+                      child: GlassSection(
+                        children: [
+                          UserTile(userId: op.userId, user: const None()),
+                        ],
+                      ),
+                    ),
+                    const SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: GlassMetrics.bottomBarClearance + 24,
+                      ),
+                    ),
+                  ],
+                ),
+                if (showAppBar)
+                  Positioned(
+                    top: MediaQuery.paddingOf(context).top + TappedSpacing.sm,
+                    left: GlassMetrics.edgeInset,
+                    child: GlassIconButton(
+                      icon: CupertinoIcons.chevron_back,
+                      semanticsLabel: 'back',
+                      variant: GlassVariant.clear,
+                      onPressed: () => Navigator.of(context).maybePop(),
                     ),
                   ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ConditionalParentWidget(
-                        condition: titleHeroTag != null,
-                        conditionalBuilder: ({required child}) => Hero(
-                          tag: titleHeroTag!,
-                          child: child,
-                        ),
-                        child: Text(
-                          op.title,
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontFamily: 'Rubik One',
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          Expanded(
-                            child: CupertinoButton(
-                              onPressed: () {
-                                final link =
-                                    'https://app.tapped.ai/opportunity/${op.id}';
-                                Share.share(link);
-                              },
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.1),
-                              padding: const EdgeInsets.all(12),
-                              child: Text(
-                                'share',
-                                style: TextStyle(
-                                  fontSize: 17,
-                                  color: theme.colorScheme.onSurface,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (currentUser.id != op.userId)
-                            const SizedBox(
-                              width: 8,
-                            ),
-                          if (currentUser.id != op.userId)
-                            Expanded(
-                              child: switch (isApplied) {
-                                null => const SizedBox.shrink(),
-                                false => CupertinoButton(
-                                    onPressed: () {
-                                      HapticFeedback.mediumImpact();
-                                      final quota = opBloc.state.opQuota;
-                                      opBloc.add(
-                                        ApplyForOpportunity(
-                                          opportunity: op,
-                                          userComment: '',
-                                        ),
-                                      );
-                                      if (quota > 0) {
-                                        onApply?.call();
-                                      }
-                                    },
-                                    color: Colors.green.withOpacity(0.8),
-                                    padding: const EdgeInsets.all(12),
-                                    child: const Text(
-                                      'apply',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                true => CupertinoButton(
-                                    onPressed: null,
-                                    color: theme.colorScheme.onSurface
-                                        .withOpacity(0.1),
-                                    padding: const EdgeInsets.all(12),
-                                    child: Text(
-                                      'applied',
-                                      style: TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.bold,
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.3),
-                                      ),
-                                    ),
-                                  ),
-                              },
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      switch (op.userId == currentUser.id || isAdmin) {
-                        false => const SizedBox.shrink(),
-                        true => Row(
-                            children: [
-                              Expanded(
-                                child: CupertinoButton(
-                                  onPressed: () {
-                                    showCupertinoModalBottomSheet<void>(
-                                      context: context,
-                                      builder: (context) => InterestedUsersView(
-                                        opportunity: op,
-                                      ),
-                                    );
-                                  },
-                                  color: theme.colorScheme.primary,
-                                  padding: const EdgeInsets.all(12),
-                                  // borderRadius: BorderRadius.circular(15),
-                                  child: const Text(
-                                    'see applicants',
-                                    style: TextStyle(
-                                      fontSize: 17,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                      },
-                      const SizedBox(height: 12),
-                      switch (op.venueId) {
-                        None() => FutureBuilder<Option<PlaceData>>(
-                            future: places.getPlaceById(
-                              op.location.placeId,
-                            ),
-                            builder: (context, snapshot) {
-                              final placeData = snapshot.data;
-                              return switch (placeData) {
-                                null => const CupertinoActivityIndicator(),
-                                None() => const SizedBox.shrink(),
-                                Some(:final value) => Row(
-                                    children: [
-                                      Icon(
-                                        CupertinoIcons.location_circle_fill,
-                                        color: theme.colorScheme.onSurface
-                                            .withOpacity(0.5),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        formattedShortAddress(
-                                          value.addressComponents,
-                                        ),
-                                        style: const TextStyle(
-                                          color: tappedAccent,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              };
-                            },
-                          ),
-                        Some(:final value) => FutureBuilder<Option<UserModel>>(
-                            future: database.getUserById(value),
-                            builder: (context, snapshot) {
-                              final requester = snapshot.data;
-                              return switch (requester) {
-                                null => SkeletonListTile(),
-                                None() => SkeletonListTile(),
-                                Some(:final value) => GestureDetector(
-                                    onTap: () =>
-                                        showCupertinoModalBottomSheet<void>(
-                                      context: context,
-                                      builder: (context) => ProfileView(
-                                        visitedUserId: value.id,
-                                        visitedUser: Option.of(value),
-                                      ),
-                                    ),
-                                    child: CupertinoListTile(
-                                      leading: UserAvatar(
-                                        pushId: Option.of(value.id),
-                                        pushUser: Option.of(value),
-                                        imageUrl: value.profilePicture,
-                                        radius: 20,
-                                      ),
-                                      title: Text(
-                                        value.displayName,
-                                        style: TextStyle(
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              };
-                            },
-                          ),
-                      },
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.calendar_circle_fill,
-                            color: theme.colorScheme.onSurface.withOpacity(0.5),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            DateFormat('MM/dd/yyyy').format(op.startTime),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Icon(
-                            CupertinoIcons.money_dollar_circle_fill,
-                            color: op.isPaid ? Colors.green : Colors.red,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            op.isPaid ? 'paid' : 'unpaid',
-                          ),
-                        ],
-                      ),
-                      if (isAdmin) const SizedBox(height: 12),
-                      if (isAdmin)
-                        GestureDetector(
-                          onTap: () {
-                            Clipboard.setData(
-                              ClipboardData(text: op.id),
-                            );
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('copied to clipboard'),
-                              ),
-                            );
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                CupertinoIcons.link_circle_fill,
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.5),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                op.id,
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const SizedBox(height: 12),
-                      Text(
-                        op.description,
-                      ),
-                      const SizedBox(height: 12),
-                      const Divider(),
-                      switch (op.referenceEventId) {
-                        None() => const SizedBox.shrink(),
-                        Some(:final value) => FutureBuilder<List<Booking>>(
-                            future: database.getBookingsByEventId(value),
-                            builder: (context, snapshot) {
-                              final bookings = snapshot.data;
-                              return switch (bookings?.isNotEmpty) {
-                                null => const SizedBox.shrink(),
-                                false => const SizedBox.shrink(),
-                                true => Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        'current lineup',
-                                        style: TextStyle(
-                                          fontSize: 18,
-                                          color: theme.colorScheme.onSurface
-                                              .withOpacity(0.5),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      FutureBuilder(
-                                        future: Future.wait(
-                                          (bookings ?? []).map(
-                                            (booking) => database.getUserById(
-                                              booking.requesteeId,
-                                            ),
-                                          ),
-                                        ),
-                                        builder: (context, snapshot) {
-                                          final users = snapshot.data;
-                                          if (users == null) {
-                                            return const CupertinoActivityIndicator();
-                                          }
-
-                                          final realUsers = users
-                                              .whereType<Some<UserModel>>()
-                                              .map((user) => user.value)
-                                              .toList();
-
-                                          if (realUsers.isEmpty) {
-                                            return Text(
-                                              'empty bill',
-                                              style: TextStyle(
-                                                color: theme
-                                                    .colorScheme.onSurface
-                                                    .withOpacity(0.5),
-                                              ),
-                                            );
-                                          }
-
-                                          return UserSlider(
-                                            users: realUsers,
-                                          );
-                                        },
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Divider(),
-                                    ],
-                                  ),
-                              };
-                            },
-                          ),
-                      },
-                      const SizedBox(height: 12),
-                      Text(
-                        'booker',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: theme.colorScheme.onSurface.withOpacity(0.5),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      UserTile(
-                        userId: op.userId,
-                        user: const None(),
-                      ),
-                      const SizedBox(height: 96),
-                    ],
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: GlassBottomBar(
+                    child: _actions(
+                      context,
+                      op: op,
+                      isApplied: isApplied,
+                      currentUser: currentUser,
+                      isAdmin: isAdmin,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
         );
-      },
-    );
-  }
-
-  Widget buildFloatingActionButton(
-    context, {
-    required Opportunity op,
-    required OpportunityBloc opBloc,
-    required bool? isApplied,
-  }) {
-    return CurrentUserBuilder(
-      builder: (context, currentUser) {
-        if (op.userId == currentUser.id) {
-          return const SizedBox.shrink();
-        }
-
-        return switch (isApplied) {
-          null => const FloatingActionButton(
-              onPressed: null,
-              child: CupertinoActivityIndicator(),
-            ),
-          false => FloatingActionButton.extended(
-              onPressed: () {
-                opBloc.add(
-                  DislikeOpportunity(
-                    opportunity: op,
-                  ),
-                );
-                onDislike?.call();
-              },
-              backgroundColor: Colors.red,
-              icon: const Icon(
-                Icons.cancel,
-              ),
-              label: const Text('not interested'),
-            ),
-          true => const SizedBox.shrink(),
-        };
       },
     );
   }
@@ -539,31 +489,35 @@ class OpportunityView extends StatelessWidget {
             final isApplied = snapshot.data;
             return switch (opportunity) {
               None() => FutureBuilder<Option<Opportunity>>(
-                  future: database.getOpportunityById(opportunityId),
-                  builder: (context, snapshot) {
-                    final op = snapshot.data;
-                    return switch (op) {
-                      null => const Center(
-                          child: CupertinoActivityIndicator(),
-                        ),
-                      None() => const Center(
-                          child: Text('error'),
-                        ),
-                      Some(:final value) => buildOpportunityView(
-                          context,
-                          op: value,
-                          isApplied: isApplied,
-                          currentUser: currentUser,
-                        ),
-                    };
-                  },
-                ),
+                future: database.getOpportunityById(opportunityId),
+                builder: (context, snapshot) {
+                  final op = snapshot.data;
+                  return switch (op) {
+                    null => const GlassAmbientBackground(
+                      child: GlassLoading(),
+                    ),
+                    None() => const GlassAmbientBackground(
+                      child: GlassEmptyState(
+                        icon: CupertinoIcons.exclamationmark_triangle,
+                        title: 'opportunity not found',
+                        message: 'it may have been removed',
+                      ),
+                    ),
+                    Some(:final value) => buildOpportunityView(
+                      context,
+                      op: value,
+                      isApplied: isApplied,
+                      currentUser: currentUser,
+                    ),
+                  };
+                },
+              ),
               Some(:final value) => buildOpportunityView(
-                  context,
-                  op: value,
-                  isApplied: isApplied,
-                  currentUser: currentUser,
-                ),
+                context,
+                op: value,
+                isApplied: isApplied,
+                currentUser: currentUser,
+              ),
             };
           },
         );

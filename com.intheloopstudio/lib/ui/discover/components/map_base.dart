@@ -38,62 +38,63 @@ class MapBase extends StatelessWidget {
 
         return switch (data) {
           null => const Center(
-              child: CupertinoActivityIndicator(),
-            ),
+            child: CupertinoActivityIndicator(),
+          ),
           (double(), double()) => FlutterMap(
-              mapController: mapController,
-              options: MapOptions(
-                // minZoom: 10,
-                maxZoom: 18,
-                initialZoom: 11.5,
-                initialCenter: LatLng(data.$1, data.$2),
-                onPositionChanged: (position, hasGesture) {
-                  context.read<DiscoverCubit>().onBoundsChange(
-                        position.visibleBounds,
-                      );
+            mapController: mapController,
+            options: MapOptions(
+              // minZoom: 10,
+              maxZoom: 18,
+              initialZoom: 11.5,
+              initialCenter: LatLng(data.$1, data.$2),
+              onPositionChanged: (position, hasGesture) {
+                context.read<DiscoverCubit>().onBoundsChange(
+                  position.visibleBounds,
+                );
+              },
+            ),
+            children: [
+              Builder(
+                builder: (context) {
+                  final theme = context.isDarkMode
+                      ? mapboxDarkStyle
+                      : mapboxLightStyle;
+                  return TileLayer(
+                    urlTemplate:
+                        'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
+                    additionalOptions: {
+                      'accessToken': defaultMapboxToken,
+                      'id': theme,
+                    },
+                    tileProvider: const FMTCStore('mapStore').getTileProvider(),
+                  );
                 },
               ),
-              children: [
-                Builder(
-                  builder: (context) {
-                    final theme = context.isDarkMode ? mapboxDarkStyle : mapboxLightStyle;
-                    return TileLayer(
-                      urlTemplate:
-                          'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token={accessToken}',
-                      additionalOptions: {
-                        'accessToken': defaultMapboxToken,
-                        'id': theme,
-                      },
-                      tileProvider:
-                          const FMTCStore('mapStore').getTileProvider(),
-                    );
-                  },
-                ),
-                BlocBuilder<DiscoverCubit, DiscoverState>(
-                  builder: (context, state) {
-                    return switch (state.mapOverlay) {
-                      MapOverlay.venues => const VenueMarkerLayer(),
-                      MapOverlay.opportunities =>
-                        const OpportunitiesClusterLayer(),
-                    };
-                  },
-                ),
-                const CurrentLocationLayer(),
-                RichAttributionWidget(
-                  animationConfig: const ScaleRAWA(),
-                  // Or `FadeRAWA` as is default
-                  showFlutterMapAttribution: false,
-                  attributions: [
-                    TextSourceAttribution(
-                      'OpenStreetMap contributors',
-                      onTap: () => launchUrl(
-                        Uri.parse('https://openstreetmap.org/copyright'),
-                      ),
+              BlocBuilder<DiscoverCubit, DiscoverState>(
+                builder: (context, state) {
+                  return switch (state.mapOverlay) {
+                    MapOverlay.venues => const VenueMarkerLayer(),
+                    MapOverlay.opportunities =>
+                      const OpportunitiesClusterLayer(),
+                  };
+                },
+              ),
+              const CurrentLocationLayer(),
+              RichAttributionWidget(
+                animationConfig: const ScaleRAWA(),
+                // Or `FadeRAWA` as is default
+                showFlutterMapAttribution: false,
+                attributions: [
+                  TextSourceAttribution(
+                    'OpenStreetMap contributors',
+                    onTap: () => launchUrl(
+                      Uri.parse('https://openstreetmap.org/copyright'),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         };
       },
     );

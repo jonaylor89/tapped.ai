@@ -12,6 +12,7 @@ class LabelFilter extends StatelessWidget {
     return BlocBuilder<SearchBloc, SearchState>(
       builder: (context, state) {
         return LabelMultiSelect(
+          standalone: false,
           initialValue: state.labels,
           onConfirm: (values) {
             context.search.add(

@@ -105,14 +105,14 @@ class ActionMenu extends StatelessWidget {
                                   )
                                 : context.push(PaywallPage()),
                           _ => ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: Colors.red,
-                                content: Text(
-                                  'subscription is uninitialized',
-                                ),
+                            const SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.red,
+                              content: Text(
+                                'subscription is uninitialized',
                               ),
                             ),
+                          ),
                         };
                       },
                     );

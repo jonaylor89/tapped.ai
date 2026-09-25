@@ -187,7 +187,8 @@ class GlassListTile extends StatelessWidget {
                       color: foreground,
                       fontWeight: FontWeight.w500,
                     ),
-                    child: titleWidget ??
+                    child:
+                        titleWidget ??
                         Text(
                           title ?? '',
                           maxLines: 1,

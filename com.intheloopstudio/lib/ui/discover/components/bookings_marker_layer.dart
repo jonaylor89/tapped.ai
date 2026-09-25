@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:fpdart/fpdart.dart';
@@ -78,18 +77,17 @@ class BookingsMarkerLayer extends StatelessWidget {
       markers: [
         ...bookings.map((booking) {
           final heroImage = HeroImage(
-            imageProvider:
-                booking.getBookingImage(const None()),
+            imageProvider: booking.getBookingImage(const None()),
             heroTag: booking.id,
           );
           return switch (booking.location) {
             None() => null,
             Some(:final value) => buildMarker(
-                context,
-                booking: booking,
-                location: value,
-                heroImage: heroImage,
-              ),
+              context,
+              booking: booking,
+              location: value,
+              heroImage: heroImage,
+            ),
           };
         }).whereType<Marker>(),
       ],

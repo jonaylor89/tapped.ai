@@ -87,8 +87,9 @@ class ServicesList extends StatelessWidget {
               height: 190,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount:
-                    isCurrentUser ? services.length : services.length + 1,
+                itemCount: isCurrentUser
+                    ? services.length
+                    : services.length + 1,
                 itemBuilder: (context, index) {
                   if (index == 0 && !isCurrentUser) {
                     return _customBookingButton(context);
@@ -98,41 +99,42 @@ class ServicesList extends StatelessWidget {
                   final service = services[listIndex];
                   return ConditionalParentWidget(
                     condition: isCurrentUser || isAdmin,
-                    conditionalBuilder: ({
-                      required Widget child,
-                    }) {
-                      return badges.Badge(
-                        onTap: () {
-                          try {
-                            context.push(
-                              CreateServicePage(
-                                onSubmit: context
-                                    .read<ProfileCubit>()
-                                    .onServiceEdited,
-                                service: Option.of(service),
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                behavior: SnackBarBehavior.floating,
-                                backgroundColor: Colors.red,
-                                content: Text('Error editing service'),
-                              ),
-                            );
-                          }
+                    conditionalBuilder:
+                        ({
+                          required Widget child,
+                        }) {
+                          return badges.Badge(
+                            onTap: () {
+                              try {
+                                context.push(
+                                  CreateServicePage(
+                                    onSubmit: context
+                                        .read<ProfileCubit>()
+                                        .onServiceEdited,
+                                    service: Option.of(service),
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    behavior: SnackBarBehavior.floating,
+                                    backgroundColor: Colors.red,
+                                    content: Text('Error editing service'),
+                                  ),
+                                );
+                              }
+                            },
+                            badgeStyle: const badges.BadgeStyle(
+                              badgeColor: Color.fromARGB(255, 47, 47, 47),
+                            ),
+                            badgeContent: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 25,
+                            ),
+                            child: child,
+                          );
                         },
-                        badgeStyle: const badges.BadgeStyle(
-                          badgeColor: Color.fromARGB(255, 47, 47, 47),
-                        ),
-                        badgeContent: const Icon(
-                          Icons.edit,
-                          color: Colors.white,
-                          size: 25,
-                        ),
-                        child: child,
-                      );
-                    },
                     child: ServiceCard(
                       service: service,
                     ),

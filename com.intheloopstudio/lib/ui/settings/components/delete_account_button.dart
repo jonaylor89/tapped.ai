@@ -39,7 +39,8 @@ class DeleteAccountButton extends StatelessWidget {
                   icon: CupertinoIcons.exclamationmark_triangle_fill,
                   tint: TappedColors.error,
                   title: 'this cannot be undone',
-                  message: 'reauthenticate to permanently delete your '
+                  message:
+                      'reauthenticate to permanently delete your '
                       'account and all of its data',
                 ),
                 const SizedBox(height: TappedSpacing.lg),

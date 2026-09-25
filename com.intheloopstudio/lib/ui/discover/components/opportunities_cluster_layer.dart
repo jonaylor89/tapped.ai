@@ -64,18 +64,20 @@ class OpportunitiesClusterLayer extends StatelessWidget {
               return FloatingActionButton(
                 onPressed: () {
                   // push page to select opportunities
-                  final ops = markers.map(
-                    (marker) {
-                      return state.opportunityHits.firstWhere(
-                        (opportunity) =>
-                            opportunity.location.lat == marker.point.latitude &&
-                            opportunity.location.lng == marker.point.longitude,
+                  final ops =
+                      markers.map(
+                        (marker) {
+                          return state.opportunityHits.firstWhere(
+                            (opportunity) =>
+                                opportunity.location.lat ==
+                                    marker.point.latitude &&
+                                opportunity.location.lng ==
+                                    marker.point.longitude,
+                          );
+                        },
+                      ).toList()..sort(
+                        (a, b) => a.startTime.compareTo(b.startTime),
                       );
-                    },
-                  ).toList()
-                    ..sort(
-                      (a, b) => a.startTime.compareTo(b.startTime),
-                    );
                   showCupertinoModalBottomSheet<void>(
                     context: context,
                     builder: (context) {

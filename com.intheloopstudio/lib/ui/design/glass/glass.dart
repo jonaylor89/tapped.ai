@@ -15,3 +15,4 @@ export 'glass_pressable.dart';
 export 'glass_sheet.dart';
 export 'glass_tokens.dart';
 export 'liquid_glass.dart';
+export 'glass_multi_select.dart';

@@ -38,8 +38,10 @@ class DraggableSheet extends StatelessWidget {
                 final featuredOpportunities = snapshot.data ?? [];
                 return BlocBuilder<DiscoverCubit, DiscoverState>(
                   builder: (context, state) {
-                    final sortedVenueHits =
-                        sortVenuesByFit(currentUser, state.venueHits);
+                    final sortedVenueHits = sortVenuesByFit(
+                      currentUser,
+                      state.venueHits,
+                    );
                     final topPerformerIds = sortedVenueHits
                         .expand((v) {
                           return v.venueInfo.fold(
@@ -51,12 +53,13 @@ class DraggableSheet extends StatelessWidget {
                         .toList();
                     return FutureBuilder(
                       future: (() async {
-                        final performers = (await Future.wait(
-                          topPerformerIds.map(database.getUserById),
-                        ))
-                            .whereType<Some<UserModel>>()
-                            .map((e) => e.value)
-                            .toList();
+                        final performers =
+                            (await Future.wait(
+                                  topPerformerIds.map(database.getUserById),
+                                ))
+                                .whereType<Some<UserModel>>()
+                                .map((e) => e.value)
+                                .toList();
 
                         return performers;
                       })(),
@@ -110,8 +113,7 @@ class DraggableSheet extends StatelessWidget {
                                           isPremium: isPremium,
                                         ),
                                         SheetFeaturedGigs(
-                                          opportunities:
-                                              featuredOpportunities,
+                                          opportunities: featuredOpportunities,
                                         ),
                                         const SizedBox(
                                           height: TappedSpacing.md,

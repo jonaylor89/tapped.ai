@@ -62,10 +62,12 @@ class ServiceCard extends StatelessWidget {
                   ),
                 ),
                 CupertinoButton(
-                  onPressed: () => context.push(ServicePage(
-                    service: service,
-                    serviceUser: const None(),
-                  ),),
+                  onPressed: () => context.push(
+                    ServicePage(
+                      service: service,
+                      serviceUser: const None(),
+                    ),
+                  ),
                   child: const Text('more info'),
                 ),
               ],

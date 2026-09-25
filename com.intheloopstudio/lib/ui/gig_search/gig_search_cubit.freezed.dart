@@ -12,7 +12,8 @@ part of 'gig_search_cubit.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 /// @nodoc
 mixin _$GigSearchState {
@@ -34,19 +35,21 @@ mixin _$GigSearchState {
 /// @nodoc
 abstract class $GigSearchStateCopyWith<$Res> {
   factory $GigSearchStateCopyWith(
-          GigSearchState value, $Res Function(GigSearchState) then) =
-      _$GigSearchStateCopyWithImpl<$Res, GigSearchState>;
+    GigSearchState value,
+    $Res Function(GigSearchState) then,
+  ) = _$GigSearchStateCopyWithImpl<$Res, GigSearchState>;
   @useResult
-  $Res call(
-      {Option<PlaceData> place,
-      List<Genre> genres,
-      List<String> startDate,
-      List<String> endDate,
-      RangeValues capacityRange,
-      DateRangeType dateRangeType,
-      List<SelectableResult> results,
-      List<UserModel> collaborators,
-      FormzSubmissionStatus formStatus});
+  $Res call({
+    Option<PlaceData> place,
+    List<Genre> genres,
+    List<String> startDate,
+    List<String> endDate,
+    RangeValues capacityRange,
+    DateRangeType dateRangeType,
+    List<SelectableResult> results,
+    List<UserModel> collaborators,
+    FormzSubmissionStatus formStatus,
+  });
 }
 
 /// @nodoc
@@ -72,65 +75,70 @@ class _$GigSearchStateCopyWithImpl<$Res, $Val extends GigSearchState>
     Object? collaborators = null,
     Object? formStatus = null,
   }) {
-    return _then(_value.copyWith(
-      place: null == place
-          ? _value.place
-          : place // ignore: cast_nullable_to_non_nullable
-              as Option<PlaceData>,
-      genres: null == genres
-          ? _value.genres
-          : genres // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      startDate: null == startDate
-          ? _value.startDate
-          : startDate // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      endDate: null == endDate
-          ? _value.endDate
-          : endDate // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      capacityRange: null == capacityRange
-          ? _value.capacityRange
-          : capacityRange // ignore: cast_nullable_to_non_nullable
-              as RangeValues,
-      dateRangeType: null == dateRangeType
-          ? _value.dateRangeType
-          : dateRangeType // ignore: cast_nullable_to_non_nullable
-              as DateRangeType,
-      results: null == results
-          ? _value.results
-          : results // ignore: cast_nullable_to_non_nullable
-              as List<SelectableResult>,
-      collaborators: null == collaborators
-          ? _value.collaborators
-          : collaborators // ignore: cast_nullable_to_non_nullable
-              as List<UserModel>,
-      formStatus: null == formStatus
-          ? _value.formStatus
-          : formStatus // ignore: cast_nullable_to_non_nullable
-              as FormzSubmissionStatus,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            place: null == place
+                ? _value.place
+                : place // ignore: cast_nullable_to_non_nullable
+                      as Option<PlaceData>,
+            genres: null == genres
+                ? _value.genres
+                : genres // ignore: cast_nullable_to_non_nullable
+                      as List<Genre>,
+            startDate: null == startDate
+                ? _value.startDate
+                : startDate // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            endDate: null == endDate
+                ? _value.endDate
+                : endDate // ignore: cast_nullable_to_non_nullable
+                      as List<String>,
+            capacityRange: null == capacityRange
+                ? _value.capacityRange
+                : capacityRange // ignore: cast_nullable_to_non_nullable
+                      as RangeValues,
+            dateRangeType: null == dateRangeType
+                ? _value.dateRangeType
+                : dateRangeType // ignore: cast_nullable_to_non_nullable
+                      as DateRangeType,
+            results: null == results
+                ? _value.results
+                : results // ignore: cast_nullable_to_non_nullable
+                      as List<SelectableResult>,
+            collaborators: null == collaborators
+                ? _value.collaborators
+                : collaborators // ignore: cast_nullable_to_non_nullable
+                      as List<UserModel>,
+            formStatus: null == formStatus
+                ? _value.formStatus
+                : formStatus // ignore: cast_nullable_to_non_nullable
+                      as FormzSubmissionStatus,
+          )
+          as $Val,
+    );
   }
 }
 
 /// @nodoc
 abstract class _$$GigSearchStateImplCopyWith<$Res>
     implements $GigSearchStateCopyWith<$Res> {
-  factory _$$GigSearchStateImplCopyWith(_$GigSearchStateImpl value,
-          $Res Function(_$GigSearchStateImpl) then) =
-      __$$GigSearchStateImplCopyWithImpl<$Res>;
+  factory _$$GigSearchStateImplCopyWith(
+    _$GigSearchStateImpl value,
+    $Res Function(_$GigSearchStateImpl) then,
+  ) = __$$GigSearchStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {Option<PlaceData> place,
-      List<Genre> genres,
-      List<String> startDate,
-      List<String> endDate,
-      RangeValues capacityRange,
-      DateRangeType dateRangeType,
-      List<SelectableResult> results,
-      List<UserModel> collaborators,
-      FormzSubmissionStatus formStatus});
+  $Res call({
+    Option<PlaceData> place,
+    List<Genre> genres,
+    List<String> startDate,
+    List<String> endDate,
+    RangeValues capacityRange,
+    DateRangeType dateRangeType,
+    List<SelectableResult> results,
+    List<UserModel> collaborators,
+    FormzSubmissionStatus formStatus,
+  });
 }
 
 /// @nodoc
@@ -138,8 +146,9 @@ class __$$GigSearchStateImplCopyWithImpl<$Res>
     extends _$GigSearchStateCopyWithImpl<$Res, _$GigSearchStateImpl>
     implements _$$GigSearchStateImplCopyWith<$Res> {
   __$$GigSearchStateImplCopyWithImpl(
-      _$GigSearchStateImpl _value, $Res Function(_$GigSearchStateImpl) _then)
-      : super(_value, _then);
+    _$GigSearchStateImpl _value,
+    $Res Function(_$GigSearchStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -154,65 +163,67 @@ class __$$GigSearchStateImplCopyWithImpl<$Res>
     Object? collaborators = null,
     Object? formStatus = null,
   }) {
-    return _then(_$GigSearchStateImpl(
-      place: null == place
-          ? _value.place
-          : place // ignore: cast_nullable_to_non_nullable
-              as Option<PlaceData>,
-      genres: null == genres
-          ? _value._genres
-          : genres // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      startDate: null == startDate
-          ? _value._startDate
-          : startDate // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      endDate: null == endDate
-          ? _value._endDate
-          : endDate // ignore: cast_nullable_to_non_nullable
-              as List<String>,
-      capacityRange: null == capacityRange
-          ? _value.capacityRange
-          : capacityRange // ignore: cast_nullable_to_non_nullable
-              as RangeValues,
-      dateRangeType: null == dateRangeType
-          ? _value.dateRangeType
-          : dateRangeType // ignore: cast_nullable_to_non_nullable
-              as DateRangeType,
-      results: null == results
-          ? _value._results
-          : results // ignore: cast_nullable_to_non_nullable
-              as List<SelectableResult>,
-      collaborators: null == collaborators
-          ? _value._collaborators
-          : collaborators // ignore: cast_nullable_to_non_nullable
-              as List<UserModel>,
-      formStatus: null == formStatus
-          ? _value.formStatus
-          : formStatus // ignore: cast_nullable_to_non_nullable
-              as FormzSubmissionStatus,
-    ));
+    return _then(
+      _$GigSearchStateImpl(
+        place: null == place
+            ? _value.place
+            : place // ignore: cast_nullable_to_non_nullable
+                  as Option<PlaceData>,
+        genres: null == genres
+            ? _value._genres
+            : genres // ignore: cast_nullable_to_non_nullable
+                  as List<Genre>,
+        startDate: null == startDate
+            ? _value._startDate
+            : startDate // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        endDate: null == endDate
+            ? _value._endDate
+            : endDate // ignore: cast_nullable_to_non_nullable
+                  as List<String>,
+        capacityRange: null == capacityRange
+            ? _value.capacityRange
+            : capacityRange // ignore: cast_nullable_to_non_nullable
+                  as RangeValues,
+        dateRangeType: null == dateRangeType
+            ? _value.dateRangeType
+            : dateRangeType // ignore: cast_nullable_to_non_nullable
+                  as DateRangeType,
+        results: null == results
+            ? _value._results
+            : results // ignore: cast_nullable_to_non_nullable
+                  as List<SelectableResult>,
+        collaborators: null == collaborators
+            ? _value._collaborators
+            : collaborators // ignore: cast_nullable_to_non_nullable
+                  as List<UserModel>,
+        formStatus: null == formStatus
+            ? _value.formStatus
+            : formStatus // ignore: cast_nullable_to_non_nullable
+                  as FormzSubmissionStatus,
+      ),
+    );
   }
 }
 
 /// @nodoc
 
 class _$GigSearchStateImpl implements _GigSearchState {
-  const _$GigSearchStateImpl(
-      {this.place = const None(),
-      final List<Genre> genres = const [],
-      final List<String> startDate = const [],
-      final List<String> endDate = const [],
-      this.capacityRange = const RangeValues(0, 200),
-      this.dateRangeType = DateRangeType.fixed,
-      final List<SelectableResult> results = const [],
-      final List<UserModel> collaborators = const [],
-      this.formStatus = FormzSubmissionStatus.initial})
-      : _genres = genres,
-        _startDate = startDate,
-        _endDate = endDate,
-        _results = results,
-        _collaborators = collaborators;
+  const _$GigSearchStateImpl({
+    this.place = const None(),
+    final List<Genre> genres = const [],
+    final List<String> startDate = const [],
+    final List<String> endDate = const [],
+    this.capacityRange = const RangeValues(0, 200),
+    this.dateRangeType = DateRangeType.fixed,
+    final List<SelectableResult> results = const [],
+    final List<UserModel> collaborators = const [],
+    this.formStatus = FormzSubmissionStatus.initial,
+  }) : _genres = genres,
+       _startDate = startDate,
+       _endDate = endDate,
+       _results = results,
+       _collaborators = collaborators;
 
   @override
   @JsonKey()
@@ -284,52 +295,60 @@ class _$GigSearchStateImpl implements _GigSearchState {
             other is _$GigSearchStateImpl &&
             (identical(other.place, place) || other.place == place) &&
             const DeepCollectionEquality().equals(other._genres, _genres) &&
-            const DeepCollectionEquality()
-                .equals(other._startDate, _startDate) &&
+            const DeepCollectionEquality().equals(
+              other._startDate,
+              _startDate,
+            ) &&
             const DeepCollectionEquality().equals(other._endDate, _endDate) &&
             (identical(other.capacityRange, capacityRange) ||
                 other.capacityRange == capacityRange) &&
             (identical(other.dateRangeType, dateRangeType) ||
                 other.dateRangeType == dateRangeType) &&
             const DeepCollectionEquality().equals(other._results, _results) &&
-            const DeepCollectionEquality()
-                .equals(other._collaborators, _collaborators) &&
+            const DeepCollectionEquality().equals(
+              other._collaborators,
+              _collaborators,
+            ) &&
             (identical(other.formStatus, formStatus) ||
                 other.formStatus == formStatus));
   }
 
   @override
   int get hashCode => Object.hash(
-      runtimeType,
-      place,
-      const DeepCollectionEquality().hash(_genres),
-      const DeepCollectionEquality().hash(_startDate),
-      const DeepCollectionEquality().hash(_endDate),
-      capacityRange,
-      dateRangeType,
-      const DeepCollectionEquality().hash(_results),
-      const DeepCollectionEquality().hash(_collaborators),
-      formStatus);
+    runtimeType,
+    place,
+    const DeepCollectionEquality().hash(_genres),
+    const DeepCollectionEquality().hash(_startDate),
+    const DeepCollectionEquality().hash(_endDate),
+    capacityRange,
+    dateRangeType,
+    const DeepCollectionEquality().hash(_results),
+    const DeepCollectionEquality().hash(_collaborators),
+    formStatus,
+  );
 
   @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$GigSearchStateImplCopyWith<_$GigSearchStateImpl> get copyWith =>
       __$$GigSearchStateImplCopyWithImpl<_$GigSearchStateImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 }
 
 abstract class _GigSearchState implements GigSearchState {
-  const factory _GigSearchState(
-      {final Option<PlaceData> place,
-      final List<Genre> genres,
-      final List<String> startDate,
-      final List<String> endDate,
-      final RangeValues capacityRange,
-      final DateRangeType dateRangeType,
-      final List<SelectableResult> results,
-      final List<UserModel> collaborators,
-      final FormzSubmissionStatus formStatus}) = _$GigSearchStateImpl;
+  const factory _GigSearchState({
+    final Option<PlaceData> place,
+    final List<Genre> genres,
+    final List<String> startDate,
+    final List<String> endDate,
+    final RangeValues capacityRange,
+    final DateRangeType dateRangeType,
+    final List<SelectableResult> results,
+    final List<UserModel> collaborators,
+    final FormzSubmissionStatus formStatus,
+  }) = _$GigSearchStateImpl;
 
   @override
   Option<PlaceData> get place;
@@ -368,8 +387,9 @@ mixin _$SelectableResult {
 /// @nodoc
 abstract class $SelectableResultCopyWith<$Res> {
   factory $SelectableResultCopyWith(
-          SelectableResult value, $Res Function(SelectableResult) then) =
-      _$SelectableResultCopyWithImpl<$Res, SelectableResult>;
+    SelectableResult value,
+    $Res Function(SelectableResult) then,
+  ) = _$SelectableResultCopyWithImpl<$Res, SelectableResult>;
   @useResult
   $Res call({UserModel user, bool selected});
 
@@ -392,16 +412,19 @@ class _$SelectableResultCopyWithImpl<$Res, $Val extends SelectableResult>
     Object? user = null,
     Object? selected = null,
   }) {
-    return _then(_value.copyWith(
-      user: null == user
-          ? _value.user
-          : user // ignore: cast_nullable_to_non_nullable
-              as UserModel,
-      selected: null == selected
-          ? _value.selected
-          : selected // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            user: null == user
+                ? _value.user
+                : user // ignore: cast_nullable_to_non_nullable
+                      as UserModel,
+            selected: null == selected
+                ? _value.selected
+                : selected // ignore: cast_nullable_to_non_nullable
+                      as bool,
+          )
+          as $Val,
+    );
   }
 
   @override
@@ -416,9 +439,10 @@ class _$SelectableResultCopyWithImpl<$Res, $Val extends SelectableResult>
 /// @nodoc
 abstract class _$$SelectableResultImplCopyWith<$Res>
     implements $SelectableResultCopyWith<$Res> {
-  factory _$$SelectableResultImplCopyWith(_$SelectableResultImpl value,
-          $Res Function(_$SelectableResultImpl) then) =
-      __$$SelectableResultImplCopyWithImpl<$Res>;
+  factory _$$SelectableResultImplCopyWith(
+    _$SelectableResultImpl value,
+    $Res Function(_$SelectableResultImpl) then,
+  ) = __$$SelectableResultImplCopyWithImpl<$Res>;
   @override
   @useResult
   $Res call({UserModel user, bool selected});
@@ -431,9 +455,10 @@ abstract class _$$SelectableResultImplCopyWith<$Res>
 class __$$SelectableResultImplCopyWithImpl<$Res>
     extends _$SelectableResultCopyWithImpl<$Res, _$SelectableResultImpl>
     implements _$$SelectableResultImplCopyWith<$Res> {
-  __$$SelectableResultImplCopyWithImpl(_$SelectableResultImpl _value,
-      $Res Function(_$SelectableResultImpl) _then)
-      : super(_value, _then);
+  __$$SelectableResultImplCopyWithImpl(
+    _$SelectableResultImpl _value,
+    $Res Function(_$SelectableResultImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -441,16 +466,18 @@ class __$$SelectableResultImplCopyWithImpl<$Res>
     Object? user = null,
     Object? selected = null,
   }) {
-    return _then(_$SelectableResultImpl(
-      user: null == user
-          ? _value.user
-          : user // ignore: cast_nullable_to_non_nullable
-              as UserModel,
-      selected: null == selected
-          ? _value.selected
-          : selected // ignore: cast_nullable_to_non_nullable
-              as bool,
-    ));
+    return _then(
+      _$SelectableResultImpl(
+        user: null == user
+            ? _value.user
+            : user // ignore: cast_nullable_to_non_nullable
+                  as UserModel,
+        selected: null == selected
+            ? _value.selected
+            : selected // ignore: cast_nullable_to_non_nullable
+                  as bool,
+      ),
+    );
   }
 }
 
@@ -487,13 +514,16 @@ class _$SelectableResultImpl implements _SelectableResult {
   @pragma('vm:prefer-inline')
   _$$SelectableResultImplCopyWith<_$SelectableResultImpl> get copyWith =>
       __$$SelectableResultImplCopyWithImpl<_$SelectableResultImpl>(
-          this, _$identity);
+        this,
+        _$identity,
+      );
 }
 
 abstract class _SelectableResult implements SelectableResult {
-  const factory _SelectableResult(
-      {required final UserModel user,
-      required final bool selected}) = _$SelectableResultImpl;
+  const factory _SelectableResult({
+    required final UserModel user,
+    required final bool selected,
+  }) = _$SelectableResultImpl;
 
   @override
   UserModel get user;

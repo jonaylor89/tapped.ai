@@ -96,7 +96,8 @@ class GlassPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final fg = foreground ??
+    final fg =
+        foreground ??
         (tint != null ? Colors.white : theme.colorScheme.onSurface);
     return LiquidGlass.capsule(
       tint: tint,
@@ -149,8 +150,8 @@ class GlassSegmentedControl<T> extends StatelessWidget {
     required this.onChanged,
     super.key,
   }) : segments = {
-          for (final e in labels.entries) e.key: GlassSegment(label: e.value),
-        };
+         for (final e in labels.entries) e.key: GlassSegment(label: e.value),
+       };
 
   final Map<T, GlassSegment> segments;
   final T selected;

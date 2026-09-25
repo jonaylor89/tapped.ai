@@ -137,7 +137,9 @@ class GlassButton extends StatelessWidget {
     return GlassPressable(
       onPressed: isLoading ? null : onPressed,
       semanticsLabel: semanticsLabel ?? label,
-      child: expand ? SizedBox(width: double.infinity, child: surface) : surface,
+      child: expand
+          ? SizedBox(width: double.infinity, child: surface)
+          : surface,
     );
   }
 }
@@ -172,13 +174,16 @@ class GlassIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    final foreground = color ?? (tint != null ? Colors.white : scheme.onSurface);
+    final foreground =
+        color ?? (tint != null ? Colors.white : scheme.onSurface);
     final button = LiquidGlass.circle(
       tint: tint,
       variant: variant,
       width: size,
       height: size,
-      child: Center(child: Icon(icon, size: iconSize, color: foreground)),
+      child: Center(
+        child: Icon(icon, size: iconSize, color: foreground),
+      ),
     );
 
     final b = badge;

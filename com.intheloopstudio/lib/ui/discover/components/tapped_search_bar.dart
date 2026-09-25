@@ -69,7 +69,8 @@ class _TappedSearchBarState extends State<TappedSearchBar> {
         (a, b) => a.startTime.compareTo(b.startTime),
       );
 
-    final combined = [...suggestedUsers, ...venuesNearby]..sort(
+    final combined = [...suggestedUsers, ...venuesNearby]
+      ..sort(
         (a, b) => a.displayName.compareTo(b.displayName),
       );
     final combinedWidgets = combined.map(

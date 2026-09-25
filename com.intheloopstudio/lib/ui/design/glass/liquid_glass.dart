@@ -149,10 +149,10 @@ class LiquidGlass extends StatelessWidget {
   }
 
   double _blurFor(GlassVariant v) => switch (v) {
-        GlassVariant.regular => GlassBlur.regular,
-        GlassVariant.clear => GlassBlur.thin,
-        GlassVariant.prominent => GlassBlur.thick,
-      };
+    GlassVariant.regular => GlassBlur.regular,
+    GlassVariant.clear => GlassBlur.thin,
+    GlassVariant.prominent => GlassBlur.thick,
+  };
 
   /// The tint is a diagonal gradient so the surface never looks flat: the
   /// top-left is a touch lighter (where light would land), the bottom-right a

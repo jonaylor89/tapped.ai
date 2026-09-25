@@ -39,7 +39,8 @@ class _MapSettingsState extends State<MapSettings> {
 
   @override
   void initState() {
-    capacityRange = widget.initialRange ??
+    capacityRange =
+        widget.initialRange ??
         RangeValues(
           0,
           widget.maxCapacity.toDouble(),
@@ -56,7 +57,8 @@ class _MapSettingsState extends State<MapSettings> {
           return GlassEmptyState(
             icon: CupertinoIcons.lock_fill,
             title: 'filters are premium',
-            message: 'narrow venues by genre and capacity to find '
+            message:
+                'narrow venues by genre and capacity to find '
                 'the rooms that fit your act',
             actionLabel: 'upgrade',
             onAction: () => context.push(PaywallPage()),
@@ -67,13 +69,15 @@ class _MapSettingsState extends State<MapSettings> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const GlassSectionTitle(
-              'genres',
-              padding: EdgeInsets.only(bottom: TappedSpacing.sm),
-            ),
-            GenreSelection(
-              initialValue: widget.genreFilters,
-              onConfirm: widget.onConfirmGenreSelection,
+            GlassSection(
+              margin: EdgeInsets.zero,
+              children: [
+                GenreSelection(
+                  standalone: false,
+                  initialValue: widget.genreFilters,
+                  onConfirm: widget.onConfirmGenreSelection,
+                ),
+              ],
             ),
             GlassSectionTitle(
               'capacity',
@@ -82,7 +86,8 @@ class _MapSettingsState extends State<MapSettings> {
                 bottom: TappedSpacing.sm,
               ),
               trailing: GlassPill(
-                label: '$capacityRangeStart – '
+                label:
+                    '$capacityRangeStart – '
                     '${capacityRangeEnd == widget.maxCapacity ? '${widget.maxCapacity}+' : capacityRangeEnd}',
               ),
             ),
@@ -96,8 +101,9 @@ class _MapSettingsState extends State<MapSettings> {
                 thumbColor: Colors.white,
                 overlayColor: theme.colorScheme.primary.withValues(alpha: 0.12),
                 activeTrackColor: theme.colorScheme.primary,
-                inactiveTrackColor:
-                    theme.colorScheme.onSurface.withValues(alpha: 0.12),
+                inactiveTrackColor: theme.colorScheme.onSurface.withValues(
+                  alpha: 0.12,
+                ),
                 showValueIndicator: ShowValueIndicator.never,
               ),
               child: RangeSlider(

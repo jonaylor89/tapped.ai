@@ -366,6 +366,7 @@ class SettingsForm extends StatelessWidget {
                           ),
                         ),
                         GenreSelection(
+                          standalone: false,
                           initialValue: state.genres,
                           onConfirm: (values) {
                             cubit.changeGenres(

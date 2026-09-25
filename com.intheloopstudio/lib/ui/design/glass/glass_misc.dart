@@ -43,7 +43,10 @@ class GlassSearchField extends StatelessWidget {
     final field = LiquidGlass.capsule(
       variant: variant,
       height: GlassMetrics.control,
-      padding: const EdgeInsets.only(left: TappedSpacing.lg, right: TappedSpacing.sm),
+      padding: const EdgeInsets.only(
+        left: TappedSpacing.lg,
+        right: TappedSpacing.sm,
+      ),
       child: Row(
         children: [
           Icon(CupertinoIcons.search, size: 18, color: muted),
@@ -73,7 +76,9 @@ class GlassSearchField extends StatelessWidget {
                     cursorColor: theme.colorScheme.primary,
                     decoration: InputDecoration(
                       hintText: hintText,
-                      hintStyle: theme.textTheme.bodyLarge?.copyWith(color: muted),
+                      hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                        color: muted,
+                      ),
                       filled: false,
                       isDense: true,
                       border: InputBorder.none,
@@ -118,7 +123,9 @@ class GlassBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final foreground = tint != null ? Colors.white : theme.colorScheme.onSurface;
+    final foreground = tint != null
+        ? Colors.white
+        : theme.colorScheme.onSurface;
 
     final body = LiquidGlass(
       tint: tint,
@@ -184,6 +191,7 @@ class GlassEmptyState extends StatelessWidget {
     this.message,
     this.actionLabel,
     this.onAction,
+    this.compact = false,
     super.key,
   });
 
@@ -193,34 +201,44 @@ class GlassEmptyState extends StatelessWidget {
   final String? actionLabel;
   final VoidCallback? onAction;
 
+  /// Smaller symbol and padding for use inside a section or card.
+  final bool compact;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final symbol = compact ? 56.0 : 88.0;
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(TappedSpacing.xxxl),
+        padding: EdgeInsets.all(
+          compact ? TappedSpacing.xl : TappedSpacing.xxxl,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             LiquidGlass.circle(
-              width: 88,
-              height: 88,
+              width: symbol,
+              height: symbol,
               child: Center(
                 child: Icon(
                   icon,
-                  size: 38,
+                  size: compact ? 24 : 38,
                   color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ),
-            const SizedBox(height: TappedSpacing.xl),
+            SizedBox(height: compact ? TappedSpacing.md : TappedSpacing.xl),
             Text(
               title,
               textAlign: TextAlign.center,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.3,
-              ),
+              style:
+                  (compact
+                          ? theme.textTheme.titleMedium
+                          : theme.textTheme.titleLarge)
+                      ?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
             ),
             if (message != null) ...[
               const SizedBox(height: TappedSpacing.sm),

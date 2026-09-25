@@ -43,12 +43,12 @@ class SheetResultsSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (state.mapOverlay) {
       MapOverlay.venues => _VenueResults(
-          sortedVenueHits: sortedVenueHits,
-          venueTileBuilder: _venueTile,
-        ),
+        sortedVenueHits: sortedVenueHits,
+        venueTileBuilder: _venueTile,
+      ),
       MapOverlay.opportunities => _OpportunityResults(
-          opportunities: state.opportunityHits,
-        ),
+        opportunities: state.opportunityHits,
+      ),
     };
   }
 }
@@ -103,7 +103,9 @@ class _OpportunityResults extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        ...opportunities.take(3).map(
+        ...opportunities
+            .take(3)
+            .map(
               (op) => OpportunityCard(opportunity: op),
             ),
         _ViewAllButton(

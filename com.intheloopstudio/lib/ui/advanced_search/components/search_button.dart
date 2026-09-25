@@ -1,6 +1,8 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/search_bloc/search_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 
 class SearchButton extends StatelessWidget {
@@ -8,18 +10,14 @@ class SearchButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FilledButton(
+    return GlassButton.primary(
+      label: 'apply filters',
+      icon: CupertinoIcons.search,
+      expand: true,
       onPressed: () {
         context.search.add(const Search(query: ''));
         context.pop();
       },
-      child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search),
-          Text('Set Filters'),
-        ],
-      ),
     );
   }
 }

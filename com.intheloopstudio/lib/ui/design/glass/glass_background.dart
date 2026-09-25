@@ -42,8 +42,9 @@ class GlassAmbientBackground extends StatelessWidget {
             bottom: -160,
             left: -120,
             child: _Bloom(
-              color: (isDark ? const Color(0xFF7C4DFF) : const Color(0xFFB388FF))
-                  .withValues(alpha: isDark ? 0.18 : 0.14),
+              color:
+                  (isDark ? const Color(0xFF7C4DFF) : const Color(0xFFB388FF))
+                      .withValues(alpha: isDark ? 0.18 : 0.14),
               size: 420,
             ),
           ),

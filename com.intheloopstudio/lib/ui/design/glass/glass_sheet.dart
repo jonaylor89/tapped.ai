@@ -121,7 +121,9 @@ class GlassGrabber extends StatelessWidget {
           width: 36,
           height: 5,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.25),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurface.withValues(alpha: 0.25),
             borderRadius: BorderRadius.circular(3),
           ),
         ),
@@ -180,7 +182,9 @@ Future<void> showGlassActionSheet({
                       message,
                       textAlign: TextAlign.center,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.6,
+                        ),
                       ),
                     ),
                   ],

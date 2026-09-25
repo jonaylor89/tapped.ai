@@ -47,13 +47,9 @@ class _DevInformationState extends State<DevInformation> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  backgroundColor: !isSafe
-                      ? Colors.green
-                      : Colors.red,
+                  backgroundColor: !isSafe ? Colors.green : Colors.red,
                   content: Text(
-                    !isSafe
-                        ? 'Safety Mode is ON'
-                        : 'Safety Mode is OFF',
+                    !isSafe ? 'Safety Mode is ON' : 'Safety Mode is OFF',
                   ),
                 ),
               );

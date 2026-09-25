@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:intheloopapp/domains/models/performer_info.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';

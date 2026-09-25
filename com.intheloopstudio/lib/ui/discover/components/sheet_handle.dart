@@ -18,13 +18,13 @@ class SheetHandle extends StatelessWidget {
   String _countLabel() {
     return switch (state.mapOverlay) {
       MapOverlay.venues => () {
-          final n = state.venueHits.length;
-          return '$n${n >= 75 ? '+' : ''} ${n == 1 ? 'venue' : 'venues'}';
-        }(),
+        final n = state.venueHits.length;
+        return '$n${n >= 75 ? '+' : ''} ${n == 1 ? 'venue' : 'venues'}';
+      }(),
       MapOverlay.opportunities => () {
-          final n = state.opportunityHits.length;
-          return '$n${n >= 75 ? '+' : ''} ${n == 1 ? 'gig' : 'gigs'}';
-        }(),
+        final n = state.opportunityHits.length;
+        return '$n${n >= 75 ? '+' : ''} ${n == 1 ? 'gig' : 'gigs'}';
+      }(),
     };
   }
 
@@ -55,7 +55,8 @@ class SheetHandle extends StatelessWidget {
               if (state.genreFilters.isNotEmpty)
                 GlassPill(
                   icon: CupertinoIcons.slider_horizontal_3,
-                  label: '${state.genreFilters.length} '
+                  label:
+                      '${state.genreFilters.length} '
                       '${state.genreFilters.length == 1 ? 'genre' : 'genres'}',
                   tint: theme.colorScheme.primary,
                 ),

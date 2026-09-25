@@ -30,14 +30,16 @@ class GlassPage extends StatefulWidget {
     this.largeTitle = true,
     this.scrollController,
     this.onRefresh,
-    this.padding = const EdgeInsets.symmetric(horizontal: GlassMetrics.edgeInset),
+    this.padding = const EdgeInsets.symmetric(
+      horizontal: GlassMetrics.edgeInset,
+    ),
     this.subtitle,
     this.background,
     super.key,
   }) : assert(
-          slivers != null || child != null,
-          'Provide slivers or a child',
-        );
+         slivers != null || child != null,
+         'Provide slivers or a child',
+       );
 
   final String? title;
   final String? subtitle;
@@ -215,7 +217,8 @@ class GlassNavChrome extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canPop = Navigator.of(context).canPop();
-    final leadingWidget = leading ??
+    final leadingWidget =
+        leading ??
         (showBack && canPop
             ? GlassIconButton(
                 icon: backIcon ?? CupertinoIcons.chevron_back,
@@ -254,8 +257,7 @@ class GlassNavChrome extends StatelessWidget {
                         child: Center(
                           child: ConstrainedBox(
                             constraints: BoxConstraints(
-                              maxWidth:
-                                  MediaQuery.sizeOf(context).width * 0.5,
+                              maxWidth: MediaQuery.sizeOf(context).width * 0.5,
                             ),
                             child: Text(
                               title!,

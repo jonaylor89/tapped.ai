@@ -8,8 +8,8 @@ class ReauthenticateButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return CupertinoButton.filled(
-          onPressed: onPressed,
-          child: const Text('Reauth'),
-        );
+      onPressed: onPressed,
+      child: const Text('Reauth'),
+    );
   }
 }

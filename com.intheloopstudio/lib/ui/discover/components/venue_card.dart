@@ -61,24 +61,29 @@ class VenueCard extends StatelessWidget {
     final database = context.database;
     final imageUrl = venue.profilePicture.toNullable();
 
-    final venueType =
-        venue.venueInfo.map((e) => e.type).getOrElse(() => VenueType.other);
+    final venueType = venue.venueInfo
+        .map((e) => e.type)
+        .getOrElse(() => VenueType.other);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         final category = currentUser.performerInfo.map((t) => t.category);
-        final userGenres =
-            currentUser.performerInfo.map((t) => t.genres).getOrElse(() => []);
+        final userGenres = currentUser.performerInfo
+            .map((t) => t.genres)
+            .getOrElse(() => []);
         final goodCapFit = venue.venueInfo
             .flatMap((t) => t.capacity)
             .map2(category, (cap, cat) {
-          return cat.suggestedMaxCapacity >= cap;
-        }).getOrElse(() => false);
-        final genreFit = venue.venueInfo.map((t) {
-          final one = Set<String>.from(t.genres);
-          final two = Set<String>.from(userGenres);
-          final intersect = one.intersection(two);
-          return intersect.isNotEmpty;
-        }).getOrElse(() => false);
+              return cat.suggestedMaxCapacity >= cap;
+            })
+            .getOrElse(() => false);
+        final genreFit = venue.venueInfo
+            .map((t) {
+              final one = Set<String>.from(t.genres);
+              final two = Set<String>.from(userGenres);
+              final intersect = one.intersection(two);
+              return intersect.isNotEmpty;
+            })
+            .getOrElse(() => false);
         final isGoodFit = goodCapFit && genreFit;
 
         return FutureBuilder(
