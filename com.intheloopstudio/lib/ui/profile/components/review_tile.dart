@@ -30,31 +30,32 @@ class ReviewTile extends StatelessWidget {
         return switch (snapshot.data) {
           null => SkeletonListTile(),
           None() => SkeletonListTile(),
-          Some(:final value) => value.deleted
-              ? const SizedBox.shrink()
-              : GlassCard(
-                  padding: const EdgeInsets.only(bottom: TappedSpacing.md),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      UserTile(
-                        userId: value.id,
-                        user: Option.of(value),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: TappedSpacing.md,
+          Some(:final value) =>
+            value.deleted
+                ? const SizedBox.shrink()
+                : GlassCard(
+                    padding: const EdgeInsets.only(bottom: TappedSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        UserTile(
+                          userId: value.id,
+                          user: Option.of(value),
                         ),
-                        child: Text(
-                          review.overallReview,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            height: 1.4,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: TappedSpacing.md,
+                          ),
+                          child: Text(
+                            review.overallReview,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              height: 1.4,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
         };
       },
     );

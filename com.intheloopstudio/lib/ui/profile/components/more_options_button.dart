@@ -40,44 +40,44 @@ class MoreOptionsButton extends StatelessWidget {
               if (isAdmin && user.id != currentUser.id)
                 switch (user.unclaimed) {
                   true => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: const Text('unclaimed account'),
-                    ),
+                    onPressed: () {},
+                    child: const Text('unclaimed account'),
+                  ),
                   false => CupertinoActionSheetAction(
-                      onPressed: () {
-                        // Copy to clipboard
-                        Clipboard.setData(
-                          ClipboardData(
-                            text: user.latestAppVersion.getOrElse(() => ''),
-                          ),
-                        ).then((value) {
-                          Navigator.pop(context);
-                          scaffoldMessenger.showSnackBar(
-                            const SnackBar(
-                              behavior: SnackBarBehavior.floating,
-                              backgroundColor: tappedAccent,
-                              content: Text(
-                                'latest app version copied to clipboard',
-                              ),
+                    onPressed: () {
+                      // Copy to clipboard
+                      Clipboard.setData(
+                        ClipboardData(
+                          text: user.latestAppVersion.getOrElse(() => ''),
+                        ),
+                      ).then((value) {
+                        Navigator.pop(context);
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: tappedAccent,
+                            content: Text(
+                              'latest app version copied to clipboard',
                             ),
-                          );
-                        });
-                      },
-                      child: Text(
-                        'latest app version ${user.latestAppVersion.getOrElse(() => 'unknown')}',
-                      ),
+                          ),
+                        );
+                      });
+                    },
+                    child: Text(
+                      'latest app version ${user.latestAppVersion.getOrElse(() => 'unknown')}',
                     ),
+                  ),
                 },
               if (isAdmin)
                 switch (user.timestamp) {
                   None() => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: const Text('joined unknown'),
-                    ),
+                    onPressed: () {},
+                    child: const Text('joined unknown'),
+                  ),
                   Some(:final value) => CupertinoActionSheetAction(
-                      onPressed: () {},
-                      child: Text('joined ${dateFormat.format(value)}'),
-                    ),
+                    onPressed: () {},
+                    child: Text('joined ${dateFormat.format(value)}'),
+                  ),
                 },
               if (isAdmin)
                 CupertinoActionSheetAction(
@@ -111,21 +111,22 @@ class MoreOptionsButton extends StatelessWidget {
 
                   Share.share('https://app.tapped.ai/u/${user.username}')
                       .then((results) {
-                    logger.info('Shared profile');
-                  }).onError((error, stackTrace) {
-                    logger.error(
-                      'Error sharing profile',
-                      error: error,
-                      stackTrace: stackTrace,
-                    );
-                    scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        backgroundColor: Colors.red,
-                        content: Text('Error sharing profile'),
-                      ),
-                    );
-                  });
+                        logger.info('Shared profile');
+                      })
+                      .onError((error, stackTrace) {
+                        logger.error(
+                          'Error sharing profile',
+                          error: error,
+                          stackTrace: stackTrace,
+                        );
+                        scaffoldMessenger.showSnackBar(
+                          const SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.red,
+                            content: Text('Error sharing profile'),
+                          ),
+                        );
+                      });
                 },
                 child: const Text('share profile'),
               ),
@@ -135,18 +136,18 @@ class MoreOptionsButton extends StatelessWidget {
                     nav.pop();
                     database
                         .reportUser(
-                      reported: user,
-                      reporter: currentUser,
-                    )
+                          reported: user,
+                          reporter: currentUser,
+                        )
                         .then((value) {
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          backgroundColor: tappedAccent,
-                          content: Text('User Reported'),
-                        ),
-                      );
-                    });
+                          scaffoldMessenger.showSnackBar(
+                            const SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: tappedAccent,
+                              content: Text('User Reported'),
+                            ),
+                          );
+                        });
                   },
                   child: const Text('report user'),
                 ),

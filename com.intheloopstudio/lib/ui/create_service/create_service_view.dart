@@ -12,8 +12,9 @@ import 'package:intheloopapp/ui/create_service/components/rate_type_selector.dar
 import 'package:intheloopapp/ui/create_service/components/submit_service_button.dart';
 import 'package:intheloopapp/ui/create_service/components/title_text_field.dart';
 import 'package:intheloopapp/ui/create_service/create_service_cubit.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/rate_text_field.dart';
-import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
 
@@ -44,85 +45,108 @@ class CreateServiceView extends StatelessWidget {
             nav: nav,
             ownerId: ownerId,
           )..initFields(service),
-          child: Scaffold(
-            backgroundColor: Theme.of(context).colorScheme.surface,
-            appBar: AppBar(
-              actions: [
-                switch (service) {
-                  None() => SubmitServiceButton(
-                      onCreated: onSubmit,
+          child: GlassPage(
+            title: service.isSome() ? 'edit service' : 'new service',
+            padding: EdgeInsets.zero,
+            bottomBar: switch (service) {
+              None() => SubmitServiceButton(onCreated: onSubmit),
+              Some(:final value) => EditServiceButton(
+                onEdited: onSubmit,
+                service: value,
+              ),
+            },
+            slivers: [
+              SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: GlassMetrics.edgeInset,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          TitleTextField(),
+                          SizedBox(height: TappedSpacing.md),
+                          DescriptionTextField(),
+                        ],
+                      ),
                     ),
-                  Some(:final value) => EditServiceButton(
-                      onEdited: onSubmit,
-                      service: value,
-                    ),
-                },
-              ],
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 12,
-                  horizontal: 20,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: [
-                      const TitleTextField(),
-                      const SizedBox(height: 16),
-                      const DescriptionTextField(),
-                      const SizedBox(height: 36),
-                      FutureBuilder<bool>(
-                        future: (() async {
-                          if (ownerId == currentUser.id) {
-                            return currentUser
-                                .hasValidConnectedAccount(payments);
-                          }
+                    FutureBuilder<bool>(
+                      future: (() async {
+                        if (ownerId == currentUser.id) {
+                          return currentUser.hasValidConnectedAccount(payments);
+                        }
 
-                          final owner = await database.getUserById(ownerId);
-                          return owner.fold(
-                            () => Future.value(false),
-                            (t) => t.hasValidConnectedAccount(payments),
-                          );
-                        })(),
-                        builder: (context, snapshot) {
-                          final isValid = snapshot.data;
-                          return switch (isValid) {
-                            null => const CupertinoActivityIndicator(),
-                            false => GestureDetector(
+                        final owner = await database.getUserById(ownerId);
+                        return owner.fold(
+                          () => Future.value(false),
+                          (t) => t.hasValidConnectedAccount(payments),
+                        );
+                      })(),
+                      builder: (context, snapshot) {
+                        final isValid = snapshot.data;
+                        return switch (isValid) {
+                          null => const Padding(
+                            padding: EdgeInsets.all(TappedSpacing.xl),
+                            child: Center(child: GlassLoading()),
+                          ),
+                          false => GlassSection(
+                            header: 'pricing',
+                            children: [
+                              GlassListTile(
+                                leadingIcon: CupertinoIcons.creditcard,
+                                leadingColor: TappedColors.accent,
+                                title: 'connect your bank',
+                                subtitle:
+                                    'required to make this a paid '
+                                    'service',
                                 onTap: () => context.push(SettingsPage()),
-                                child: const Text(
-                                  'connect your bank to make this paid',
-                                  style: TextStyle(
-                                    color: tappedAccent,
-                                  ),
+                              ),
+                            ],
+                          ),
+                          true => GlassSection(
+                            header: 'pricing',
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(
+                                  TappedSpacing.md,
+                                ),
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
+                                  children: [
+                                    BlocBuilder<
+                                      CreateServiceCubit,
+                                      CreateServiceState
+                                    >(
+                                      builder: (context, state) {
+                                        return RateTextField(
+                                          initialValue: state.rate,
+                                          onChanged: (input) => context
+                                              .read<CreateServiceCubit>()
+                                              .onRateChange(input),
+                                        );
+                                      },
+                                    ),
+                                    const SizedBox(
+                                      height: TappedSpacing.md,
+                                    ),
+                                    const RateTypeSelector(),
+                                  ],
                                 ),
                               ),
-                            true => Column(
-                                children: [
-                                  BlocBuilder<CreateServiceCubit,
-                                      CreateServiceState>(
-                                    builder: (context, state) {
-                                      return RateTextField(
-                                        initialValue: state.rate,
-                                        onChanged: (input) => context
-                                            .read<CreateServiceCubit>()
-                                            .onRateChange(input),
-                                      );
-                                    },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const RateTypeSelector(),
-                                ],
-                              ),
-                          };
-                        },
-                      ),
-                    ],
-                  ),
+                            ],
+                          ),
+                        };
+                      },
+                    ),
+                    const SizedBox(height: GlassMetrics.bottomBarClearance),
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
         );
       },

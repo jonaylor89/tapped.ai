@@ -75,31 +75,33 @@ class BookingTile extends StatelessWidget {
         shape: RoundedRectangleBorder(borderRadius: GlassRadius.cardAll),
         child: switch (booking.requesterId) {
           None() => FutureBuilder(
-              future: database.getUserById(booking.requesteeId),
-              builder: (context, snapshot) {
-                final requestee = snapshot.data;
-                return switch (requestee) {
-                  null => const SizedBox(
-                      height: 64,
-                      child: Center(child: GlassLoading()),
-                    ),
-                  None() => const SizedBox.shrink(),
-                  Some(:final value) => _row(
-                      context,
-                      image: booking.getBookingImage(const None()),
-                      role: 'performer',
-                      description:
-                          '@${value.username}${booking.name.map((t) => ' - $t').getOrElse(() => '')}',
-                    ),
-                };
-              },
-            ),
-          Some(:final value) => FutureBuilder<
-                (
-                  Option<UserModel>,
-                  Option<UserModel>,
-                  Option<Service>,
-                )>(
+            future: database.getUserById(booking.requesteeId),
+            builder: (context, snapshot) {
+              final requestee = snapshot.data;
+              return switch (requestee) {
+                null => const SizedBox(
+                  height: 64,
+                  child: Center(child: GlassLoading()),
+                ),
+                None() => const SizedBox.shrink(),
+                Some(:final value) => _row(
+                  context,
+                  image: booking.getBookingImage(const None()),
+                  role: 'performer',
+                  description:
+                      '@${value.username}${booking.name.map((t) => ' - $t').getOrElse(() => '')}',
+                ),
+              };
+            },
+          ),
+          Some(:final value) =>
+            FutureBuilder<
+              (
+                Option<UserModel>,
+                Option<UserModel>,
+                Option<Service>,
+              )
+            >(
               future: () async {
                 final [
                   requester as Option<UserModel>,
@@ -113,9 +115,9 @@ class BookingTile extends StatelessWidget {
                       return switch (booking.serviceId) {
                         None() => const None(),
                         Some(:final value) => database.getServiceById(
-                            booking.requesteeId,
-                            value,
-                          ),
+                          booking.requesteeId,
+                          value,
+                        ),
                       };
                     }(),
                   ],

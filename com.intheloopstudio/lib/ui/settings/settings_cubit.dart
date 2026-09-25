@@ -40,13 +40,16 @@ class SettingsCubit extends Cubit<SettingsState> {
     required this.places,
     required this.currentUser,
   }) : super(
-          SettingsState(
-            formKey: GlobalKey<FormState>(debugLabel: 'settings'),
-            pushNotificationsDirectMessages: currentUser.pushNotifications.directMessages,
-            emailNotificationsAppReleases: currentUser.emailNotifications.appReleases,
-            emailNotificationsDirectMessages: currentUser.emailNotifications.directMessages,
-          ),
-        );
+         SettingsState(
+           formKey: GlobalKey<FormState>(debugLabel: 'settings'),
+           pushNotificationsDirectMessages:
+               currentUser.pushNotifications.directMessages,
+           emailNotificationsAppReleases:
+               currentUser.emailNotifications.appReleases,
+           emailNotificationsDirectMessages:
+               currentUser.emailNotifications.directMessages,
+         ),
+       );
 
   final UserModel currentUser;
   final NavigationBloc navigationBloc;
@@ -65,7 +68,9 @@ class SettingsCubit extends Cubit<SettingsState> {
         artistName: currentUser.artistName,
         bio: currentUser.bio,
         genres: fromStrings(
-          currentUser.performerInfo.map((t) => t.genres).getOrElse(
+          currentUser.performerInfo
+              .map((t) => t.genres)
+              .getOrElse(
                 () => [],
               ),
         ),
@@ -76,15 +81,16 @@ class SettingsCubit extends Cubit<SettingsState> {
         twitterFollowers: currentUser.socialFollowing.twitterFollowers,
         twitterHandle: currentUser.socialFollowing.twitterHandle.toNullable(),
         instagramFollowers: currentUser.socialFollowing.instagramFollowers,
-        instagramHandle:
-            currentUser.socialFollowing.instagramHandle.toNullable(),
-        youtubeHandle:
-            currentUser.socialFollowing.youtubeHandle.toNullable(),
+        instagramHandle: currentUser.socialFollowing.instagramHandle
+            .toNullable(),
+        youtubeHandle: currentUser.socialFollowing.youtubeHandle.toNullable(),
         placeId: currentUser.location.toNullable()?.placeId,
-        soundcloudHandle:
-            currentUser.socialFollowing.soundcloudHandle.toNullable(),
+        soundcloudHandle: currentUser.socialFollowing.soundcloudHandle
+            .toNullable(),
         audiusHandle: currentUser.socialFollowing.audiusHandle.toNullable(),
-        spotifyUrl: currentUser.socialFollowing.spotifyId.map((t) => 'https://open.spotify.com/artist/$t').toNullable(),
+        spotifyUrl: currentUser.socialFollowing.spotifyId
+            .map((t) => 'https://open.spotify.com/artist/$t')
+            .toNullable(),
       ),
     );
   }
@@ -118,8 +124,8 @@ class SettingsCubit extends Cubit<SettingsState> {
       emit(state.copyWith(instagramHandle: value));
 
   void changeInstagramFollowers(int value) => emit(
-        state.copyWith(instagramFollowers: value),
-      );
+    state.copyWith(instagramFollowers: value),
+  );
 
   void changeTikTik(String value) => emit(state.copyWith(tiktokHandle: value));
 
@@ -132,8 +138,7 @@ class SettingsCubit extends Cubit<SettingsState> {
   void changeSoundcloud(String value) =>
       emit(state.copyWith(soundcloudHandle: value));
 
-  void changeSpotify(String value) =>
-      emit(state.copyWith(spotifyUrl: value));
+  void changeSpotify(String value) => emit(state.copyWith(spotifyUrl: value));
 
   void changePlace(Option<PlaceData> place, String placeId) {
     emit(
@@ -145,8 +150,8 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void changeGenres(List<Genre> genres) => emit(
-        state.copyWith(genres: genres),
-      );
+    state.copyWith(genres: genres),
+  );
 
   void removeGenre(Genre genre) {
     emit(
@@ -157,8 +162,8 @@ class SettingsCubit extends Cubit<SettingsState> {
   }
 
   void changeOccupations(List<String> value) => emit(
-        state.copyWith(occupations: value),
-      );
+    state.copyWith(occupations: value),
+  );
 
   void removeOccupation(String occupation) {
     emit(
@@ -171,12 +176,12 @@ class SettingsCubit extends Cubit<SettingsState> {
   void changeLabel(String? value) => emit(state.copyWith(label: value ?? ''));
 
   void updateEmail(String? input) => emit(
-        state.copyWith(email: input ?? ''),
-      );
+    state.copyWith(email: input ?? ''),
+  );
 
   void updatePassword(String? input) => emit(
-        state.copyWith(password: input ?? ''),
-      );
+    state.copyWith(password: input ?? ''),
+  );
 
   void changeDirectMsgPush({required bool selected}) =>
       emit(state.copyWith(pushNotificationsDirectMessages: selected));
@@ -193,11 +198,12 @@ class SettingsCubit extends Cubit<SettingsState> {
           .onDeniedCallback(AppSettings.openAppSettings)
           .request()
           .then((status) {
-        logger.debug('permission status: $status');
-      });
+            logger.debug('permission status: $status');
+          });
 
-      final imageFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
+      final imageFile = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+      );
       if (imageFile != null) {
         emit(
           state.copyWith(
@@ -262,7 +268,6 @@ class SettingsCubit extends Cubit<SettingsState> {
     );
   }
 
-
   Future<void> saveProfile() async {
     // print(state.formKey);
     if (state.formKey.currentState == null) {
@@ -291,60 +296,63 @@ class SettingsCubit extends Cubit<SettingsState> {
 
         final profilePictureUrl = await switch (state.profileImage) {
           None() => Future<Option<String>>.value(currentUser.profilePicture),
-          Some(:final value) => storageRepository
-              .uploadProfilePicture(
-                currentUser.id,
-                value,
-              )
-              .then(Option.of),
+          Some(:final value) =>
+            storageRepository
+                .uploadProfilePicture(
+                  currentUser.id,
+                  value,
+                )
+                .then(Option.of),
         };
 
         final pressKitUrl = await switch (state.pressKitFile) {
           None() => Future<Option<String>>.value(
-              currentUser.performerInfo.flatMap((t) => t.pressKitUrl),
-            ),
+            currentUser.performerInfo.flatMap((t) => t.pressKitUrl),
+          ),
           Some(:final value) => (() async {
-              final url = await storageRepository.uploadPressKit(
-                userId: currentUser.id,
-                pressKitFile: value,
-              );
-              return Option.of(url);
-            })(),
+            final url = await storageRepository.uploadPressKit(
+              userId: currentUser.id,
+              pressKitFile: value,
+            );
+            return Option.of(url);
+          })(),
         };
 
         final location = switch (state.place) {
           None() => const None(),
           Some(:final value) => Option.of(
-              Location(
-                placeId: value.placeId,
-                // geohash: value.geohash,
-                lat: value.lat,
-                lng: value.lng,
-              ),
+            Location(
+              placeId: value.placeId,
+              // geohash: value.geohash,
+              lat: value.lat,
+              lng: value.lng,
             ),
+          ),
         };
 
         final newPerformerInfo = switch (currentUser.performerInfo) {
           None() => PerformerInfo(
-              genres: state.genres.map((e) => e.name).toList(),
-              label: state.label,
-              pressKitUrl: pressKitUrl,
-            ),
+            genres: state.genres.map((e) => e.name).toList(),
+            label: state.label,
+            pressKitUrl: pressKitUrl,
+          ),
           Some(:final value) => value.copyWith(
-              genres: state.genres.map((e) => e.name).toList(),
-              label: state.label,
-              pressKitUrl: pressKitUrl,
-            ),
+            genres: state.genres.map((e) => e.name).toList(),
+            label: state.label,
+            pressKitUrl: pressKitUrl,
+          ),
         };
 
         final spotifyId = state.spotifyUrl == null
-          ? const None()
-          : Uri.parse(state.spotifyUrl!).pathSegments.lastOption;
+            ? const None()
+            : Uri.parse(state.spotifyUrl!).pathSegments.lastOption;
         final user = currentUser.copyWith(
           username: Username.fromString(state.username),
           artistName: state.artistName,
           bio: state.bio,
-          performerInfo: state.isPerformer ? Option.of(newPerformerInfo) : const None(),
+          performerInfo: state.isPerformer
+              ? Option.of(newPerformerInfo)
+              : const None(),
           socialFollowing: currentUser.socialFollowing.copyWith(
             twitterHandle: Option.fromNullable(state.twitterHandle),
             twitterFollowers: state.twitterFollowers ?? 0,

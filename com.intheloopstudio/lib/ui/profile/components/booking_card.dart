@@ -78,10 +78,10 @@ class BookingCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    height: 1.15,
-                  ),
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                height: 1.15,
+              ),
             ),
           ),
         );

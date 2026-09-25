@@ -87,7 +87,8 @@ class ProfileView extends StatelessWidget {
       child: GestureDetector(
         onTap: () => context.push(
           ImagePage(
-            heroImage: heroImage ??
+            heroImage:
+                heroImage ??
                 HeroImage(
                   heroTag: titleHeroTag ?? visitedUserId,
                   imageProvider: imageProvider,
@@ -125,15 +126,15 @@ class ProfileView extends StatelessWidget {
     DatabaseRepository databaseRepository,
     PlacesRepository places,
     SpotifyRepository spotify,
-  ) =>
-      BlocProvider(
-        create: (context) => ProfileCubit(
-          spotify: spotify,
-          places: places,
-          database: databaseRepository,
-          currentUser: currentUser,
-          visitedUser: visitedUser,
-        )
+  ) => BlocProvider(
+    create: (context) =>
+        ProfileCubit(
+            spotify: spotify,
+            places: places,
+            database: databaseRepository,
+            currentUser: currentUser,
+            visitedUser: visitedUser,
+          )
           ..getTopBookings()
           ..getLatestReview()
           ..initOpportunities()
@@ -141,51 +142,51 @@ class ProfileView extends StatelessWidget {
           ..loadIsBlocked()
           ..loadIsVerified(visitedUser.id)
           ..initPlace(),
-        child: BlocBuilder<ProfileCubit, ProfileState>(
-          builder: (context, state) {
-            return BlocListener<OnboardingBloc, OnboardingState>(
-              listener: (context, userState) {
-                if (userState is Onboarded) {
-                  if (userState.currentUser.id == visitedUser.id) {
-                    context
-                        .read<ProfileCubit>()
-                        .refetchVisitedUser(newUserData: userState.currentUser);
-                  }
-                }
-              },
-              child: ConditionalParentWidget(
-                condition: stretchable,
-                conditionalBuilder: ({required child}) {
-                  return NotificationListener<ScrollNotification>(
-                    onNotification: (notification) =>
-                        context.read<ProfileCubit>().onNotification(
-                              scrollController,
-                              expandedBarHeight,
-                              collapsedBarHeight,
-                            ),
-                    child: child,
-                  );
-                },
-                child: GlassAmbientBackground(
-                  child: CustomScrollView(
-                    controller: scrollController,
-                    physics: const BouncingScrollPhysics(
-                      parent: AlwaysScrollableScrollPhysics(),
-                    ),
-                    slivers: [
-                      _heroSliver(context, state, visitedUser),
-                      if (state.isBlocked)
-                        ..._blockedSlivers(context)
-                      else
-                        ..._unblockedSlivers(context, state),
-                    ],
-                  ),
-                ),
-              ),
-            );
+    child: BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        return BlocListener<OnboardingBloc, OnboardingState>(
+          listener: (context, userState) {
+            if (userState is Onboarded) {
+              if (userState.currentUser.id == visitedUser.id) {
+                context.read<ProfileCubit>().refetchVisitedUser(
+                  newUserData: userState.currentUser,
+                );
+              }
+            }
           },
-        ),
-      );
+          child: ConditionalParentWidget(
+            condition: stretchable,
+            conditionalBuilder: ({required child}) {
+              return NotificationListener<ScrollNotification>(
+                onNotification: (notification) =>
+                    context.read<ProfileCubit>().onNotification(
+                      scrollController,
+                      expandedBarHeight,
+                      collapsedBarHeight,
+                    ),
+                child: child,
+              );
+            },
+            child: GlassAmbientBackground(
+              child: CustomScrollView(
+                controller: scrollController,
+                physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics(),
+                ),
+                slivers: [
+                  _heroSliver(context, state, visitedUser),
+                  if (state.isBlocked)
+                    ..._blockedSlivers(context)
+                  else
+                    ..._unblockedSlivers(context, state),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    ),
+  );
 
   Widget _heroSliver(
     BuildContext context,
@@ -241,9 +242,10 @@ class ProfileView extends StatelessWidget {
       flexibleSpace: LayoutBuilder(
         builder: (context, constraints) {
           final collapsedExtent = collapsedBarHeight + topPadding;
-          final t = ((constraints.maxHeight - collapsedExtent) /
-                  (expandedBarHeight - collapsedBarHeight))
-              .clamp(0.0, 1.0);
+          final t =
+              ((constraints.maxHeight - collapsedExtent) /
+                      (expandedBarHeight - collapsedBarHeight))
+                  .clamp(0.0, 1.0);
           return Stack(
             fit: StackFit.expand,
             children: [
@@ -303,40 +305,41 @@ class ProfileView extends StatelessWidget {
   }
 
   List<Widget> _unblockedSlivers(BuildContext context, ProfileState state) => [
-        const SliverToBoxAdapter(child: HeaderSliver()),
-        if (state.isCurrentUser)
-          const SliverToBoxAdapter(child: BookingControlsSliver()),
-        const SliverToBoxAdapter(child: InfoSliver()),
-        const SocialMediaIcons(),
-        const SliverToBoxAdapter(child: OpportunitiesSliver()),
-        const SliverToBoxAdapter(child: TopPerformersSliver()),
-        const SliverToBoxAdapter(child: TopTracksSliver()),
-        const SliverToBoxAdapter(child: BookingsSliver()),
-        const SliverToBoxAdapter(child: ReviewsSliver()),
-        const SliverToBoxAdapter(child: BioSliver()),
-        if (state.visitedUser.unclaimed)
-          const SliverToBoxAdapter(child: ClaimProfileButton()),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: GlassMetrics.bottomBarClearance),
-        ),
-      ];
+    const SliverToBoxAdapter(child: HeaderSliver()),
+    if (state.isCurrentUser)
+      const SliverToBoxAdapter(child: BookingControlsSliver()),
+    const SliverToBoxAdapter(child: InfoSliver()),
+    const SocialMediaIcons(),
+    const SliverToBoxAdapter(child: OpportunitiesSliver()),
+    const SliverToBoxAdapter(child: TopPerformersSliver()),
+    const SliverToBoxAdapter(child: TopTracksSliver()),
+    const SliverToBoxAdapter(child: BookingsSliver()),
+    const SliverToBoxAdapter(child: ReviewsSliver()),
+    const SliverToBoxAdapter(child: BioSliver()),
+    if (state.visitedUser.unclaimed)
+      const SliverToBoxAdapter(child: ClaimProfileButton()),
+    const SliverToBoxAdapter(
+      child: SizedBox(height: GlassMetrics.bottomBarClearance),
+    ),
+  ];
 
   List<Widget> _blockedSlivers(BuildContext context) => [
-        SliverFillRemaining(
-          hasScrollBody: false,
-          child: Padding(
-            padding: const EdgeInsets.all(GlassMetrics.edgeInset),
-            child: GlassEmptyState(
-              icon: CupertinoIcons.hand_raised_fill,
-              title: 'blocked',
-              message: 'you blocked this user. they cannot see your '
-                  'profile or message you.',
-              actionLabel: 'unblock',
-              onAction: () => context.read<ProfileCubit>().unblock(),
-            ),
-          ),
+    SliverFillRemaining(
+      hasScrollBody: false,
+      child: Padding(
+        padding: const EdgeInsets.all(GlassMetrics.edgeInset),
+        child: GlassEmptyState(
+          icon: CupertinoIcons.hand_raised_fill,
+          title: 'blocked',
+          message:
+              'you blocked this user. they cannot see your '
+              'profile or message you.',
+          actionLabel: 'unblock',
+          onAction: () => context.read<ProfileCubit>().unblock(),
         ),
-      ];
+      ),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -361,37 +364,37 @@ class ProfileView extends StatelessWidget {
 
           return switch ((visitedUser, currentUser.id == visitedUserId)) {
             (_, true) => _profilePage(
-                currentUser,
-                currentUser,
-                database,
-                places,
-                spotify,
-              ),
+              currentUser,
+              currentUser,
+              database,
+              places,
+              spotify,
+            ),
             (None(), false) => FutureBuilder<Option<UserModel>>(
-                future: database.getUserById(visitedUserId),
-                builder: (context, snapshot) {
-                  final user = snapshot.data;
+              future: database.getUserById(visitedUserId),
+              builder: (context, snapshot) {
+                final user = snapshot.data;
 
-                  return switch (user) {
-                    null => const LoadingView(),
-                    None() => const LoadingView(),
-                    Some(:final value) => _profilePage(
-                        currentUser,
-                        value,
-                        database,
-                        places,
-                        spotify,
-                      ),
-                  };
-                },
-              ),
+                return switch (user) {
+                  null => const LoadingView(),
+                  None() => const LoadingView(),
+                  Some(:final value) => _profilePage(
+                    currentUser,
+                    value,
+                    database,
+                    places,
+                    spotify,
+                  ),
+                };
+              },
+            ),
             (Some(:final value), false) => _profilePage(
-                currentUser,
-                value,
-                database,
-                places,
-                spotify,
-              ),
+              currentUser,
+              value,
+              database,
+              places,
+              spotify,
+            ),
           };
         },
       ),
@@ -464,8 +467,9 @@ class _HeroTitle extends StatelessWidget {
               ),
             if (place != null)
               GlassPill(
-                label: formattedShortAddress(place.addressComponents)
-                    .toLowerCase(),
+                label: formattedShortAddress(
+                  place.addressComponents,
+                ).toLowerCase(),
                 icon: CupertinoIcons.location_solid,
                 variant: GlassVariant.clear,
               ),

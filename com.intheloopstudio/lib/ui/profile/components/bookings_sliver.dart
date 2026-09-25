@@ -37,11 +37,10 @@ class BookingsSliver extends StatelessWidget {
           Text(
             'it helps you get more gigs',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurface
-                      .withValues(alpha: 0.5),
-                ),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurface.withValues(alpha: 0.5),
+            ),
           ),
         ],
       ),

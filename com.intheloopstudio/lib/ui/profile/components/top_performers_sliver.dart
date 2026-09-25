@@ -35,19 +35,21 @@ class TopPerformersSliver extends StatelessWidget {
                 GlassSectionTitle(
                   'top performers',
                   actionLabel: isPremium ? null : 'unlock',
-                  onAction:
-                      isPremium ? null : () => context.push(PaywallPage()),
+                  onAction: isPremium
+                      ? null
+                      : () => context.push(PaywallPage()),
                 ),
                 SizedBox(
                   height: 200,
                   child: FutureBuilder(
                     future: (() async {
-                      final performers = (await Future.wait(
-                        topPerformerIds.map(database.getUserById),
-                      ))
-                          .whereType<Some<UserModel>>()
-                          .map((e) => e.value)
-                          .toList();
+                      final performers =
+                          (await Future.wait(
+                                topPerformerIds.map(database.getUserById),
+                              ))
+                              .whereType<Some<UserModel>>()
+                              .map((e) => e.value)
+                              .toList();
 
                       return performers;
                     })(),

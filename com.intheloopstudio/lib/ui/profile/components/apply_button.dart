@@ -116,15 +116,15 @@ class _ApplyButtonState extends State<ApplyButton> {
                     });
                     database
                         .applyForOpportunity(
-                      opportunity: _opportunity,
-                      userComment: '',
-                      userId: currentUser.id,
-                    )
+                          opportunity: _opportunity,
+                          userComment: '',
+                          userId: currentUser.id,
+                        )
                         .then((value) {
-                      setState(() {
-                        loading = false;
-                      });
-                    });
+                          setState(() {
+                            loading = false;
+                          });
+                        });
                   },
                   borderRadius: BorderRadius.circular(15),
                   child: const Text(

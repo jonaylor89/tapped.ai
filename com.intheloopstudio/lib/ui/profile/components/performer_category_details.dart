@@ -44,10 +44,11 @@ class PerformerCategoryDetails extends StatelessWidget {
                         Text(
                           e.formattedName.toLowerCase(),
                           style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? e.color
-                                  : e.color.withOpacity(0.5),),
+                            fontWeight: FontWeight.bold,
+                            color: isSelected
+                                ? e.color
+                                : e.color.withOpacity(0.5),
+                          ),
                         ),
                         Text(
                           e.description.toLowerCase(),

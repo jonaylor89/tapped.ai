@@ -72,16 +72,23 @@ class InfoSliver extends StatelessWidget {
         final performerInfo = user.performerInfo;
         final venueInfo = user.venueInfo;
         final bookerInfo = user.bookerInfo;
-        final genres = performerInfo.map((t) => t.genres).getOrElse(
+        final genres = performerInfo
+            .map((t) => t.genres)
+            .getOrElse(
               () => venueInfo.map((t) => t.genres).getOrElse(() => []),
             );
-        final rating = performerInfo.map((t) => t.rating).getOrElse(
-              () => bookerInfo.map((t) => t.rating).getOrElse(
+        final rating = performerInfo
+            .map((t) => t.rating)
+            .getOrElse(
+              () => bookerInfo
+                  .map((t) => t.rating)
+                  .getOrElse(
                     () => const None(),
                   ),
             );
-        final averagePerformerTicketPrice =
-            performerInfo.map((t) => t.formattedPriceRange);
+        final averagePerformerTicketPrice = performerInfo.map(
+          (t) => t.formattedPriceRange,
+        );
         final averageAttendance = performerInfo
             .map(
               (t) => t.averageAttendance.fold(
@@ -93,10 +100,12 @@ class InfoSliver extends StatelessWidget {
         final label = performerInfo.map((t) => t.label).getOrElse(() => 'None');
         final bookingAgency = performerInfo.flatMap((t) => t.bookingAgency);
         final currPlace = state.place;
-        final idealPerformerProfile =
-            venueInfo.flatMap((t) => t.idealPerformerProfile);
-        final bookingEmail =
-            venueInfo.flatMap((t) => t.bookingEmail).toNullable();
+        final idealPerformerProfile = venueInfo.flatMap(
+          (t) => t.idealPerformerProfile,
+        );
+        final bookingEmail = venueInfo
+            .flatMap((t) => t.bookingEmail)
+            .toNullable();
         final phone = user.phoneNumber.toNullable();
         final capacity = venueInfo.flatMap((t) => t.capacity).toNullable();
         final formatted = NumberFormat.compactLong();
@@ -137,8 +146,9 @@ class InfoSliver extends StatelessWidget {
                         GlassListTile(
                           leadingIcon: CupertinoIcons.music_note_2,
                           title: 'genres',
-                          subtitle:
-                              genres.map((e) => e.toLowerCase()).join(', '),
+                          subtitle: genres
+                              .map((e) => e.toLowerCase())
+                              .join(', '),
                         ),
                       if (performerInfo.isSome())
                         GlassListTile(
@@ -203,15 +213,16 @@ class InfoSliver extends StatelessWidget {
                           showChevron: true,
                           onTap: switch (value.pressKitUrl) {
                             None() => () => showCupertinoModalBottomSheet<void>(
-                                  context: context,
-                                  backgroundColor: Colors.transparent,
-                                  builder: (context) => ShareProfileView(
-                                    userId: user.id,
-                                    user: Option.of(user),
-                                  ),
-                                ),
-                            Some(:final value) => () =>
-                                launchUrl(Uri.parse(value)),
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => ShareProfileView(
+                                userId: user.id,
+                                user: Option.of(user),
+                              ),
+                            ),
+                            Some(:final value) => () => launchUrl(
+                              Uri.parse(value),
+                            ),
                           },
                         ),
                       if (idealPerformerProfile case Some(:final value))
@@ -239,8 +250,9 @@ class InfoSliver extends StatelessWidget {
                               scrollable: true,
                               builder: (context) => Text(
                                 value,
-                                style: theme.textTheme.bodyLarge
-                                    ?.copyWith(height: 1.45),
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  height: 1.45,
+                                ),
                               ),
                             );
                           },
@@ -252,8 +264,9 @@ class InfoSliver extends StatelessWidget {
                         GlassListTile(
                           leadingIcon: CupertinoIcons.envelope_fill,
                           title: 'booking email',
-                          subtitle:
-                              isPremium ? bookingEmail : '•••••@email.com',
+                          subtitle: isPremium
+                              ? bookingEmail
+                              : '•••••@email.com',
                           trailing: Icon(
                             isPremium
                                 ? CupertinoIcons.doc_on_doc
@@ -303,7 +316,7 @@ class InfoSliver extends StatelessWidget {
                             footer: isPremium
                                 ? null
                                 : 'upgrade to tapped premium to unlock '
-                                    'contact details',
+                                      'contact details',
                             children: contact,
                           ),
                         if (venueInfo.isSome() && user.unclaimed)
@@ -347,16 +360,16 @@ class InfoSliver extends StatelessWidget {
 
         storage
             .uploadFeedbackScreenshot(
-          currentUserId,
-          feedback.screenshot,
-        )
+              currentUserId,
+              feedback.screenshot,
+            )
             .then((imageUrl) {
-          database.sendFeedback(
-            currentUserId,
-            feedback,
-            imageUrl,
-          );
-        });
+              database.sendFeedback(
+                currentUserId,
+                feedback,
+                imageUrl,
+              );
+            });
 
         scaffoldMessenger.showSnackBar(
           const SnackBar(

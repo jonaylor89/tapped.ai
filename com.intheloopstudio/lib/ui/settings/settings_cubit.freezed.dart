@@ -12,7 +12,8 @@ part of 'settings_cubit.dart';
 T _$identity<T>(T value) => value;
 
 final _privateConstructorUsedError = UnsupportedError(
-    'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models');
+  'It seems like you constructed your class using `MyClass._()`. This constructor is only meant to be used by freezed and you are not supposed to need it nor use it.\nPlease check the documentation here for more information: https://github.com/rrousselGit/freezed#adding-getters-and-methods-to-our-models',
+);
 
 /// @nodoc
 mixin _$SettingsState {
@@ -55,38 +56,40 @@ mixin _$SettingsState {
 /// @nodoc
 abstract class $SettingsStateCopyWith<$Res> {
   factory $SettingsStateCopyWith(
-          SettingsState value, $Res Function(SettingsState) then) =
-      _$SettingsStateCopyWithImpl<$Res, SettingsState>;
+    SettingsState value,
+    $Res Function(SettingsState) then,
+  ) = _$SettingsStateCopyWithImpl<$Res, SettingsState>;
   @useResult
-  $Res call(
-      {GlobalKey<FormState> formKey,
-      bool isPerformer,
-      String username,
-      String artistName,
-      String bio,
-      List<Genre> genres,
-      String label,
-      dynamic occupations,
-      String? placeId,
-      String? twitterHandle,
-      int? twitterFollowers,
-      String? instagramHandle,
-      int? instagramFollowers,
-      String? tiktokHandle,
-      int? tiktokFollowers,
-      String? soundcloudHandle,
-      String? audiusHandle,
-      String? youtubeHandle,
-      String? spotifyUrl,
-      Option<File> profileImage,
-      Option<File> pressKitFile,
-      FormzSubmissionStatus status,
-      bool pushNotificationsDirectMessages,
-      bool emailNotificationsAppReleases,
-      bool emailNotificationsDirectMessages,
-      String email,
-      String password,
-      Option<PlaceData> place});
+  $Res call({
+    GlobalKey<FormState> formKey,
+    bool isPerformer,
+    String username,
+    String artistName,
+    String bio,
+    List<Genre> genres,
+    String label,
+    dynamic occupations,
+    String? placeId,
+    String? twitterHandle,
+    int? twitterFollowers,
+    String? instagramHandle,
+    int? instagramFollowers,
+    String? tiktokHandle,
+    int? tiktokFollowers,
+    String? soundcloudHandle,
+    String? audiusHandle,
+    String? youtubeHandle,
+    String? spotifyUrl,
+    Option<File> profileImage,
+    Option<File> pressKitFile,
+    FormzSubmissionStatus status,
+    bool pushNotificationsDirectMessages,
+    bool emailNotificationsAppReleases,
+    bool emailNotificationsDirectMessages,
+    String email,
+    String password,
+    Option<PlaceData> place,
+  });
 }
 
 /// @nodoc
@@ -131,120 +134,125 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
     Object? password = null,
     Object? place = null,
   }) {
-    return _then(_value.copyWith(
-      formKey: null == formKey
-          ? _value.formKey
-          : formKey // ignore: cast_nullable_to_non_nullable
-              as GlobalKey<FormState>,
-      isPerformer: null == isPerformer
-          ? _value.isPerformer
-          : isPerformer // ignore: cast_nullable_to_non_nullable
-              as bool,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      artistName: null == artistName
-          ? _value.artistName
-          : artistName // ignore: cast_nullable_to_non_nullable
-              as String,
-      bio: null == bio
-          ? _value.bio
-          : bio // ignore: cast_nullable_to_non_nullable
-              as String,
-      genres: null == genres
-          ? _value.genres
-          : genres // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      label: null == label
-          ? _value.label
-          : label // ignore: cast_nullable_to_non_nullable
-              as String,
-      occupations: freezed == occupations
-          ? _value.occupations
-          : occupations // ignore: cast_nullable_to_non_nullable
-              as dynamic,
-      placeId: freezed == placeId
-          ? _value.placeId
-          : placeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      twitterHandle: freezed == twitterHandle
-          ? _value.twitterHandle
-          : twitterHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      twitterFollowers: freezed == twitterFollowers
-          ? _value.twitterFollowers
-          : twitterFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      instagramHandle: freezed == instagramHandle
-          ? _value.instagramHandle
-          : instagramHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      instagramFollowers: freezed == instagramFollowers
-          ? _value.instagramFollowers
-          : instagramFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      tiktokHandle: freezed == tiktokHandle
-          ? _value.tiktokHandle
-          : tiktokHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tiktokFollowers: freezed == tiktokFollowers
-          ? _value.tiktokFollowers
-          : tiktokFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      soundcloudHandle: freezed == soundcloudHandle
-          ? _value.soundcloudHandle
-          : soundcloudHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      audiusHandle: freezed == audiusHandle
-          ? _value.audiusHandle
-          : audiusHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      youtubeHandle: freezed == youtubeHandle
-          ? _value.youtubeHandle
-          : youtubeHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      spotifyUrl: freezed == spotifyUrl
-          ? _value.spotifyUrl
-          : spotifyUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      profileImage: null == profileImage
-          ? _value.profileImage
-          : profileImage // ignore: cast_nullable_to_non_nullable
-              as Option<File>,
-      pressKitFile: null == pressKitFile
-          ? _value.pressKitFile
-          : pressKitFile // ignore: cast_nullable_to_non_nullable
-              as Option<File>,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as FormzSubmissionStatus,
-      pushNotificationsDirectMessages: null == pushNotificationsDirectMessages
-          ? _value.pushNotificationsDirectMessages
-          : pushNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
-              as bool,
-      emailNotificationsAppReleases: null == emailNotificationsAppReleases
-          ? _value.emailNotificationsAppReleases
-          : emailNotificationsAppReleases // ignore: cast_nullable_to_non_nullable
-              as bool,
-      emailNotificationsDirectMessages: null == emailNotificationsDirectMessages
-          ? _value.emailNotificationsDirectMessages
-          : emailNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
-              as bool,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      password: null == password
-          ? _value.password
-          : password // ignore: cast_nullable_to_non_nullable
-              as String,
-      place: null == place
-          ? _value.place
-          : place // ignore: cast_nullable_to_non_nullable
-              as Option<PlaceData>,
-    ) as $Val);
+    return _then(
+      _value.copyWith(
+            formKey: null == formKey
+                ? _value.formKey
+                : formKey // ignore: cast_nullable_to_non_nullable
+                      as GlobalKey<FormState>,
+            isPerformer: null == isPerformer
+                ? _value.isPerformer
+                : isPerformer // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            username: null == username
+                ? _value.username
+                : username // ignore: cast_nullable_to_non_nullable
+                      as String,
+            artistName: null == artistName
+                ? _value.artistName
+                : artistName // ignore: cast_nullable_to_non_nullable
+                      as String,
+            bio: null == bio
+                ? _value.bio
+                : bio // ignore: cast_nullable_to_non_nullable
+                      as String,
+            genres: null == genres
+                ? _value.genres
+                : genres // ignore: cast_nullable_to_non_nullable
+                      as List<Genre>,
+            label: null == label
+                ? _value.label
+                : label // ignore: cast_nullable_to_non_nullable
+                      as String,
+            occupations: freezed == occupations
+                ? _value.occupations
+                : occupations // ignore: cast_nullable_to_non_nullable
+                      as dynamic,
+            placeId: freezed == placeId
+                ? _value.placeId
+                : placeId // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            twitterHandle: freezed == twitterHandle
+                ? _value.twitterHandle
+                : twitterHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            twitterFollowers: freezed == twitterFollowers
+                ? _value.twitterFollowers
+                : twitterFollowers // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            instagramHandle: freezed == instagramHandle
+                ? _value.instagramHandle
+                : instagramHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            instagramFollowers: freezed == instagramFollowers
+                ? _value.instagramFollowers
+                : instagramFollowers // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            tiktokHandle: freezed == tiktokHandle
+                ? _value.tiktokHandle
+                : tiktokHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            tiktokFollowers: freezed == tiktokFollowers
+                ? _value.tiktokFollowers
+                : tiktokFollowers // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            soundcloudHandle: freezed == soundcloudHandle
+                ? _value.soundcloudHandle
+                : soundcloudHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            audiusHandle: freezed == audiusHandle
+                ? _value.audiusHandle
+                : audiusHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            youtubeHandle: freezed == youtubeHandle
+                ? _value.youtubeHandle
+                : youtubeHandle // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            spotifyUrl: freezed == spotifyUrl
+                ? _value.spotifyUrl
+                : spotifyUrl // ignore: cast_nullable_to_non_nullable
+                      as String?,
+            profileImage: null == profileImage
+                ? _value.profileImage
+                : profileImage // ignore: cast_nullable_to_non_nullable
+                      as Option<File>,
+            pressKitFile: null == pressKitFile
+                ? _value.pressKitFile
+                : pressKitFile // ignore: cast_nullable_to_non_nullable
+                      as Option<File>,
+            status: null == status
+                ? _value.status
+                : status // ignore: cast_nullable_to_non_nullable
+                      as FormzSubmissionStatus,
+            pushNotificationsDirectMessages:
+                null == pushNotificationsDirectMessages
+                ? _value.pushNotificationsDirectMessages
+                : pushNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            emailNotificationsAppReleases: null == emailNotificationsAppReleases
+                ? _value.emailNotificationsAppReleases
+                : emailNotificationsAppReleases // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            emailNotificationsDirectMessages:
+                null == emailNotificationsDirectMessages
+                ? _value.emailNotificationsDirectMessages
+                : emailNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            email: null == email
+                ? _value.email
+                : email // ignore: cast_nullable_to_non_nullable
+                      as String,
+            password: null == password
+                ? _value.password
+                : password // ignore: cast_nullable_to_non_nullable
+                      as String,
+            place: null == place
+                ? _value.place
+                : place // ignore: cast_nullable_to_non_nullable
+                      as Option<PlaceData>,
+          )
+          as $Val,
+    );
   }
 }
 
@@ -252,39 +260,41 @@ class _$SettingsStateCopyWithImpl<$Res, $Val extends SettingsState>
 abstract class _$$SettingsStateImplCopyWith<$Res>
     implements $SettingsStateCopyWith<$Res> {
   factory _$$SettingsStateImplCopyWith(
-          _$SettingsStateImpl value, $Res Function(_$SettingsStateImpl) then) =
-      __$$SettingsStateImplCopyWithImpl<$Res>;
+    _$SettingsStateImpl value,
+    $Res Function(_$SettingsStateImpl) then,
+  ) = __$$SettingsStateImplCopyWithImpl<$Res>;
   @override
   @useResult
-  $Res call(
-      {GlobalKey<FormState> formKey,
-      bool isPerformer,
-      String username,
-      String artistName,
-      String bio,
-      List<Genre> genres,
-      String label,
-      dynamic occupations,
-      String? placeId,
-      String? twitterHandle,
-      int? twitterFollowers,
-      String? instagramHandle,
-      int? instagramFollowers,
-      String? tiktokHandle,
-      int? tiktokFollowers,
-      String? soundcloudHandle,
-      String? audiusHandle,
-      String? youtubeHandle,
-      String? spotifyUrl,
-      Option<File> profileImage,
-      Option<File> pressKitFile,
-      FormzSubmissionStatus status,
-      bool pushNotificationsDirectMessages,
-      bool emailNotificationsAppReleases,
-      bool emailNotificationsDirectMessages,
-      String email,
-      String password,
-      Option<PlaceData> place});
+  $Res call({
+    GlobalKey<FormState> formKey,
+    bool isPerformer,
+    String username,
+    String artistName,
+    String bio,
+    List<Genre> genres,
+    String label,
+    dynamic occupations,
+    String? placeId,
+    String? twitterHandle,
+    int? twitterFollowers,
+    String? instagramHandle,
+    int? instagramFollowers,
+    String? tiktokHandle,
+    int? tiktokFollowers,
+    String? soundcloudHandle,
+    String? audiusHandle,
+    String? youtubeHandle,
+    String? spotifyUrl,
+    Option<File> profileImage,
+    Option<File> pressKitFile,
+    FormzSubmissionStatus status,
+    bool pushNotificationsDirectMessages,
+    bool emailNotificationsAppReleases,
+    bool emailNotificationsDirectMessages,
+    String email,
+    String password,
+    Option<PlaceData> place,
+  });
 }
 
 /// @nodoc
@@ -292,8 +302,9 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
     extends _$SettingsStateCopyWithImpl<$Res, _$SettingsStateImpl>
     implements _$$SettingsStateImplCopyWith<$Res> {
   __$$SettingsStateImplCopyWithImpl(
-      _$SettingsStateImpl _value, $Res Function(_$SettingsStateImpl) _then)
-      : super(_value, _then);
+    _$SettingsStateImpl _value,
+    $Res Function(_$SettingsStateImpl) _then,
+  ) : super(_value, _then);
 
   @pragma('vm:prefer-inline')
   @override
@@ -327,153 +338,156 @@ class __$$SettingsStateImplCopyWithImpl<$Res>
     Object? password = null,
     Object? place = null,
   }) {
-    return _then(_$SettingsStateImpl(
-      formKey: null == formKey
-          ? _value.formKey
-          : formKey // ignore: cast_nullable_to_non_nullable
-              as GlobalKey<FormState>,
-      isPerformer: null == isPerformer
-          ? _value.isPerformer
-          : isPerformer // ignore: cast_nullable_to_non_nullable
-              as bool,
-      username: null == username
-          ? _value.username
-          : username // ignore: cast_nullable_to_non_nullable
-              as String,
-      artistName: null == artistName
-          ? _value.artistName
-          : artistName // ignore: cast_nullable_to_non_nullable
-              as String,
-      bio: null == bio
-          ? _value.bio
-          : bio // ignore: cast_nullable_to_non_nullable
-              as String,
-      genres: null == genres
-          ? _value._genres
-          : genres // ignore: cast_nullable_to_non_nullable
-              as List<Genre>,
-      label: null == label
-          ? _value.label
-          : label // ignore: cast_nullable_to_non_nullable
-              as String,
-      occupations: freezed == occupations ? _value.occupations! : occupations,
-      placeId: freezed == placeId
-          ? _value.placeId
-          : placeId // ignore: cast_nullable_to_non_nullable
-              as String?,
-      twitterHandle: freezed == twitterHandle
-          ? _value.twitterHandle
-          : twitterHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      twitterFollowers: freezed == twitterFollowers
-          ? _value.twitterFollowers
-          : twitterFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      instagramHandle: freezed == instagramHandle
-          ? _value.instagramHandle
-          : instagramHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      instagramFollowers: freezed == instagramFollowers
-          ? _value.instagramFollowers
-          : instagramFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      tiktokHandle: freezed == tiktokHandle
-          ? _value.tiktokHandle
-          : tiktokHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      tiktokFollowers: freezed == tiktokFollowers
-          ? _value.tiktokFollowers
-          : tiktokFollowers // ignore: cast_nullable_to_non_nullable
-              as int?,
-      soundcloudHandle: freezed == soundcloudHandle
-          ? _value.soundcloudHandle
-          : soundcloudHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      audiusHandle: freezed == audiusHandle
-          ? _value.audiusHandle
-          : audiusHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      youtubeHandle: freezed == youtubeHandle
-          ? _value.youtubeHandle
-          : youtubeHandle // ignore: cast_nullable_to_non_nullable
-              as String?,
-      spotifyUrl: freezed == spotifyUrl
-          ? _value.spotifyUrl
-          : spotifyUrl // ignore: cast_nullable_to_non_nullable
-              as String?,
-      profileImage: null == profileImage
-          ? _value.profileImage
-          : profileImage // ignore: cast_nullable_to_non_nullable
-              as Option<File>,
-      pressKitFile: null == pressKitFile
-          ? _value.pressKitFile
-          : pressKitFile // ignore: cast_nullable_to_non_nullable
-              as Option<File>,
-      status: null == status
-          ? _value.status
-          : status // ignore: cast_nullable_to_non_nullable
-              as FormzSubmissionStatus,
-      pushNotificationsDirectMessages: null == pushNotificationsDirectMessages
-          ? _value.pushNotificationsDirectMessages
-          : pushNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
-              as bool,
-      emailNotificationsAppReleases: null == emailNotificationsAppReleases
-          ? _value.emailNotificationsAppReleases
-          : emailNotificationsAppReleases // ignore: cast_nullable_to_non_nullable
-              as bool,
-      emailNotificationsDirectMessages: null == emailNotificationsDirectMessages
-          ? _value.emailNotificationsDirectMessages
-          : emailNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
-              as bool,
-      email: null == email
-          ? _value.email
-          : email // ignore: cast_nullable_to_non_nullable
-              as String,
-      password: null == password
-          ? _value.password
-          : password // ignore: cast_nullable_to_non_nullable
-              as String,
-      place: null == place
-          ? _value.place
-          : place // ignore: cast_nullable_to_non_nullable
-              as Option<PlaceData>,
-    ));
+    return _then(
+      _$SettingsStateImpl(
+        formKey: null == formKey
+            ? _value.formKey
+            : formKey // ignore: cast_nullable_to_non_nullable
+                  as GlobalKey<FormState>,
+        isPerformer: null == isPerformer
+            ? _value.isPerformer
+            : isPerformer // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        username: null == username
+            ? _value.username
+            : username // ignore: cast_nullable_to_non_nullable
+                  as String,
+        artistName: null == artistName
+            ? _value.artistName
+            : artistName // ignore: cast_nullable_to_non_nullable
+                  as String,
+        bio: null == bio
+            ? _value.bio
+            : bio // ignore: cast_nullable_to_non_nullable
+                  as String,
+        genres: null == genres
+            ? _value._genres
+            : genres // ignore: cast_nullable_to_non_nullable
+                  as List<Genre>,
+        label: null == label
+            ? _value.label
+            : label // ignore: cast_nullable_to_non_nullable
+                  as String,
+        occupations: freezed == occupations ? _value.occupations! : occupations,
+        placeId: freezed == placeId
+            ? _value.placeId
+            : placeId // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        twitterHandle: freezed == twitterHandle
+            ? _value.twitterHandle
+            : twitterHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        twitterFollowers: freezed == twitterFollowers
+            ? _value.twitterFollowers
+            : twitterFollowers // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        instagramHandle: freezed == instagramHandle
+            ? _value.instagramHandle
+            : instagramHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        instagramFollowers: freezed == instagramFollowers
+            ? _value.instagramFollowers
+            : instagramFollowers // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        tiktokHandle: freezed == tiktokHandle
+            ? _value.tiktokHandle
+            : tiktokHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        tiktokFollowers: freezed == tiktokFollowers
+            ? _value.tiktokFollowers
+            : tiktokFollowers // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        soundcloudHandle: freezed == soundcloudHandle
+            ? _value.soundcloudHandle
+            : soundcloudHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        audiusHandle: freezed == audiusHandle
+            ? _value.audiusHandle
+            : audiusHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        youtubeHandle: freezed == youtubeHandle
+            ? _value.youtubeHandle
+            : youtubeHandle // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        spotifyUrl: freezed == spotifyUrl
+            ? _value.spotifyUrl
+            : spotifyUrl // ignore: cast_nullable_to_non_nullable
+                  as String?,
+        profileImage: null == profileImage
+            ? _value.profileImage
+            : profileImage // ignore: cast_nullable_to_non_nullable
+                  as Option<File>,
+        pressKitFile: null == pressKitFile
+            ? _value.pressKitFile
+            : pressKitFile // ignore: cast_nullable_to_non_nullable
+                  as Option<File>,
+        status: null == status
+            ? _value.status
+            : status // ignore: cast_nullable_to_non_nullable
+                  as FormzSubmissionStatus,
+        pushNotificationsDirectMessages: null == pushNotificationsDirectMessages
+            ? _value.pushNotificationsDirectMessages
+            : pushNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        emailNotificationsAppReleases: null == emailNotificationsAppReleases
+            ? _value.emailNotificationsAppReleases
+            : emailNotificationsAppReleases // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        emailNotificationsDirectMessages:
+            null == emailNotificationsDirectMessages
+            ? _value.emailNotificationsDirectMessages
+            : emailNotificationsDirectMessages // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        email: null == email
+            ? _value.email
+            : email // ignore: cast_nullable_to_non_nullable
+                  as String,
+        password: null == password
+            ? _value.password
+            : password // ignore: cast_nullable_to_non_nullable
+                  as String,
+        place: null == place
+            ? _value.place
+            : place // ignore: cast_nullable_to_non_nullable
+                  as Option<PlaceData>,
+      ),
+    );
   }
 }
 
 /// @nodoc
 
 class _$SettingsStateImpl implements _SettingsState {
-  const _$SettingsStateImpl(
-      {required this.formKey,
-      this.isPerformer = true,
-      this.username = '',
-      this.artistName = '',
-      this.bio = '',
-      final List<Genre> genres = const [],
-      this.label = 'independent',
-      this.occupations = const [],
-      this.placeId,
-      this.twitterHandle,
-      this.twitterFollowers,
-      this.instagramHandle,
-      this.instagramFollowers,
-      this.tiktokHandle,
-      this.tiktokFollowers,
-      this.soundcloudHandle,
-      this.audiusHandle,
-      this.youtubeHandle,
-      this.spotifyUrl,
-      this.profileImage = const None(),
-      this.pressKitFile = const None(),
-      this.status = FormzSubmissionStatus.initial,
-      this.pushNotificationsDirectMessages = true,
-      this.emailNotificationsAppReleases = true,
-      this.emailNotificationsDirectMessages = true,
-      this.email = '',
-      this.password = '',
-      this.place = const None()})
-      : _genres = genres;
+  const _$SettingsStateImpl({
+    required this.formKey,
+    this.isPerformer = true,
+    this.username = '',
+    this.artistName = '',
+    this.bio = '',
+    final List<Genre> genres = const [],
+    this.label = 'independent',
+    this.occupations = const [],
+    this.placeId,
+    this.twitterHandle,
+    this.twitterFollowers,
+    this.instagramHandle,
+    this.instagramFollowers,
+    this.tiktokHandle,
+    this.tiktokFollowers,
+    this.soundcloudHandle,
+    this.audiusHandle,
+    this.youtubeHandle,
+    this.spotifyUrl,
+    this.profileImage = const None(),
+    this.pressKitFile = const None(),
+    this.status = FormzSubmissionStatus.initial,
+    this.pushNotificationsDirectMessages = true,
+    this.emailNotificationsAppReleases = true,
+    this.emailNotificationsDirectMessages = true,
+    this.email = '',
+    this.password = '',
+    this.place = const None(),
+  }) : _genres = genres;
 
   @override
   final GlobalKey<FormState> formKey;
@@ -574,8 +588,10 @@ class _$SettingsStateImpl implements _SettingsState {
             (identical(other.bio, bio) || other.bio == bio) &&
             const DeepCollectionEquality().equals(other._genres, _genres) &&
             (identical(other.label, label) || other.label == label) &&
-            const DeepCollectionEquality()
-                .equals(other.occupations, occupations) &&
+            const DeepCollectionEquality().equals(
+              other.occupations,
+              occupations,
+            ) &&
             (identical(other.placeId, placeId) || other.placeId == placeId) &&
             (identical(other.twitterHandle, twitterHandle) ||
                 other.twitterHandle == twitterHandle) &&
@@ -602,16 +618,22 @@ class _$SettingsStateImpl implements _SettingsState {
             (identical(other.pressKitFile, pressKitFile) ||
                 other.pressKitFile == pressKitFile) &&
             (identical(other.status, status) || other.status == status) &&
-            (identical(other.pushNotificationsDirectMessages,
-                    pushNotificationsDirectMessages) ||
+            (identical(
+                  other.pushNotificationsDirectMessages,
+                  pushNotificationsDirectMessages,
+                ) ||
                 other.pushNotificationsDirectMessages ==
                     pushNotificationsDirectMessages) &&
-            (identical(other.emailNotificationsAppReleases,
-                    emailNotificationsAppReleases) ||
+            (identical(
+                  other.emailNotificationsAppReleases,
+                  emailNotificationsAppReleases,
+                ) ||
                 other.emailNotificationsAppReleases ==
                     emailNotificationsAppReleases) &&
-            (identical(other.emailNotificationsDirectMessages,
-                    emailNotificationsDirectMessages) ||
+            (identical(
+                  other.emailNotificationsDirectMessages,
+                  emailNotificationsDirectMessages,
+                ) ||
                 other.emailNotificationsDirectMessages ==
                     emailNotificationsDirectMessages) &&
             (identical(other.email, email) || other.email == email) &&
@@ -622,36 +644,36 @@ class _$SettingsStateImpl implements _SettingsState {
 
   @override
   int get hashCode => Object.hashAll([
-        runtimeType,
-        formKey,
-        isPerformer,
-        username,
-        artistName,
-        bio,
-        const DeepCollectionEquality().hash(_genres),
-        label,
-        const DeepCollectionEquality().hash(occupations),
-        placeId,
-        twitterHandle,
-        twitterFollowers,
-        instagramHandle,
-        instagramFollowers,
-        tiktokHandle,
-        tiktokFollowers,
-        soundcloudHandle,
-        audiusHandle,
-        youtubeHandle,
-        spotifyUrl,
-        profileImage,
-        pressKitFile,
-        status,
-        pushNotificationsDirectMessages,
-        emailNotificationsAppReleases,
-        emailNotificationsDirectMessages,
-        email,
-        password,
-        place
-      ]);
+    runtimeType,
+    formKey,
+    isPerformer,
+    username,
+    artistName,
+    bio,
+    const DeepCollectionEquality().hash(_genres),
+    label,
+    const DeepCollectionEquality().hash(occupations),
+    placeId,
+    twitterHandle,
+    twitterFollowers,
+    instagramHandle,
+    instagramFollowers,
+    tiktokHandle,
+    tiktokFollowers,
+    soundcloudHandle,
+    audiusHandle,
+    youtubeHandle,
+    spotifyUrl,
+    profileImage,
+    pressKitFile,
+    status,
+    pushNotificationsDirectMessages,
+    emailNotificationsAppReleases,
+    emailNotificationsDirectMessages,
+    email,
+    password,
+    place,
+  ]);
 
   @JsonKey(ignore: true)
   @override
@@ -661,35 +683,36 @@ class _$SettingsStateImpl implements _SettingsState {
 }
 
 abstract class _SettingsState implements SettingsState {
-  const factory _SettingsState(
-      {required final GlobalKey<FormState> formKey,
-      final bool isPerformer,
-      final String username,
-      final String artistName,
-      final String bio,
-      final List<Genre> genres,
-      final String label,
-      final dynamic occupations,
-      final String? placeId,
-      final String? twitterHandle,
-      final int? twitterFollowers,
-      final String? instagramHandle,
-      final int? instagramFollowers,
-      final String? tiktokHandle,
-      final int? tiktokFollowers,
-      final String? soundcloudHandle,
-      final String? audiusHandle,
-      final String? youtubeHandle,
-      final String? spotifyUrl,
-      final Option<File> profileImage,
-      final Option<File> pressKitFile,
-      final FormzSubmissionStatus status,
-      final bool pushNotificationsDirectMessages,
-      final bool emailNotificationsAppReleases,
-      final bool emailNotificationsDirectMessages,
-      final String email,
-      final String password,
-      final Option<PlaceData> place}) = _$SettingsStateImpl;
+  const factory _SettingsState({
+    required final GlobalKey<FormState> formKey,
+    final bool isPerformer,
+    final String username,
+    final String artistName,
+    final String bio,
+    final List<Genre> genres,
+    final String label,
+    final dynamic occupations,
+    final String? placeId,
+    final String? twitterHandle,
+    final int? twitterFollowers,
+    final String? instagramHandle,
+    final int? instagramFollowers,
+    final String? tiktokHandle,
+    final int? tiktokFollowers,
+    final String? soundcloudHandle,
+    final String? audiusHandle,
+    final String? youtubeHandle,
+    final String? spotifyUrl,
+    final Option<File> profileImage,
+    final Option<File> pressKitFile,
+    final FormzSubmissionStatus status,
+    final bool pushNotificationsDirectMessages,
+    final bool emailNotificationsAppReleases,
+    final bool emailNotificationsDirectMessages,
+    final String email,
+    final String password,
+    final Option<PlaceData> place,
+  }) = _$SettingsStateImpl;
 
   @override
   GlobalKey<FormState> get formKey;

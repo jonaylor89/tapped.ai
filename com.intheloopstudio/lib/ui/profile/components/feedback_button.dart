@@ -21,17 +21,18 @@ class FeedbackButton extends StatelessWidget {
             HapticFeedback.lightImpact();
             BetterFeedback.of(context).show((UserFeedback feedback) {
               try {
-                logger
-                    .debug('feedback: ${feedback.text} and ${feedback.extra}');
+                logger.debug(
+                  'feedback: ${feedback.text} and ${feedback.extra}',
+                );
 
                 storage
                     .uploadFeedbackScreenshot(
-                  currentUser.id,
-                  feedback.screenshot,
-                )
+                      currentUser.id,
+                      feedback.screenshot,
+                    )
                     .then((imageUrl) {
-                  database.sendFeedback(currentUser.id, feedback, imageUrl);
-                });
+                      database.sendFeedback(currentUser.id, feedback, imageUrl);
+                    });
 
                 scaffoldMessenger.showSnackBar(
                   const SnackBar(

@@ -51,29 +51,29 @@ class RequestToPerform extends StatelessWidget {
         return switch (bookingEmail) {
           None() => const SizedBox.shrink(),
           Some(value: final _) => FutureBuilder(
-              future: database.hasUserSentContactRequest(
-                user: currentUser,
-                venue: venue,
-              ),
-              builder: (context, snapshot) {
-                final alreadyRequested = snapshot.data;
-                return switch (alreadyRequested) {
-                  null => const GlassButton(
-                      label: 'request to perform',
-                      expand: true,
-                      isLoading: true,
-                      onPressed: null,
-                    ),
-                  false => _buildRequestButton(context),
-                  true => const GlassButton(
-                      label: 'performance request sent',
-                      icon: CupertinoIcons.checkmark_alt,
-                      expand: true,
-                      onPressed: null,
-                    ),
-                };
-              },
+            future: database.hasUserSentContactRequest(
+              user: currentUser,
+              venue: venue,
             ),
+            builder: (context, snapshot) {
+              final alreadyRequested = snapshot.data;
+              return switch (alreadyRequested) {
+                null => const GlassButton(
+                  label: 'request to perform',
+                  expand: true,
+                  isLoading: true,
+                  onPressed: null,
+                ),
+                false => _buildRequestButton(context),
+                true => const GlassButton(
+                  label: 'performance request sent',
+                  icon: CupertinoIcons.checkmark_alt,
+                  expand: true,
+                  onPressed: null,
+                ),
+              };
+            },
+          ),
         };
       },
     );

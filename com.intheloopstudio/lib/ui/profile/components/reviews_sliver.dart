@@ -17,27 +17,27 @@ class ReviewsSliver extends StatelessWidget {
         return switch (state.latestReview) {
           None() => const SizedBox.shrink(),
           Some(:final value) => Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                GlassSectionTitle(
-                  'reviews',
-                  actionLabel: 'see all',
-                  onAction: () => showCupertinoModalBottomSheet<void>(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => UserReviewsFeed(
-                      userId: state.visitedUser.id,
-                    ),
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              GlassSectionTitle(
+                'reviews',
+                actionLabel: 'see all',
+                onAction: () => showCupertinoModalBottomSheet<void>(
+                  context: context,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => UserReviewsFeed(
+                    userId: state.visitedUser.id,
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: GlassMetrics.edgeInset,
-                  ),
-                  child: ReviewTile(review: value),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: GlassMetrics.edgeInset,
                 ),
-              ],
-            ),
+                child: ReviewTile(review: value),
+              ),
+            ],
+          ),
         };
       },
     );

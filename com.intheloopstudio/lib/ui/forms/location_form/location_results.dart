@@ -1,8 +1,9 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/location_form/location_cubit.dart';
-import 'package:intheloopapp/ui/loading/logo_wave.dart';
 
 class LocationResults extends StatelessWidget {
   const LocationResults({super.key});
@@ -12,52 +13,39 @@ class LocationResults extends StatelessWidget {
     return BlocBuilder<LocationCubit, LocationState>(
       builder: (context, state) {
         if (state.loading) {
-          return const Center(
-            child: LogoWave(),
-          );
+          return const Center(child: GlassLoading());
         }
 
         if (state.locationResults.isEmpty) {
           return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.search,
-                  size: 200,
-                  color: Color(0xFF757575),
-                ),
-                Text(
-                  'Search Location',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w400,
-                    color: Color(0xFF757575),
-                  ),
-                ),
-              ],
+            child: GlassEmptyState(
+              icon: CupertinoIcons.location,
+              title: 'search a location',
+              message: 'start typing a city, venue, or address',
             ),
           );
-        } else if (state.locationResults.isEmpty) {
-          return const Center(
-            child: Text('No users found'),
-          );
-        } else {
-          return ListView.builder(
-            itemCount: state.locationResults.length,
-            itemBuilder: (BuildContext context, int index) {
-              final prediction = state.locationResults[index];
-              return ListTile(
-                onTap: () {
-                  context.read<LocationCubit>().saveLocation(prediction);
-                },
-                leading: const Icon(CupertinoIcons.location_fill),
-                title: Text(prediction.primaryText),
-                subtitle: Text(prediction.secondaryText),
-              );
-            },
-          );
         }
+
+        return ListView(
+          padding: const EdgeInsets.only(bottom: TappedSpacing.xxl),
+          physics: const BouncingScrollPhysics(),
+          children: [
+            GlassSection(
+              children: [
+                for (final prediction in state.locationResults)
+                  GlassListTile(
+                    leadingIcon: CupertinoIcons.location_fill,
+                    leadingColor: TappedColors.error,
+                    title: prediction.primaryText,
+                    subtitle: prediction.secondaryText,
+                    onTap: () {
+                      context.read<LocationCubit>().saveLocation(prediction);
+                    },
+                  ),
+              ],
+            ),
+          ],
+        );
       },
     );
   }

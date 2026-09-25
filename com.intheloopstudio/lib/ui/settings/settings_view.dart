@@ -24,18 +24,19 @@ class SettingsView extends StatelessWidget {
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         return BlocProvider(
-          create: (_) => SettingsCubit(
-            authenticationBloc: context.authentication,
-            onboardingBloc: context.onboarding,
-            authRepository: context.auth,
-            database: context.database,
-            storageRepository: context.storage,
-            navigationBloc: context.nav,
-            places: context.places,
-            currentUser: currentUser,
-          )
-            ..initUserData()
-            ..initPlace(),
+          create: (_) =>
+              SettingsCubit(
+                  authenticationBloc: context.authentication,
+                  onboardingBloc: context.onboarding,
+                  authRepository: context.auth,
+                  database: context.database,
+                  storageRepository: context.storage,
+                  navigationBloc: context.nav,
+                  places: context.places,
+                  currentUser: currentUser,
+                )
+                ..initUserData()
+                ..initPlace(),
           child: GlassPage(
             title: 'settings',
             subtitle: currentUser.artistName.isNotEmpty

@@ -56,12 +56,12 @@ class SocialMediaIcons extends StatelessWidget {
             vertical: TappedSpacing.md,
           ),
           sliver: SliverGrid.count(
-          crossAxisCount: 4,
-          mainAxisSpacing: TappedSpacing.sm,
-          children: [
-            switch (socialFollowing.facebookHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+            crossAxisCount: 4,
+            mainAxisSpacing: TappedSpacing.sm,
+            children: [
+              switch (socialFollowing.facebookHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.blue.shade900,
                   icon: Icon(
                     FontAwesomeIcons.facebook,
@@ -76,10 +76,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.twitterHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.twitterHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.white,
                   icon: const Icon(
                     FontAwesomeIcons.xTwitter,
@@ -94,10 +94,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.instagramHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.instagramHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.pink,
                   icon: const Icon(
                     FontAwesomeIcons.instagram,
@@ -112,10 +112,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.tiktokHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.tiktokHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.black,
                   icon: const Icon(FontAwesomeIcons.tiktok),
                   onTap: () {
@@ -127,29 +127,29 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.youtubeHandle) {
-              None() => (() {
+              },
+              switch (socialFollowing.youtubeHandle) {
+                None() => (() {
                   return switch (socialFollowing.youtubeChannelId) {
                     None() => null,
                     Some(:final value) => _socialMediaIcon(
-                        color: Colors.red,
-                        icon: Icon(
-                          FontAwesomeIcons.youtube,
-                          color: Colors.red.shade700,
-                        ),
-                        onTap: () {
-                          launchUrl(
-                            Uri(
-                              scheme: 'https',
-                              path: 'youtube.com/channel/$value',
-                            ),
-                          );
-                        },
+                      color: Colors.red,
+                      icon: Icon(
+                        FontAwesomeIcons.youtube,
+                        color: Colors.red.shade700,
                       ),
+                      onTap: () {
+                        launchUrl(
+                          Uri(
+                            scheme: 'https',
+                            path: 'youtube.com/channel/$value',
+                          ),
+                        );
+                      },
+                    ),
                   };
                 })(),
-              Some(:final value) => _socialMediaIcon(
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.red,
                   icon: Icon(
                     FontAwesomeIcons.youtube,
@@ -164,10 +164,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (spotifyUrl) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (spotifyUrl) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.green,
                   icon: const Icon(
                     FontAwesomeIcons.spotify,
@@ -179,10 +179,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.soundcloudHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.soundcloudHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.orange,
                   icon: const Icon(
                     FontAwesomeIcons.soundcloud,
@@ -197,10 +197,10 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.twitchHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.twitchHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.purple,
                   icon: const Icon(
                     FontAwesomeIcons.twitch,
@@ -215,15 +215,17 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-            switch (socialFollowing.audiusHandle) {
-              None() => null,
-              Some(:final value) => _socialMediaIcon(
+              },
+              switch (socialFollowing.audiusHandle) {
+                None() => null,
+                Some(:final value) => _socialMediaIcon(
                   color: Colors.purpleAccent,
                   icon: SvgPicture.asset(
                     'assets/audius_logo.svg',
-                    colorFilter:
-                        const ColorFilter.mode(Colors.purple, BlendMode.srcIn),
+                    colorFilter: const ColorFilter.mode(
+                      Colors.purple,
+                      BlendMode.srcIn,
+                    ),
                     semanticsLabel: 'Audius Logo',
                   ),
                   onTap: () {
@@ -235,8 +237,8 @@ class SocialMediaIcons extends StatelessWidget {
                     );
                   },
                 ),
-            },
-          ].where((element) => element != null).whereType<Widget>().toList(),
+              },
+            ].where((element) => element != null).whereType<Widget>().toList(),
           ),
         );
       },

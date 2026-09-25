@@ -37,26 +37,26 @@ class CreateServiceCubit extends Cubit<CreateServiceState> {
   }
 
   void onTitleChange(String title) => emit(
-        state.copyWith(
-          title: ServiceTitle.dirty(title.trim()),
-        ),
-      );
+    state.copyWith(
+      title: ServiceTitle.dirty(title.trim()),
+    ),
+  );
 
   void onDescriptionChange(String description) => emit(
-        state.copyWith(
-          description: ServiceDescription.dirty(description.trim()),
-        ),
-      );
+    state.copyWith(
+      description: ServiceDescription.dirty(description.trim()),
+    ),
+  );
   void onRateChange(int rate) => emit(
-        state.copyWith(
-          rate: rate,
-        ),
-      );
+    state.copyWith(
+      rate: rate,
+    ),
+  );
   void onRateTypeChange(RateType rateType) => emit(
-        state.copyWith(
-          rateType: rateType,
-        ),
-      );
+    state.copyWith(
+      rateType: rateType,
+    ),
+  );
 
   Future<void> edit(
     Service service,

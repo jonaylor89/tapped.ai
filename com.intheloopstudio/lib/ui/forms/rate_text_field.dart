@@ -1,6 +1,8 @@
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class RateTextField extends StatelessWidget {
   RateTextField({
@@ -22,16 +24,13 @@ class RateTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextFormField(
+    return GlassTextField(
       initialValue: _formatter.format.format(initialValue),
-      decoration: const InputDecoration(
-        prefixIcon: Icon(Icons.attach_money),
-        labelText: 'Price',
-        // prefixText: r'$ ',
-      ),
+      label: 'price',
+      prefixIcon: CupertinoIcons.money_dollar,
       inputFormatters: <TextInputFormatter>[_formatter],
       keyboardType: TextInputType.number,
-      onFieldSubmitted: (input) {
+      onSubmitted: (input) {
         final value = _formatter.getUnformattedValue().toDouble();
         final usdValue = (value * 100).toInt();
 

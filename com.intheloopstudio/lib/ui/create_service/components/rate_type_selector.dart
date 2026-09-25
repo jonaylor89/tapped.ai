@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/domains/models/service.dart';
 import 'package:intheloopapp/ui/create_service/create_service_cubit.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class RateTypeSelector extends StatelessWidget {
   const RateTypeSelector({super.key});
@@ -11,22 +12,19 @@ class RateTypeSelector extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<CreateServiceCubit, CreateServiceState>(
       builder: (context, state) {
-        return SegmentedButton<RateType>(
-          segments: const [
-            ButtonSegment(
-              icon: Icon(CupertinoIcons.clock),
-              value: RateType.hourly,
-              label: Text('hourly'),
+        return GlassSegmentedControl<RateType>(
+          segments: const {
+            RateType.hourly: GlassSegment(
+              label: 'hourly',
+              icon: CupertinoIcons.clock,
             ),
-            ButtonSegment(
-              icon: Icon(CupertinoIcons.money_dollar),
-              value: RateType.fixed,
-              label: Text('fixed'),
+            RateType.fixed: GlassSegment(
+              label: 'fixed',
+              icon: CupertinoIcons.money_dollar,
             ),
-          ],
-          selected: {state.rateType},
-          onSelectionChanged: (p0) =>
-              context.read<CreateServiceCubit>().onRateTypeChange(p0.first),
+          },
+          selected: state.rateType,
+          onChanged: context.read<CreateServiceCubit>().onRateTypeChange,
         );
       },
     );

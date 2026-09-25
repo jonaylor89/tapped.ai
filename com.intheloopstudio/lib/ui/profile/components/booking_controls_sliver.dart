@@ -101,7 +101,8 @@ class BookingControlsSliver extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<BookingsBloc, BookingsState>(
       builder: (context, state) {
-        final anyBookings = state.pendingBookings.isNotEmpty ||
+        final anyBookings =
+            state.pendingBookings.isNotEmpty ||
             state.upcomingBookings.isNotEmpty ||
             state.canceledBookings.isNotEmpty;
 
