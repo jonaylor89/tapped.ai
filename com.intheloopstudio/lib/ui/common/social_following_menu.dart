@@ -51,13 +51,13 @@ class SocialFollowingMenu extends StatelessWidget {
             onTap: switch (facebookHandle) {
               None() => null,
               Some(:final value) => () {
-                  launchUrl(
-                    Uri(
-                      scheme: 'https',
-                      path: 'facebook.com/$value',
-                    ),
-                  );
-                }
+                launchUrl(
+                  Uri(
+                    scheme: 'https',
+                    path: 'facebook.com/$value',
+                  ),
+                );
+              },
             },
             leading: const Icon(
               FontAwesomeIcons.facebook,
@@ -78,13 +78,13 @@ class SocialFollowingMenu extends StatelessWidget {
             onTap: switch (instagramHandle) {
               None() => null,
               Some(:final value) => () {
-                  launchUrl(
-                    Uri(
-                      scheme: 'https',
-                      path: 'instagram.com/$value',
-                    ),
-                  );
-                },
+                launchUrl(
+                  Uri(
+                    scheme: 'https',
+                    path: 'instagram.com/$value',
+                  ),
+                );
+              },
             },
             leading: const Icon(
               FontAwesomeIcons.instagram,
@@ -108,13 +108,13 @@ class SocialFollowingMenu extends StatelessWidget {
             onTap: switch (twitterHandle) {
               None() => null,
               Some(:final value) => () {
-                  launchUrl(
-                    Uri(
-                      scheme: 'https',
-                      path: 'twitter.com/$value',
-                    ),
-                  );
-                },
+                launchUrl(
+                  Uri(
+                    scheme: 'https',
+                    path: 'twitter.com/$value',
+                  ),
+                );
+              },
             },
             trailing: switch (twitterHandle) {
               None() => null,
@@ -138,13 +138,13 @@ class SocialFollowingMenu extends StatelessWidget {
             onTap: switch (tiktokHandle) {
               None() => null,
               Some(:final value) => () {
-                  launchUrl(
-                    Uri(
-                      scheme: 'https',
-                      path: 'tiktok.com/@$value',
-                    ),
-                  );
-                },
+                launchUrl(
+                  Uri(
+                    scheme: 'https',
+                    path: 'tiktok.com/@$value',
+                  ),
+                );
+              },
             },
             trailing: switch (tiktokHandle) {
               None() => null,

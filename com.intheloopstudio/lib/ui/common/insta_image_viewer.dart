@@ -272,12 +272,12 @@ class KeymotionGestureDetector extends StatelessWidget {
       gestures: <Type, GestureRecognizerFactory>{
         VerticalDragGestureRecognizer:
             GestureRecognizerFactoryWithHandlers<VerticalDragGestureRecognizer>(
-          () => VerticalDragGestureRecognizer()
-            ..onStart = onStart
-            ..onUpdate = onUpdate
-            ..onEnd = onEnd,
-          (instance) {},
-        ),
+              () => VerticalDragGestureRecognizer()
+                ..onStart = onStart
+                ..onUpdate = onUpdate
+                ..onEnd = onEnd,
+              (instance) {},
+            ),
         // DoubleTapGestureRecognizer: GestureRecognizerFactoryWithHandlers<DoubleTapGestureRecognizer>(
         //   () => DoubleTapGestureRecognizer()..onDoubleTap = onDoubleTap,
         //   (instance) {},

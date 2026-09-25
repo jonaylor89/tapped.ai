@@ -19,7 +19,9 @@ class OpportunitiesList extends StatelessWidget {
       ..sort((a, b) => a.startTime.compareTo(b.startTime));
     return Column(
       children: [
-        ...sortedOpportunities.take(3).map(
+        ...sortedOpportunities
+            .take(3)
+            .map(
               (opportunity) => OpportunityCard(
                 opportunity: opportunity,
                 onOpportunityDeleted: () => opportunities.remove(opportunity),

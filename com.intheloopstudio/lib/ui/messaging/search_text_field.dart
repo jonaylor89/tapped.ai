@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class SearchTextField extends StatelessWidget {
-
   const SearchTextField({
     required this.controller,
     this.onChanged,
     this.onTap,
-    this.hintText = 'search...',
+    this.hintText = 'search conversations',
     this.showCloseButton = true,
     super.key,
   });
@@ -19,76 +19,32 @@ class SearchTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 36,
-      decoration: BoxDecoration(
-        color: StreamChatTheme.of(context).colorTheme.barsBg,
-        border: Border.all(
-          color: StreamChatTheme.of(context).colorTheme.borders,
-        ),
-        borderRadius: BorderRadius.circular(24),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        GlassMetrics.edgeInset,
+        TappedSpacing.sm,
+        GlassMetrics.edgeInset,
+        TappedSpacing.sm,
       ),
-      margin: const EdgeInsets.symmetric(
-        vertical: 8,
-        horizontal: 8,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              onTap: onTap,
-              controller: controller,
-              onChanged: onChanged,
-              decoration: InputDecoration(
-                prefixText: '    ',
-                prefixIconConstraints: BoxConstraints.tight(const Size(40, 24)),
-                prefixIcon: Padding(
-                  padding: const EdgeInsets.only(
-                    left: 8,
-                    right: 8,
-                  ),
-                  child: StreamSvgIcon.search(
-                    color:
-                    StreamChatTheme.of(context).colorTheme.textHighEmphasis,
-                    size: 24,
-                  ),
-                ),
-                hintText: hintText,
-                hintStyle: StreamChatTheme.of(context).textTheme.body.copyWith(
-                    color: StreamChatTheme.of(context)
-                        .colorTheme
-                        .textHighEmphasis
-                        .withOpacity(.5),),
-                contentPadding: const EdgeInsets.all(0),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-              ),
-            ),
-          ),
-          if (showCloseButton)
-            Material(
-              color: Colors.transparent,
-              child: IconButton(
-                padding: const EdgeInsets.all(0),
-                icon: StreamSvgIcon.closeSmall(
-                  color: Colors.grey,
-                ),
-                splashRadius: 24,
+      child: GlassSearchField(
+        controller: controller,
+        onChanged: onChanged,
+        onTap: onTap,
+        hintText: hintText,
+        trailing: showCloseButton
+            ? GlassPressable(
+                haptics: false,
+                semanticsLabel: 'clear search',
                 onPressed: () {
-                  if (controller!.text.isNotEmpty) {
-                    Future.microtask(
-                          () => [
-                        controller!.clear(),
-                        if (onChanged != null) onChanged!(''),
-                      ],
-                    );
-                  }
+                  controller?.clear();
+                  FocusScope.of(context).unfocus();
                 },
-              ),
-            ),
-        ],
+                child: const Padding(
+                  padding: EdgeInsets.all(TappedSpacing.sm),
+                  child: Icon(Icons.close, size: 18),
+                ),
+              )
+            : null,
       ),
     );
   }

@@ -26,8 +26,9 @@ class ChannelName extends StatelessWidget {
   Widget build(BuildContext context) {
     final client = StreamChat.of(context);
     final channel = StreamChannel.of(context).channel;
-    final databaseRepository =
-        RepositoryProvider.of<DatabaseRepository>(context);
+    final databaseRepository = RepositoryProvider.of<DatabaseRepository>(
+      context,
+    );
 
     return BetterStreamBuilder<Map<String, Object?>>(
       stream: channel.extraDataStream,
@@ -46,60 +47,60 @@ class ChannelName extends StatelessWidget {
     Map<String, dynamic> extraData,
     List<Member> members,
     StreamChatState client,
-  ) =>
-      FutureBuilder<List<UserModel>>(
-        future: Future.wait(
-          members.map((member) async {
-            final user =
-                await databaseRepository.getUserById(member.userId ?? '');
-            return user.toNullable() ?? UserModel.empty();
-          }),
-        ),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const SizedBox.shrink();
-          }
+  ) => FutureBuilder<List<UserModel>>(
+    future: Future.wait(
+      members.map((member) async {
+        final user = await databaseRepository.getUserById(member.userId ?? '');
+        return user.toNullable() ?? UserModel.empty();
+      }),
+    ),
+    builder: (context, snapshot) {
+      if (!snapshot.hasData) {
+        return const SizedBox.shrink();
+      }
 
-          final userMembers = snapshot.data!;
+      final userMembers = snapshot.data!;
 
-          return LayoutBuilder(
-            builder: (context, constraints) {
-              var title = context.translations.noTitleText;
-              if (extraData['name'] != null) {
-                title = extraData['name'] as String;
-              } else {
-                final otherMembers = userMembers
-                    .where((member) => member.id != client.currentUser!.id);
-                if (otherMembers.length == 1) {
-                  title = otherMembers.first.displayName;
-                } else if (otherMembers.isNotEmpty) {
-                  final maxWidth = constraints.maxWidth;
-                  final maxChars = maxWidth / (textStyle?.fontSize ?? 1);
-                  var currentChars = 0;
-                  final currentMembers = <UserModel>[];
-                  for (final element in otherMembers) {
-                    final newLength =
-                        currentChars + (element.username.toString().length);
-                    if (newLength < maxChars) {
-                      currentChars = newLength;
-                      currentMembers.add(element);
-                    }
-                  }
-
-                  final exceedingMembers =
-                      otherMembers.length - currentMembers.length;
-                  title = '${currentMembers.map((e) => e.username).join(', ')} '
-                      '${exceedingMembers > 0 ? '+ $exceedingMembers' : ''}';
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          var title = context.translations.noTitleText;
+          if (extraData['name'] != null) {
+            title = extraData['name'] as String;
+          } else {
+            final otherMembers = userMembers.where(
+              (member) => member.id != client.currentUser!.id,
+            );
+            if (otherMembers.length == 1) {
+              title = otherMembers.first.displayName;
+            } else if (otherMembers.isNotEmpty) {
+              final maxWidth = constraints.maxWidth;
+              final maxChars = maxWidth / (textStyle?.fontSize ?? 1);
+              var currentChars = 0;
+              final currentMembers = <UserModel>[];
+              for (final element in otherMembers) {
+                final newLength =
+                    currentChars + (element.username.toString().length);
+                if (newLength < maxChars) {
+                  currentChars = newLength;
+                  currentMembers.add(element);
                 }
               }
 
-              return Text(
-                title,
-                style: textStyle,
-                overflow: textOverflow,
-              );
-            },
+              final exceedingMembers =
+                  otherMembers.length - currentMembers.length;
+              title =
+                  '${currentMembers.map((e) => e.username).join(', ')} '
+                  '${exceedingMembers > 0 ? '+ $exceedingMembers' : ''}';
+            }
+          }
+
+          return Text(
+            title,
+            style: textStyle,
+            overflow: textOverflow,
           );
         },
       );
+    },
+  );
 }

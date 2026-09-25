@@ -49,17 +49,17 @@ class CreateOpportunityState extends Equatable {
 
   @override
   List<Object?> get props => [
-        loading,
-        title,
-        description,
-        isPaid,
-        placeId,
-        venue,
-        placeData,
-        startTime,
-        endTime,
-        pickedPhoto,
-      ];
+    loading,
+    title,
+    description,
+    isPaid,
+    placeId,
+    venue,
+    placeData,
+    startTime,
+    endTime,
+    pickedPhoto,
+  ];
 
   CreateOpportunityState copyWith({
     bool? loading,

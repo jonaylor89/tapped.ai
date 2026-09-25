@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
 
@@ -32,125 +34,144 @@ class _WaitlistViewState extends State<WaitlistView> {
     super.dispose();
   }
 
-  Widget _buildCheckItem({required String text}) {
-    return Row(
-      children: [
-        SizedBox(
-          height: 45,
-          width: 45,
-          child: Icon(
-            Icons.check_circle,
-            color: Colors.green.withOpacity(0.5),
+  static const _perks = [
+    (CupertinoIcons.infinite, 'unlimited gig opportunities'),
+    (CupertinoIcons.eye, 'exclusive info on venues looking for performers'),
+    (CupertinoIcons.phone, 'contact info for thousands of venues'),
+    (CupertinoIcons.slider_horizontal_3, 'advanced search'),
+  ];
+
+  Widget _hero(BuildContext context, {required String title}) {
+    final theme = Theme.of(context);
+    return SizedBox(
+      height: 320,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          const Image(
+            image: AssetImage('assets/splash.gif'),
+            fit: BoxFit.cover,
           ),
-        ),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 16,
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                stops: const [0.35, 1],
+                colors: [
+                  Colors.transparent,
+                  theme.colorScheme.surface,
+                ],
+              ),
             ),
           ),
-        ),
+          Positioned(
+            left: GlassMetrics.edgeInset + TappedSpacing.xs,
+            right: GlassMetrics.edgeInset + TappedSpacing.xs,
+            bottom: 0,
+            child: Text(
+              title,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+                height: 1.05,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _perkList(BuildContext context, {int count = 4}) {
+    return GlassSection(
+      children: [
+        for (final (icon, text) in _perks.take(count))
+          GlassListTile(
+            leadingIcon: icon,
+            leadingColor: TappedColors.success,
+            title: text,
+            showChevron: false,
+          ),
       ],
     );
   }
 
-  Widget _buildAlreadySignedUp(BuildContext context) {
+  Widget _screen(
+    BuildContext context, {
+    required String title,
+    required String caption,
+    required int perkCount,
+    required Widget bottomBar,
+  }) {
     final theme = Theme.of(context);
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 300,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(32),
-              bottomRight: Radius.circular(32),
-            ),
-            image: DecorationImage(
-              image: AssetImage('assets/splash.gif'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 16,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return GlassAmbientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            ListView(
+              padding: const EdgeInsets.only(
+                bottom: GlassMetrics.bottomBarClearance + 60,
+              ),
+              physics: const BouncingScrollPhysics(),
               children: [
-                const Text(
-                  "you're on the waitlist!",
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
+                _hero(context, title: title),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    GlassMetrics.edgeInset + TappedSpacing.xs,
+                    TappedSpacing.sm,
+                    GlassMetrics.edgeInset + TappedSpacing.xs,
+                    TappedSpacing.md,
                   ),
-                ),
-                const Text(
-                  "we'll let you know when premium is available where you'll get",
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'unlimited gig opportunities',
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'exclusive info on venues looking for performers',
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'contact info for thousands of venues',
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'advanced search',
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 16,
-          ),
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CupertinoButton(
-                    onPressed: () {
-                      HapticFeedback.lightImpact();
-                      _confettiController.play();
-                      context.popUntilHome();
-                    },
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(15),
-                    child: const Text(
-                      'okay',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
+                  child: Text(
+                    caption,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(
+                        alpha: 0.65,
                       ),
                     ),
                   ),
                 ),
+                _perkList(context, count: perkCount),
               ],
             ),
-          ),
+            const GlassNavChrome(backIcon: CupertinoIcons.xmark),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GlassBottomBar(
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  child: bottomBar,
+                ),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 18),
-      ],
+      ),
+    );
+  }
+
+  Widget _buildAlreadySignedUp(BuildContext context) {
+    return _screen(
+      context,
+      title: "you're on\nthe waitlist",
+      caption:
+          "we'll let you know when premium is available. here's what "
+          "you'll get:",
+      perkCount: 4,
+      bottomBar: GlassButton.primary(
+        label: 'okay',
+        expand: true,
+        onPressed: () {
+          HapticFeedback.lightImpact();
+          _confettiController.play();
+          context.popUntilHome();
+        },
+      ),
     );
   }
 
@@ -160,151 +181,70 @@ class _WaitlistViewState extends State<WaitlistView> {
   }) {
     final database = context.database;
     final nav = context.nav;
-    final theme = Theme.of(context);
 
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          height: 300,
-          width: double.infinity,
-          decoration: const BoxDecoration(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(32),
-              bottomRight: Radius.circular(32),
-            ),
-            image: DecorationImage(
-              image: AssetImage('assets/splash.gif'),
-              fit: BoxFit.cover,
-            ),
-          ),
-        ),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 16,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'get tapped premium',
-                  style: TextStyle(
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Text(
-                  "join the waitlist and we'll let you know when premium is available",
-                  style: TextStyle(
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'unlimited gig opportunities',
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'exclusive info on venues looking for performers',
-                ),
-                const SizedBox(height: 24),
-                _buildCheckItem(
-                  text: 'contact info for thousands of venues',
-                ),
-              ],
-            ),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 20,
-          ),
-          child: ConfettiWidget(
-            confettiController: _confettiController,
-            blastDirectionality: BlastDirectionality.explosive,
-            child: Row(
-              children: [
-                Expanded(
-                  child: CupertinoButton(
-                    onPressed: () async {
-                      _confettiController.play();
-                      setState(() {
-                        _loading = true;
-                      });
+    return _screen(
+      context,
+      title: 'get tapped\npremium',
+      caption:
+          "join the waitlist and we'll let you know when premium is "
+          'available',
+      perkCount: 3,
+      bottomBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GlassButton.primary(
+            label: 'join waitlist',
+            icon: CupertinoIcons.sparkles,
+            expand: true,
+            isLoading: _loading,
+            onPressed: () async {
+              _confettiController.play();
+              setState(() {
+                _loading = true;
+              });
 
-                      // apply for the waitlist
-                      await database.joinPremiumWaitlist(currentUser.id);
-                      nav.popUntilHome();
-                      setState(() {
-                        _loading = false;
-                      });
-                    },
-                    color: theme.colorScheme.primary,
-                    borderRadius: BorderRadius.circular(15),
-                    child: const Text(
-                      'join waitlist',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              await database.joinPremiumWaitlist(currentUser.id);
+              nav.popUntilHome();
+              if (!mounted) return;
+              setState(() {
+                _loading = false;
+              });
+            },
           ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CupertinoButton(
-              onPressed: nav.pop,
-              child: const Text(
-                'not now',
-                style: TextStyle(
-                  color: Colors.red,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-      ],
+          const SizedBox(height: TappedSpacing.xs),
+          GlassButton.plain(
+            label: 'not now',
+            compact: true,
+            onPressed: nav.pop,
+          ),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final database = context.database;
-
-    if (_loading) {
-      return const Center(
-        child: CupertinoActivityIndicator(),
-      );
-    }
 
     return CurrentUserBuilder(
       builder: (context, currentUser) {
-        return Scaffold(
-          backgroundColor: theme.colorScheme.surface,
-          body: FutureBuilder(
-            future: database.isOnPremiumWailist(currentUser.id),
-            builder: (context, snapshot) {
-              final isOnWaitlist = snapshot.data;
+        return FutureBuilder(
+          future: database.isOnPremiumWailist(currentUser.id),
+          builder: (context, snapshot) {
+            final isOnWaitlist = snapshot.data;
 
-              return switch (isOnWaitlist) {
-                null => const Center(
-                    child: CupertinoActivityIndicator(),
-                  ),
-                false => _buildWaitlist(context, currentUser: currentUser),
-                true => _buildAlreadySignedUp(context),
-              };
-            },
-          ),
+            return switch (isOnWaitlist) {
+              null => const GlassAmbientBackground(
+                child: Scaffold(
+                  backgroundColor: Colors.transparent,
+                  body: GlassLoading(),
+                ),
+              ),
+              false => _buildWaitlist(context, currentUser: currentUser),
+              true => _buildAlreadySignedUp(context),
+            };
+          },
         );
       },
     );
