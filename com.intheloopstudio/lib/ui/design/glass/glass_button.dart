@@ -30,6 +30,8 @@ class GlassButton extends StatelessWidget {
     this.isLoading = false,
     this.compact = false,
     this.semanticsLabel,
+    this.variant = GlassVariant.regular,
+    this.foreground,
     super.key,
   });
 
@@ -42,7 +44,9 @@ class GlassButton extends StatelessWidget {
     this.compact = false,
     this.semanticsLabel,
     super.key,
-  }) : style = GlassButtonStyle.primary;
+  }) : style = GlassButtonStyle.primary,
+       variant = GlassVariant.regular,
+       foreground = null;
 
   const GlassButton.destructive({
     required this.label,
@@ -53,7 +57,9 @@ class GlassButton extends StatelessWidget {
     this.compact = false,
     this.semanticsLabel,
     super.key,
-  }) : style = GlassButtonStyle.destructive;
+  }) : style = GlassButtonStyle.destructive,
+       variant = GlassVariant.regular,
+       foreground = null;
 
   const GlassButton.plain({
     required this.label,
@@ -64,7 +70,9 @@ class GlassButton extends StatelessWidget {
     this.compact = false,
     this.semanticsLabel,
     super.key,
-  }) : style = GlassButtonStyle.plain;
+  }) : style = GlassButtonStyle.plain,
+       variant = GlassVariant.regular,
+       foreground = null;
 
   final String label;
   final VoidCallback? onPressed;
@@ -75,6 +83,12 @@ class GlassButton extends StatelessWidget {
   final bool compact;
   final String? semanticsLabel;
 
+  /// Glass material used for [GlassButtonStyle.glass] buttons.
+  final GlassVariant variant;
+
+  /// Overrides the label/icon colour (e.g. white on imagery).
+  final Color? foreground;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -83,8 +97,8 @@ class GlassButton extends StatelessWidget {
     final (Color? tint, Color foreground) = switch (style) {
       GlassButtonStyle.primary => (scheme.primary, Colors.white),
       GlassButtonStyle.destructive => (TappedColors.error, Colors.white),
-      GlassButtonStyle.glass => (null, scheme.onSurface),
-      GlassButtonStyle.plain => (null, scheme.primary),
+      GlassButtonStyle.glass => (null, this.foreground ?? scheme.onSurface),
+      GlassButtonStyle.plain => (null, this.foreground ?? scheme.primary),
     };
 
     final textStyle = theme.textTheme.titleSmall?.copyWith(
@@ -130,7 +144,7 @@ class GlassButton extends StatelessWidget {
             tint: tint,
             height: height,
             padding: padding,
-            variant: GlassVariant.regular,
+            variant: variant,
             child: content,
           );
 

@@ -34,18 +34,18 @@ class OnboardingFlowState extends Equatable with FormzMixin {
 
   @override
   List<Object?> get props => [
-        currentUserId,
-        spotifyArtist,
-        artistName,
-        tiktokHandle,
-        tiktokFollowers,
-        instagramHandle,
-        instagramFollowers,
-        eula,
-        pickedPhoto,
-        status,
-        formKey,
-      ];
+    currentUserId,
+    spotifyArtist,
+    artistName,
+    tiktokHandle,
+    tiktokFollowers,
+    instagramHandle,
+    instagramFollowers,
+    eula,
+    pickedPhoto,
+    status,
+    formKey,
+  ];
 
   OnboardingFlowState copyWith({
     String? artistName,

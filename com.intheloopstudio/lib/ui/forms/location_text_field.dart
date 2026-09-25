@@ -17,7 +17,8 @@ class LocationTextField extends StatelessWidget {
   final void Function(
     Option<PlaceData> placeData,
     String placeId,
-  ) onChanged;
+  )
+  onChanged;
   final Option<PlaceData> initialPlace;
   final String hintText;
 

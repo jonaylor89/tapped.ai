@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/authentication_bloc/authentication_bloc.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/onboarding/onboarding_flow_cubit.dart';
 import 'package:intheloopapp/utils/default_image.dart';
 
@@ -19,9 +20,9 @@ class ProfilePictureUploader extends StatelessWidget {
     return switch (newProfileImage) {
       Some(:final value) => FileImage(value),
       None() => switch (currentProfileImage) {
-          Some(:final value) => CachedNetworkImageProvider(value),
-          None() => getDefaultImage(const None()),
-        },
+        Some(:final value) => CachedNetworkImageProvider(value),
+        None() => getDefaultImage(const None()),
+      },
     };
   }
 
@@ -35,52 +36,41 @@ class ProfilePictureUploader extends StatelessWidget {
 
         return BlocBuilder<OnboardingFlowCubit, OnboardingFlowState>(
           builder: (context, state) {
-            return GestureDetector(
-              onTap: () =>
-                  context.read<OnboardingFlowCubit>().handleImageFromGallery(),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 45,
-                        backgroundImage: switch (state.photoUrl) {
-                          None() => displayProfileImage(
-                              state.pickedPhoto,
-                              const None(),
-                            ),
-                          Some(:final value) =>
-                            CachedNetworkImageProvider(value),
-                        },
+            final image = switch (state.photoUrl) {
+              None() => displayProfileImage(state.pickedPhoto, const None()),
+              Some(:final value) => CachedNetworkImageProvider(value),
+            };
+            return Center(
+              child: GlassPressable(
+                semanticsLabel: 'upload profile picture',
+                onPressed: context
+                    .read<OnboardingFlowCubit>()
+                    .handleImageFromGallery,
+                child: Stack(
+                  alignment: Alignment.bottomRight,
+                  children: [
+                    LiquidGlass.circle(
+                      width: 132,
+                      height: 132,
+                      padding: const EdgeInsets.all(5),
+                      child: ClipOval(
+                        child: Image(image: image, fit: BoxFit.cover),
                       ),
-                      const CircleAvatar(
-                        radius: 45,
-                        backgroundColor: Colors.black54,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Icon(
-                              Icons.camera_alt,
-                              size: 50,
-                              color: Colors.white,
-                            ),
-                            Text(
-                              'Upload Profile Picture',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
+                    ),
+                    LiquidGlass.circle(
+                      width: 40,
+                      height: 40,
+                      tint: Theme.of(context).colorScheme.primary,
+                      child: const Center(
+                        child: Icon(
+                          CupertinoIcons.camera_fill,
+                          size: 18,
+                          color: Colors.white,
                         ),
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
             );
           },

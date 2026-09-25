@@ -365,11 +365,13 @@ class GlassTextField extends StatelessWidget {
     this.inputFormatters,
     this.focusNode,
     this.enabled = true,
+    this.validator,
     super.key,
   });
 
   final TextEditingController? controller;
   final String? label;
+  final FormFieldValidator<String>? validator;
   final String? hintText;
   final String? errorText;
   final String? helperText;
@@ -448,6 +450,7 @@ class GlassTextField extends StatelessWidget {
             maxLength: maxLength,
             textCapitalization: textCapitalization,
             inputFormatters: inputFormatters,
+            validator: validator,
             cursorColor: theme.colorScheme.primary,
             style: theme.textTheme.bodyLarge,
             decoration: InputDecoration(

@@ -18,7 +18,8 @@ class LocationFormView extends StatelessWidget {
   final void Function(
     Option<PlaceData> placeData,
     String placeId,
-  ) onSelected;
+  )
+  onSelected;
 
   @override
   Widget build(BuildContext context) {

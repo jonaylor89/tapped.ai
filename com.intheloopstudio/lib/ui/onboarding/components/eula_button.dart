@@ -1,4 +1,7 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class EULAButton extends StatelessWidget {
@@ -14,39 +17,55 @@ class EULAButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    final theme = Theme.of(context);
+    return GlassSection(
+      margin: EdgeInsets.zero,
       children: [
-        Checkbox(
-          value: initialValue,
-          onChanged: onChanged.call,
-        ),
-        GestureDetector(
-          onTap: () {
-            launchUrl(
-              Uri.parse('https://app.tapped.ai/eula'),
-            );
-          },
-          child: RichText(
-            text: TextSpan(
+        GlassListTile(
+          leading: GlassPressable(
+            semanticsLabel: initialValue ? 'agreed to EULA' : 'agree to EULA',
+            onPressed: () => onChanged(!initialValue),
+            child: Icon(
+              initialValue
+                  ? CupertinoIcons.checkmark_circle_fill
+                  : CupertinoIcons.circle,
+              color: initialValue
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurface.withValues(alpha: 0.3),
+            ),
+          ),
+          titleWidget: Text.rich(
+            TextSpan(
               children: [
-                const TextSpan(
-                  text: 'I agree to the ',
-                ),
+                const TextSpan(text: 'I agree to the '),
                 TextSpan(
                   text: 'EULA',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        decoration: TextDecoration.underline,
-                      ),
+                  style: TextStyle(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const WidgetSpan(
-                  child: Icon(
-                    Icons.launch,
-                    size: 16,
+                WidgetSpan(
+                  alignment: PlaceholderAlignment.middle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: TappedSpacing.xs),
+                    child: Icon(
+                      CupertinoIcons.arrow_up_right_square,
+                      size: 14,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
                 ),
               ],
             ),
+            style: theme.textTheme.bodyLarge,
+          ),
+          showChevron: false,
+          onTap: () => onChanged(!initialValue),
+          trailing: GlassButton.plain(
+            label: 'read',
+            compact: true,
+            onPressed: () => launchUrl(Uri.parse('https://app.tapped.ai/eula')),
           ),
         ),
       ],

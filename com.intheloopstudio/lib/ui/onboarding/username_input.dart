@@ -17,5 +17,3 @@ class UsernameInput extends FormzInput<String, UsernameInputError> {
 
 // Define input validation errors
 enum UsernameInputError { empty }
-
-
