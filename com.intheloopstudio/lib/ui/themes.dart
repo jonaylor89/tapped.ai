@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass_tokens.dart';
 import 'package:intheloopapp/ui/design/tapped_theme_extension.dart';
 
 export 'package:intheloopapp/ui/design/tapped_theme_extension.dart'
@@ -26,6 +26,9 @@ ThemeData buildDarkTheme({
 
 /// Maps the [TappedTypography] ramp onto Material's `TextTheme` slots so
 /// `theme.textTheme.*` is the single typography source for views.
+///
+/// Uses the platform system font (SF Pro on iOS, Roboto on Android) with
+/// Apple's tight display tracking, so the app reads like a native iOS app.
 TextTheme buildTextTheme(Brightness brightness) {
   final base = brightness == Brightness.dark
       ? ThemeData.dark().textTheme
@@ -48,7 +51,14 @@ TextTheme buildTextTheme(Brightness brightness) {
     labelSmall: base.labelSmall?.merge(TappedTypography.caption),
   );
 
-  return GoogleFonts.titilliumWebTextTheme(ramp);
+  return ramp.copyWith(
+    displayLarge: ramp.displayLarge?.copyWith(letterSpacing: -0.8),
+    displayMedium: ramp.displayMedium?.copyWith(letterSpacing: -0.6),
+    headlineLarge: ramp.headlineLarge?.copyWith(letterSpacing: -0.5),
+    headlineMedium: ramp.headlineMedium?.copyWith(letterSpacing: -0.4),
+    titleLarge: ramp.titleLarge?.copyWith(letterSpacing: -0.4),
+    titleMedium: ramp.titleMedium?.copyWith(letterSpacing: -0.2),
+  );
 }
 
 ThemeData buildTheme({
@@ -89,6 +99,15 @@ ThemeData buildTheme({
 
   return base.copyWith(
     textTheme: textTheme,
+    splashFactory: NoSplash.splashFactory,
+    highlightColor: Colors.transparent,
+    splashColor: Colors.transparent,
+    pageTransitionsTheme: PageTransitionsTheme(
+      builders: {
+        for (final platform in TargetPlatform.values)
+          platform: const CupertinoPageTransitionsBuilder(),
+      },
+    ),
     primaryColor: primaryColor,
     scaffoldBackgroundColor: background,
     canvasColor: background,
@@ -127,12 +146,16 @@ ThemeData buildTheme({
     ),
 
     appBarTheme: AppBarTheme(
-      backgroundColor: background,
+      backgroundColor: Colors.transparent,
+      surfaceTintColor: Colors.transparent,
       foregroundColor: onBackground,
       elevation: 0,
       scrolledUnderElevation: 0,
-      centerTitle: false,
-      titleTextStyle: textTheme.titleMedium?.copyWith(color: onBackground),
+      centerTitle: true,
+      titleTextStyle: textTheme.titleMedium?.copyWith(
+        color: onBackground,
+        fontWeight: FontWeight.w600,
+      ),
     ),
 
     tabBarTheme: TabBarThemeData(
@@ -202,30 +225,30 @@ ThemeData buildTheme({
 
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surface,
+      fillColor: onBackground.withValues(alpha: isDark ? 0.10 : 0.05),
       hintStyle: textTheme.bodyLarge?.copyWith(color: tokens.mutedText),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.lg,
         vertical: TappedSpacing.md,
       ),
       border: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
+        borderRadius: GlassRadius.controlAll,
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
+        borderRadius: GlassRadius.controlAll,
         borderSide: BorderSide.none,
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
+        borderRadius: GlassRadius.controlAll,
         borderSide: BorderSide(color: primaryColor, width: 1.5),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
+        borderRadius: GlassRadius.controlAll,
         borderSide: const BorderSide(color: TappedColors.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: TappedRadius.mdAll,
+        borderRadius: GlassRadius.controlAll,
         borderSide: const BorderSide(color: TappedColors.error, width: 1.5),
       ),
     ),
@@ -238,7 +261,7 @@ ThemeData buildTheme({
         disabledForegroundColor: colorScheme.onPrimary.withValues(alpha: 0.7),
         minimumSize:
             const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
-        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        shape: const StadiumBorder(),
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(
           horizontal: TappedSpacing.xl,
@@ -253,7 +276,7 @@ ThemeData buildTheme({
         side: BorderSide(color: primaryColor),
         minimumSize:
             const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
-        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        shape: const StadiumBorder(),
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(
           horizontal: TappedSpacing.xl,
@@ -267,7 +290,7 @@ ThemeData buildTheme({
         foregroundColor: primaryColor,
         minimumSize:
             const Size(TappedSizes.minTapTarget, TappedSizes.minTapTarget),
-        shape: RoundedRectangleBorder(borderRadius: TappedRadius.lgAll),
+        shape: const StadiumBorder(),
         textStyle: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
         padding: const EdgeInsets.symmetric(
           horizontal: TappedSpacing.lg,
@@ -280,7 +303,7 @@ ThemeData buildTheme({
       backgroundColor: surface,
       selectedColor: primaryColor.withValues(alpha: isDark ? 0.25 : 0.15),
       labelStyle: textTheme.labelMedium?.copyWith(color: onBackground),
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.smAll),
+      shape: const StadiumBorder(),
       side: BorderSide.none,
       padding: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.sm,
@@ -293,17 +316,13 @@ ThemeData buildTheme({
       surfaceTintColor: Colors.transparent,
       showDragHandle: true,
       dragHandleColor: tokens.mutedText,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(TappedRadius.xl),
-        ),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: GlassRadius.sheetTop),
     ),
 
     dialogTheme: DialogThemeData(
       backgroundColor: background,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.xlAll),
+      shape: RoundedRectangleBorder(borderRadius: GlassRadius.cardAll),
     ),
 
     listTileTheme: ListTileThemeData(
@@ -312,7 +331,7 @@ ThemeData buildTheme({
       contentPadding: const EdgeInsets.symmetric(
         horizontal: TappedSpacing.lg,
       ),
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
+      shape: RoundedRectangleBorder(borderRadius: GlassRadius.controlAll),
     ),
 
     dividerTheme: DividerThemeData(
@@ -325,7 +344,7 @@ ThemeData buildTheme({
       behavior: SnackBarBehavior.floating,
       backgroundColor: isDark ? TappedColors.surfaceDark : Colors.black87,
       contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
-      shape: RoundedRectangleBorder(borderRadius: TappedRadius.mdAll),
+      shape: const StadiumBorder(),
     ),
   );
 }

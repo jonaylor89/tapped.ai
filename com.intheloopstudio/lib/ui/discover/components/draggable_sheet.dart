@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/components/sheet_featured_gigs.dart';
 import 'package:intheloopapp/ui/discover/components/sheet_genre_chips.dart';
 import 'package:intheloopapp/ui/discover/components/sheet_handle.dart';
@@ -27,7 +28,6 @@ class DraggableSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final database = context.database;
-    final theme = Theme.of(context);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         return PremiumBuilder(
@@ -64,17 +64,18 @@ class DraggableSheet extends StatelessWidget {
                         final performers = snapshot.data ?? [];
                         return DraggableScrollableSheet(
                           expand: false,
-                          initialChildSize: 0.11,
-                          minChildSize: 0.11,
+                          initialChildSize: 0.12,
+                          minChildSize: 0.12,
+                          maxChildSize: 0.94,
                           snap: true,
-                          snapSizes: const [0.11, 0.5, 1],
+                          snapSizes: const [0.12, 0.5, 0.94],
                           controller: dragController,
-                          builder: (ctx, scrollController) => DecoratedBox(
-                            decoration: BoxDecoration(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(TappedRadius.md),
+                          builder: (ctx, scrollController) => LiquidGlass(
+                            variant: GlassVariant.prominent,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(GlassRadius.sheet),
                               ),
-                              color: theme.colorScheme.surface,
                             ),
                             child: Column(
                               children: [
@@ -90,7 +91,12 @@ class DraggableSheet extends StatelessWidget {
                                           currentUser: currentUser,
                                           state: state,
                                         ),
-                                        const SheetQuickActions(),
+                                        SheetQuickActions(
+                                          currentUserId: currentUser.id,
+                                        ),
+                                        const SizedBox(
+                                          height: TappedSpacing.lg,
+                                        ),
                                         SheetResultsSection(
                                           currentUser: currentUser,
                                           state: state,
@@ -123,7 +129,9 @@ class DraggableSheet extends StatelessWidget {
                                             ],
                                           ),
                                         ),
-                                        const SizedBox(height: 50),
+                                        const SizedBox(
+                                          height: GlassMetrics.edgeInset * 3,
+                                        ),
                                       ],
                                     ),
                                   ),

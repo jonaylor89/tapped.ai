@@ -10,11 +10,13 @@ import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/domains/search_bloc/search_bloc.dart';
 import 'package:intheloopapp/ui/common/opportunity_card.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
+import 'package:intheloopapp/ui/design/premium_banner.dart';
 import 'package:intheloopapp/ui/loading/logo_wave.dart';
 import 'package:intheloopapp/ui/user_tile.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/custom_claims_builder.dart';
-import 'package:intheloopapp/ui/design/premium_banner.dart';
 
 class TappedSearchBar extends StatefulWidget {
   const TappedSearchBar({
@@ -105,59 +107,74 @@ class _TappedSearchBarState extends State<TappedSearchBar> {
     final theme = Theme.of(context);
     final database = context.database;
     final searchRepo = context.read<SearchRepository>();
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.5);
     return SearchAnchor(
       searchController: _searchController,
       textCapitalization: TextCapitalization.none,
       textInputAction: TextInputAction.search,
       viewBackgroundColor: theme.colorScheme.surface,
+      viewSurfaceTintColor: Colors.transparent,
       viewElevation: 0,
+      viewHintText: 'search tapped',
+      dividerColor: Colors.transparent,
+      viewLeading: GlassIconButton(
+        icon: CupertinoIcons.chevron_back,
+        size: 36,
+        iconSize: 18,
+        onPressed: () {
+          if (_searchController.isOpen) _searchController.closeView(null);
+        },
+        semanticsLabel: 'back',
+      ),
+      viewTrailing: [
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: _searchController,
+          builder: (context, value, _) {
+            if (value.text.isEmpty) return const SizedBox.shrink();
+            return GlassIconButton(
+              icon: CupertinoIcons.xmark,
+              size: 32,
+              iconSize: 14,
+              onPressed: _searchController.clear,
+              semanticsLabel: 'clear search',
+            );
+          },
+        ),
+      ],
       builder: (context, searchController) {
         return Hero(
           tag: 'searchBar',
-          child: SearchBar(
-            backgroundColor: WidgetStatePropertyAll(
-              theme.colorScheme.surface,
-            ),
-            elevation: const WidgetStatePropertyAll(0),
+          child: GlassSearchField(
             controller: searchController,
-            focusNode: _searchFocusNode,
-            hintText: 'search tapped...',
-            leading: IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.search),
-            ),
-            trailing: widget.trailing ??
-                [
-                  CustomClaimsBuilder(
-                    builder: (context, claims) {
-                      final hasClaim = claims.isNotEmpty;
-                      return IconButton(
-                        onPressed: () {
-                          return switch (hasClaim) {
-                            true => context.push(
-                                AdvancedSearchPage(),
-                              ),
-                            false => context.push(
-                                PaywallPage(),
-                              ),
-                          };
-                        },
-                        icon: const Icon(CupertinoIcons.doc_text_search),
-                        color: theme.colorScheme.onSurface,
-                      );
-                    },
-                  ),
-                ],
-            onChanged: (_) {
-              if (searchController.isOpen) {
-                return;
-              }
-              searchController.openView();
-            },
+            readOnly: true,
+            hintText: 'search tapped',
             onTap: () {
               searchController.openView();
               widget.onTap?.call();
             },
+            trailing: widget.trailing != null && widget.trailing!.isNotEmpty
+                ? Row(children: widget.trailing!)
+                : CustomClaimsBuilder(
+                    builder: (context, claims) {
+                      final hasClaim = claims.isNotEmpty;
+                      return GlassPressable(
+                        haptics: false,
+                        semanticsLabel: 'advanced search',
+                        onPressed: () => switch (hasClaim) {
+                          true => context.push(AdvancedSearchPage()),
+                          false => context.push(PaywallPage()),
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(TappedSpacing.sm),
+                          child: Icon(
+                            CupertinoIcons.slider_horizontal_3,
+                            size: 18,
+                            color: muted,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         );
       },
@@ -175,86 +192,70 @@ class _TappedSearchBarState extends State<TappedSearchBar> {
               final ops = sugList.whereType<OpportunityCard>().toList();
               final restUsers = sugList.whereType<UserTile>();
 
-              return ListView(
-                controller: _scrollController,
-                children: [
-                  const PremiumBanner(),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: CupertinoButton(
-                            onPressed: () => context.push(
-                              GigSearchPage(),
-                            ),
-                            borderRadius: BorderRadius.circular(15),
-                            color: theme.colorScheme.primary.withOpacity(0.1),
-                            child: Text(
-                              'search locations',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.primary,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+              return GlassAmbientBackground(
+                child: ListView(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.only(
+                    bottom: GlassMetrics.bottomBarClearance,
                   ),
-                  if (ops.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          child: Text(
-                            'apply to perform',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        ...ops,
-                      ],
-                    ),
-                  if (restUsers.isNotEmpty)
+                  children: [
                     const Padding(
                       padding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
+                        horizontal: GlassMetrics.edgeInset,
                       ),
-                      child: Text(
-                        'suggestions',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: PremiumBanner(),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        GlassMetrics.edgeInset,
+                        TappedSpacing.sm,
+                        GlassMetrics.edgeInset,
+                        0,
+                      ),
+                      child: GlassButton(
+                        label: 'search by city',
+                        icon: CupertinoIcons.map,
+                        expand: true,
+                        onPressed: () => context.push(GigSearchPage()),
                       ),
                     ),
-                  ...restUsers,
-                ],
+                    if (ops.isNotEmpty) ...[
+                      const GlassSectionTitle('apply to perform'),
+                      ...ops,
+                    ],
+                    if (restUsers.isNotEmpty) ...[
+                      const GlassSectionTitle('suggested'),
+                      ...restUsers,
+                    ],
+                  ],
+                ),
               );
             }
 
-            return state.searchResults.isEmpty
-                ? const Center(child: Text('nothing found'))
-                : ListView.builder(
-                    itemCount: state.searchResults.length,
-                    itemBuilder: (context, index) {
-                      final user = state.searchResults[index];
-                      return UserTile(
-                        userId: user.id,
-                        user: Option.of(user),
-                      );
-                    },
-                  );
+            return GlassAmbientBackground(
+              child: state.searchResults.isEmpty
+                  ? const GlassEmptyState(
+                      icon: CupertinoIcons.search,
+                      title: 'nothing found',
+                      message: 'try a different name or username',
+                    )
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(
+                        top: TappedSpacing.sm,
+                        bottom: GlassMetrics.bottomBarClearance,
+                      ),
+                      itemCount: state.searchResults.length,
+                      itemBuilder: (context, index) {
+                        final user = state.searchResults[index];
+                        return UserTile(
+                          userId: user.id,
+                          user: Option.of(user),
+                        );
+                      },
+                    ),
+            );
           },
         );
       },

@@ -1,4 +1,6 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/bookings_bloc/bookings_bloc.dart';
@@ -43,51 +45,13 @@ class TasksBanner extends StatelessWidget {
                   return const SizedBox.shrink();
                 }
 
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(15),
-                      gradient: LinearGradient(
-                        colors: [
-                          Colors.blue.shade800.withOpacity(0.8),
-                          Colors.lightBlue.withOpacity(0.8),
-                        ],
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.checklist,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'you have ${incompleteTasks.length} tasks left to '
-                              'complete',
-                              style: const TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              context.push(TasksPage());
-                            },
-                            child: const Text(
-                              'show tasks',
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                final n = incompleteTasks.length;
+                return GlassBanner(
+                  icon: CupertinoIcons.checkmark_circle,
+                  tint: Theme.of(context).colorScheme.primary,
+                  title: 'finish setting up',
+                  message: '$n ${n == 1 ? 'task' : 'tasks'} left to get booked',
+                  onAction: () => context.push(TasksPage()),
                 );
               },
             );

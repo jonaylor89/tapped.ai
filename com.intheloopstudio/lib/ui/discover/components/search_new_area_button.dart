@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/discover/discover_cubit.dart';
 
 class SearchNewAreaButton extends StatelessWidget {
@@ -8,35 +10,27 @@ class SearchNewAreaButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final onSurface = theme.colorScheme.onSurface;
     return BlocBuilder<DiscoverCubit, DiscoverState>(
+      buildWhen: (a, b) => a.resultsExpired != b.resultsExpired,
       builder: (context, state) {
-        if (!state.resultsExpired) {
-          return const SizedBox.shrink();
-        }
-
-        return CupertinoButton(
-          onPressed: context.read<DiscoverCubit>().searchNewBounds,
-          color: onSurface.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(15),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.search,
-                color: onSurface,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'search new area',
-                style: TextStyle(
-                  color: onSurface,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+        return AnimatedSwitcher(
+          duration: GlassMotion.reveal,
+          switchInCurve: GlassMotion.spring,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: ScaleTransition(scale: anim, child: child),
           ),
+          child: !state.resultsExpired
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: TappedSpacing.sm),
+                  child: GlassButton(
+                    label: 'search this area',
+                    icon: CupertinoIcons.arrow_clockwise,
+                    compact: true,
+                    onPressed: context.read<DiscoverCubit>().searchNewBounds,
+                  ),
+                ),
         );
       },
     );
