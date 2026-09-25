@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/email_text_field.dart';
 import 'package:intheloopapp/ui/forms/password_text_field.dart';
 import 'package:intheloopapp/ui/login/components/forgot_password_button.dart';
@@ -18,14 +19,18 @@ class TraditionalLogin extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            EmailTextField(
-              onChanged: (input) =>
-                  context.read<LoginCubit>().updateEmail(input ?? ''),
-            ),
-            const SizedBox(height: TappedSpacing.md),
-            PasswordTextField(
-              onChanged: (input) =>
-                  context.read<LoginCubit>().updatePassword(input ?? ''),
+            GlassFormGroup(
+              margin: EdgeInsets.zero,
+              children: [
+                EmailTextField(
+                  onChanged: (input) =>
+                      context.read<LoginCubit>().updateEmail(input ?? ''),
+                ),
+                PasswordTextField(
+                  onChanged: (input) =>
+                      context.read<LoginCubit>().updatePassword(input ?? ''),
+                ),
+              ],
             ),
             const Align(
               alignment: Alignment.centerRight,

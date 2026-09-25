@@ -61,18 +61,25 @@ class _CreateBookingFormState extends State<CreateBookingForm> {
             ),
             child: Column(
               children: [
-                BookingNameTextField(
-                  controller: bookingNameController,
-                ),
-                const SizedBox(height: TappedSpacing.sm),
-                LocationTextField(
-                  initialPlace: state.place,
-                  onChanged: (place, placeId) {
-                    context.read<CreateBookingCubit>().updatePlace(
-                      place: place,
-                      placeId: Option.of(placeId),
-                    );
-                  },
+                GlassFormGroup(
+                  header: 'event',
+                  margin: const EdgeInsets.symmetric(
+                    vertical: TappedSpacing.sm,
+                  ),
+                  children: [
+                    BookingNameTextField(
+                      controller: bookingNameController,
+                    ),
+                    LocationTextField(
+                      initialPlace: state.place,
+                      onChanged: (place, placeId) {
+                        context.read<CreateBookingCubit>().updatePlace(
+                          place: place,
+                          placeId: Option.of(placeId),
+                        );
+                      },
+                    ),
+                  ],
                 ),
                 GlassSection(
                   header: 'when',
@@ -206,8 +213,16 @@ class _CreateBookingFormState extends State<CreateBookingForm> {
                     ),
                   ],
                 ),
-                BookingNoteTextField(
-                  controller: noteController,
+                GlassFormGroup(
+                  header: 'note',
+                  margin: const EdgeInsets.symmetric(
+                    vertical: TappedSpacing.sm,
+                  ),
+                  children: [
+                    BookingNoteTextField(
+                      controller: noteController,
+                    ),
+                  ],
                 ),
                 const SizedBox(height: TappedSpacing.lg),
                 GlassButton.primary(

@@ -11,7 +11,6 @@ class DescriptionTextField extends StatelessWidget {
     return BlocBuilder<CreateServiceCubit, CreateServiceState>(
       builder: (context, state) {
         return GlassTextField(
-          label: 'description',
           hintText: 'what does this service include?',
           keyboardType: TextInputType.multiline,
           textCapitalization: TextCapitalization.sentences,

@@ -8,7 +8,6 @@ import 'package:intheloopapp/ui/advanced_search/components/label_filter.dart';
 import 'package:intheloopapp/ui/advanced_search/components/location_filter.dart';
 import 'package:intheloopapp/ui/advanced_search/components/occupation_filter.dart';
 import 'package:intheloopapp/ui/advanced_search/components/search_button.dart';
-import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/glass.dart';
 
 class AdvancedSearchView extends StatelessWidget {
@@ -42,21 +41,9 @@ class AdvancedSearchView extends StatelessWidget {
               ),
             ),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: GlassMetrics.edgeInset,
-                  vertical: TappedSpacing.sm,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    GlassSectionTitle(
-                      'where',
-                      padding: EdgeInsets.only(bottom: TappedSpacing.sm),
-                    ),
-                    LocationFilter(),
-                  ],
-                ),
+              child: GlassSection(
+                header: 'where',
+                children: [LocationFilter()],
               ),
             ),
             SliverToBoxAdapter(

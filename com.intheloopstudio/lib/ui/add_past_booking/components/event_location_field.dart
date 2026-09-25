@@ -12,33 +12,8 @@ import 'package:intheloopapp/ui/user_tile.dart';
 class EventLocationField extends StatelessWidget {
   const EventLocationField({super.key});
 
-  Widget _buildDivider({required Color color}) => Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      Expanded(
-        child: Divider(
-          color: color,
-        ),
-      ),
-      const SizedBox(width: 16),
-      Text(
-        'or',
-        style: TextStyle(
-          color: color,
-        ),
-      ),
-      const SizedBox(width: 16),
-      Expanded(
-        child: Divider(
-          color: color,
-        ),
-      ),
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return BlocBuilder<AddPastBookingCubit, AddPastBookingState>(
       builder: (context, state) {
         return GlassQuestion(
@@ -56,16 +31,14 @@ class EventLocationField extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: TappedSpacing.lg),
-                _buildDivider(
-                  color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
-                ),
-                const SizedBox(height: TappedSpacing.lg),
-                LocationTextField(
-                  hintText: 'search address',
-                  initialPlace: state.place,
-                  onChanged: (place, _) {
-                    context.read<AddPastBookingCubit>().placeChanged(place);
-                  },
+                GlassGroupedSurface(
+                  child: LocationTextField(
+                    hintText: 'search address',
+                    initialPlace: state.place,
+                    onChanged: (place, _) {
+                      context.read<AddPastBookingCubit>().placeChanged(place);
+                    },
+                  ),
                 ),
               ],
             ),

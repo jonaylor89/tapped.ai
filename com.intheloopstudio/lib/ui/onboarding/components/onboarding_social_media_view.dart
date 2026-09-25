@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/forms/instagram_followers_text_field.dart';
 import 'package:intheloopapp/ui/forms/instagram_text_field.dart';
 import 'package:intheloopapp/ui/forms/tiktok_followers_text_field.dart';
@@ -34,24 +35,34 @@ class OnboardingSocialMediaView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: TappedSpacing.xl),
-            TikTokTextField(
-              onChanged: cubit.tiktokHandleChange,
-              initialValue: state.tiktokHandle,
+            GlassFormGroup(
+              header: 'tiktok',
+              margin: EdgeInsets.zero,
+              children: [
+                TikTokTextField(
+                  onChanged: cubit.tiktokHandleChange,
+                  initialValue: state.tiktokHandle,
+                ),
+                TikTokFollowersTextField(
+                  onChanged: cubit.tiktokFollowersChange,
+                  initialValue: state.tiktokFollowers,
+                ),
+              ],
             ),
-            const SizedBox(height: TappedSpacing.sm),
-            TikTokFollowersTextField(
-              onChanged: cubit.tiktokFollowersChange,
-              initialValue: state.tiktokFollowers,
-            ),
-            const SizedBox(height: TappedSpacing.xl),
-            InstagramTextField(
-              onChanged: cubit.instagramHandleChange,
-              initialValue: state.instagramHandle,
-            ),
-            const SizedBox(height: TappedSpacing.sm),
-            InstagramFollowersTextField(
-              onChanged: cubit.instagramFollowersChange,
-              initialValue: state.instagramFollowers,
+            const SizedBox(height: TappedSpacing.lg),
+            GlassFormGroup(
+              header: 'instagram',
+              margin: EdgeInsets.zero,
+              children: [
+                InstagramTextField(
+                  onChanged: cubit.instagramHandleChange,
+                  initialValue: state.instagramHandle,
+                ),
+                InstagramFollowersTextField(
+                  onChanged: cubit.instagramFollowersChange,
+                  initialValue: state.instagramFollowers,
+                ),
+              ],
             ),
           ],
         );

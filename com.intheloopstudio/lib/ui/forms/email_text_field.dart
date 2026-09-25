@@ -19,7 +19,6 @@ class EmailTextField extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlassTextField(
       hintText: labelText,
-      prefixIcon: CupertinoIcons.envelope,
       keyboardType: TextInputType.emailAddress,
       textInputAction: textInputAction,
       autocorrect: false,

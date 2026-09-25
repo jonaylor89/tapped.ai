@@ -60,18 +60,9 @@ class CreateServiceView extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: GlassMetrics.edgeInset,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          TitleTextField(),
-                          SizedBox(height: TappedSpacing.md),
-                          DescriptionTextField(),
-                        ],
-                      ),
+                    const GlassFormGroup(
+                      header: 'service',
+                      children: [TitleTextField(), DescriptionTextField()],
                     ),
                     FutureBuilder<bool>(
                       future: (() async {
@@ -106,36 +97,25 @@ class CreateServiceView extends StatelessWidget {
                               ),
                             ],
                           ),
-                          true => GlassSection(
+                          true => GlassFormGroup(
                             header: 'pricing',
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(
-                                  TappedSpacing.md,
-                                ),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    BlocBuilder<
-                                      CreateServiceCubit,
-                                      CreateServiceState
-                                    >(
-                                      builder: (context, state) {
-                                        return RateTextField(
-                                          initialValue: state.rate,
-                                          onChanged: (input) => context
-                                              .read<CreateServiceCubit>()
-                                              .onRateChange(input),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(
-                                      height: TappedSpacing.md,
-                                    ),
-                                    const RateTypeSelector(),
-                                  ],
-                                ),
+                              BlocBuilder<
+                                CreateServiceCubit,
+                                CreateServiceState
+                              >(
+                                builder: (context, state) {
+                                  return RateTextField(
+                                    initialValue: state.rate,
+                                    onChanged: (input) => context
+                                        .read<CreateServiceCubit>()
+                                        .onRateChange(input),
+                                  );
+                                },
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.all(TappedSpacing.md),
+                                child: RateTypeSelector(),
                               ),
                             ],
                           ),

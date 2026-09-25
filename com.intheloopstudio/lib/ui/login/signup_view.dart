@@ -63,18 +63,22 @@ class SignUpView extends StatelessWidget {
               ],
             ),
             children: [
-              EmailTextField(
-                onChanged: (input) => cubit.updateEmail(input ?? ''),
-              ),
-              const SizedBox(height: TappedSpacing.md),
-              PasswordTextField(
-                textInputAction: TextInputAction.next,
-                onChanged: (input) => cubit.updatePassword(input ?? ''),
-              ),
-              const SizedBox(height: TappedSpacing.md),
-              PasswordTextField(
-                labelText: 'confirm password',
-                onChanged: (input) => cubit.updateConfirmPassword(input ?? ''),
+              GlassFormGroup(
+                margin: EdgeInsets.zero,
+                children: [
+                  EmailTextField(
+                    onChanged: (input) => cubit.updateEmail(input ?? ''),
+                  ),
+                  PasswordTextField(
+                    textInputAction: TextInputAction.next,
+                    onChanged: (input) => cubit.updatePassword(input ?? ''),
+                  ),
+                  PasswordTextField(
+                    labelText: 'confirm password',
+                    onChanged: (input) =>
+                        cubit.updateConfirmPassword(input ?? ''),
+                  ),
+                ],
               ),
               const SizedBox(height: TappedSpacing.xl),
               const ConfirmSignUpButton(),

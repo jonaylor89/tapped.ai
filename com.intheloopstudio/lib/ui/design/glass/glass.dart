@@ -8,6 +8,7 @@ export 'glass_background.dart';
 export 'glass_button.dart';
 export 'glass_card.dart';
 export 'glass_chip.dart';
+export 'glass_form.dart';
 export 'glass_list.dart';
 export 'glass_misc.dart';
 export 'glass_page.dart';

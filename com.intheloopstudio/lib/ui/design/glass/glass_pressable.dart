@@ -11,6 +11,7 @@ class GlassPressable extends StatefulWidget {
     this.onPressed,
     this.onLongPress,
     this.haptics = true,
+    this.scale = true,
     this.semanticsLabel,
     super.key,
   });
@@ -19,6 +20,10 @@ class GlassPressable extends StatefulWidget {
   final VoidCallback? onPressed;
   final VoidCallback? onLongPress;
   final bool haptics;
+
+  /// When false, list rows highlight in place (like a `UITableViewCell`
+  /// selection) instead of shrinking.
+  final bool scale;
   final String? semanticsLabel;
 
   @override
@@ -37,17 +42,25 @@ class _GlassPressableState extends State<GlassPressable> {
 
   @override
   Widget build(BuildContext context) {
-    final scale = _pressed ? GlassMotion.pressedScale : 1.0;
-    final child = AnimatedScale(
-      scale: scale,
-      duration: _pressed ? GlassMotion.press : GlassMotion.release,
-      curve: _pressed ? GlassMotion.ease : GlassMotion.spring,
-      child: AnimatedOpacity(
-        opacity: _enabled ? 1 : 0.45,
-        duration: GlassMotion.reveal,
-        child: widget.child,
-      ),
+    final faded = AnimatedOpacity(
+      opacity: _enabled ? 1 : 0.45,
+      duration: GlassMotion.reveal,
+      child: widget.child,
     );
+    final child = widget.scale
+        ? AnimatedScale(
+            scale: _pressed ? GlassMotion.pressedScale : 1.0,
+            duration: _pressed ? GlassMotion.press : GlassMotion.release,
+            curve: _pressed ? GlassMotion.ease : GlassMotion.spring,
+            child: faded,
+          )
+        : AnimatedContainer(
+            duration: _pressed ? GlassMotion.press : GlassMotion.release,
+            color: _pressed
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
+                : Colors.transparent,
+            child: faded,
+          );
 
     final gesture = GestureDetector(
       behavior: HitTestBehavior.opaque,

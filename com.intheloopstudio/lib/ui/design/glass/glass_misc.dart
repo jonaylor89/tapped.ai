@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intheloopapp/ui/design/app_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/glass_button.dart';
+import 'package:intheloopapp/ui/design/glass/glass_form.dart';
 import 'package:intheloopapp/ui/design/glass/glass_pressable.dart';
 import 'package:intheloopapp/ui/design/glass/glass_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/liquid_glass.dart';
@@ -338,8 +339,11 @@ class GlassLoading extends StatelessWidget {
   }
 }
 
-/// Text input on glass for forms. Label sits above the field like a grouped
-/// iOS form; errors render beneath in red.
+/// A text-field cell for inset-grouped forms, like `UITextField` inside a
+/// `UITableViewCell`. Inside a [GlassFormGroup] it renders flat with an
+/// optional left-aligned [label]; on its own it wraps itself in a one-row
+/// group with [label] as the section header. Errors/helpers render as the
+/// group footer.
 class GlassTextField extends StatelessWidget {
   const GlassTextField({
     this.controller,
@@ -399,97 +403,104 @@ class GlassTextField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.5);
+    final muted = theme.colorScheme.onSurface.withValues(alpha: 0.45);
     final hasError = errorText != null && errorText!.isNotEmpty;
+    final grouped = GlassFormScope.of(context);
+    final multiline = (maxLines ?? 1) > 1 || maxLines == null;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (label != null)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: TappedSpacing.lg,
-              bottom: TappedSpacing.sm,
-            ),
-            child: Text(
-              label!.toUpperCase(),
-              style: theme.textTheme.labelSmall?.copyWith(
-                color: muted,
-                letterSpacing: 0.6,
-                fontWeight: FontWeight.w600,
+    final field = TextFormField(
+      controller: controller,
+      focusNode: focusNode,
+      initialValue: controller == null ? initialValue : null,
+      enabled: enabled,
+      readOnly: readOnly,
+      onTap: onTap,
+      autofocus: autofocus,
+      onChanged: onChanged,
+      onFieldSubmitted: onSubmitted,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      obscureText: obscureText,
+      autocorrect: autocorrect,
+      maxLines: maxLines,
+      minLines: minLines,
+      maxLength: maxLength,
+      textCapitalization: textCapitalization,
+      inputFormatters: inputFormatters,
+      validator: validator,
+      cursorColor: theme.colorScheme.primary,
+      style: theme.textTheme.bodyLarge,
+      decoration: InputDecoration(
+        hintText: hintText,
+        hintStyle: theme.textTheme.bodyLarge?.copyWith(color: muted),
+        filled: false,
+        isDense: true,
+        counterText: '',
+        errorStyle: const TextStyle(height: 0, fontSize: 0),
+        border: InputBorder.none,
+        enabledBorder: InputBorder.none,
+        focusedBorder: InputBorder.none,
+        errorBorder: InputBorder.none,
+        disabledBorder: InputBorder.none,
+        focusedErrorBorder: InputBorder.none,
+        suffixIcon: suffix,
+        suffixIconConstraints: const BoxConstraints(minWidth: 24),
+        contentPadding: const EdgeInsets.symmetric(vertical: 13),
+      ),
+    );
+
+    final inlineLabel = grouped && label != null;
+    final cell = Padding(
+      padding: const EdgeInsets.symmetric(horizontal: TappedSpacing.lg),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: TappedSizes.minTapTarget),
+        child: Row(
+          crossAxisAlignment: multiline
+              ? CrossAxisAlignment.start
+              : CrossAxisAlignment.center,
+          children: [
+            if (prefixIcon != null) ...[
+              Padding(
+                padding: EdgeInsets.only(top: multiline ? 13 : 0),
+                child: Icon(
+                  prefixIcon,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
               ),
-            ),
-          ),
-        LiquidGlass(
-          shape: RoundedRectangleBorder(
-            borderRadius: GlassRadius.controlAll,
-            side: hasError
-                ? const BorderSide(color: TappedColors.error)
-                : BorderSide.none,
-          ),
-          shadow: false,
-          padding: EdgeInsets.symmetric(
-            horizontal: TappedSpacing.lg,
-            vertical: (maxLines ?? 1) > 1 ? TappedSpacing.md : 0,
-          ),
-          child: TextFormField(
-            controller: controller,
-            focusNode: focusNode,
-            initialValue: controller == null ? initialValue : null,
-            enabled: enabled,
-            readOnly: readOnly,
-            onTap: onTap,
-            autofocus: autofocus,
-            onChanged: onChanged,
-            onFieldSubmitted: onSubmitted,
-            keyboardType: keyboardType,
-            textInputAction: textInputAction,
-            obscureText: obscureText,
-            autocorrect: autocorrect,
-            maxLines: maxLines,
-            minLines: minLines,
-            maxLength: maxLength,
-            textCapitalization: textCapitalization,
-            inputFormatters: inputFormatters,
-            validator: validator,
-            cursorColor: theme.colorScheme.primary,
-            style: theme.textTheme.bodyLarge,
-            decoration: InputDecoration(
-              hintText: hintText,
-              hintStyle: theme.textTheme.bodyLarge?.copyWith(color: muted),
-              filled: false,
-              counterText: '',
-              border: InputBorder.none,
-              enabledBorder: InputBorder.none,
-              focusedBorder: InputBorder.none,
-              errorBorder: InputBorder.none,
-              disabledBorder: InputBorder.none,
-              focusedErrorBorder: InputBorder.none,
-              prefixIcon: prefixIcon == null
-                  ? null
-                  : Icon(prefixIcon, size: 20, color: muted),
-              prefixIconConstraints: const BoxConstraints(minWidth: 32),
-              suffixIcon: suffix,
-              contentPadding: EdgeInsets.symmetric(
-                vertical: (maxLines ?? 1) > 1 ? 0 : 15,
+              const SizedBox(width: TappedSpacing.md),
+            ],
+            if (inlineLabel) ...[
+              Padding(
+                padding: EdgeInsets.only(top: multiline ? 13 : 0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minWidth: 88),
+                  child: Text(
+                    label!,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: hasError
+                          ? TappedColors.error
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ),
+              const SizedBox(width: TappedSpacing.md),
+            ],
+            Expanded(child: field),
+          ],
         ),
-        if (hasError || helperText != null)
-          Padding(
-            padding: const EdgeInsets.only(
-              left: TappedSpacing.lg,
-              top: TappedSpacing.xs + 2,
-            ),
-            child: Text(
-              hasError ? errorText! : helperText!,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: hasError ? TappedColors.error : muted,
-              ),
-            ),
-          ),
-      ],
+      ),
+    );
+
+    if (grouped) return cell;
+
+    return GlassFormGroup(
+      margin: EdgeInsets.zero,
+      header: label,
+      footer: helperText,
+      errorText: hasError ? errorText : null,
+      children: [cell],
     );
   }
 }

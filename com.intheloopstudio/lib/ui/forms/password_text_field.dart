@@ -31,7 +31,6 @@ class _PasswordTextFieldState extends State<PasswordTextField> {
     final theme = Theme.of(context);
     return GlassTextField(
       hintText: widget.labelText,
-      prefixIcon: CupertinoIcons.lock,
       obscureText: _hidePassword,
       autocorrect: false,
       textInputAction: widget.textInputAction,

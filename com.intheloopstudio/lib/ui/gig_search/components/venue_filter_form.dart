@@ -102,49 +102,27 @@ class VenueFilterForm extends StatelessWidget {
                       ),
                     ),
                     SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: GlassMetrics.edgeInset,
-                          vertical: TappedSpacing.sm,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const GlassSectionTitle(
-                              'where',
-                              padding: EdgeInsets.only(
-                                bottom: TappedSpacing.sm,
-                              ),
-                            ),
-                            LocationTextField(
-                              initialPlace: state.place,
-                              onChanged: (placeData, _) {
-                                try {
-                                  cubit.updateLocation(placeData);
-                                } catch (e, s) {
-                                  logger.e(
-                                    'Error updating location',
-                                    error: e,
-                                    stackTrace: s,
-                                  );
-                                }
-                              },
-                            ),
-                            if (state.place.isNone())
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: TappedSpacing.xs,
-                                  left: TappedSpacing.sm,
-                                ),
-                                child: Text(
-                                  'please select a city',
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: TappedColors.error,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
+                      child: GlassSection(
+                        header: 'where',
+                        footer: state.place.isNone()
+                            ? 'please select a city'
+                            : null,
+                        children: [
+                          LocationTextField(
+                            initialPlace: state.place,
+                            onChanged: (placeData, _) {
+                              try {
+                                cubit.updateLocation(placeData);
+                              } catch (e, s) {
+                                logger.e(
+                                  'Error updating location',
+                                  error: e,
+                                  stackTrace: s,
+                                );
+                              }
+                            },
+                          ),
+                        ],
                       ),
                     ),
                     SliverToBoxAdapter(

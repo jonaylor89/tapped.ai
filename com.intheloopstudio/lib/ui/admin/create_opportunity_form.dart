@@ -168,32 +168,24 @@ class CreateOpportunityForm extends StatelessWidget {
               child: _flier(context, state),
             ),
             const SizedBox(height: TappedSpacing.lg),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: GlassMetrics.edgeInset,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  GlassTextField(
-                    label: 'title',
-                    hintText: 'open mic night',
-                    prefixIcon: CupertinoIcons.textformat,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: cubit.updateTitle,
-                  ),
-                  const SizedBox(height: TappedSpacing.md),
-                  GlassTextField(
-                    label: 'description',
-                    hintText: 'add a description',
-                    textInputAction: TextInputAction.newline,
-                    keyboardType: TextInputType.multiline,
-                    maxLines: 5,
-                    maxLength: 256,
-                    onChanged: cubit.updateDescription,
-                  ),
-                ],
-              ),
+            GlassFormGroup(
+              header: 'details',
+              children: [
+                GlassTextField(
+                  label: 'title',
+                  hintText: 'open mic night',
+                  textCapitalization: TextCapitalization.sentences,
+                  onChanged: cubit.updateTitle,
+                ),
+                GlassTextField(
+                  hintText: 'add a description',
+                  textInputAction: TextInputAction.newline,
+                  keyboardType: TextInputType.multiline,
+                  maxLines: 5,
+                  maxLength: 256,
+                  onChanged: cubit.updateDescription,
+                ),
+              ],
             ),
             GlassSection(
               header: 'where',
@@ -203,23 +195,22 @@ class CreateOpportunityForm extends StatelessWidget {
                   : null,
               children: [
                 switch (state.venue) {
-                  None() => Padding(
-                    padding: const EdgeInsets.all(TappedSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        VenueSearchBar(
+                  None() => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(TappedSpacing.md),
+                        child: VenueSearchBar(
                           onSelected: (venue) {
                             cubit.updateVenue(Option.of(venue));
                           },
                         ),
-                        const SizedBox(height: TappedSpacing.md),
-                        LocationTextField(
-                          initialPlace: state.placeData,
-                          onChanged: cubit.onLocationChanged,
-                        ),
-                      ],
-                    ),
+                      ),
+                      LocationTextField(
+                        initialPlace: state.placeData,
+                        onChanged: cubit.onLocationChanged,
+                      ),
+                    ],
                   ),
                   Some(:final value) => UserTile(
                     user: state.venue,

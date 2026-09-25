@@ -27,7 +27,6 @@ class RateTextField extends StatelessWidget {
     return GlassTextField(
       initialValue: _formatter.format.format(initialValue),
       label: 'price',
-      prefixIcon: CupertinoIcons.money_dollar,
       inputFormatters: <TextInputFormatter>[_formatter],
       keyboardType: TextInputType.number,
       onSubmitted: (input) {
