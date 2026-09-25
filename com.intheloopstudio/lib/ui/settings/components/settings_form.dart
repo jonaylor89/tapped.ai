@@ -8,11 +8,11 @@ import 'package:intheloopapp/domains/models/genre.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/navigation_bloc/tapped_route.dart';
 import 'package:intheloopapp/ui/profile/components/epk_button.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/ui/settings/components/genre_selection.dart';
 import 'package:intheloopapp/ui/settings/components/label_form_view.dart';
 import 'package:intheloopapp/ui/settings/components/theme_switch.dart';
 import 'package:intheloopapp/ui/settings/settings_cubit.dart';
-import 'package:intheloopapp/ui/themes.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
 import 'package:intheloopapp/utils/geohash.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -32,8 +32,9 @@ class SettingsForm extends StatelessWidget {
               child: Column(
                 children: [
                   // ── PROFILE ───────────────────────────────────────────
-                  CupertinoFormSection.insetGrouped(
-                    header: const Text('PROFILE'),
+                  GlassSection(
+                    header: 'profile',
+                    dividers: false,
                     children: [
                       CupertinoTextFormFieldRow(
                         prefix: const Text('Username'),
@@ -123,9 +124,10 @@ class SettingsForm extends StatelessWidget {
                   ),
 
                   // ── SOCIAL MEDIA ──────────────────────────────────────
-                  CupertinoFormSection.insetGrouped(
-                    header: const Text('SOCIAL MEDIA'),
-                    footer: GestureDetector(
+                  GlassSection(
+                    header: 'social media',
+                    dividers: false,
+                    footerWidget: GestureDetector(
                       onTap: () => launchUrl(
                         Uri.parse(
                           'https://tappedapp.notion.site/how-do-i-get-my-spotify-url-2d1250547a044071becbe43763a77583',
@@ -301,8 +303,9 @@ class SettingsForm extends StatelessWidget {
                   ),
 
                   // ── APPEARANCE ────────────────────────────────────────
-                  CupertinoFormSection.insetGrouped(
-                    header: const Text('APPEARANCE'),
+                  GlassSection(
+                    header: 'appearance',
+                    dividers: false,
                     children: [
                       CupertinoFormRow(
                         prefix: const Text('Theme'),
@@ -315,8 +318,9 @@ class SettingsForm extends StatelessWidget {
                   ),
 
                   // ── PERFORMER ─────────────────────────────────────────
-                  CupertinoFormSection.insetGrouped(
-                    header: const Text('PERFORMER'),
+                  GlassSection(
+                    header: 'performer',
+                    dividers: false,
                     children: [
                       CupertinoFormRow(
                         prefix: const Text('I am a performer'),
@@ -380,14 +384,9 @@ class SettingsForm extends StatelessWidget {
                           child: EPKButton(),
                         ),
                         if (state.status.isInProgress)
-                          const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16),
-                              child: CircularProgressIndicator(
-                                valueColor:
-                                    AlwaysStoppedAnimation(tappedAccent),
-                              ),
-                            ),
+                          const Padding(
+                            padding: EdgeInsets.all(16),
+                            child: GlassLoading(),
                           ),
                       ],
                     ],

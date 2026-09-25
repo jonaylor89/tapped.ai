@@ -14,6 +14,7 @@ class GlassSection extends StatelessWidget {
     required this.children,
     this.header,
     this.footer,
+    this.footerWidget,
     this.margin = const EdgeInsets.symmetric(
       horizontal: GlassMetrics.edgeInset,
       vertical: TappedSpacing.sm,
@@ -26,6 +27,7 @@ class GlassSection extends StatelessWidget {
   final List<Widget> children;
   final String? header;
   final String? footer;
+  final Widget? footerWidget;
   final EdgeInsetsGeometry margin;
   final GlassVariant variant;
   final bool dividers;
@@ -88,6 +90,15 @@ class GlassSection extends StatelessWidget {
                 footer!,
                 style: theme.textTheme.bodySmall?.copyWith(color: muted),
               ),
+            ),
+          if (footerWidget != null)
+            Padding(
+              padding: const EdgeInsets.only(
+                left: TappedSpacing.lg,
+                right: TappedSpacing.lg,
+                top: TappedSpacing.sm,
+              ),
+              child: footerWidget,
             ),
         ],
       ),
