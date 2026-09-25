@@ -1,6 +1,9 @@
 import 'package:badges/badges.dart' as badges;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/ui/conditional_parent_widget.dart';
@@ -34,7 +37,8 @@ class UserAvatar extends StatelessWidget {
 
   Widget Function({
     required Widget child,
-  }) _pushProfile(BuildContext context) {
+  })
+  _pushProfile(BuildContext context) {
     return ({
       required Widget child,
     }) {
@@ -48,47 +52,47 @@ class UserAvatar extends StatelessWidget {
       return switch ((pushId, pushUser)) {
         (None(), None()) => child,
         (Some(:final value), None()) => GestureDetector(
-            onTap: () {
-              showCupertinoModalBottomSheet<void>(
-                context: context,
-                builder: (context) {
-                  return ProfileView(
-                    scrollController: ModalScrollController.of(context),
-                    visitedUserId: value,
-                    visitedUser: const None(),
-                  );
-                },
-              );
+          onTap: () {
+            showCupertinoModalBottomSheet<void>(
+              context: context,
+              builder: (context) {
+                return ProfileView(
+                  scrollController: ModalScrollController.of(context),
+                  visitedUserId: value,
+                  visitedUser: const None(),
+                );
+              },
+            );
 
-              // context.push(
-              //   ProfilePage(
-              //     userId: value.id,
-              //     user: pushUser,
-              //   ),
-              // );
-            },
+            // context.push(
+            //   ProfilePage(
+            //     userId: value.id,
+            //     user: pushUser,
+            //   ),
+            // );
+          },
         ),
         (_, Some(:final value)) => GestureDetector(
-            onTap: () {
-              showCupertinoModalBottomSheet<void>(
-                context: context,
-                builder: (context) {
-                  return ProfileView(
-                    visitedUserId: value.id,
-                    visitedUser: Option.of(value),
-                  );
-                },
-              );
+          onTap: () {
+            showCupertinoModalBottomSheet<void>(
+              context: context,
+              builder: (context) {
+                return ProfileView(
+                  visitedUserId: value.id,
+                  visitedUser: Option.of(value),
+                );
+              },
+            );
 
-              // context.push(
-              //   ProfilePage(
-              //     userId: value.id,
-              //     user: pushUser,
-              //   ),
-              // );
-            },
-            child: child,
-          ),
+            // context.push(
+            //   ProfilePage(
+            //     userId: value.id,
+            //     user: pushUser,
+            //   ),
+            // );
+          },
+          child: child,
+        ),
       };
     };
   }
@@ -102,56 +106,31 @@ class UserAvatar extends StatelessWidget {
       child: badges.Badge(
         position: badges.BadgePosition.bottomEnd(end: -5, bottom: -4),
         badgeContent: GestureDetector(
-          onTap: () => showModalBottomSheet<void>(
+          onTap: () => showGlassSheet<void>(
             context: context,
-            showDragHandle: true,
+            title: 'get verified',
             builder: (context) {
-              return SizedBox(
-                width: double.infinity,
-                height: 300,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    CupertinoIcons.checkmark_seal_fill,
+                    color: theme.colorScheme.primary,
+                    size: 28,
                   ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.verified,
-                        color: theme.colorScheme.primary,
-                        size: 96,
-                      ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'get verified',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
+                  const SizedBox(width: TappedSpacing.md),
+                  Expanded(
+                    child: Text(
+                      'post a screenshot of your profile to your instagram '
+                      'story and tag us @tappedai',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.colorScheme.onSurface.withValues(
+                          alpha: 0.7,
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.lightbulb,
-                            color: Colors.amber,
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              'to get verified, post a screenshot of your profile to your instagram story and tag us @tappedai',
-                              maxLines: 2,
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.5),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               );
             },
           ),
@@ -175,8 +154,8 @@ class UserAvatar extends StatelessWidget {
                   image: DecorationImage(
                     fit: BoxFit.cover,
                     image: imageUrl.fold(
-                          () => getDefaultImage(pushId),
-                          (t) {
+                      () => getDefaultImage(pushId),
+                      (t) {
                         if (t.isEmpty) {
                           return getDefaultImage(pushId);
                         }
@@ -209,26 +188,26 @@ class UserAvatar extends StatelessWidget {
                   backgroundColor: Colors.black,
                 ),
               )
-        : CircleAvatar(
-          radius: radius,
-          minRadius: minRadius,
-          maxRadius: maxRadius,
-          foregroundImage: imageUrl.fold(
-            () => getDefaultImage(pushId),
-            (t) {
-              if (t.isEmpty) {
-                return getDefaultImage(pushId);
-              }
-              return CachedNetworkImageProvider(
-                t,
-                errorListener: (object) {
-                  return;
-                },
-              );
-            },
-          ),
-          backgroundColor: Colors.black,
-        ),
+            : CircleAvatar(
+                radius: radius,
+                minRadius: minRadius,
+                maxRadius: maxRadius,
+                foregroundImage: imageUrl.fold(
+                  () => getDefaultImage(pushId),
+                  (t) {
+                    if (t.isEmpty) {
+                      return getDefaultImage(pushId);
+                    }
+                    return CachedNetworkImageProvider(
+                      t,
+                      errorListener: (object) {
+                        return;
+                      },
+                    );
+                  },
+                ),
+                backgroundColor: Colors.black,
+              ),
       ),
     );
   }

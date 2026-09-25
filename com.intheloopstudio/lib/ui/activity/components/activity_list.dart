@@ -56,41 +56,48 @@ class _ActivityListState extends State<ActivityList> {
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
       controller: _scrollController,
-      slivers: activities.isEmpty
-          ? const <Widget>[
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: GlassEmptyState(
-                  icon: CupertinoIcons.bell,
-                  title: "you're all caught up",
-                  message: 'booking requests, reminders, and new followers '
-                      'will show up here',
+      slivers: [
+        CupertinoSliverRefreshControl(
+          onRefresh: () async =>
+              context.read<ActivityBloc>().add(InitListenerEvent()),
+        ),
+        ...activities.isEmpty
+            ? const <Widget>[
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: GlassEmptyState(
+                    icon: CupertinoIcons.bell,
+                    title: "you're all caught up",
+                    message:
+                        'booking requests, reminders, and new followers '
+                        'will show up here',
+                  ),
                 ),
-              ),
-            ]
-          : <Widget>[
-              const SliverToBoxAdapter(
-                child: SizedBox(height: TappedSpacing.sm),
-              ),
-              SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (BuildContext context, int index) {
-                    return index >= activities.length
-                        ? const Padding(
-                            padding: EdgeInsets.all(TappedSpacing.lg),
-                            child: Center(child: GlassLoading()),
-                          )
-                        : ActivityTile(
-                            activity: activities[index],
-                          );
-                  },
-                  childCount: activities.length + 1,
+              ]
+            : <Widget>[
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: TappedSpacing.sm),
                 ),
-              ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: GlassMetrics.bottomBarClearance),
-              ),
-            ],
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (BuildContext context, int index) {
+                      return index >= activities.length
+                          ? const Padding(
+                              padding: EdgeInsets.all(TappedSpacing.lg),
+                              child: Center(child: GlassLoading()),
+                            )
+                          : ActivityTile(
+                              activity: activities[index],
+                            );
+                    },
+                    childCount: activities.length + 1,
+                  ),
+                ),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: GlassMetrics.bottomBarClearance),
+                ),
+              ],
+      ],
     );
   }
 
@@ -98,20 +105,17 @@ class _ActivityListState extends State<ActivityList> {
   Widget build(BuildContext context) {
     return BlocBuilder<ActivityBloc, ActivityState>(
       builder: (context, state) {
-        return RefreshIndicator(
-          onRefresh: () async =>
-              context.read<ActivityBloc>().add(InitListenerEvent()),
-          child: switch (state) {
-            ActivityInitial() => const Center(child: GlassLoading()),
-            ActivityFailure() => const GlassEmptyState(
-                icon: CupertinoIcons.exclamationmark_triangle,
-                title: 'failed to fetch activities',
-              ),
-            ActivitySuccess(:final activities) ||
-            ActivityEnd(:final activities) =>
-              _activityListBuilder(context, activities),
-          },
-        );
+        return switch (state) {
+          ActivityInitial() => const Center(child: GlassLoading()),
+          ActivityFailure() => const GlassEmptyState(
+            icon: CupertinoIcons.exclamationmark_triangle,
+            title: 'failed to fetch activities',
+          ),
+          ActivitySuccess(:final activities) ||
+          ActivityEnd(
+            :final activities,
+          ) => _activityListBuilder(context, activities),
+        };
       },
     );
   }

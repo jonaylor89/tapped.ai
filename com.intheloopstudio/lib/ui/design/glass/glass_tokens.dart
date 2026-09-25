@@ -58,6 +58,9 @@ abstract final class GlassMotion {
   static const Duration press = Duration(milliseconds: 120);
   static const Duration release = Duration(milliseconds: 320);
   static const Duration reveal = Duration(milliseconds: 260);
+
+  /// UIKit modal presentation duration.
+  static const Duration sheet = Duration(milliseconds: 335);
   static const Curve spring = Cubic(0.2, 0.9, 0.3, 1.1);
   static const Curve ease = Curves.easeOutCubic;
   static const double pressedScale = 0.96;

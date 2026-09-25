@@ -29,6 +29,10 @@ Future<T?> showGlassSheet<T>({
     backgroundColor: Colors.transparent,
     barrierColor: Colors.black.withValues(alpha: 0.35),
     showDragHandle: false,
+    sheetAnimationStyle: const AnimationStyle(
+      duration: GlassMotion.sheet,
+      reverseDuration: GlassMotion.sheet,
+    ),
     builder: (ctx) {
       final theme = Theme.of(ctx);
       final bottom = MediaQuery.viewInsetsOf(ctx).bottom;
@@ -147,7 +151,8 @@ class GlassAction {
   final bool destructive;
 }
 
-/// Action sheet on glass. Dismisses itself before invoking the action.
+/// Native `UIAlertController` action sheet (system slide-up, blur, and
+/// press feedback). Dismisses itself before invoking the action.
 Future<void> showGlassActionSheet({
   required BuildContext context,
   required List<GlassAction> actions,
@@ -155,66 +160,28 @@ Future<void> showGlassActionSheet({
   String? message,
   String cancelLabel = 'cancel',
 }) {
-  return showGlassSheet<void>(
+  return showCupertinoModalPopup<void>(
     context: context,
-    builder: (ctx) {
-      final theme = Theme.of(ctx);
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (title != null || message != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: TappedSpacing.lg),
-              child: Column(
-                children: [
-                  if (title != null)
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  if (message != null) ...[
-                    const SizedBox(height: TappedSpacing.xs),
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withValues(
-                          alpha: 0.6,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          for (final a in actions)
-            Padding(
-              padding: const EdgeInsets.only(bottom: TappedSpacing.sm),
-              child: GlassButton(
-                label: a.label,
-                icon: a.icon,
-                expand: true,
-                style: a.destructive
-                    ? GlassButtonStyle.destructive
-                    : GlassButtonStyle.glass,
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  a.onPressed();
-                },
-              ),
-            ),
-          GlassButton.plain(
-            label: cancelLabel,
-            expand: true,
-            onPressed: () => Navigator.of(ctx).pop(),
+    builder: (ctx) => CupertinoActionSheet(
+      title: title == null ? null : Text(title),
+      message: message == null ? null : Text(message),
+      actions: [
+        for (final a in actions)
+          CupertinoActionSheetAction(
+            isDestructiveAction: a.destructive,
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              a.onPressed();
+            },
+            child: Text(a.label),
           ),
-        ],
-      );
-    },
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        isDefaultAction: true,
+        onPressed: () => Navigator.of(ctx).pop(),
+        child: Text(cancelLabel),
+      ),
+    ),
   );
 }
 
