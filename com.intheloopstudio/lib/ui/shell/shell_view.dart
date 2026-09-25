@@ -25,9 +25,9 @@ class ShellView extends StatelessWidget {
       builder: (context, currentUser) {
         return PremiumBuilder(
           builder: (context, isPremium) {
-            context
-                .read<PremiumThemeCubit>()
-                .updateTheme(isPremiumMode: isPremium);
+            context.read<PremiumThemeCubit>().updateTheme(
+              isPremiumMode: isPremium,
+            );
             return BlocBuilder<NavigationBloc, NavigationState>(
               builder: (context, state) {
                 if (isPremium) return const DiscoverView();
@@ -85,10 +85,13 @@ class _PremiumGate extends StatelessWidget {
                           tint: theme.colorScheme.primary,
                           width: 72,
                           height: 72,
-                          child: const Center(
+                          child: Center(
                             child: Icon(
                               CupertinoIcons.sparkles,
-                              color: Colors.white,
+                              color: glassTintForeground(
+                                theme.colorScheme.primary,
+                                isDark: theme.brightness == Brightness.dark,
+                              ),
                               size: 32,
                             ),
                           ),
@@ -108,8 +111,9 @@ class _PremiumGate extends StatelessWidget {
                         'genre and room size, and reach out directly.',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color:
-                              theme.colorScheme.onSurface.withValues(alpha: 0.65),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.65,
+                          ),
                         ),
                       ),
                       const SizedBox(height: TappedSpacing.xxl),

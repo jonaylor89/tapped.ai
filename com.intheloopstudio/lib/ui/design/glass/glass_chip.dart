@@ -31,7 +31,12 @@ class GlassChip extends StatelessWidget {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final fill = selected ? (tint ?? scheme.primary) : null;
-    final foreground = selected ? Colors.white : scheme.onSurface;
+    final foreground = fill != null
+        ? glassTintForeground(
+            fill,
+            isDark: theme.brightness == Brightness.dark,
+          )
+        : scheme.onSurface;
 
     final chip = LiquidGlass.capsule(
       tint: fill,
@@ -96,9 +101,15 @@ class GlassPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final t = tint;
     final fg =
         foreground ??
-        (tint != null ? Colors.white : theme.colorScheme.onSurface);
+        (t != null
+            ? glassTintForeground(
+                t,
+                isDark: theme.brightness == Brightness.dark,
+              )
+            : theme.colorScheme.onSurface);
     return LiquidGlass.capsule(
       tint: tint,
       variant: variant,
@@ -160,6 +171,10 @@ class GlassSegmentedControl<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final selectedFg = glassTintForeground(
+      theme.colorScheme.primary,
+      isDark: theme.brightness == Brightness.dark,
+    );
     final keys = segments.keys.toList();
     final index = keys.indexOf(selected).clamp(0, keys.length - 1);
 
@@ -198,7 +213,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                             style: theme.textTheme.labelLarge!.copyWith(
                               fontWeight: FontWeight.w600,
                               color: k == selected
-                                  ? Colors.white
+                                  ? selectedFg
                                   : theme.colorScheme.onSurface,
                             ),
                             child: Row(
@@ -209,7 +224,7 @@ class GlassSegmentedControl<T> extends StatelessWidget {
                                     segments[k]!.icon,
                                     size: 15,
                                     color: k == selected
-                                        ? Colors.white
+                                        ? selectedFg
                                         : theme.colorScheme.onSurface,
                                   ),
                                   const SizedBox(width: 6),

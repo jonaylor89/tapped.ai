@@ -61,11 +61,15 @@ class ProfilePictureUploader extends StatelessWidget {
                       width: 40,
                       height: 40,
                       tint: Theme.of(context).colorScheme.primary,
-                      child: const Center(
+                      child: Center(
                         child: Icon(
                           CupertinoIcons.camera_fill,
                           size: 18,
-                          color: Colors.white,
+                          color: glassTintForeground(
+                            Theme.of(context).colorScheme.primary,
+                            isDark:
+                                Theme.of(context).brightness == Brightness.dark,
+                          ),
                         ),
                       ),
                     ),

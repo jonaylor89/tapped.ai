@@ -123,8 +123,9 @@ class GlassBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final foreground = tint != null
-        ? Colors.white
+    final t = tint;
+    final foreground = t != null
+        ? glassTintForeground(t, isDark: theme.brightness == Brightness.dark)
         : theme.colorScheme.onSurface;
 
     final body = LiquidGlass(

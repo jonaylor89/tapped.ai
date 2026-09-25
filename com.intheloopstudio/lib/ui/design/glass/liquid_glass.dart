@@ -25,9 +25,11 @@ enum GlassVariant {
 ///     would catch the top-left edge — which is what makes it read as glass,
 ///  4. the child.
 ///
-/// Pass [tint] to colour the glass (used for the accent-filled primary
-/// button and for status pills). Use [shape] to choose between a capsule,
-/// a rounded rectangle or a circle.
+/// Pass [tint] to colour the glass: the surface stays translucent and picks
+/// up a faint wash of the colour while the rim is drawn in the accent, so
+/// tinted controls read as outlined glass rather than filled buttons. Pair
+/// with [glassTintForeground] for legible text/icons. Use [shape] to choose
+/// between a capsule, a rounded rectangle or a circle.
 class LiquidGlass extends StatelessWidget {
   const LiquidGlass({
     required this.child,
@@ -110,6 +112,7 @@ class LiquidGlass extends StatelessWidget {
           foregroundPainter: _SpecularRimPainter(
             shape: effectiveShape,
             isDark: isDark,
+            tint: tint,
           ),
           child: DecoratedBox(
             decoration: ShapeDecoration(
@@ -133,14 +136,14 @@ class LiquidGlass extends StatelessWidget {
         shape: effectiveShape,
         shadows: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.45 : 0.10),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
+            color: Colors.black.withValues(alpha: isDark ? 0.18 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
           ),
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 2,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: isDark ? 0.10 : 0.02),
+            blurRadius: 1,
+            offset: const Offset(0, 0.5),
           ),
         ],
       ),
@@ -169,13 +172,13 @@ class LiquidGlass extends StatelessWidget {
 
     final t = tint;
     if (t != null) {
-      final strength = variant == GlassVariant.clear ? 0.55 : 0.82;
+      final wash = variant == GlassVariant.clear ? 0.08 : 0.14;
       return LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          Color.lerp(t, Colors.white, 0.18)!.withValues(alpha: strength),
-          t.withValues(alpha: strength + 0.1),
+          Color.lerp(base.withValues(alpha: hi), t, wash)!,
+          Color.lerp(shade.withValues(alpha: lo), t, wash + 0.06)!,
         ],
       );
     }
@@ -191,18 +194,50 @@ class LiquidGlass extends StatelessWidget {
   }
 }
 
+/// Text/icon colour that stays legible on tinted glass: the accent itself,
+/// lifted toward white in dark mode and toward black in light mode.
+Color glassTintForeground(Color tint, {required bool isDark}) => Color.lerp(
+  tint,
+  isDark ? Colors.white : Colors.black,
+  isDark ? 0.25 : 0.2,
+)!;
+
 /// A hairline that runs around the shape and fades from bright at the top
 /// edge to almost nothing at the bottom — the refracted edge of a real slab
-/// of glass.
+/// of glass. With a [tint], the rim becomes a 1.5pt accent outline instead.
 class _SpecularRimPainter extends CustomPainter {
-  const _SpecularRimPainter({required this.shape, required this.isDark});
+  const _SpecularRimPainter({
+    required this.shape,
+    required this.isDark,
+    this.tint,
+  });
 
   final ShapeBorder shape;
   final bool isDark;
+  final Color? tint;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rect = Offset.zero & size;
+    final t = tint;
+    if (t != null) {
+      final outline = shape.getOuterPath(rect.deflate(0.75));
+      canvas.drawPath(
+        outline,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5
+          ..shader = LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.lerp(t, Colors.white, isDark ? 0.35 : 0.0)!,
+              t.withValues(alpha: 0.85),
+            ],
+          ).createShader(rect),
+      );
+      return;
+    }
     final path = shape.getOuterPath(rect.deflate(0.5));
     final paint = Paint()
       ..style = PaintingStyle.stroke
@@ -235,5 +270,7 @@ class _SpecularRimPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SpecularRimPainter oldDelegate) =>
-      oldDelegate.shape != shape || oldDelegate.isDark != isDark;
+      oldDelegate.shape != shape ||
+      oldDelegate.isDark != isDark ||
+      oldDelegate.tint != tint;
 }

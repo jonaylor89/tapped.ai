@@ -6,7 +6,7 @@ import 'package:intheloopapp/ui/design/glass/glass_tokens.dart';
 import 'package:intheloopapp/ui/design/glass/liquid_glass.dart';
 
 enum GlassButtonStyle {
-  /// Accent-tinted glass. One per screen — the primary action.
+  /// Accent-outlined glass. One per screen — the primary action.
   primary,
 
   /// Neutral glass. Secondary actions.
@@ -93,10 +93,17 @@ class GlassButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     final (Color? tint, Color foreground) = switch (style) {
-      GlassButtonStyle.primary => (scheme.primary, Colors.white),
-      GlassButtonStyle.destructive => (TappedColors.error, Colors.white),
+      GlassButtonStyle.primary => (
+        scheme.primary,
+        glassTintForeground(scheme.primary, isDark: isDark),
+      ),
+      GlassButtonStyle.destructive => (
+        TappedColors.error,
+        glassTintForeground(TappedColors.error, isDark: isDark),
+      ),
       GlassButtonStyle.glass => (null, this.foreground ?? scheme.onSurface),
       GlassButtonStyle.plain => (null, this.foreground ?? scheme.primary),
     };
@@ -187,9 +194,17 @@ class GlassIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final t = tint;
     final foreground =
-        color ?? (tint != null ? Colors.white : scheme.onSurface);
+        color ??
+        (t != null
+            ? glassTintForeground(
+                t,
+                isDark: theme.brightness == Brightness.dark,
+              )
+            : scheme.onSurface);
     final button = LiquidGlass.circle(
       tint: tint,
       variant: variant,
