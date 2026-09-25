@@ -70,6 +70,7 @@ export const sendEmailOnSubscriptionExpiration = onRequest(
   },
 );
 
+// Deprecated: configure Stream to call api.tapped.ai instead. Kept during rollout for rollback safety.
 export const streamBeforeMessageWebhook = onRequest(
   { secrets: [streamKey, streamSecret, POSTMARK_SERVER_ID] },
   async (req, res) => {
@@ -152,6 +153,7 @@ export const streamBeforeMessageWebhook = onRequest(
   },
 );
 
+// Deprecated: booking.tapped.ai MX now terminates at Haraka. Kept during rollout for rollback safety.
 export const inboundEmailWebhook = onRequest(
   { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret, SLACK_WEBHOOK_URL] },
   async (req, res) => {
