@@ -9,7 +9,9 @@ class ActivityView extends StatelessWidget {
   Widget build(BuildContext context) {
     return const GlassPage(
       title: 'notifications',
-      child: ActivityList(),
+      slivers: [
+        SliverFillRemaining(child: ActivityList()),
+      ],
     );
   }
 }

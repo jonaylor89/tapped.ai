@@ -187,6 +187,7 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
   Widget _venueStack(ThemeData theme) {
     return SizedBox(
       height: 56,
+      width: 56 + (_venues.length - 1).clamp(0, 3) * 36.0,
       child: WidgetStack(
         positions: RestrictedPositions(
           infoItem: const InfoItem(indent: 5),
