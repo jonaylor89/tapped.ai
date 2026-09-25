@@ -143,7 +143,8 @@ extension DiscoverStateX on DiscoverState {
       },
     );
 
-    final sortedGenreMap = genreMap.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sortedGenreMap = genreMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     return sortedGenreMap;
   }

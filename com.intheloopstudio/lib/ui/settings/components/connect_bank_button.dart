@@ -8,6 +8,8 @@ import 'package:intheloopapp/domains/models/payment_user.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
 import 'package:intheloopapp/domains/navigation_bloc/navigation_bloc.dart';
 import 'package:intheloopapp/domains/onboarding_bloc/onboarding_bloc.dart';
+import 'package:intheloopapp/ui/design/app_tokens.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
@@ -36,8 +38,13 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
     final nav = context.nav;
     final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        CupertinoButton.filled(
+        GlassButton.primary(
+          label: 'connect bank account',
+          icon: CupertinoIcons.building_2_fill,
+          expand: true,
+          isLoading: loading,
           onPressed: () async {
             try {
               if (loading) {
@@ -110,7 +117,7 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   behavior: SnackBarBehavior.floating,
-                  backgroundColor: Colors.red,
+                  backgroundColor: TappedColors.error,
                   content: Text(
                     'error connecting bank account',
                   ),
@@ -118,23 +125,13 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
               );
             }
           },
-          borderRadius: BorderRadius.circular(15),
-          child: loading
-              ? CupertinoActivityIndicator(
-                  color: onSurfaceColor,
-                )
-              : Text(
-                  'connect bank account',
-                  style: TextStyle(
-                    color: onSurfaceColor,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
         ),
+        const SizedBox(height: TappedSpacing.sm),
         Text(
           'so bookers can pay you directly on the app',
+          textAlign: TextAlign.center,
           style: TextStyle(
-            color: onSurfaceColor.withOpacity(0.5),
+            color: onSurfaceColor.withValues(alpha: 0.5),
             fontSize: 12,
           ),
         ),
@@ -145,19 +142,12 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
   @override
   Widget build(BuildContext context) {
     final payments = RepositoryProvider.of<PaymentRepository>(context);
-    final onSurfaceColor = Theme.of(context).colorScheme.onSurface;
-
     return CurrentUserBuilder(
-      errorWidget: CupertinoButton(
+      errorWidget: const GlassButton(
+        label: 'an error has occurred :/',
+        foreground: TappedColors.error,
+        expand: true,
         onPressed: null,
-        borderRadius: BorderRadius.circular(15),
-        child: const Text(
-          'An error has occured :/',
-          style: TextStyle(
-            color: Colors.red,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
       ),
       builder: (context, currentUser) {
         return switch (currentUser.stripeConnectedAccountId) {
@@ -177,11 +167,11 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
               future: payments.getAccountById(value),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) {
-                  return CupertinoButton(
+                  return const GlassButton(
+                    label: 'checking bank status',
+                    expand: true,
+                    isLoading: true,
                     onPressed: null,
-                    color: onSurfaceColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(15),
-                    child: const CupertinoActivityIndicator(),
                   );
                 }
 
@@ -204,17 +194,12 @@ class _ConnectBankButtonState extends State<ConnectBankButton> {
                       );
                     }
 
-                    return CupertinoButton(
+                    return const GlassButton(
+                      label: 'bank connected',
+                      icon: CupertinoIcons.checkmark_seal_fill,
+                      foreground: TappedColors.success,
+                      expand: true,
                       onPressed: null,
-                      color: onSurfaceColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(15),
-                      child: const Text(
-                        '✅ Bank Connected',
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     );
                   }(),
                 };

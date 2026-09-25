@@ -1,8 +1,8 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:fpdart/fpdart.dart';
 import 'package:intheloopapp/domains/models/user_model.dart';
+import 'package:intheloopapp/ui/design/glass/glass.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,7 +16,6 @@ class SocialFollowingMenu extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final facebookFollowers = user.socialFollowing.facebookFollowers;
     final facebookHandle = user.socialFollowing.facebookHandle;
     final instagramFollowers = user.socialFollowing.instagramFollowers;
@@ -34,134 +33,69 @@ class SocialFollowingMenu extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    return CupertinoListSection.insetGrouped(
-      backgroundColor: theme.colorScheme.surface,
-      decoration: BoxDecoration(
-        color: theme.colorScheme.onSurface.withOpacity(0.1),
-        border: Border(
-          bottom: BorderSide(
-            color: theme.colorScheme.onSurface.withOpacity(0.1),
-            width: 0.5,
+    GlassListTile tile({
+      required IconData icon,
+      required Color color,
+      required String network,
+      required int followers,
+      required Option<String> handle,
+      required String Function(String) urlOf,
+    }) {
+      return GlassListTile(
+        leadingIcon: icon,
+        leadingColor: color,
+        title: network,
+        subtitle: handle.fold(() => null, (h) => '@$h'),
+        value: '${formatter.format(followers)} followers',
+        showChevron: handle.isSome(),
+        onTap: switch (handle) {
+          None() => null,
+          Some(:final value) => () => launchUrl(
+            Uri.parse(urlOf(value)),
+            mode: LaunchMode.externalApplication,
           ),
-        ),
-      ),
+        },
+      );
+    }
+
+    return GlassSection(
+      header: 'audience',
       children: [
         if (facebookFollowers > 0)
-          CupertinoListTile(
-            onTap: switch (facebookHandle) {
-              None() => null,
-              Some(:final value) => () {
-                launchUrl(
-                  Uri(
-                    scheme: 'https',
-                    path: 'facebook.com/$value',
-                  ),
-                );
-              },
-            },
-            leading: const Icon(
-              FontAwesomeIcons.facebook,
-            ),
-            trailing: Icon(
-              CupertinoIcons.chevron_forward,
-              color: theme.colorScheme.onSurface,
-            ),
-            title: Text(
-              '${formatter.format(facebookFollowers)} followers',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+          tile(
+            icon: FontAwesomeIcons.facebook,
+            color: const Color(0xff1877F2),
+            network: 'facebook',
+            followers: facebookFollowers,
+            handle: facebookHandle,
+            urlOf: (h) => 'https://facebook.com/$h',
           ),
         if (instagramFollowers > 0)
-          CupertinoListTile(
-            onTap: switch (instagramHandle) {
-              None() => null,
-              Some(:final value) => () {
-                launchUrl(
-                  Uri(
-                    scheme: 'https',
-                    path: 'instagram.com/$value',
-                  ),
-                );
-              },
-            },
-            leading: const Icon(
-              FontAwesomeIcons.instagram,
-            ),
-            trailing: switch (instagramHandle) {
-              None() => null,
-              Some(value: final _) => Icon(
-                CupertinoIcons.chevron_forward,
-                color: theme.colorScheme.onSurface,
-              ),
-            },
-            title: Text(
-              '${formatter.format(instagramFollowers)} followers',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+          tile(
+            icon: FontAwesomeIcons.instagram,
+            color: const Color(0xffE1306C),
+            network: 'instagram',
+            followers: instagramFollowers,
+            handle: instagramHandle,
+            urlOf: (h) => 'https://instagram.com/$h',
           ),
         if (twitterFollowers > 0)
-          CupertinoListTile(
-            onTap: switch (twitterHandle) {
-              None() => null,
-              Some(:final value) => () {
-                launchUrl(
-                  Uri(
-                    scheme: 'https',
-                    path: 'twitter.com/$value',
-                  ),
-                );
-              },
-            },
-            trailing: switch (twitterHandle) {
-              None() => null,
-              Some(value: final _) => Icon(
-                CupertinoIcons.chevron_forward,
-                color: theme.colorScheme.onSurface,
-              ),
-            },
-            leading: const Icon(
-              FontAwesomeIcons.twitter,
-            ),
-            title: Text(
-              '${formatter.format(twitterFollowers)} followers',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+          tile(
+            icon: FontAwesomeIcons.twitter,
+            color: const Color(0xff1DA1F2),
+            network: 'twitter',
+            followers: twitterFollowers,
+            handle: twitterHandle,
+            urlOf: (h) => 'https://twitter.com/$h',
           ),
         if (tiktokFollowers > 0)
-          CupertinoListTile(
-            onTap: switch (tiktokHandle) {
-              None() => null,
-              Some(:final value) => () {
-                launchUrl(
-                  Uri(
-                    scheme: 'https',
-                    path: 'tiktok.com/@$value',
-                  ),
-                );
-              },
-            },
-            trailing: switch (tiktokHandle) {
-              None() => null,
-              Some(value: final _) => Icon(
-                CupertinoIcons.chevron_forward,
-                color: theme.colorScheme.onSurface,
-              ),
-            },
-            leading: const Icon(
-              FontAwesomeIcons.tiktok,
-            ),
-            title: Text(
-              '${formatter.format(tiktokFollowers)} followers',
-              style: TextStyle(
-                color: theme.colorScheme.onSurface,
-              ),
-            ),
+          tile(
+            icon: FontAwesomeIcons.tiktok,
+            color: Colors.black,
+            network: 'tiktok',
+            followers: tiktokFollowers,
+            handle: tiktokHandle,
+            urlOf: (h) => 'https://tiktok.com/@$h',
           ),
       ],
     );

@@ -46,8 +46,8 @@ class DiscoverView extends StatelessWidget {
           builder: (context, isPremium) {
             final initGenres = isPremium
                 ? currentUser.performerInfo
-                    .map((info) => info.genres)
-                    .getOrElse(() => [])
+                      .map((info) => info.genres)
+                      .getOrElse(() => [])
                 : <String>[];
             return BlocProvider<DiscoverCubit>(
               create: (context) => DiscoverCubit(
@@ -59,8 +59,8 @@ class DiscoverView extends StatelessWidget {
                 places: context.places,
                 suggestedMaxCapacity: isPremium
                     ? currentUser.performerInfo
-                        .map((info) => info.category.suggestedMaxCapacity)
-                        .getOrElse(() => 1000)
+                          .map((info) => info.category.suggestedMaxCapacity)
+                          .getOrElse(() => 1000)
                     : 1000,
               ),
               child: Scaffold(
@@ -230,8 +230,9 @@ class _MapControls extends StatelessWidget {
                                 genres.whereType<Genre>().toList(),
                               );
                             },
-                            initialRange:
-                                isPremium ? state.capacityRange : null,
+                            initialRange: isPremium
+                                ? state.capacityRange
+                                : null,
                             maxCapacity: state.capacityRange.end.round() < 1000
                                 ? 1000
                                 : state.capacityRange.end.round(),
