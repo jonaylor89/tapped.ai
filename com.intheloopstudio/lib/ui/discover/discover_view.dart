@@ -33,13 +33,15 @@ import 'package:stream_chat_flutter/stream_chat_flutter.dart';
 /// results in a glass sheet that lifts from the bottom — the same model as
 /// Apple Maps.
 class DiscoverView extends StatelessWidget {
-  const DiscoverView({
-    super.key,
-  });
+  const DiscoverView({this.initialSheetSize, super.key});
+
+  /// Detent the results sheet opens at; defaults to the collapsed detent.
+  final double? initialSheetSize;
 
   @override
   Widget build(BuildContext context) {
     final mapController = MapController();
+    final sheetProgress = ValueNotifier<double>(0);
     return CurrentUserBuilder(
       builder: (context, currentUser) {
         return PremiumBuilder(
@@ -70,14 +72,54 @@ class DiscoverView extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     MapBase(mapController: mapController),
-                    _MapControls(mapController: mapController),
+                    _MapControls(
+                      mapController: mapController,
+                      sheetProgress: sheetProgress,
+                    ),
                     _TopChrome(currentUser: currentUser),
                   ],
                 ),
-                bottomSheet: DraggableSheet(),
+                bottomSheet: DraggableSheet(
+                  progress: sheetProgress,
+                  initialSize: initialSheetSize ?? DraggableSheet.collapsed,
+                ),
               ),
             );
           },
+        );
+      },
+    );
+  }
+}
+
+/// Fades and disables floating map chrome as the sheet rises past its mid
+/// detent, so the sheet reads as the single foreground glass layer.
+class _Receding extends StatelessWidget {
+  const _Receding({required this.progress, required this.child});
+
+  final ValueListenable<double> progress;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<double>(
+      valueListenable: progress,
+      child: child,
+      builder: (context, t, child) {
+        final midT =
+            (DraggableSheet.mid - DraggableSheet.collapsed) /
+            (DraggableSheet.expanded - DraggableSheet.collapsed);
+        final hide = ((t - midT) / (1 - midT)).clamp(0.0, 1.0);
+        final opacity = 1 - Curves.easeIn.transform(hide);
+        return IgnorePointer(
+          ignoring: opacity < 0.5,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.translate(
+              offset: Offset(0, -8 * hide),
+              child: child,
+            ),
+          ),
         );
       },
     );
@@ -188,9 +230,13 @@ class _OverlaySwitcher extends StatelessWidget {
 /// Vertical stack of clear-glass map controls (filters, locate, debug zoom)
 /// pinned above the sheet on the trailing edge.
 class _MapControls extends StatelessWidget {
-  const _MapControls({required this.mapController});
+  const _MapControls({
+    required this.mapController,
+    required this.sheetProgress,
+  });
 
   final MapController mapController;
+  final ValueListenable<double> sheetProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -203,81 +249,85 @@ class _MapControls extends StatelessWidget {
             return Positioned(
               bottom: 132,
               right: GlassMetrics.edgeInset,
-              child: LiquidGlass.capsule(
-                variant: GlassVariant.clear,
-                padding: const EdgeInsets.all(4),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (state.mapOverlay == MapOverlay.venues)
-                      _ControlButton(
-                        icon: CupertinoIcons.slider_horizontal_3,
-                        active: hasFilters,
-                        label: 'filters',
-                        onPressed: () => showGlassSheet<void>(
-                          context: context,
-                          title: 'filters',
-                          showClose: true,
-                          scrollable: true,
-                          builder: (ctx) => MapSettings(
-                            genreFilters: isPremium ? state.genreFilters : [],
-                            onConfirmGenreSelection: (genres) {
-                              if (!isPremium) {
-                                context.push(PaywallPage());
-                                return;
-                              }
-                              cubit.setGenreFilters(
-                                genres.whereType<Genre>().toList(),
-                              );
-                            },
-                            initialRange: isPremium
-                                ? state.capacityRange
-                                : null,
-                            maxCapacity: state.capacityRange.end.round() < 1000
-                                ? 1000
-                                : state.capacityRange.end.round(),
-                            onCapacityRangeChange: (ranges) {
-                              if (!isPremium) {
-                                context.push(PaywallPage());
-                                return;
-                              }
-                              cubit.updateCapacityRange(ranges);
-                            },
+              child: _Receding(
+                progress: sheetProgress,
+                child: LiquidGlass.capsule(
+                  variant: GlassVariant.clear,
+                  padding: const EdgeInsets.all(4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (state.mapOverlay == MapOverlay.venues)
+                        _ControlButton(
+                          icon: CupertinoIcons.slider_horizontal_3,
+                          active: hasFilters,
+                          label: 'filters',
+                          onPressed: () => showGlassSheet<void>(
+                            context: context,
+                            title: 'filters',
+                            showClose: true,
+                            scrollable: true,
+                            builder: (ctx) => MapSettings(
+                              genreFilters: isPremium ? state.genreFilters : [],
+                              onConfirmGenreSelection: (genres) {
+                                if (!isPremium) {
+                                  context.push(PaywallPage());
+                                  return;
+                                }
+                                cubit.setGenreFilters(
+                                  genres.whereType<Genre>().toList(),
+                                );
+                              },
+                              initialRange: isPremium
+                                  ? state.capacityRange
+                                  : null,
+                              maxCapacity:
+                                  state.capacityRange.end.round() < 1000
+                                  ? 1000
+                                  : state.capacityRange.end.round(),
+                              onCapacityRangeChange: (ranges) {
+                                if (!isPremium) {
+                                  context.push(PaywallPage());
+                                  return;
+                                }
+                                cubit.updateCapacityRange(ranges);
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    _ControlButton(
-                      icon: CupertinoIcons.location_fill,
-                      label: 'my location',
-                      onPressed: () {
-                        FirebaseAnalytics.instance.logEvent(
-                          name: 'discover_seek_home',
-                        );
-                        mapController.move(
-                          LatLng(state.userLat, state.userLng),
-                          13,
-                        );
-                      },
-                    ),
-                    if (kDebugMode) ...[
                       _ControlButton(
-                        icon: CupertinoIcons.plus,
-                        label: 'zoom in',
-                        onPressed: () => mapController.move(
-                          mapController.camera.center,
-                          mapController.camera.zoom + 1,
-                        ),
+                        icon: CupertinoIcons.location_fill,
+                        label: 'my location',
+                        onPressed: () {
+                          FirebaseAnalytics.instance.logEvent(
+                            name: 'discover_seek_home',
+                          );
+                          mapController.move(
+                            LatLng(state.userLat, state.userLng),
+                            13,
+                          );
+                        },
                       ),
-                      _ControlButton(
-                        icon: CupertinoIcons.minus,
-                        label: 'zoom out',
-                        onPressed: () => mapController.move(
-                          mapController.camera.center,
-                          mapController.camera.zoom - 1,
+                      if (kDebugMode) ...[
+                        _ControlButton(
+                          icon: CupertinoIcons.plus,
+                          label: 'zoom in',
+                          onPressed: () => mapController.move(
+                            mapController.camera.center,
+                            mapController.camera.zoom + 1,
+                          ),
                         ),
-                      ),
+                        _ControlButton(
+                          icon: CupertinoIcons.minus,
+                          label: 'zoom out',
+                          onPressed: () => mapController.move(
+                            mapController.camera.center,
+                            mapController.camera.zoom - 1,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             );

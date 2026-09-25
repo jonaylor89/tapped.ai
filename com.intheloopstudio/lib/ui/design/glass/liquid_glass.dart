@@ -39,6 +39,7 @@ class LiquidGlass extends StatelessWidget {
     this.padding,
     this.blur,
     this.shadow = true,
+    this.solidity = 0,
     this.width,
     this.height,
     this.alignment,
@@ -57,7 +58,8 @@ class LiquidGlass extends StatelessWidget {
     this.height,
     this.alignment,
     super.key,
-  }) : shape = const StadiumBorder();
+  }) : shape = const StadiumBorder(),
+       solidity = 0;
 
   /// Circular glass (icon controls, avatars rings).
   const LiquidGlass.circle({
@@ -71,7 +73,8 @@ class LiquidGlass extends StatelessWidget {
     this.height,
     this.alignment,
     super.key,
-  }) : shape = const CircleBorder();
+  }) : shape = const CircleBorder(),
+       solidity = 0;
 
   final Widget child;
   final GlassVariant variant;
@@ -84,6 +87,10 @@ class LiquidGlass extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final double? blur;
   final bool shadow;
+
+  /// 0 = translucent glass, 1 = the opaque grouped-background colour. Sheets
+  /// raise this as they expand so content takes focus over what's beneath.
+  final double solidity;
   final double? width;
   final double? height;
   final AlignmentGeometry? alignment;
@@ -169,6 +176,19 @@ class LiquidGlass extends StatelessWidget {
       GlassVariant.clear => isDark ? (0.06, 0.18) : (0.40, 0.22),
       GlassVariant.prominent => isDark ? (0.10, 0.62) : (0.90, 0.78),
     };
+
+    final solid = solidity.clamp(0.0, 1.0);
+    if (solid > 0) {
+      final target = isDark ? const Color(0xFF1C1C1E) : Colors.white;
+      return LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.lerp(base.withValues(alpha: hi), target, solid)!,
+          Color.lerp(shade.withValues(alpha: lo), target, solid)!,
+        ],
+      );
+    }
 
     final t = tint;
     if (t != null) {
