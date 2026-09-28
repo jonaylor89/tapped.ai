@@ -11,9 +11,9 @@ import type { Opportunity, UserModel, VenueContactRequest } from "../../types/mo
 import { _sendEmailOnVenueContacting } from "../email_triggers";
 import {
   contactVenuesRef,
+  MAIL_API_SECRET,
   OPEN_AI_KEY,
   opportunitiesRef,
-  POSTMARK_SERVER_ID,
   SLACK_WEBHOOK_URL,
   streamKey,
   streamSecret,
@@ -78,7 +78,7 @@ async function sendAsEmail({
   // };
 
   // fcm.sendToDevice(devices, payload);
-  const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+  const client = new postmark.ServerClient(MAIL_API_SECRET.value());
   const messageId = createEmailMessageId();
 
   const { subject, body } = await composeVenueEmail({
@@ -442,7 +442,7 @@ export const sendEmailToVenueFromStreamMessage = async ({
 export const notifyFoundersOnVenueContact = onDocumentCreated(
   {
     document: "contactVenues/{userId}/venuesContacted/{venueId}",
-    secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret, OPEN_AI_KEY, SLACK_WEBHOOK_URL],
+    secrets: [MAIL_API_SECRET, streamKey, streamSecret, OPEN_AI_KEY, SLACK_WEBHOOK_URL],
   },
   async (event) => {
     process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
@@ -526,12 +526,12 @@ export const notifyFoundersOnVenueContact = onDocumentCreated(
 export const notifyFoundersOnOrphanEmail = onDocumentCreated(
   {
     document: "orphanEmails/{emailId}",
-    secrets: [POSTMARK_SERVER_ID, SLACK_WEBHOOK_URL],
+    secrets: [MAIL_API_SECRET, SLACK_WEBHOOK_URL],
   },
   async (event) => {
     const snapshot = event.data;
     const documentData = snapshot?.data();
-    const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
 
     const error = documentData?.error;
     if (!error) {
@@ -605,7 +605,7 @@ export const setLatestContactRequest = onDocumentCreated(
   },
 );
 
-export const genericContactVenues = onCall({ secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY] }, async (request) => {
+export const genericContactVenues = onCall({ secrets: [MAIL_API_SECRET, OPEN_AI_KEY] }, async (request) => {
   authenticatedRequest(request);
   process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
 
@@ -628,7 +628,7 @@ export const genericContactVenues = onCall({ secrets: [POSTMARK_SERVER_ID, OPEN_
   }
 
   const userData = userSnap.data() as UserModel;
-  const emailClient = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+  const emailClient = new postmark.ServerClient(MAIL_API_SECRET.value());
 
   await Promise.all(
     venueIds.map(async (venueId) => {

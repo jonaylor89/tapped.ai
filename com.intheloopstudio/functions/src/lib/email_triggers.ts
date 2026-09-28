@@ -18,8 +18,8 @@ import { welcomeTemplate } from "../email_templates/welcome";
 import type { Booking, MarketingPlan, UserModel } from "../types/models";
 import {
   guestMarketingPlansRef,
+  MAIL_API_SECRET,
   mailRef,
-  POSTMARK_SERVER_ID,
   queuedWritesRef,
   stripeTestEndpointSecret,
   stripeTestKey,
@@ -29,7 +29,7 @@ import * as postmark from "./mail_client";
 // import { venueContacted } from "../email_templates/venue_contacted";
 
 export const sendWelcomeEmailOnUserCreated = functions
-  .runWith({ secrets: [POSTMARK_SERVER_ID] })
+  .runWith({ secrets: [MAIL_API_SECRET] })
   .auth.user()
   .onCreate(async (user: UserRecord) => {
     const email = user.email;
@@ -44,7 +44,7 @@ export const sendWelcomeEmailOnUserCreated = functions
     }
 
     debug(`sending welcome email to ${email}`);
-    const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
     await client.sendEmail({
       From: "no-reply@tapped.ai",
       To: email,
@@ -57,7 +57,7 @@ export const sendWelcomeEmailOnUserCreated = functions
 export const sendEmailOnLabelApplication = onDocumentCreated(
   {
     document: "label_applications/{applicationId}",
-    secrets: [POSTMARK_SERVER_ID],
+    secrets: [MAIL_API_SECRET],
   },
   async (event) => {
     const snapshot = event.data;
@@ -67,7 +67,7 @@ export const sendEmailOnLabelApplication = onDocumentCreated(
       throw new Error(`application ${application?.id} does not have an email`);
     }
 
-    const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
     await client.sendEmail({
       From: "no-reply@tapped.ai",
       To: email,
@@ -79,13 +79,13 @@ export const sendEmailOnLabelApplication = onDocumentCreated(
 );
 
 export const emailMarketingPlanStripeWebhook = onRequest(
-  { secrets: [stripeTestKey, stripeTestEndpointSecret, POSTMARK_SERVER_ID] },
+  { secrets: [stripeTestKey, stripeTestEndpointSecret, MAIL_API_SECRET] },
   async (req, res) => {
     const stripe = new Stripe(stripeTestKey.value(), {
       apiVersion: "2022-11-15",
     });
 
-    const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
     const productIds = [
       "prod_Ojv2uMqEt5n60E", // test AI plan product
       "prod_OjsPZixnuZ86el", // prod AI plan product
@@ -420,7 +420,7 @@ export const sendBookingNotificationsOnBookingConfirmed = functions.firestore
 export const sendEmailOnPremiumWaitlist = onDocumentCreated(
   {
     document: "premiumWaitlist/{userId}",
-    secrets: [POSTMARK_SERVER_ID],
+    secrets: [MAIL_API_SECRET],
   },
   async (event) => {
     const snapshot = event.data;
@@ -443,7 +443,7 @@ export const sendEmailOnPremiumWaitlist = onDocumentCreated(
       throw new Error(`${document?.id} does not have an email`);
     }
 
-    const client = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
     await client.sendEmail({
       From: "no-reply@tapped.ai",
       To: email,
@@ -483,9 +483,9 @@ export const _sendEmailOnVenueContacting = async ({
   });
 };
 
-export const sendEmailOnVenueContacting = onCall({ secrets: [POSTMARK_SERVER_ID] }, async (req) => {
+export const sendEmailOnVenueContacting = onCall({ secrets: [MAIL_API_SECRET] }, async (req) => {
   const { userId } = req.data;
-  const emailClient = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+  const emailClient = new postmark.ServerClient(MAIL_API_SECRET.value());
 
   await _sendEmailOnVenueContacting({
     userId,

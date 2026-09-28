@@ -1,5 +1,6 @@
 use async_trait::async_trait;
 use axum::response::IntoResponse;
+use base64::{Engine, engine::general_purpose::STANDARD};
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::{
@@ -476,6 +477,65 @@ async fn email_reply_is_delivered_to_stream_exactly_once() {
     assert_eq!(deliveries[0].sender_id, "venue-1");
     assert_eq!(deliveries[0].receiver_id, "artist-1");
     assert_eq!(deliveries[0].text, "Yes, Friday works.");
+}
+
+#[tokio::test]
+async fn authenticated_postmark_reply_is_delivered_to_stream() {
+    let (app, store, stream) = test_app().await;
+    let stream_body = stream_payload();
+    app.api_client
+        .post(format!("{}/webhooks/stream/before-message", app.address))
+        .header("x-signature", sign("stream-secret", &stream_body))
+        .body(stream_body)
+        .send()
+        .await
+        .unwrap();
+    let parent = store.outbound()[0].message_id.clone();
+    let payload = serde_json::json!({
+        "From": "Booker <bookings@venue.example>",
+        "To": "The Band <the-band@booking.tapped.ai>",
+        "ToFull": [{"Email": "the-band@booking.tapped.ai", "Name": "The Band", "MailboxHash": ""}],
+        "OriginalRecipient": "the-band@booking.tapped.ai",
+        "MessageID": "postmark-inbound-id",
+        "TextBody": "Quoted body",
+        "StrippedTextReply": "Yes, Friday works.",
+        "Headers": [
+            {"Name": "Message-ID", "Value": "<postmark-reply@venue.example>"},
+            {"Name": "In-Reply-To", "Value": parent},
+            {"Name": "References", "Value": "<initial@booking.tapped.ai>"}
+        ],
+        "Attachments": []
+    });
+    let authorization = format!("Basic {}", STANDARD.encode("postmark:ingress-secret"));
+
+    let response = app
+        .api_client
+        .post(format!("{}/webhooks/postmark/inbound", app.address))
+        .header("authorization", authorization)
+        .json(&payload)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    let deliveries = stream.deliveries.lock().unwrap();
+    assert_eq!(deliveries.len(), 1);
+    assert_eq!(deliveries[0].text, "Yes, Friday works.");
+    assert_eq!(deliveries[0].sender_id, "venue-1");
+}
+
+#[tokio::test]
+async fn postmark_inbound_requires_basic_authentication() {
+    let (app, _, stream) = test_app().await;
+    let response = app
+        .api_client
+        .post(format!("{}/webhooks/postmark/inbound", app.address))
+        .json(&serde_json::json!({"To": "the-band@booking.tapped.ai"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+    assert!(stream.deliveries.lock().unwrap().is_empty());
 }
 
 #[tokio::test]

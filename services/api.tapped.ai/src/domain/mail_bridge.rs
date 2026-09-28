@@ -6,6 +6,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::IntoResponse,
 };
+use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::Utc;
 use hmac::{Hmac, Mac};
 use mailparse::{MailHeaderMap, parse_mail};
@@ -785,6 +786,98 @@ fn plain_body(parsed: &mailparse::ParsedMail<'_>) -> String {
         .unwrap_or_default()
 }
 
+fn mailbox_username(address: &str) -> &str {
+    let mailbox = address
+        .split_once('<')
+        .map(|(_, mailbox)| mailbox)
+        .unwrap_or(address)
+        .split('>')
+        .next()
+        .unwrap_or_default();
+    mailbox
+        .split('@')
+        .next()
+        .unwrap_or_default()
+        .trim()
+        .trim_matches('<')
+}
+
+async fn deliver_inbound(
+    state: &AppStateDyn,
+    raw: &[u8],
+    username: &str,
+    message_id: String,
+    references: Vec<String>,
+    text: String,
+) -> (StatusCode, &'static str) {
+    if username.is_empty() || message_id.is_empty() || references.is_empty() {
+        let _ = state
+            .mail
+            .store
+            .record_orphan(raw, "missing routing headers")
+            .await;
+        return (StatusCode::UNPROCESSABLE_ENTITY, "missing routing headers");
+    }
+    let thread = match state
+        .mail
+        .store
+        .thread_for_reply(username, &references)
+        .await
+    {
+        Ok(Some(thread)) => thread,
+        Ok(None) => {
+            let _ = state
+                .mail
+                .store
+                .record_orphan(raw, "thread not found")
+                .await;
+            return (StatusCode::NOT_FOUND, "thread not found");
+        }
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
+    };
+    let delivery = StreamDelivery {
+        event_id: format!("email:{message_id}"),
+        thread_id: thread.id.clone(),
+        sender_id: thread.venue_id,
+        receiver_id: thread.performer_id,
+        text: text.trim().to_owned(),
+    };
+    let is_new = match state
+        .mail
+        .store
+        .claim_inbound(&message_id, raw, &delivery)
+        .await
+    {
+        Ok(is_new) => is_new,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
+    };
+    if is_new {
+        if state.mail.stream.send_message(&delivery).await.is_err() {
+            let _ = state.mail.store.mark_inbound_failed(&message_id).await;
+            return (StatusCode::SERVICE_UNAVAILABLE, "stream unavailable");
+        }
+        if state
+            .mail
+            .store
+            .mark_inbound_delivered(&message_id)
+            .await
+            .is_err()
+        {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "store error");
+        }
+        if state
+            .mail
+            .store
+            .update_latest_message_id(&thread.id, &message_id)
+            .await
+            .is_err()
+        {
+            return (StatusCode::INTERNAL_SERVER_ERROR, "store error");
+        }
+    }
+    (StatusCode::OK, "ok")
+}
+
 pub async fn inbound_email(
     State(state): State<AppStateDyn>,
     headers: HeaderMap,
@@ -830,84 +923,140 @@ pub async fn inbound_email(
         .then(|| envelope_to.to_owned())
         .or_else(|| parsed.headers.get_first_value("To"))
         .unwrap_or_default();
-    let username = to
-        .split('@')
-        .next()
-        .unwrap_or_default()
-        .trim()
-        .trim_matches('<');
     let message_id = parsed
         .headers
         .get_first_value("Message-ID")
         .unwrap_or_default();
     let mut references = header_values(&parsed, "In-Reply-To");
     references.extend(header_values(&parsed, "References"));
-    if username.is_empty() || message_id.is_empty() || references.is_empty() {
-        let _ = state
-            .mail
-            .store
-            .record_orphan(&body, "missing routing headers")
-            .await;
-        return (StatusCode::UNPROCESSABLE_ENTITY, "missing routing headers");
+    deliver_inbound(
+        &state,
+        &body,
+        mailbox_username(&to),
+        message_id,
+        references,
+        plain_body(&parsed),
+    )
+    .await
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PostmarkInboundHeader {
+    pub name: String,
+    pub value: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PostmarkInboundRecipient {
+    pub email: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct PostmarkInboundEmail {
+    pub to: String,
+    #[serde(default)]
+    pub to_full: Vec<PostmarkInboundRecipient>,
+    #[serde(default)]
+    pub original_recipient: Option<String>,
+    #[serde(default)]
+    pub message_id: Option<String>,
+    #[serde(default)]
+    pub text_body: String,
+    #[serde(default)]
+    pub stripped_text_reply: Option<String>,
+    #[serde(default)]
+    pub headers: Vec<PostmarkInboundHeader>,
+}
+
+fn postmark_basic_auth_is_valid(headers: &HeaderMap, secret: &str) -> bool {
+    let Some(encoded) = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Basic "))
+    else {
+        return false;
+    };
+    let Ok(decoded) = STANDARD.decode(encoded) else {
+        return false;
+    };
+    let Ok(credentials) = String::from_utf8(decoded) else {
+        return false;
+    };
+    credentials
+        .split_once(':')
+        .is_some_and(|(username, password)| !username.is_empty() && password == secret)
+}
+
+pub async fn postmark_inbound_email(
+    State(state): State<AppStateDyn>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> impl IntoResponse {
+    if !postmark_basic_auth_is_valid(&headers, &state.mail.ingress_secret) {
+        return (StatusCode::UNAUTHORIZED, "invalid credentials");
     }
-    let thread = match state
-        .mail
-        .store
-        .thread_for_reply(username, &references)
-        .await
-    {
-        Ok(Some(thread)) => thread,
-        Ok(None) => {
+    let message: PostmarkInboundEmail = match serde_json::from_slice(&body) {
+        Ok(message) => message,
+        Err(_) => {
             let _ = state
                 .mail
                 .store
-                .record_orphan(&body, "thread not found")
+                .record_orphan(&body, "invalid Postmark payload")
                 .await;
-            return (StatusCode::NOT_FOUND, "thread not found");
+            return (StatusCode::BAD_REQUEST, "invalid Postmark payload");
         }
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
     };
-    let delivery = StreamDelivery {
-        event_id: format!("email:{message_id}"),
-        thread_id: thread.id.clone(),
-        sender_id: thread.venue_id,
-        receiver_id: thread.performer_id,
-        text: plain_body(&parsed).trim().to_owned(),
+    let recipient = message
+        .original_recipient
+        .as_deref()
+        .or_else(|| {
+            message
+                .to_full
+                .first()
+                .map(|recipient| recipient.email.as_str())
+        })
+        .unwrap_or(&message.to);
+    let header = |name: &str| {
+        message
+            .headers
+            .iter()
+            .find(|header| header.name.eq_ignore_ascii_case(name))
+            .map(|header| header.value.clone())
     };
-    let is_new = match state
-        .mail
-        .store
-        .claim_inbound(&message_id, &body, &delivery)
-        .await
-    {
-        Ok(is_new) => is_new,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
-    };
-    if is_new {
-        if state.mail.stream.send_message(&delivery).await.is_err() {
-            let _ = state.mail.store.mark_inbound_failed(&message_id).await;
-            return (StatusCode::SERVICE_UNAVAILABLE, "stream unavailable");
-        }
-        if state
-            .mail
-            .store
-            .mark_inbound_delivered(&message_id)
-            .await
-            .is_err()
-        {
-            return (StatusCode::INTERNAL_SERVER_ERROR, "store error");
-        }
-        if state
-            .mail
-            .store
-            .update_latest_message_id(&thread.id, &message_id)
-            .await
-            .is_err()
-        {
-            return (StatusCode::INTERNAL_SERVER_ERROR, "store error");
-        }
-    }
-    (StatusCode::OK, "ok")
+    let message_id = header("Message-ID")
+        .or(message.message_id)
+        .unwrap_or_default();
+    let mut references = header("In-Reply-To")
+        .into_iter()
+        .flat_map(|value| {
+            value
+                .split_whitespace()
+                .map(str::to_owned)
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    references.extend(header("References").into_iter().flat_map(|value| {
+        value
+            .split_whitespace()
+            .map(str::to_owned)
+            .collect::<Vec<_>>()
+    }));
+    let text = message
+        .stripped_text_reply
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(message.text_body);
+    deliver_inbound(
+        &state,
+        &body,
+        mailbox_username(recipient),
+        message_id,
+        references,
+        text,
+    )
+    .await
 }
 
 #[derive(Debug, Deserialize)]

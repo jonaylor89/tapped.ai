@@ -3,7 +3,7 @@ use crate::{
     docs::docs_routes,
     domain::mail_bridge::{
         MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_thread, create_email_thread,
-        enqueue_service_email, inbound_email, stream_before_message,
+        enqueue_service_email, inbound_email, postmark_inbound_email, stream_before_message,
     },
     errors::AppError,
     routes::v1_routes,
@@ -134,6 +134,7 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
             axum::routing::post(stream_before_message),
         )
         .route("/internal/mail/inbound", post(inbound_email))
+        .route("/webhooks/postmark/inbound", post(postmark_inbound_email))
         .route("/internal/mail/outbound", post(enqueue_service_email))
         .route(
             "/internal/mail/backfill-thread",

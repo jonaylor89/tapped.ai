@@ -13,10 +13,10 @@ import {
   creditsPerTestPriceId,
   creditsRef,
   guestMarketingPlansRef,
+  MAIL_API_SECRET,
   marketingFormsRef,
   marketingPlansRef,
   OPEN_AI_KEY,
-  POSTMARK_SERVER_ID,
   SLACK_WEBHOOK_URL,
   stripeCoverArtTestWebhookSecret,
   stripeCoverArtWebhookSecret,
@@ -257,7 +257,7 @@ export const createSingleMarketingPlan = onCall({ secrets: [OPEN_AI_KEY] }, asyn
 
 export const marketingPlanStripeWebhook = onRequest(
   {
-    secrets: [stripeTestKey, stripeTestEndpointSecret, POSTMARK_SERVER_ID, OPEN_AI_KEY],
+    secrets: [stripeTestKey, stripeTestEndpointSecret, MAIL_API_SECRET, OPEN_AI_KEY],
   },
   async (req, res) => {
     const stripe = new Stripe(stripeTestKey.value(), {
@@ -302,7 +302,7 @@ export const marketingPlanStripeWebhook = onRequest(
             checkoutSessionCompleteId: checkoutSessionCompleted.id,
             checkoutSession,
             customerEmail,
-            postmarkServerId: POSTMARK_SERVER_ID.value(),
+            postmarkServerId: MAIL_API_SECRET.value(),
           });
           break;
         }
@@ -323,7 +323,7 @@ export const marketingPlanStripeWebhook = onRequest(
 
 export const generateMarketingPlan = functions
   .runWith({
-    secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY],
+    secrets: [MAIL_API_SECRET, OPEN_AI_KEY],
   })
   .firestore.document("marketingForms/{clientReferenceId}")
   .onCreate(async (_request, context) => {

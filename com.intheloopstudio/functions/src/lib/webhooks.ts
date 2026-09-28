@@ -14,8 +14,8 @@ import {
 } from "./email_triggers";
 import {
   contactVenuesRef,
+  MAIL_API_SECRET,
   orphanEmailsRef,
-  POSTMARK_SERVER_ID,
   SLACK_WEBHOOK_URL,
   streamKey,
   streamSecret,
@@ -25,14 +25,14 @@ import { slackNotification } from "./notifications";
 
 // send email on subscription purchase
 export const sendEmailOnSubscriptionPurchase = onRequest(
-  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret] },
+  { secrets: [MAIL_API_SECRET, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionPurchase", req.body);
       const { event } = req.body;
       const { app_user_id: userId } = event;
 
-      await sendEmailSubscriptionPurchase(POSTMARK_SERVER_ID.value(), userId);
+      await sendEmailSubscriptionPurchase(MAIL_API_SECRET.value(), userId);
 
       // add them to group chat
       await addUserToPremiumChat(userId, {
@@ -49,14 +49,14 @@ export const sendEmailOnSubscriptionPurchase = onRequest(
 );
 
 export const sendEmailOnSubscriptionExpiration = onRequest(
-  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret] },
+  { secrets: [MAIL_API_SECRET, streamKey, streamSecret] },
   async (req, res) => {
     try {
       info("sendEmailOnSubscriptionExpiration", req.body);
       const { event } = req.body;
       const { app_user_id: userId } = event;
 
-      await sendEmailSubscriptionExpiration(POSTMARK_SERVER_ID.value(), userId);
+      await sendEmailSubscriptionExpiration(MAIL_API_SECRET.value(), userId);
 
       // remove from group chat
       await removeUserFromPremiumChat(userId, {
@@ -72,7 +72,7 @@ export const sendEmailOnSubscriptionExpiration = onRequest(
 
 // Deprecated: configure Stream to call api.tapped.ai instead. Kept during rollout for rollback safety.
 export const streamBeforeMessageWebhook = onRequest(
-  { secrets: [streamKey, streamSecret, POSTMARK_SERVER_ID] },
+  { secrets: [streamKey, streamSecret, MAIL_API_SECRET] },
   async (req, res) => {
     const client = new StreamChat(streamKey.value(), streamSecret.value());
 
@@ -136,7 +136,7 @@ export const streamBeforeMessageWebhook = onRequest(
         msg,
         receiverData,
         senderUser,
-        postmarkServerId: POSTMARK_SERVER_ID.value(),
+        postmarkServerId: MAIL_API_SECRET.value(),
       });
     } else {
       // send email if venue
@@ -146,16 +146,16 @@ export const streamBeforeMessageWebhook = onRequest(
         receiverData,
         sender: senderUser,
         receiver: receiverUser,
-        postmarkServerId: POSTMARK_SERVER_ID.value(),
+        postmarkServerId: MAIL_API_SECRET.value(),
       });
     }
     res.status(200).send("ok");
   },
 );
 
-// Deprecated: booking.tapped.ai MX now terminates at Haraka. Kept during rollout for rollback safety.
+// Deprecated: Postmark should deliver inbound email to api.tapped.ai. Kept during rollout for rollback safety.
 export const inboundEmailWebhook = onRequest(
-  { secrets: [POSTMARK_SERVER_ID, streamKey, streamSecret, SLACK_WEBHOOK_URL] },
+  { secrets: [MAIL_API_SECRET, streamKey, streamSecret, SLACK_WEBHOOK_URL] },
   async (req, res) => {
     const body = req.body;
     try {

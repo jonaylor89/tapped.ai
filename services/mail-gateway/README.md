@@ -1,65 +1,95 @@
-# Tapped mail gateway
+# Tapped Stream ↔ email bridge
 
-Self-hosted SMTP edge for the Stream ↔ email bridge.
+The Rust API owns email-thread business logic, Stream synchronization, idempotency, and the durable SQLite inbox/outbox. Email transport differs by environment:
 
-## Services
+- **Production:** Postmark sends outbound mail and posts parsed inbound replies to the Rust API.
+- **Local development:** Haraka accepts inbound SMTP and Postfix receives outbound SMTP from the worker.
 
-- **Haraka** accepts inbound SMTP for `booking.tapped.ai` only and forwards the raw RFC-822 message to the API with a timestamped HMAC.
-- **api.tapped.ai** validates Stream/Haraka signatures, parses MIME, resolves email threads, and persists inbox/outbox state in SQLite WAL mode.
-- **mail_worker** leases the durable outbox and submits RFC-822 messages to Postfix.
-- **Postfix/OpenDKIM** performs internet delivery, retries, and DKIM signing.
+Production keeps the existing Postmark MX records. Haraka and Postfix are development/test infrastructure and must not replace Postmark in production.
 
-## Required environment
+## Production configuration
+
+Run the API and `mail_worker` from the same API image with a shared persistent volume containing `tapped-mail.sqlite3`. Configure the worker with:
+
+```text
+MAIL_STORE_PATH=/data/tapped-mail.sqlite3
+MAIL_TRANSPORT=postmark
+POSTMARK_SERVER_TOKEN=<existing Postmark server token>
+```
+
+Configure the API with:
 
 ```text
 FIREBASE_PROJECT_ID
 GOOGLE_APPLICATION_CREDENTIALS
 STREAM_KEY
 STREAM_SECRET
-MAIL_INGRESS_SECRET       # random 32+ byte Haraka/API secret
-MAIL_API_SECRET           # random 32+ byte Functions/API transition secret
+MAIL_INGRESS_SECRET       # random password used for Postmark inbound webhook Basic auth
+MAIL_API_SECRET           # random HMAC secret used by transitional Firebase Functions
+MAIL_STORE_PATH=/data/tapped-mail.sqlite3
+BOOKING_EMAIL_DOMAIN=booking.tapped.ai
 TYPESENSE_HOST
-TYPESENSE_PORT           # defaults to 443
-TYPESENSE_PROTOCOL       # defaults to https
+TYPESENSE_PORT
+TYPESENSE_PROTOCOL
+TYPESENSE_SEARCH_API_KEY
+```
+
+In Postmark, configure the inbound webhook as:
+
+```text
+https://postmark:<MAIL_INGRESS_SECRET>@api.tapped.ai/webhooks/postmark/inbound
+```
+
+Postmark sends HTTP Basic authentication from the URL credentials. Use HTTPS and a dedicated random secret. The API also retains signed `POST /internal/mail/inbound` for local Haraka delivery.
+
+## Local mail stack
+
+The Compose stack builds the API and runs:
+
+- Haraka for inbound SMTP
+- Postfix/OpenDKIM as a local SMTP target
+- `mail_worker` with `MAIL_TRANSPORT=smtp`
+
+Required local variables are listed in `.env.example`-style form below:
+
+```text
+FIREBASE_PROJECT_ID
+GOOGLE_APPLICATION_CREDENTIALS
+STREAM_KEY
+STREAM_SECRET
+MAIL_INGRESS_SECRET
+MAIL_API_SECRET
+TYPESENSE_HOST
+TYPESENSE_PORT
+TYPESENSE_PROTOCOL
 TYPESENSE_SEARCH_API_KEY
 BOOKING_EMAIL_DOMAIN      # defaults to booking.tapped.ai
 MAIL_HOSTNAME             # defaults to mail.tapped.ai
-API_PORT                  # host loopback port for the HTTPS reverse proxy; defaults to 3000
-MAIL_TLS_KEY              # PEM private key mounted into Haraka
-MAIL_TLS_CERT             # PEM full certificate chain mounted into Haraka
+API_PORT                   # defaults to 3000
+MAIL_TLS_KEY               # local Haraka PEM key
+MAIL_TLS_CERT              # local Haraka PEM certificate
 ```
 
-Start with:
+Start it with:
 
 ```bash
 docker compose up --build
 ```
 
-The host must allow outbound TCP 25. Publish only HTTPS for the API and TCP 25 for Haraka. Keep SQLite, Postfix submission, and Typesense on the private network.
-
-## DNS
-
-Configure:
-
-- `booking.tapped.ai MX 10 mail.tapped.ai`
-- `mail.tapped.ai A <VPS IP>`
-- matching PTR/rDNS for the VPS IP
-- SPF authorizing the VPS IP
-- the DKIM public key generated under the `postfix-dkim` volume
-- DMARC, initially in monitoring mode
-
-Before changing production MX records, run the Rust integration suite and test inbound/outbound delivery on a staging subdomain. During the Functions transition, set the legacy `POSTMARK_SERVER_ID` Firebase secret to the same value as `MAIL_API_SECRET`; it is now an API HMAC key, not a Postmark token.
+No production DNS changes are required for this stack.
 
 ## Manual Steps
 
-- [ ] Deploy the stack on a staging mail subdomain with persistent volumes, backups, TLS certificates, and all required secrets.
-- [ ] Create a Firebase smoke-test performer and a test venue whose `venueInfo.bookingEmail` points to the controlled IMAP inbox.
-- [ ] Configure the `mail-smoke.yml` repository variables (`MAIL_SMOKE_API_URL`, `MAIL_SMOKE_VENUE_ID`, `MAIL_SMOKE_IMAP_HOST`, `MAIL_SMOKE_SMTP_HOST`, and `MAIL_SMOKE_SMTP_PORT`) and matching Firebase, IMAP, and Stream secrets.
-- [ ] Run **Post-deploy mail smoke**. It creates a real authenticated thread, waits for internet delivery over IMAP, replies through SMTP, and verifies the reply in Stream. The deployment job can trigger it with a `mail-deployed` repository dispatch.
+- [ ] Back up the current Hetzner Compose configuration and tag the running API image for rollback.
+- [ ] Add a persistent `mail-data` volume shared by the API and `mail_worker`.
+- [ ] Deploy the merged API image with the production variables above; set the worker to `MAIL_TRANSPORT=postmark`.
+- [ ] Confirm `/health`, API logs, worker startup, SQLite WAL creation, and Postmark API connectivity.
 - [ ] Authenticate Application Default Credentials with `gcloud auth application-default login`, then preview the legacy migration with `python3 services/mail-gateway/tools/backfill_mail_threads.py`.
-- [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the reported eligible and written counts match.
-- [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`, then rerun the smoke workflow.
-- [ ] Lower the MX TTL, publish/verify PTR, SPF, DKIM, and DMARC, and switch `booking.tapped.ai` MX to Haraka.
-- [ ] Rerun the smoke workflow after DNS propagation and verify outbox retries, Postfix queue depth, orphan volume, disk usage, and bounce logs.
-- [ ] Keep the deprecated Firebase Stream and inbound handlers for a 72-hour rollback window. Because traffic is low, run the smoke workflow at least daily during that window rather than relying only on organic traffic.
-- [ ] After 72 healthy hours and three successful daily smoke runs, delete the deprecated handlers, remove the `POSTMARK_SERVER_ID` compatibility name, and remove the old Functions configuration.
+- [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible and written counts match.
+- [ ] Configure Postmark's inbound webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records.
+- [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`.
+- [ ] Build and release the Flutter app that calls `POST /app/v1/venue-email-threads`.
+- [ ] Run **Post-deploy mail smoke** manually. IMAP is used only by this optional end-to-end deliverability test, not by production infrastructure.
+- [ ] Verify app → Postmark → recipient, recipient reply → Postmark webhook → Stream, Stream follow-up → Postmark, duplicate webhook retries, and attachment handling.
+- [ ] Keep deprecated Firebase handlers for a 72-hour rollback window.
+- [ ] After 72 healthy hours, remove deprecated handlers and obsolete Functions configuration. Keep the actual Postmark server token under `POSTMARK_SERVER_TOKEN`; never reuse it as `MAIL_API_SECRET`.
