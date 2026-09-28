@@ -13,8 +13,8 @@ struct ProfileViewModelTests {
         await model.load()
         #expect(model.phase == .loaded)
         #expect(model.isCurrentUser)
-        #expect(model.services.map(\.id) == ["service-nova-hourly", "service-nova-set"])
-        #expect(model.latestBookings.map(\.id) == ["booking-1", "booking-3", "booking-4"])
+        #expect(model.services.map(\.id) == ["service-dj-set", "service-opener", "service-private"])
+        #expect(model.latestBookings.map(\.id) == ["booking-1", "booking-4", "booking-5", "booking-6", "booking-7"])
         #expect(model.counterpartName(for: model.latestBookings[0]) == "The Camel")
         #expect(model.latestReview?.id == "review-nova-camel")
         #expect(model.latestReviewer?.id == "venue-camel")
@@ -70,7 +70,7 @@ struct SettingsViewModelTests {
         let dependencies = Dependencies.mock(signedIn: true)
         let model = SettingsViewModel(dependencies: dependencies, currentUser: Samples.performer)
         await model.load()
-        #expect(model.services.count == 2)
+        #expect(model.services.count == 3)
         #expect(model.placeName == "Richmond, VA, USA")
         #expect(!model.hasChanges)
 
@@ -118,8 +118,8 @@ struct SettingsViewModelTests {
         #expect(model.draft.performerInfo == Samples.performer.performerInfo)
 
         await model.deleteService(model.services[0])
-        #expect(model.services.count == 1)
-        #expect(try await dependencies.database.getUserServices(Samples.performer.id).count == 1)
+        #expect(model.services.count == 2)
+        #expect(try await dependencies.database.getUserServices(Samples.performer.id).count == 2)
     }
 
     @Test func deleteAccountSignsOut() async {

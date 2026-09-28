@@ -28,6 +28,10 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     /// Dart `blockerSubcollection`.
     static let blockerSubcollection = "blockedUsers"
 
+    private func userServices(_ userId: String) -> CollectionReference {
+        services.document(userId).collection("userServices")
+    }
+
     // MARK: - implemented
 
     public func userEmailExists(_ email: String) async throws -> Bool {
