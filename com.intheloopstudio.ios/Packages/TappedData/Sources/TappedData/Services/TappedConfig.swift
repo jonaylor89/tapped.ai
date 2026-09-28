@@ -11,6 +11,8 @@ public struct TappedConfig: Sendable, Hashable {
     public var postHogHost: String
     /// StoreKit product IDs that grant the `premium` entitlement.
     public var premiumProductIds: [String]
+    /// Stream Chat app key (`lib/main.dart` `StreamChatClient('…')`). Public by design.
+    public var streamAPIKey: String
 
     public init(
         typesenseHost: String = "search.tapped.ai",
@@ -20,7 +22,8 @@ public struct TappedConfig: Sendable, Hashable {
         googlePlacesAPIKey: String = "",
         postHogAPIKey: String = "",
         postHogHost: String = "https://us.i.posthog.com",
-        premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds
+        premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds,
+        streamAPIKey: String = TappedConfig.defaultStreamAPIKey
     ) {
         self.typesenseHost = typesenseHost
         self.typesensePort = typesensePort
@@ -30,10 +33,13 @@ public struct TappedConfig: Sendable, Hashable {
         self.postHogAPIKey = postHogAPIKey
         self.postHogHost = postHogHost
         self.premiumProductIds = premiumProductIds
+        self.streamAPIKey = streamAPIKey
     }
 
-    /// No RevenueCat / `.storekit` configuration exists in the Flutter repo, so these are placeholders
-    /// until App Store Connect products are confirmed.
+    public static let defaultStreamAPIKey = "xyk6dwdsp422"
+
+    /// No `.storekit` configuration exists in the Flutter repo (it used RevenueCat), so these are placeholders
+    /// until App Store Connect products are confirmed. `StoreKit/Tapped.storekit` mirrors them for local testing.
     public static let defaultPremiumProductIds = [
         "com.intheloopstudio.premium.monthly",
         "com.intheloopstudio.premium.yearly",
@@ -54,7 +60,8 @@ public struct TappedConfig: Sendable, Hashable {
             googlePlacesAPIKey: string("TappedGooglePlacesAPIKey") ?? "",
             postHogAPIKey: string("TappedPostHogAPIKey") ?? "",
             postHogHost: string("TappedPostHogHost") ?? defaults.postHogHost,
-            premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds
+            premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds,
+            streamAPIKey: string("TappedStreamAPIKey") ?? defaults.streamAPIKey
         )
     }
 }

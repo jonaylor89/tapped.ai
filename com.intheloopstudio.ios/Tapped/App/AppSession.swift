@@ -60,6 +60,7 @@ final class AppSession {
     }
 
     func signOut() async {
+        await dependencies.chat.disconnect()
         try? await dependencies.auth.logout()
         await dependencies.analytics.reset()
     }

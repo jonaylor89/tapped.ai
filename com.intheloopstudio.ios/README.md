@@ -74,6 +74,9 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
+| `TAPPED_MOCK_ADMIN` | `1` | grant the `admin` custom claim (admin form) |
+| `TAPPED_MOCK_STOREKIT` | `1` | real StoreKit 2 purchases against `StoreKit/Tapped.storekit` (set in the `Tapped Mock` scheme) |
+| `TAPPED_MOCK_ROUTE` | `paywall` \| `messages` \| `channel` \| `admin` | push a route on top of Discover once signed in |
 
 Mock sign-in: any email + password works, except the password `wrong` (which returns an auth error).
 
@@ -191,9 +194,13 @@ map-like gradient) so glass is visible. `ComponentGallery` shows everything at o
   activities + observer, bookings by requester/requestee + observers, opportunities, reviews + observers, premium
   waitlist, contacted venues); everything else throws `NotImplemented`.
 - Every `Route` except `login`/`signUp`/`forgotPassword`/`discovery` resolves to `PlaceholderScreen`.
-- Onboarding (phase `.onboarding`) is a placeholder; unread message count is `0` until Stream Chat lands.
+- Onboarding (phase `.onboarding`) is a placeholder.
 - StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` are placeholders (Flutter uses RevenueCat
-  offerings; no StoreKit config exists in the repo).
+  offerings); `StoreKit/Tapped.storekit` mirrors them for local testing (`Tapped Mock` scheme).
+- Messaging: `ChatRepository` (backend-neutral `Conversation`/`ConversationMessage`) with `StreamChatRepository`
+  (StreamChat state layer, token from the `ext-auth-chat-getStreamUserToken` callable) and `MockChatRepository`.
+  UI is native SwiftUI, not `StreamChatSwiftUI`, so the backend can be swapped for Firestore.
+- Premium gating: `Route.requiringPremium(_:)`, `Router.push(_:requiresPremium:)`, `PremiumGate` view.
 - Push: APNs token is forwarded to FCM; topic subscription/deep-link routing is session 5.
 
 ## Screen ownership (follow-up sessions)

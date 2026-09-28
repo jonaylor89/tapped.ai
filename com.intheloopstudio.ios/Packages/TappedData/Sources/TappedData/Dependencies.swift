@@ -17,6 +17,8 @@ public struct Dependencies: Sendable {
     public var purchases: any PurchasesRepository
     public var analytics: any AnalyticsRepository
     public var remoteConfig: any RemoteConfigRepository
+    public var chat: any ChatRepository
+    public var storage: any StorageRepository
 
     public init(
         mode: Mode,
@@ -26,7 +28,9 @@ public struct Dependencies: Sendable {
         places: any PlacesRepository,
         purchases: any PurchasesRepository,
         analytics: any AnalyticsRepository,
-        remoteConfig: any RemoteConfigRepository
+        remoteConfig: any RemoteConfigRepository,
+        chat: any ChatRepository = MockChatRepository(),
+        storage: any StorageRepository = MockStorageRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -36,6 +40,8 @@ public struct Dependencies: Sendable {
         self.purchases = purchases
         self.analytics = analytics
         self.remoteConfig = remoteConfig
+        self.chat = chat
+        self.storage = storage
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -49,7 +55,9 @@ public struct Dependencies: Sendable {
             places: GooglePlacesRepository(apiKey: config.googlePlacesAPIKey),
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
-            remoteConfig: FirebaseRemoteConfigRepository()
+            remoteConfig: FirebaseRemoteConfigRepository(),
+            chat: StreamChatRepository(apiKey: config.streamAPIKey, tokenProvider: FirebaseStreamToken.fetch),
+            storage: FirebaseStorageRepository()
         )
     }
 
@@ -57,7 +65,8 @@ public struct Dependencies: Sendable {
         signedIn: Bool = false,
         isPremium: Bool = false,
         claims: [CustomClaim] = [],
-        downForMaintenance: Bool = false
+        downForMaintenance: Bool = false,
+        storeKitPurchases: Bool = false
     ) -> Dependencies {
         Dependencies(
             mode: .mock,
@@ -65,9 +74,13 @@ public struct Dependencies: Sendable {
             database: MockDatabaseRepository(),
             search: MockSearchRepository(),
             places: MockPlacesRepository(),
-            purchases: MockPurchasesRepository(isPremium: isPremium),
+            purchases: storeKitPurchases
+                ? StoreKitPurchasesRepository(productIds: TappedConfig.defaultPremiumProductIds)
+                : MockPurchasesRepository(isPremium: isPremium),
             analytics: MockAnalytics(),
-            remoteConfig: MockRemoteConfigRepository(downForMaintenance: downForMaintenance)
+            remoteConfig: MockRemoteConfigRepository(downForMaintenance: downForMaintenance),
+            chat: MockChatRepository(),
+            storage: MockStorageRepository()
         )
     }
 
@@ -87,7 +100,9 @@ public struct Dependencies: Sendable {
     }
 
     /// Mock-mode launch arguments used by UI tests / screenshots:
-    /// `TAPPED_MOCK_SIGNED_IN=1` starts signed in, `TAPPED_MOCK_PREMIUM=1` grants premium.
+    /// `TAPPED_MOCK_SIGNED_IN=1` starts signed in, `TAPPED_MOCK_PREMIUM=1` grants premium,
+    /// `TAPPED_MOCK_ADMIN=1` grants the `admin` claim, `TAPPED_MOCK_STOREKIT=1` uses real StoreKit 2
+    /// (pair with the scheme's `Tapped.storekit` configuration).
     public static func resolve(environment: [String: String] = ProcessInfo.processInfo.environment) -> Dependencies {
         switch resolveMode(environment: environment) {
         case .live:
@@ -95,7 +110,9 @@ public struct Dependencies: Sendable {
         case .mock:
             return .mock(
                 signedIn: environment["TAPPED_MOCK_SIGNED_IN"] == "1",
-                isPremium: environment["TAPPED_MOCK_PREMIUM"] == "1"
+                isPremium: environment["TAPPED_MOCK_PREMIUM"] == "1",
+                claims: environment["TAPPED_MOCK_ADMIN"] == "1" ? [.admin] : [],
+                storeKitPurchases: environment["TAPPED_MOCK_STOREKIT"] == "1"
             )
         }
     }

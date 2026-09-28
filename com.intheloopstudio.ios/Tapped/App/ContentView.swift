@@ -23,7 +23,7 @@ struct ContentView: View {
                     // TODO(session-5): replace with the onboarding flow.
                     NavigationStack { PlaceholderScreen(title: Route.onboarding.title) }
                 case let .signedIn(user):
-                    ShellView(currentUser: user)
+                    ShellView(currentUser: user, chat: dependencies.chat)
                         .id(user.id)
                 }
             }

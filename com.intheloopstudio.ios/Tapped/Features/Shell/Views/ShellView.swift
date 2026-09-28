@@ -10,8 +10,8 @@ struct ShellView: View {
     @Environment(\.dependencies) private var dependencies
     @State private var shell: ShellViewModel
 
-    init(currentUser: UserModel) {
-        _shell = State(initialValue: ShellViewModel(currentUser: currentUser))
+    init(currentUser: UserModel, chat: (any ChatRepository)? = nil) {
+        _shell = State(initialValue: ShellViewModel(currentUser: currentUser, chat: chat))
     }
 
     var body: some View {
@@ -27,6 +27,10 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
+        .task { await shell.run() }
+        .task {
+            if let route = session.launchOptions.initialRoute, router.isAtRoot { router.push(route) }
+        }
     }
 }
 

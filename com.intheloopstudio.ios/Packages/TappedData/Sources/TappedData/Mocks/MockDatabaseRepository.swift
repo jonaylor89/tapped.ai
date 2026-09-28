@@ -7,6 +7,9 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var users: [String: UserModel]
     public private(set) var opportunities: [String: Opportunity]
     public private(set) var bookings: [String: Booking]
+    /// `opportunityFeeds/{userId}/opportunities/{opportunityId}`.
+    public private(set) var opportunityFeeds: [String: [String: Opportunity]] = [:]
+    public private(set) var premiumWaitlist: Set<String> = []
     public var featuredPerformerIds: [String]
     public var featuredOpportunityIds: [String]
 
@@ -104,9 +107,12 @@ public actor MockDatabaseRepository: DatabaseRepository {
         AsyncThrowingStream { $0.finish(throwing: NotImplemented()) }
     }
     public func decrementUserOpportunityQuota(_ userId: String) async throws { throw NotImplemented() }
-    public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
+    public func createOpportunity(_ opportunity: Opportunity) async throws { opportunities[opportunity.id] = opportunity }
+    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws {
+        let recipients = users.values.filter { $0.id != opportunity.userId && !$0.deleted && !$0.email.hasSuffix("tapped.ai") }
+        for user in recipients { opportunityFeeds[user.id, default: [:]][opportunity.id] = opportunity }
+    }
+    public func deleteOpportunity(_ opportunityId: String) async throws { opportunities[opportunityId]?.deleted = true }
     public func blockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     public func unblockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool { throw NotImplemented() }
@@ -115,7 +121,7 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
     public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
     public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
-    public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
+    public func joinPremiumWaitlist(_ userId: String) async throws { premiumWaitlist.insert(userId) }
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers

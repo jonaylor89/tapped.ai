@@ -76,6 +76,7 @@ public struct MockPlacesRepository: PlacesRepository {
 
 public actor MockPurchasesRepository: PurchasesRepository {
     private var entitlements: Set<Entitlement>
+    private let broadcaster = EntitlementBroadcaster()
 
     public init(isPremium: Bool = false) {
         entitlements = isPremium ? [.premium] : []
@@ -83,22 +84,31 @@ public actor MockPurchasesRepository: PurchasesRepository {
 
     public func products() async throws -> [PremiumProduct] {
         [
-            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[0], displayName: "tapped premium", description: "monthly", displayPrice: "$9.99"),
-            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[1], displayName: "tapped premium", description: "yearly", displayPrice: "$79.99"),
+            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[0], displayName: "tapped premium", description: "monthly", displayPrice: "$9.99", period: .month),
+            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[1], displayName: "tapped premium", description: "yearly", displayPrice: "$79.99", period: .year),
         ]
     }
 
     public func purchase(productId: String) async throws -> PurchaseOutcome {
         entitlements.insert(.premium)
+        await broadcaster.publish(entitlements)
         return .purchased
     }
 
-    public func restorePurchases() async throws {}
+    public func restorePurchases() async throws {
+        await broadcaster.publish(entitlements)
+    }
+
     public func activeEntitlements() async -> Set<Entitlement> { entitlements }
 
     public nonisolated func entitlementUpdates() -> AsyncStream<Set<Entitlement>> {
         AsyncStream { continuation in
-            Task { continuation.yield(await self.activeEntitlements()) }
+            let id = UUID()
+            Task {
+                await self.broadcaster.register(id, continuation)
+                continuation.yield(await self.activeEntitlements())
+            }
+            continuation.onTermination = { _ in Task { await self.broadcaster.unregister(id) } }
         }
     }
 }

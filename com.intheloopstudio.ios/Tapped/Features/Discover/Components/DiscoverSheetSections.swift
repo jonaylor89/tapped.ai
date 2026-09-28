@@ -211,7 +211,7 @@ struct SheetTopPerformers: View {
                     HStack(spacing: TappedSpacing.sm) {
                         ForEach(performers) { performer in
                             Button {
-                                push(isPremium ? .profile(userId: performer.id, user: performer) : .paywall)
+                                push(Route.profile(userId: performer.id, user: performer).requiringPremium(isPremium))
                             } label: {
                                 UserCard(user: performer, isLocked: !isPremium)
                             }

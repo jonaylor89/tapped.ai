@@ -22,6 +22,7 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     private var opportunities: CollectionReference { db.collection("opportunities") }
     private var premiumWaitlist: CollectionReference { db.collection("premiumWaitlist") }
     private var contactVenues: CollectionReference { db.collection("contactVenues") }
+    private var opportunityFeeds: CollectionReference { db.collection("opportunityFeeds") }
 
     // MARK: - implemented
 
@@ -219,12 +220,31 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     }
     // TODO(session-4): opportunities quota.
     public func decrementUserOpportunityQuota(_ userId: String) async throws { throw NotImplemented() }
-    // TODO(session-6): admin → add gig.
-    public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    // TODO(session-6): admin → add gig.
-    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    // TODO(session-6): admin.
-    public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
+    public func createOpportunity(_ opportunity: Opportunity) async throws {
+        try await opportunities.document(opportunity.id).setData(Firestore.Encoder().encode(opportunity))
+    }
+
+    /// Fans the opportunity out to `opportunityFeeds/{userId}/opportunities/{id}` for every non-deleted user
+    /// except the creator and `@tapped.ai` staff accounts.
+    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws {
+        let snapshot = try await users.whereField("deleted", isNotEqualTo: true).getDocuments()
+        let recipients = snapshot.documents
+            .filter { $0.documentID != opportunity.userId }
+            .filter { !(($0.get("email") as? String) ?? "").hasSuffix("tapped.ai") }
+            .map(\.documentID)
+        let data = try Firestore.Encoder().encode(opportunity)
+        for chunk in stride(from: 0, to: recipients.count, by: 450).map({ Array(recipients[$0..<min($0 + 450, recipients.count)]) }) {
+            let batch = db.batch()
+            for userId in chunk {
+                batch.setData(data, forDocument: opportunityFeeds.document(userId).collection("opportunities").document(opportunity.id))
+            }
+            try await batch.commit()
+        }
+    }
+
+    public func deleteOpportunity(_ opportunityId: String) async throws {
+        try await opportunities.document(opportunityId).updateData(["deleted": true])
+    }
     // TODO(session-2): profile → block.
     public func blockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     // TODO(session-2): profile → block.
@@ -241,8 +261,9 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
     // TODO(session-4): reviews.
     public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
-    // TODO(session-6): paywall waitlist.
-    public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
+    public func joinPremiumWaitlist(_ userId: String) async throws {
+        try await premiumWaitlist.document(userId).setData(["timestamp": Timestamp(date: .now)])
+    }
     // TODO(session-2): settings → feedback.
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 

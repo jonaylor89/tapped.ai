@@ -1,4 +1,5 @@
 import Foundation
+import TappedDomain
 import TappedUI
 
 /// Mock-mode-only launch environment used for deterministic screenshots and UI checks.
@@ -6,6 +7,7 @@ import TappedUI
 /// - `TAPPED_MOCK_SIGNED_IN=1`   start signed in (handled by `Dependencies.resolve`)
 /// - `TAPPED_MOCK_SCREEN=splash|login|signup|forgot`  hold the auth gate on a screen
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
+/// - `TAPPED_MOCK_ROUTE=paywall|messages|channel|admin`  push a route on top of Discover once signed in
 struct LaunchOptions: Equatable {
     enum Screen: String {
         case splash, login, signup, forgot
@@ -13,6 +15,7 @@ struct LaunchOptions: Equatable {
 
     var screen: Screen?
     var detent: MapsSheetDetent?
+    var initialRoute: Route?
 
     static let none = LaunchOptions()
 
@@ -32,6 +35,17 @@ struct LaunchOptions: Equatable {
         case "large": .large
         default: nil
         }
-        return LaunchOptions(screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)), detent: detent)
+        let route: Route? = switch environment["TAPPED_MOCK_ROUTE"] {
+        case "paywall": .paywall
+        case "messages": .messagingChannelList
+        case "channel": .streamChannel(channelId: Samples.conversations[0].id)
+        case "admin": .admin
+        default: nil
+        }
+        return LaunchOptions(
+            screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)),
+            detent: detent,
+            initialRoute: route
+        )
     }
 }
