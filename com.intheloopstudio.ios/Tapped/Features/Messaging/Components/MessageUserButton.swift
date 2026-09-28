@@ -4,7 +4,6 @@ import TappedDomain
 import TappedUI
 
 /// `MessageButton` (profile): opens — or creates — the 1:1 conversation with `userId`.
-/// Drop into the profile header (session 2 owns `ProfileView`).
 struct MessageUserButton: View {
     let userId: String
 

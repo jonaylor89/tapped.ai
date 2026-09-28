@@ -48,7 +48,7 @@ struct SearchOpportunitiesDestination: View {
         case let .reviews(userId):
             UserReviewsView(dependencies: dependencies, currentUser: currentUser, userId: userId, isWriting: launchDetail != nil)
         default:
-            PlaceholderScreen(title: route.title, owner: route.owner)
+            EmptyView()
         }
     }
 }

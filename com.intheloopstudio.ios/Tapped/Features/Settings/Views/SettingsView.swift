@@ -15,6 +15,7 @@ struct SettingsView: View {
     @State private var isPickingGenres = false
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDelete = false
+    @State private var isReauthenticating = false
 
     init(dependencies: Dependencies, currentUser: UserModel) {
         _model = State(initialValue: SettingsViewModel(dependencies: dependencies, currentUser: currentUser))
@@ -60,13 +61,15 @@ struct SettingsView: View {
             }
         }
         .confirmationDialog("delete account?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-            Button("delete account", role: .destructive) {
-                Task {
-                    if await model.deleteAccount() { router.popToRoot() }
-                }
-            }
+            Button("delete account", role: .destructive) { isReauthenticating = true }
         } message: {
             Text("this permanently deletes your profile, bookings and messages")
+        }
+        .reauthenticationSheet(isPresented: $isReauthenticating, reason: "enter your password to delete your account") {
+            isReauthenticating = false
+            Task {
+                if await model.deleteAccount() { router.popToRoot() }
+            }
         }
         .sheet(isPresented: $isPickingLocation) {
             LocationSearchSheet(search: model.searchPlaces, resolve: model.place(for:), onSelect: model.selectPlace)

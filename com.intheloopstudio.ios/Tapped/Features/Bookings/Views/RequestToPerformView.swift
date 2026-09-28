@@ -7,8 +7,11 @@ import TappedUI
 struct RequestToPerformView: View {
     @State private var model: RequestToPerformViewModel
     @Environment(Router.self) private var router
+    @State private var isAddingCollaborators = false
+    private let dependencies: Dependencies
 
     init(dependencies: Dependencies, currentUser: UserModel, venues: [UserModel], collaborators: [UserModel]) {
+        self.dependencies = dependencies
         _model = State(initialValue: RequestToPerformViewModel(dependencies: dependencies, currentUser: currentUser, venues: venues, collaborators: collaborators))
     }
 
@@ -24,11 +27,11 @@ struct RequestToPerformView: View {
                 Text(model.venues.count == 1 ? "venue" : "venues")
             }
 
-            if !model.collaborators.isEmpty {
-                Section("collaborators") {
-                    ForEach(model.collaborators) { UserTile(user: $0) }
-                        .onDelete { model.collaborators.remove(atOffsets: $0) }
-                }
+            Section("collaborators") {
+                ForEach(model.collaborators) { UserTile(user: $0) }
+                    .onDelete { model.collaborators.remove(atOffsets: $0) }
+                Button("add collaborators", systemImage: "person.badge.plus") { isAddingCollaborators = true }
+                    .fontWeight(.semibold)
             }
 
             Section {
@@ -53,6 +56,11 @@ struct RequestToPerformView: View {
             Button("ok", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
+        }
+        .sheet(isPresented: $isAddingCollaborators) {
+            NavigationStack {
+                AddCollaboratorsView(dependencies: dependencies, currentUserId: model.currentUser.id, collaborators: $model.collaborators)
+            }
         }
         .navigationTitle("request to perform")
         .navigationBarTitleDisplayMode(.inline)

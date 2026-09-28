@@ -45,9 +45,9 @@ struct ProfileDataTests {
     @Test func servicesSoftDelete() async throws {
         let database = MockDatabaseRepository()
         let services = try await database.getUserServices(me)
-        #expect(services.count == 2)
+        #expect(services.map(\.id) == Samples.services.filter { $0.userId == me }.map(\.id))
         try await database.deleteService(me, services[0].id)
-        #expect(try await database.getUserServices(me).map(\.id) == [services[1].id])
+        #expect(try await database.getUserServices(me).map(\.id) == services.dropFirst().map(\.id))
         #expect(try await database.getServiceById(me, services[0].id)?.deleted == true)
         #expect(try await database.getServiceById("someone-else", services[1].id) == nil)
     }
@@ -70,9 +70,9 @@ struct ProfileDataTests {
     @Test func reviewsAreFilteredAndSorted() async throws {
         let database = MockDatabaseRepository()
         let performer = try await database.getPerformerReviewsByPerformerId(me, limit: 10, lastReviewId: nil)
-        #expect(performer.map(\.id) == ["review-nova-camel", "review-nova-broadberry"])
+        #expect(performer.map(\.id) == ["review-camel-nova", "review-canal-nova", "review-vagabond-nova"])
         let next = try await database.getPerformerReviewsByPerformerId(me, limit: 10, lastReviewId: performer[0].id)
-        #expect(next.map(\.id) == ["review-nova-broadberry"])
+        #expect(next.map(\.id) == ["review-canal-nova", "review-vagabond-nova"])
         #expect(try await database.getBookerReviewsByBookerId("venue-camel", limit: 1, lastReviewId: nil).count == 1)
     }
 

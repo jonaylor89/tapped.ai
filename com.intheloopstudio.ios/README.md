@@ -37,6 +37,19 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 | `TappedPostHogAPIKey` / `TappedPostHogHost` | PostHog project key / `https://us.i.posthog.com` |
 | `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In (same OAuth client as Flutter) |
 | `TappedPremiumProductIds` | optional override for StoreKit product IDs |
+| `TappedAPIURL` | optional; Tapped API base URL used by request-to-perform venue outreach (default `https://api.tapped.ai`) |
+| `TappedStreamAPIKey` | optional; Stream Chat **public** app key (default is the key the Flutter app ships). The user token comes from the `ext-auth-chat-getStreamUserToken` callable, never from the app bundle |
+
+Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; create the `ios_*` / waitlist keys in the Firebase console,
+Flutter has no equivalents):
+
+| Key | Type / default | Effect |
+| --- | --- | --- |
+| `down_for_maintenance` | bool / `false` | `MaintenanceView` gate |
+| `booking_fee` | number | fee shown on booking forms |
+| `ios_minimum_app_version` | string / `""` | semver; installed version below it → blocking `UpdateRequiredView` (replaces Flutter's `upgrader`). Empty/unparseable = off |
+| `ios_latest_app_version` | string / `""` | semver; installed version below it → dismissible "update available" alert (update now / later / ignore this version) |
+| `premium_waitlist_enabled` | bool / `false` | `Route.paywall` shows the premium waitlist instead of the StoreKit paywall |
 
 ## Build / test / run
 
@@ -74,7 +87,8 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
-| `TAPPED_MOCK_ROUTE` | `profile` \| `profile:<userId>` \| `settings` \| `activities` \| `tasks` \| `shareProfile` | push a screen after sign-in (screenshots) |
+| `TAPPED_MOCK_ROUTE` | see below | push a screen (or path) on top of Discover once signed in (`Route.mockLaunchPath`) |
+| `TAPPED_MOCK_ROUTE_DETAIL` | screen-specific (e.g. a search query) | extra state for the launched search/opportunity screen |
 | `TAPPED_MOCK_ONBOARDING` | `1` | start as a new account with no `users/{uid}` doc (→ onboarding) |
 | `TAPPED_MOCK_UNVERIFIED` | `1` | new unverified email/password account (→ confirm email) |
 | `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `occupation` \| `genres` \| `location` \| `socials` \| `avatar` \| `complete` | open onboarding on a step with sample answers |
@@ -85,7 +99,16 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_LINK` | a URL | deliver a deep link at launch (cold start) |
 | `TAPPED_MOCK_ADMIN` | `1` | grant the `admin` custom claim (admin form) |
 | `TAPPED_MOCK_STOREKIT` | `1` | real StoreKit 2 purchases against `StoreKit/Tapped.storekit` (set in the `Tapped Mock` scheme) |
-| `TAPPED_MOCK_ROUTE` | `paywall` \| `messages` \| `channel` \| `admin` \| `videocall` | push a route on top of Discover once signed in |
+
+`TAPPED_MOCK_ROUTE` names:
+
+- profile: `profile`, `profile:<userId>`, `settings`, `activities`, `tasks`, `shareProfile`
+- bookings: `bookings`, `booking`, `booking-pending`, `booking-sent`, `booking-past`, `booking-confirmation`,
+  `create-booking`, `add-past-booking`, `request-to-perform`, `request-sent`, `add-collaborators`, `history`,
+  `services`, `services-book`, `service`, `service-book`, `create-service`, `edit-service`
+- search / opportunities / reviews: `search`, `advanced-search`, `location-form`, `gig-search`, `opportunity`,
+  `opportunities`, `opportunity-feed`, `interested-users`, `reviews`, `reviews-venue`
+- premium / messaging / admin: `paywall`, `messages`, `channel`, `admin`, `videocall`
 
 Mock sign-in: any email + password works, except the password `wrong` (which returns an auth error).
 
@@ -168,8 +191,9 @@ clustering), glass top chrome (avatar · search capsule · messages, venues/gigs
 ### Adding a feature
 
 1. Create `Tapped/Features/<Feature>/{Views,ViewModels,Components}`.
-2. If it's a destination, it already has a `Route` case (mirrors `tapped_route.dart`). Replace the
-   `PlaceholderScreen` for that case in `Features/Navigation/Views/RouteDestination.swift` with your view.
+2. If it's a destination, it already has a `Route` case (mirrors `tapped_route.dart`). Resolve it in
+   `Features/Navigation/Views/RouteDestination.swift` (or the feature's `…RouteDestination`), and add a
+   `TAPPED_MOCK_ROUTE` name in `Route+MockLaunch.swift`.
 3. Build the view model against `Dependencies`; add `#Preview`s using `Dependencies.mock()` and `Samples`.
 4. Add Swift Testing tests in `TappedTests/`.
 5. `xcodegen generate` is only needed if you add a new target or edit `project.yml` (sources are folder-globbed,
@@ -190,7 +214,7 @@ with `NavigationLink(destination:)`.
 ### Dependency injection
 
 `Dependencies` is a `Sendable` struct of protocol existentials (`auth`, `database`, `search`, `places`,
-`purchases`, `analytics`, `remoteConfig`). Read with `@Environment(\.dependencies)`; pass into view models' inits.
+`purchases`, `analytics`, `remoteConfig`, `notifications`, `storage`, `venueOutreach`, `chat`). Read with `@Environment(\.dependencies)`; pass into view models' inits.
 Tests and previews use `Dependencies.mock(signedIn:isPremium:claims:downForMaintenance:)`; override a single repo
 by constructing `Dependencies(...)` with your own mock.
 
@@ -209,34 +233,31 @@ map-like gradient) so glass is visible. `ComponentGallery` shows everything at o
 - `TappedUITests`: `ImageRenderer` smoke renders of every component in light/dark + sheet math.
 - `TappedTests`: view models (`DiscoverViewModel`, auth), `AppSession`, `Router`, `Route`, `LaunchOptions`.
 
+## Features
+
+Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRouteDestination` /
+`SearchOpportunitiesDestination`). `Route.owner` records which rewrite session built each destination.
+
+| Area | Screens / behaviour | Routes | Built in |
+| --- | --- | --- | --- |
+| Shell, Discover, auth | Map + clustering, glass chrome, three-detent `MapsStyleSheet` (quick actions/results fade in above the collapsed detent), filters, all results; splash, login, sign up, forgot password, confirm email | `discovery`, `login`, `signUp`, `forgotPassword` | #18 |
+| Profile | Profile (hero, stats, socials, reviews, services, bookings; **message** via `MessageUserButton` → `ChatRepository.createDirectConversation` → `streamChannel`), settings / edit profile (delete account behind `.reauthenticationSheet`), share profile (QR), tasks, activity (unread badge on the Discover avatar), image viewer | `profile`, `settings`, `shareProfile`, `tasks`, `activities`, `image` | #22 |
+| Bookings | Bookings list (upcoming/past, sent/received), booking detail + accept/decline/cancel, create booking, confirmation, add past booking, booking history map, request to perform (+ add collaborators) and confirmation, services list / detail / create-edit | `bookings`, `booking`, `createBooking`, `bookingConfirmation`, `addPastBooking`, `bookingHistory`, `requestToPerform`, `requestToPerformConfirmation`, `addCollaborators`, `serviceSelection`, `service`, `createService` | #20 |
+| Search & opportunities | Search (performers/venues, recents), advanced search, location form, gig search (premium, venue fit), opportunity detail + apply, opportunities list, feed, interested users, reviews (new reviews carry the most recent confirmed booking id between the two users) | `search`, `advancedSearch`, `locationForm`, `gigSearch`, `opportunity`, `opportunities`, `opportunityFeed`, `interestedUsers`, `reviews` | #23 |
+| Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), FCM token, Remote Config gates (maintenance, update required/available, premium waitlist), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
+| Premium, messaging, admin | StoreKit 2 paywall (`PaywallGate`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen, as in Flutter), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
+
+`Route.discovery` pops to the root (Discover is the shell root).
+
 ## What's stubbed
 
-- `DatabaseRepository`: only the Discover + profile-header subset is live in `FirestoreDatabaseRepository`
-  (users by id/username, username availability, featured performers/opportunities, booking/booker leaders,
-  activities + observer, bookings by requester/requestee + observers, opportunities, reviews + observers, premium
-  waitlist, contacted venues); everything else throws `NotImplemented`.
-- Every `Route` except `login`/`signUp`/`forgotPassword`/`discovery` resolves to `PlaceholderScreen`.
-- Onboarding (phase `.onboarding`) is a placeholder.
-- StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` are placeholders (Flutter uses RevenueCat
-  offerings; no StoreKit config exists in the repo).
-- Push: no topic subscriptions (Flutter has none either); Stream Chat device registration is session 6.
-- `classifyPerformer` (onboarding → performer classification Cloud Function) is still `NotImplemented`.
-  offerings); `StoreKit/Tapped.storekit` mirrors them for local testing (`Tapped Mock` scheme).
-- Messaging: `ChatRepository` (backend-neutral `Conversation`/`ConversationMessage`) with `StreamChatRepository`
-  (StreamChat state layer, token from the `ext-auth-chat-getStreamUserToken` callable) and `MockChatRepository`.
-  UI is native SwiftUI, not `StreamChatSwiftUI`, so the backend can be swapped for Firestore.
-- Premium gating: `Route.requiringPremium(_:)`, `Router.push(_:requiresPremium:)`, `PremiumGate` view.
-- Push: APNs token is forwarded to FCM; topic subscription/deep-link routing is session 5.
-
-## Screen ownership (follow-up sessions)
-
-| Session | Scope | Routes |
-| --- | --- | --- |
-| 2 | Profile, Settings, Share profile, Tasks, Activity | `profile`, `settings`, `shareProfile`, `tasks`, `activities`, `image`, `addCollaborators` |
-| 3 | Bookings, Request to perform, Services, Booking history map | `bookings`, `booking`, `createBooking`, `bookingConfirmation`, `requestToPerform`, `requestToPerformConfirmation`, `addPastBooking`, `bookingHistory`, `serviceSelection`, `createService`, `service` |
-| 4 | Search, Advanced search, Gig search, Opportunities, Feed, Reviews | `search`, `advancedSearch`, `gigSearch`, `opportunity`, `interestedUsers`, `reviews`, `locationForm` |
-| 5 | Onboarding, Universal links, Push, Remote Config gates | `onboarding`, `AppSession` phases, `TappedApp.onOpenURL`, `AppDelegate` push |
-| 6 | Paywall (StoreKit 2), Messaging (Stream Chat), Admin | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` |
-
-`Route.owner` encodes the same table so `PlaceholderScreen` shows who owns each destination.
-Shared code (`TappedUI`, `TappedData` protocols, `Route`) is changed by small, separate PRs so sessions don't conflict.
+- `DatabaseRepository.deleteUser`, `searchUsersByLocation`, `classifyPerformer` and `sendFeedback` throw
+  `NotImplemented` in the live implementation; onboarding skips `classifyPerformer`. Delete account calls
+  `AuthRepository.deleteUser()` only, so Firestore cleanup relies on a backend trigger.
+- Opportunity apply doesn't call Dart's `notifyVenueOfInterestedOpportunities` (no Functions equivalent yet).
+- Video call is a "coming soon" screen (Flutter's `VideoCallView` is empty too).
+- StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` and prices in `StoreKit/Tapped.storekit` are
+  placeholders until App Store Connect products exist (Flutter used RevenueCat offerings).
+- Push: no topic subscriptions (Flutter has none either).
+- Live Firebase / Stream / Storage / APNs paths compile and are unit-tested against mocks only; this repo has no real
+  `GoogleService-Info.plist`.

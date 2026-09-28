@@ -1,6 +1,7 @@
 import SwiftUI
 import TappedData
 import TappedDomain
+import TappedUI
 
 /// Session-3 destinations (bookings, booking flows, services). Resolved from `RouteDestination`.
 struct BookingsRouteDestination: View {
@@ -12,7 +13,7 @@ struct BookingsRouteDestination: View {
         if let user = session.currentUser {
             destination(currentUser: user)
         } else {
-            PlaceholderScreen(title: route.title, owner: route.owner)
+            ErrorView("sign in to continue")
         }
     }
 
@@ -41,8 +42,10 @@ struct BookingsRouteDestination: View {
             CreateServiceView(dependencies: dependencies, service: service, ownerId: currentUser.id)
         case let .bookingHistory(user):
             BookingHistoryView(dependencies: dependencies, user: user, currentUser: currentUser)
+        case let .addCollaborators(maxCollaborators, initialCollaborators):
+            AddCollaboratorsRoute(dependencies: dependencies, currentUserId: currentUser.id, maxCollaborators: maxCollaborators, collaborators: initialCollaborators)
         default:
-            PlaceholderScreen(title: route.title, owner: route.owner)
+            EmptyView()
         }
     }
 }
@@ -87,6 +90,7 @@ extension Route {
         case "create-service": return [.createService(service: nil)]
         case "edit-service": return [.createService(service: Samples.services[0])]
         case "history": return [.bookingHistory(currentUser)]
+        case "add-collaborators": return [.addCollaborators(initialCollaborators: [Samples.performers[2]])]
         default: return nil
         }
     }

@@ -141,9 +141,7 @@ struct ProfileView: View {
                         }
                     }
                     if model.canMessage {
-                        GlassCapsuleButton("message", systemImage: "bubble.left.fill") {
-                            router.push(.streamChannel(channelId: [model.currentUser.id, user.id].sorted().joined(separator: "-")))
-                        }
+                        MessageUserButton(userId: user.id)
                     }
                 }
             }

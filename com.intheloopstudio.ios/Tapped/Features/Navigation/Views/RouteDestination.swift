@@ -2,12 +2,13 @@ import SwiftUI
 import TappedData
 import TappedDomain
 
-/// Resolves a `Route` to its screen. Follow-up sessions replace their `PlaceholderScreen` case here.
+/// Resolves a `Route` to its screen.
 struct RouteDestination: View {
     let route: Route
     @Environment(\.dependencies) private var dependencies
     @Environment(AppSession.self) private var session: AppSession?
     @Environment(ShellViewModel.self) private var shell: ShellViewModel?
+    @Environment(Router.self) private var router: Router?
 
     private var currentUser: UserModel? { session?.currentUser ?? shell?.currentUser }
 
@@ -34,7 +35,7 @@ struct RouteDestination: View {
         case .tasks:
             if let currentUser { TasksView(dependencies: dependencies, currentUser: currentUser) }
         case .bookings, .booking, .bookingConfirmation, .createBooking, .addPastBooking, .requestToPerform,
-             .requestToPerformConfirmation, .serviceSelection, .service, .createService, .bookingHistory:
+             .requestToPerformConfirmation, .serviceSelection, .service, .createService, .bookingHistory, .addCollaborators:
             BookingsRouteDestination(route: route)
         case .search, .advancedSearch, .gigSearch, .locationForm, .opportunity, .opportunities, .opportunityFeed,
              .interestedUsers, .reviews:
@@ -51,8 +52,9 @@ struct RouteDestination: View {
             VideoCallView()
         case .admin:
             AdminView(dependencies: dependencies)
-        default:
-            PlaceholderScreen(title: route.title, owner: route.owner)
+        case .discovery:
+            // Discover is the shell root, so "navigate to discovery" unwinds the stack.
+            Color.clear.task { router?.popToRoot() }
         }
     }
 }

@@ -93,7 +93,7 @@ enum Route: Hashable {
         }
     }
 
-    /// Follow-up session that owns the destination (see README "Screen ownership"). `nil` = implemented here.
+    /// Feature session that built the destination (README "Features"). `nil` = the skeleton.
     var owner: Int? {
         switch self {
         case .discovery, .login, .signUp, .forgotPassword: nil
