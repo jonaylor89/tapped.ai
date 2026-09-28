@@ -54,6 +54,7 @@ struct BookingDetailView: View {
                             Image(systemName: "arrow.up.right.square").foregroundStyle(TappedColors.accent)
                         }
                     }
+                    .foregroundStyle(.primary)
                     .accessibilityHint("opens in maps")
                 }
             }
@@ -86,6 +87,7 @@ struct BookingDetailView: View {
                             Image(systemName: "star.bubble").foregroundStyle(TappedColors.warning)
                         }
                     }
+                    .foregroundStyle(.primary)
                 }
             } else if model.hasReviewed {
                 Section {
