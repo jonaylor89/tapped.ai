@@ -1,0 +1,7 @@
+{
+  "name": "tapped-mail-gateway",
+  "private": true,
+  "dependencies": {
+    "Haraka": "^3.0.5"
+  }
+}

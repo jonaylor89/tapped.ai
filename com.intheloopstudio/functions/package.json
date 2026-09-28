@@ -32,7 +32,6 @@
     "node-fetch": "^3.3.2",
     "nodemailer": "^6.6.3",
     "openai": "^4.73.0",
-    "postmark": "^4.0.2",
     "spotify-web-api-node": "^5.0.2",
     "stream-chat": "^4.1.0",
     "stripe": "^11.15.0",

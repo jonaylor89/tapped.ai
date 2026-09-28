@@ -3,7 +3,6 @@
 import { Timestamp } from "firebase-admin/firestore";
 import { debug, info } from "firebase-functions/logger";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
-import * as postmark from "postmark";
 import type { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
 import {
   bookingsRef,
@@ -13,6 +12,7 @@ import {
   POSTMARK_SERVER_ID,
   usersRef,
 } from "../firebase";
+import * as postmark from "../mail_client";
 import { _appendNewContactRequestToThread } from "./venue_contacting";
 
 export const notifyVenueOfInterestedOpportunities = onCall(

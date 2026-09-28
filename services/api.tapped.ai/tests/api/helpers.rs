@@ -29,12 +29,18 @@ pub struct TestApp {
 impl TestApp {}
 
 pub async fn spawn_app() -> TestApp {
-    Lazy::force(&TRACING);
-
     let state = AppStateDyn {
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
+        firebase_project_id: "test-project".to_string(),
+        mail: tapped_api_rs::domain::mail_bridge::MailBridge::disabled(),
     };
+
+    spawn_app_with_state(state).await
+}
+
+pub async fn spawn_app_with_state(state: AppStateDyn) -> TestApp {
+    Lazy::force(&TRACING);
 
     let application = Application::build_with_state(0, state)
         .await
@@ -50,11 +56,9 @@ pub async fn spawn_app() -> TestApp {
         .build()
         .unwrap();
 
-    let test_app = TestApp {
+    TestApp {
         address,
         port: application_port,
         api_client: client,
-    };
-
-    test_app
+    }
 }
