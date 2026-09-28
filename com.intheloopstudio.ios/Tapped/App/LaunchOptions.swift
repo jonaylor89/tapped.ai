@@ -8,9 +8,17 @@ import TappedUI
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
 /// - `TAPPED_MOCK_ROUTE=<name>`  push a route on launch (see `Route.mockLaunchPath`)
 /// - `TAPPED_MOCK_ROUTE_DETAIL=<value>`  screen-specific extra state (search query, open sheet/results)
+/// - `TAPPED_MOCK_ONBOARDING_STEP=name|occupation|genres|location|socials|avatar|complete`  open onboarding on a
+///   step with sample answers filled in (combine with `TAPPED_MOCK_ONBOARDING=1`)
+/// - `TAPPED_MOCK_SHEET=reauth`  present the re-authentication sheet over the shell
+/// - `TAPPED_MOCK_LINK=<url>`  deliver a deep link on launch (cold start)
 struct LaunchOptions: Equatable {
     enum Screen: String {
         case splash, login, signup, forgot
+    }
+
+    enum Sheet: String {
+        case reauth
     }
 
     var screen: Screen?
@@ -20,6 +28,9 @@ struct LaunchOptions: Equatable {
 
     /// Routes `route` resolves to for the mock signed-in user.
     var routes: [Route] { route.flatMap { Route.mockLaunchPath($0) } ?? [] }
+    var onboardingStep: OnboardingViewModel.Step?
+    var sheet: Sheet?
+    var link: URL?
 
     static let none = LaunchOptions()
 
@@ -43,7 +54,10 @@ struct LaunchOptions: Equatable {
             screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)),
             detent: detent,
             route: environment["TAPPED_MOCK_ROUTE"],
-            routeDetail: environment["TAPPED_MOCK_ROUTE_DETAIL"]
+            routeDetail: environment["TAPPED_MOCK_ROUTE_DETAIL"],
+            onboardingStep: environment["TAPPED_MOCK_ONBOARDING_STEP"].flatMap(OnboardingViewModel.Step.init(rawValue:)),
+            sheet: environment["TAPPED_MOCK_SHEET"].flatMap(Sheet.init(rawValue:)),
+            link: environment["TAPPED_MOCK_LINK"].flatMap(URL.init(string:))
         )
     }
 }

@@ -7,8 +7,9 @@ public actor MockStorageRepository: StorageRepository {
     public init() {}
 
     public func uploadProfilePicture(userId: String, imageData: Data) async throws -> URL {
-        let url = FileManager.default.temporaryDirectory
-            .appending(path: "userProfile_\(userId)_\(UUID().uuidString.lowercased()).jpg")
+        let directory = FileManager.default.temporaryDirectory.appending(path: "images/users/\(userId)")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let url = directory.appending(path: "userProfile_\(userId)_\(UUID().uuidString.lowercased()).jpg")
         try imageData.write(to: url)
         uploads.append(url)
         return url

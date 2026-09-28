@@ -90,6 +90,33 @@ public struct MaintenanceView: View {
     }
 }
 
+/// Shown while this build is older than Remote Config's minimum version (replaces Flutter `upgrader`).
+public struct UpdateRequiredView: View {
+    let minimumVersion: String
+    let update: () -> Void
+
+    public init(minimumVersion: String, update: @escaping () -> Void) {
+        self.minimumVersion = minimumVersion
+        self.update = update
+    }
+
+    public var body: some View {
+        ContentUnavailableView {
+            Label("time to update", systemImage: "arrow.down.app")
+        } description: {
+            Text("this version of tapped is no longer supported. update to \(minimumVersion) or newer to keep going.")
+        } actions: {
+            Button(action: update) {
+                Text("update tapped").frame(maxWidth: 240)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .tint(TappedColors.accent)
+        }
+        .background(TappedColors.background.ignoresSafeArea())
+    }
+}
+
 /// Premium waitlist prompt (`premium_waitlist_view.dart`).
 public struct WaitlistView: View {
     let isOnWaitlist: Bool
@@ -137,5 +164,7 @@ public struct WaitlistView: View {
 #Preview("LoadingView") { LoadingView() }
 #Preview("ErrorView") { ErrorView(retry: {}) }
 #Preview("MaintenanceView") { MaintenanceView() }
+#Preview("UpdateRequiredView") { UpdateRequiredView(minimumVersion: "2.0.0") {} }
+#Preview("UpdateRequiredView dark") { UpdateRequiredView(minimumVersion: "2.0.0") {}.preferredColorScheme(.dark) }
 #Preview("WaitlistView") { WaitlistView(isOnWaitlist: false) {} }
 #Preview("WaitlistView joined") { WaitlistView(isOnWaitlist: true) {} }

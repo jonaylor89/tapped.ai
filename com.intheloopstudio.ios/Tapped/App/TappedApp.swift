@@ -10,11 +10,16 @@ struct TappedApp: App {
     @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
 
     private let dependencies: Dependencies
+    private let inbound = AppEnvironment.inbound
 
     init() {
         let dependencies = AppEnvironment.dependencies
         self.dependencies = dependencies
-        _session = State(initialValue: AppSession(dependencies: dependencies, launchOptions: .current))
+        let launchOptions = LaunchOptions.current
+        _session = State(initialValue: AppSession(dependencies: dependencies, launchOptions: launchOptions))
+        if let link = launchOptions.link {
+            AppEnvironment.inbound.open(link)
+        }
     }
 
     var body: some Scene {
@@ -23,10 +28,13 @@ struct TappedApp: App {
                 .environment(\.dependencies, dependencies)
                 .environment(session)
                 .environment(router)
+                .environment(inbound)
                 .tint(TappedColors.accent)
                 .preferredColorScheme(appearance.colorScheme)
                 .onOpenURL { url in
-                    _ = FirebaseBootstrap.handle(url: url)
+                    // Universal links and the custom scheme arrive here on both cold and warm start.
+                    if FirebaseBootstrap.handle(url: url) { return }
+                    inbound.open(url)
                 }
         }
     }
@@ -35,4 +43,5 @@ struct TappedApp: App {
 /// Resolved once per process so the app delegate and the scene share the same mode.
 enum AppEnvironment {
     @MainActor static let dependencies = Dependencies.resolve()
+    @MainActor static let inbound = InboundLinks()
 }

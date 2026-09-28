@@ -39,6 +39,10 @@ struct RouteDestination: View {
         case .search, .advancedSearch, .gigSearch, .locationForm, .opportunity, .opportunities, .opportunityFeed,
              .interestedUsers, .reviews:
             SearchOpportunitiesDestination(route: route)
+        case .onboarding:
+            OnboardingView(dependencies: dependencies)
+        case .paywall:
+            PaywallGate { PlaceholderScreen(title: route.title, owner: route.owner) }
         default:
             PlaceholderScreen(title: route.title, owner: route.owner)
         }

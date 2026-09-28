@@ -9,6 +9,7 @@ extension Route {
         if let path = bookingsMockLaunchPath(name, currentUser: currentUser) { return path }
         let opportunity = Samples.opportunities[0]
         return switch name {
+        case "paywall": [.paywall]
         case "search": [.search]
         case "advanced-search": [.advancedSearch]
         case "location-form": [.locationForm(initialPlace: MockPlacesRepository.places.first)]

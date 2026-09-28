@@ -7,7 +7,7 @@ import TappedDomain
 @Observable
 @MainActor
 final class ShellViewModel {
-    let currentUser: UserModel
+    private(set) var currentUser: UserModel
     /// TODO(session-6): drive from Stream Chat `totalUnreadCount`.
     private(set) var unreadMessages = 0
     /// Unread `activities` for the current user; driven by `observeActivities(database:)`.
@@ -26,5 +26,10 @@ final class ShellViewModel {
         } catch {
             unreadActivities = 0
         }
+    }
+
+    func update(_ user: UserModel) {
+        guard user.id == currentUser.id else { return }
+        currentUser = user
     }
 }

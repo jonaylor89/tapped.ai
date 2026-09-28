@@ -32,6 +32,7 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var opportunityQuotas: [String: Int]
     public var defaultOpportunityQuota: Int
     private var quotaContinuations: [UUID: (userId: String, continuation: AsyncThrowingStream<Int, any Error>.Continuation)] = [:]
+    public private(set) var premiumWaitlist: Set<String> = []
 
     public init(
         users: [UserModel] = Samples.performers + Samples.venues,
@@ -171,7 +172,13 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? {
         bookerReviews.first { $0.id == reviewId && $0.fields.bookerId == revieweeId }
     }
-    public func isOnPremiumWailist(_ userId: String) async throws -> Bool { false }
+    public func isOnPremiumWailist(_ userId: String) async throws -> Bool { premiumWaitlist.contains(userId) }
+    public func joinPremiumWaitlist(_ userId: String) async throws { premiumWaitlist.insert(userId) }
+    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String {
+        let version = AppVersion.current().firestoreValue
+        users[currentUserId]?.latestAppVersion = version
+        return version
+    }
     public func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool { false }
     public func getContactedVenues(_ userId: String) async throws -> [UserModel] { [] }
 
@@ -252,14 +259,12 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func updateBooking(_ booking: Booking) async throws { bookings[booking.id] = booking }
     public func createService(_ service: Service) async throws { services[service.id] = service }
     public func updateService(_ service: Service) async throws { services[service.id] = service }
-    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String { throw NotImplemented() }
     public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
     public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
     public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws { throw NotImplemented() }
     public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
-    public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers
