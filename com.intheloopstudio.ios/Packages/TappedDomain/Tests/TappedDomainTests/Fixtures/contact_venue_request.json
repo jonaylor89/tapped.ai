@@ -1,0 +1,9 @@
+{
+  "venue": { "id": "venue-1", "username": "thecamel" },
+  "user": { "id": "performer-1", "username": "djnova" },
+  "bookingEmail": "booking@thecameo.com",
+  "note": "would love to play",
+  "timestamp": { "_seconds": 1720000000 },
+  "allEmails": ["booking@thecameo.com"],
+  "collaborators": [{ "id": "c1", "username": "friend" }]
+}

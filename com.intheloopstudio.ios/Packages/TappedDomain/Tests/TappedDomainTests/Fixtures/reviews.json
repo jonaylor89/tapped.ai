@@ -1,0 +1,4 @@
+[
+  { "id": "r1", "type": "booker", "bookerId": "v1", "performerId": "p1", "timestamp": { "_seconds": 1720000000 }, "overallRating": 5, "overallReview": "great crowd" },
+  { "id": "r2", "type": "performer", "bookerId": "v1", "performerId": "p1", "bookingId": "b1", "timestamp": 1720000000, "overallRating": 4, "overallReview": "on time" }
+]

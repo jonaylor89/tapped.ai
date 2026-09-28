@@ -1,0 +1,78 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'com.intheloopstudio.ios/**'
+      - '.github/workflows/ios.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'com.intheloopstudio.ios/**'
+      - '.github/workflows/ios.yml'
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_test:
+    name: Build and test (iPhone simulator)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: com.intheloopstudio.ios
+    env:
+      TAPPED_MOCK: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select newest Xcode
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+
+      - name: Pick an iPhone simulator
+        id: sim
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if "iOS" in k), key=lambda k: [int(p) for p in k.split("iOS-")[1].split("-")])
+          for runtime in reversed(ios):
+              phones = [d for d in devices[runtime] if d["name"].startswith("iPhone")]
+              if phones:
+                  print(phones[-1]["udid"]); break
+          ')
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SwiftPM
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData/**/SourcePackages
+          key: spm-${{ hashFiles('com.intheloopstudio.ios/Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+
+      - name: Resolve packages (locked)
+        run: xcodebuild -resolvePackageDependencies -project Tapped.xcodeproj -scheme Tapped -disableAutomaticPackageResolution
+
+      - name: Build and test app + TappedDomain + TappedUI
+        run: |
+          xcodebuild build test \
+            -project Tapped.xcodeproj \
+            -scheme Tapped \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            -disableAutomaticPackageResolution \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Test TappedData
+        # Run standalone: linking Firebase into both the app and a package test bundle forces
+        # Xcode to build FirebaseFirestore as a dynamic framework, which fails to link.
+        working-directory: com.intheloopstudio.ios/Packages/TappedData
+        run: |
+          xcodebuild test \
+            -scheme TappedData \
+            -destination "id=${{ steps.sim.outputs.udid }}" \
+            CODE_SIGNING_ALLOWED=NO

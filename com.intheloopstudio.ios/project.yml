@@ -1,0 +1,92 @@
+name: Tapped
+options:
+  bundleIdPrefix: com.intheloopstudio
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    IPHONEOS_DEPLOYMENT_TARGET: "26.0"
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    DEAD_CODE_STRIPPING: YES
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+packages:
+  TappedDomain:
+    path: Packages/TappedDomain
+  TappedData:
+    path: Packages/TappedData
+  TappedUI:
+    path: Packages/TappedUI
+targets:
+  Tapped:
+    type: application
+    platform: iOS
+    sources:
+      - path: Tapped
+    dependencies:
+      - package: TappedDomain
+      - package: TappedData
+      - package: TappedUI
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio
+        PRODUCT_NAME: Tapped
+        INFOPLIST_FILE: Tapped/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Tapped/Resources/Tapped.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MACCATALYST: NO
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        OTHER_LDFLAGS: $(inherited) -ObjC
+        TAPPED_GOOGLE_PLACES_API_KEY: ""
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+  TappedTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: TappedTests
+    dependencies:
+      - target: Tapped
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio.TappedTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Tapped.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tapped
+        BUNDLE_LOADER: $(TEST_HOST)
+schemes:
+  Tapped:
+    build:
+      targets:
+        Tapped: all
+        TappedTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      gatherCoverageData: false
+      environmentVariables:
+        TAPPED_MOCK: "1"
+      targets:
+        - TappedTests
+        - package: TappedDomain/TappedDomainTests
+        - package: TappedUI/TappedUITests
+    archive:
+      config: Release
+  Tapped Mock:
+    build:
+      targets:
+        Tapped: all
+    run:
+      config: Debug
+      environmentVariables:
+        TAPPED_MOCK: "1"
+    archive:
+      config: Debug

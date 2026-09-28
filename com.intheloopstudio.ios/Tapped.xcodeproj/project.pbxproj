@@ -1,0 +1,772 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00D72FA0F810A072A5B51A4F /* DiscoverAllResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC05585B31736B75158DFE53 /* DiscoverAllResultsView.swift */; };
+		0DA3FAFD3DDD594D48FC5518 /* AuthFormViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB3F369039EE4E690BD524FC /* AuthFormViewModel.swift */; };
+		1E1104750C13AC479FF8BDA8 /* AuthComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6ED2034638CB7F71941ADDF /* AuthComponents.swift */; };
+		205E1E3A322CA4F4123B3910 /* DiscoverMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6857B9A5FEDC5F4CE9107A4 /* DiscoverMapView.swift */; };
+		25543471200C23AA5A5821EE /* DiscoverFiltersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A41DA3BB5E151D40CC867DB5 /* DiscoverFiltersView.swift */; };
+		25A184F9D6E7A81210244167 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A4F9D5215A27AF48CAD49B1 /* ContentView.swift */; };
+		2AE6E58B126B54E6096258E2 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D25557C29CF7B267EA696956 /* AppDelegate.swift */; };
+		30F361C6B55053CBF12B631A /* DiscoverTopChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9054990CB16F08448F68562B /* DiscoverTopChrome.swift */; };
+		329775E5E3BA47B1BFBAB15A /* DiscoverSheetContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19780ADD500B7CE75AD0F6B /* DiscoverSheetContent.swift */; };
+		35EB10C0D6104C05BA46D1A2 /* SplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73E8D622F190666A5B0404DD /* SplashView.swift */; };
+		3E960C44CADEF5E8B35F2319 /* TappedUI in Frameworks */ = {isa = PBXBuildFile; productRef = B4BDBF99AED8CAADB1DE5CD1 /* TappedUI */; };
+		43CB7024AE9D3D7AE7975265 /* PlaceholderScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B6D423F6685D67B23918A4C /* PlaceholderScreen.swift */; };
+		4A9AF8BF4967800090FEAF0E /* TappedData in Frameworks */ = {isa = PBXBuildFile; productRef = 9D5A0730E9D1DF3BFF0E94E9 /* TappedData */; };
+		55FB09889C4F23EE8054E689 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B24094DFC276545B1B206D /* LoginView.swift */; };
+		6045D39A747DED92AADF1105 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE258A141BCCEA88B15A65F9 /* Assets.xcassets */; };
+		629F8C29294CC14B238F74F9 /* TappedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0DB4000CE514C948214AF4 /* TappedApp.swift */; };
+		67908D8AB22D9FCFB9ADB112 /* ShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A594B655FAA927AA5AE497D /* ShellView.swift */; };
+		724658FBA0296DCF2573C5BC /* TappedDomain in Frameworks */ = {isa = PBXBuildFile; productRef = F84EBB5E6788B3EC3EFDC2F4 /* TappedDomain */; };
+		77432339E9868F21C82767C0 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D7E4503FDDE40D4B230DD8 /* AuthViewModelTests.swift */; };
+		936448C4BAE11CF8EEFCF572 /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C18130990FB0FFDE1E68C6 /* DiscoverViewModel.swift */; };
+		9CD47EF8E1D3C65E83A193BD /* AppShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C594726B687A5102B4C9DD2 /* AppShellTests.swift */; };
+		A4363A16886232D6104763F6 /* DiscoverViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40989F6D343229DBBB2841E /* DiscoverViewModelTests.swift */; };
+		AC1FDAAAA17EDD48B26491C8 /* Route.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A1F2A9FD9DBEB13471FD56 /* Route.swift */; };
+		B1438D03B10B626D46A73D7A /* Router.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4DB0E68F9D9E2454DC024F2C /* Router.swift */; };
+		B4BB5ED4692CE4918CE66C6A /* DiscoverMapControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4935825C589AF60937B6E2C8 /* DiscoverMapControls.swift */; };
+		B9381F904D9B4335B5369B36 /* AuthFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A6B14A4DBFDC883D36FA28F /* AuthFlowView.swift */; };
+		BD164D9336D574B8077F17AC /* RouteDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFE33C3D375B7A22B454E75D /* RouteDestination.swift */; };
+		BDC106741EC207B2B6B6839B /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 51603D61E2C91CC46E53ADEE /* GoogleService-Info.plist */; };
+		BF1FC064431D23AEC2E0155E /* UnreadBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7176FDBA292211D1074611A /* UnreadBadge.swift */; };
+		C7B0B9C016717A3AC49D267D /* DiscoverSheetSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CAC87F02402DD06322BAB9 /* DiscoverSheetSections.swift */; };
+		CB6B200254D9938D85DBF1C7 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D16076AC51CDFA56D8F57AF /* DiscoverView.swift */; };
+		D376BB397536394803666ACB /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4FD759996F1BB49961C5DD0 /* ForgotPasswordView.swift */; };
+		D5D763DE2A51045572169E27 /* ShellViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */; };
+		D64F40C7FB83F6347499114A /* SignupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85450D5AB1F381BF830CAFA1 /* SignupView.swift */; };
+		D7BBE38A930D686B91E6098E /* LaunchOptions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C80949563E7EFF33770F6A1B /* LaunchOptions.swift */; };
+		EAE162D504BA39D7B9C112FC /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6205BF0BD01A9F72495BAEF7 /* AppSession.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		ACACBAEA019961A00AFB6970 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59C2C9CE84DD6B1668861C4C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D2A2AA6732B9632BBAB71469;
+			remoteInfo = Tapped;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		0A4F9D5215A27AF48CAD49B1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		20D7E4503FDDE40D4B230DD8 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
+		2FE5D5FD465E5B79895D9CE5 /* TappedData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedData; path = Packages/TappedData; sourceTree = SOURCE_ROOT; };
+		3A594B655FAA927AA5AE497D /* ShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellView.swift; sourceTree = "<group>"; };
+		3BF61D00CEF173A8D72DB47B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		443EB7DFF439E2147D5583C2 /* Tapped.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tapped.entitlements; sourceTree = "<group>"; };
+		4935825C589AF60937B6E2C8 /* DiscoverMapControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverMapControls.swift; sourceTree = "<group>"; };
+		4DB0E68F9D9E2454DC024F2C /* Router.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Router.swift; sourceTree = "<group>"; };
+		51603D61E2C91CC46E53ADEE /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		60A1F2A9FD9DBEB13471FD56 /* Route.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Route.swift; sourceTree = "<group>"; };
+		6205BF0BD01A9F72495BAEF7 /* AppSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSession.swift; sourceTree = "<group>"; };
+		6C594726B687A5102B4C9DD2 /* AppShellTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppShellTests.swift; sourceTree = "<group>"; };
+		6D16076AC51CDFA56D8F57AF /* DiscoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverView.swift; sourceTree = "<group>"; };
+		73E8D622F190666A5B0404DD /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
+		74719AE7E972D16A9BA3463B /* TappedDomain */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedDomain; path = Packages/TappedDomain; sourceTree = SOURCE_ROOT; };
+		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
+		85450D5AB1F381BF830CAFA1 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
+		8B6D423F6685D67B23918A4C /* PlaceholderScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderScreen.swift; sourceTree = "<group>"; };
+		9054990CB16F08448F68562B /* DiscoverTopChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTopChrome.swift; sourceTree = "<group>"; };
+		9A6B14A4DBFDC883D36FA28F /* AuthFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFlowView.swift; sourceTree = "<group>"; };
+		9B0DB4000CE514C948214AF4 /* TappedApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappedApp.swift; sourceTree = "<group>"; };
+		A40989F6D343229DBBB2841E /* DiscoverViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverViewModelTests.swift; sourceTree = "<group>"; };
+		A41DA3BB5E151D40CC867DB5 /* DiscoverFiltersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverFiltersView.swift; sourceTree = "<group>"; };
+		A7176FDBA292211D1074611A /* UnreadBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnreadBadge.swift; sourceTree = "<group>"; };
+		BF2DAB8C39ACC121141BB1E2 /* TappedTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TappedTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3B24094DFC276545B1B206D /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		C80949563E7EFF33770F6A1B /* LaunchOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchOptions.swift; sourceTree = "<group>"; };
+		CB3F369039EE4E690BD524FC /* AuthFormViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFormViewModel.swift; sourceTree = "<group>"; };
+		D25557C29CF7B267EA696956 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D9CAC87F02402DD06322BAB9 /* DiscoverSheetSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverSheetSections.swift; sourceTree = "<group>"; };
+		E19780ADD500B7CE75AD0F6B /* DiscoverSheetContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverSheetContent.swift; sourceTree = "<group>"; };
+		E4FD759996F1BB49961C5DD0 /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
+		E6857B9A5FEDC5F4CE9107A4 /* DiscoverMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverMapView.swift; sourceTree = "<group>"; };
+		E6ED2034638CB7F71941ADDF /* AuthComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthComponents.swift; sourceTree = "<group>"; };
+		EC05585B31736B75158DFE53 /* DiscoverAllResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverAllResultsView.swift; sourceTree = "<group>"; };
+		EE258A141BCCEA88B15A65F9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F1C18130990FB0FFDE1E68C6 /* DiscoverViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverViewModel.swift; sourceTree = "<group>"; };
+		FB43B57939018532D29D7B7E /* TappedUI */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedUI; path = Packages/TappedUI; sourceTree = SOURCE_ROOT; };
+		FFE33C3D375B7A22B454E75D /* RouteDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteDestination.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		1527EA70A1CC5AD92A6F9DAE /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				724658FBA0296DCF2573C5BC /* TappedDomain in Frameworks */,
+				4A9AF8BF4967800090FEAF0E /* TappedData in Frameworks */,
+				3E960C44CADEF5E8B35F2319 /* TappedUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		14A46CD27BBCF6CDF2C7A516 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				317A61FA6FD4B90301AC87DE /* Auth */,
+				4880639D57B34A76E1945510 /* Discover */,
+				F05D5F5578C0AB733A0DC2C9 /* Navigation */,
+				EF25800B9AED1FC16276395D /* Shell */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		1BB23876092AA0776F1161B4 /* Tapped */ = {
+			isa = PBXGroup;
+			children = (
+				3E56160366791CCFDB0F2E97 /* App */,
+				14A46CD27BBCF6CDF2C7A516 /* Features */,
+				770C2E3D849DAA0662470C64 /* Resources */,
+			);
+			path = Tapped;
+			sourceTree = "<group>";
+		};
+		1EF1FF7FE812EBB7133D22D2 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				4935825C589AF60937B6E2C8 /* DiscoverMapControls.swift */,
+				E6857B9A5FEDC5F4CE9107A4 /* DiscoverMapView.swift */,
+				E19780ADD500B7CE75AD0F6B /* DiscoverSheetContent.swift */,
+				D9CAC87F02402DD06322BAB9 /* DiscoverSheetSections.swift */,
+				9054990CB16F08448F68562B /* DiscoverTopChrome.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		1F0EED8779704F0BE17E3ED9 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				74EDF7A5C1C82CD6959263EE /* Tapped.app */,
+				BF2DAB8C39ACC121141BB1E2 /* TappedTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		317A61FA6FD4B90301AC87DE /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				F14A0ADDB3674C1E57EB7CE2 /* Components */,
+				A12176C25323220682F2B121 /* ViewModels */,
+				CFAE4EBC28ACCE594B7ECC6C /* Views */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		364E1F9119CF19F166DD319F /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		3E56160366791CCFDB0F2E97 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				D25557C29CF7B267EA696956 /* AppDelegate.swift */,
+				6205BF0BD01A9F72495BAEF7 /* AppSession.swift */,
+				0A4F9D5215A27AF48CAD49B1 /* ContentView.swift */,
+				C80949563E7EFF33770F6A1B /* LaunchOptions.swift */,
+				9B0DB4000CE514C948214AF4 /* TappedApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		42F1F9611390F9550E285379 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				60A1F2A9FD9DBEB13471FD56 /* Route.swift */,
+				4DB0E68F9D9E2454DC024F2C /* Router.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		4880639D57B34A76E1945510 /* Discover */ = {
+			isa = PBXGroup;
+			children = (
+				1EF1FF7FE812EBB7133D22D2 /* Components */,
+				F27A7A5FDDC29FF0C74F86BE /* ViewModels */,
+				C7AE46612953D692F18B0681 /* Views */,
+			);
+			path = Discover;
+			sourceTree = "<group>";
+		};
+		770C2E3D849DAA0662470C64 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				EE258A141BCCEA88B15A65F9 /* Assets.xcassets */,
+				51603D61E2C91CC46E53ADEE /* GoogleService-Info.plist */,
+				3BF61D00CEF173A8D72DB47B /* Info.plist */,
+				443EB7DFF439E2147D5583C2 /* Tapped.entitlements */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		99EED5B191FF07863651E120 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A7176FDBA292211D1074611A /* UnreadBadge.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A12176C25323220682F2B121 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				CB3F369039EE4E690BD524FC /* AuthFormViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		AAF5E79B8D06A4C5F4980F03 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				2FE5D5FD465E5B79895D9CE5 /* TappedData */,
+				74719AE7E972D16A9BA3463B /* TappedDomain */,
+				FB43B57939018532D29D7B7E /* TappedUI */,
+			);
+			path = Packages;
+			sourceTree = "<group>";
+		};
+		B3963748B455BE7BE074C285 = {
+			isa = PBXGroup;
+			children = (
+				AAF5E79B8D06A4C5F4980F03 /* Packages */,
+				1BB23876092AA0776F1161B4 /* Tapped */,
+				BFC344D3AB3F87AA912F2F8F /* TappedTests */,
+				1F0EED8779704F0BE17E3ED9 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		BFC344D3AB3F87AA912F2F8F /* TappedTests */ = {
+			isa = PBXGroup;
+			children = (
+				6C594726B687A5102B4C9DD2 /* AppShellTests.swift */,
+				20D7E4503FDDE40D4B230DD8 /* AuthViewModelTests.swift */,
+				A40989F6D343229DBBB2841E /* DiscoverViewModelTests.swift */,
+			);
+			path = TappedTests;
+			sourceTree = "<group>";
+		};
+		C7AE46612953D692F18B0681 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				EC05585B31736B75158DFE53 /* DiscoverAllResultsView.swift */,
+				A41DA3BB5E151D40CC867DB5 /* DiscoverFiltersView.swift */,
+				6D16076AC51CDFA56D8F57AF /* DiscoverView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		C9F2FB6EAEB7EFD1BF1D813A /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				FFE33C3D375B7A22B454E75D /* RouteDestination.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		CCD0AF80925CD61B2AEF2C92 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				8B6D423F6685D67B23918A4C /* PlaceholderScreen.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		CFAE4EBC28ACCE594B7ECC6C /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				9A6B14A4DBFDC883D36FA28F /* AuthFlowView.swift */,
+				E4FD759996F1BB49961C5DD0 /* ForgotPasswordView.swift */,
+				C3B24094DFC276545B1B206D /* LoginView.swift */,
+				85450D5AB1F381BF830CAFA1 /* SignupView.swift */,
+				73E8D622F190666A5B0404DD /* SplashView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		D3326DF44CCD44062EF49961 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				3A594B655FAA927AA5AE497D /* ShellView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		EF25800B9AED1FC16276395D /* Shell */ = {
+			isa = PBXGroup;
+			children = (
+				99EED5B191FF07863651E120 /* Components */,
+				364E1F9119CF19F166DD319F /* ViewModels */,
+				D3326DF44CCD44062EF49961 /* Views */,
+			);
+			path = Shell;
+			sourceTree = "<group>";
+		};
+		F05D5F5578C0AB733A0DC2C9 /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				CCD0AF80925CD61B2AEF2C92 /* Components */,
+				42F1F9611390F9550E285379 /* ViewModels */,
+				C9F2FB6EAEB7EFD1BF1D813A /* Views */,
+			);
+			path = Navigation;
+			sourceTree = "<group>";
+		};
+		F14A0ADDB3674C1E57EB7CE2 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				E6ED2034638CB7F71941ADDF /* AuthComponents.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		F27A7A5FDDC29FF0C74F86BE /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				F1C18130990FB0FFDE1E68C6 /* DiscoverViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0D13F765338C37DC3EC6FE96 /* TappedTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AF93835929144B983573F9AF /* Build configuration list for PBXNativeTarget "TappedTests" */;
+			buildPhases = (
+				9DEFF420AE89DF7D3C1F1B82 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				3200CCD740899A8C84AD91D2 /* PBXTargetDependency */,
+			);
+			name = TappedTests;
+			packageProductDependencies = (
+			);
+			productName = TappedTests;
+			productReference = BF2DAB8C39ACC121141BB1E2 /* TappedTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		D2A2AA6732B9632BBAB71469 /* Tapped */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 73A5C76EC2A6EEE3CD142A13 /* Build configuration list for PBXNativeTarget "Tapped" */;
+			buildPhases = (
+				F1E768A09E9FF6BD9A60097E /* Sources */,
+				2530953B252A359B1578A647 /* Resources */,
+				1527EA70A1CC5AD92A6F9DAE /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Tapped;
+			packageProductDependencies = (
+				F84EBB5E6788B3EC3EFDC2F4 /* TappedDomain */,
+				9D5A0730E9D1DF3BFF0E94E9 /* TappedData */,
+				B4BDBF99AED8CAADB1DE5CD1 /* TappedUI */,
+			);
+			productName = Tapped;
+			productReference = 74EDF7A5C1C82CD6959263EE /* Tapped.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		59C2C9CE84DD6B1668861C4C /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					D2A2AA6732B9632BBAB71469 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 2685221CB60E59B3FE170A46 /* Build configuration list for PBXProject "Tapped" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = B3963748B455BE7BE074C285;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5D24FD4D48FF24645B2A4668 /* XCLocalSwiftPackageReference "Packages/TappedData" */,
+				402482DEC7B74D69B738A339 /* XCLocalSwiftPackageReference "Packages/TappedDomain" */,
+				5D8DA3C33F61C370B8904F41 /* XCLocalSwiftPackageReference "Packages/TappedUI" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 1F0EED8779704F0BE17E3ED9 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D2A2AA6732B9632BBAB71469 /* Tapped */,
+				0D13F765338C37DC3EC6FE96 /* TappedTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		2530953B252A359B1578A647 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				6045D39A747DED92AADF1105 /* Assets.xcassets in Resources */,
+				BDC106741EC207B2B6B6839B /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		9DEFF420AE89DF7D3C1F1B82 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9CD47EF8E1D3C65E83A193BD /* AppShellTests.swift in Sources */,
+				77432339E9868F21C82767C0 /* AuthViewModelTests.swift in Sources */,
+				A4363A16886232D6104763F6 /* DiscoverViewModelTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F1E768A09E9FF6BD9A60097E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				2AE6E58B126B54E6096258E2 /* AppDelegate.swift in Sources */,
+				EAE162D504BA39D7B9C112FC /* AppSession.swift in Sources */,
+				1E1104750C13AC479FF8BDA8 /* AuthComponents.swift in Sources */,
+				B9381F904D9B4335B5369B36 /* AuthFlowView.swift in Sources */,
+				0DA3FAFD3DDD594D48FC5518 /* AuthFormViewModel.swift in Sources */,
+				25A184F9D6E7A81210244167 /* ContentView.swift in Sources */,
+				00D72FA0F810A072A5B51A4F /* DiscoverAllResultsView.swift in Sources */,
+				25543471200C23AA5A5821EE /* DiscoverFiltersView.swift in Sources */,
+				B4BB5ED4692CE4918CE66C6A /* DiscoverMapControls.swift in Sources */,
+				205E1E3A322CA4F4123B3910 /* DiscoverMapView.swift in Sources */,
+				329775E5E3BA47B1BFBAB15A /* DiscoverSheetContent.swift in Sources */,
+				C7B0B9C016717A3AC49D267D /* DiscoverSheetSections.swift in Sources */,
+				30F361C6B55053CBF12B631A /* DiscoverTopChrome.swift in Sources */,
+				CB6B200254D9938D85DBF1C7 /* DiscoverView.swift in Sources */,
+				936448C4BAE11CF8EEFCF572 /* DiscoverViewModel.swift in Sources */,
+				D376BB397536394803666ACB /* ForgotPasswordView.swift in Sources */,
+				D7BBE38A930D686B91E6098E /* LaunchOptions.swift in Sources */,
+				55FB09889C4F23EE8054E689 /* LoginView.swift in Sources */,
+				43CB7024AE9D3D7AE7975265 /* PlaceholderScreen.swift in Sources */,
+				AC1FDAAAA17EDD48B26491C8 /* Route.swift in Sources */,
+				BD164D9336D574B8077F17AC /* RouteDestination.swift in Sources */,
+				B1438D03B10B626D46A73D7A /* Router.swift in Sources */,
+				67908D8AB22D9FCFB9ADB112 /* ShellView.swift in Sources */,
+				D5D763DE2A51045572169E27 /* ShellViewModel.swift in Sources */,
+				D64F40C7FB83F6347499114A /* SignupView.swift in Sources */,
+				35EB10C0D6104C05BA46D1A2 /* SplashView.swift in Sources */,
+				629F8C29294CC14B238F74F9 /* TappedApp.swift in Sources */,
+				BF1FC064431D23AEC2E0155E /* UnreadBadge.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		3200CCD740899A8C84AD91D2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D2A2AA6732B9632BBAB71469 /* Tapped */;
+			targetProxy = ACACBAEA019961A00AFB6970 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0D18E13C0C80B36DFB83B5A6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/Tapped.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = Tapped/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
+				PRODUCT_NAME = Tapped;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TAPPED_GOOGLE_PLACES_API_KEY = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		5A9F46E1C94C4DB08B19973E /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio.TappedTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tapped.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tapped";
+			};
+			name = Release;
+		};
+		D74331965D0EA3B55E99AC3D /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		E262C79388F667163F77FCBC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/Tapped.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = Tapped/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
+				PRODUCT_NAME = Tapped;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				TAPPED_GOOGLE_PLACES_API_KEY = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		F0C2960B582373B61219A33D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		F85F2163F4D1E6963B0BE01A /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio.TappedTests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tapped.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tapped";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		2685221CB60E59B3FE170A46 /* Build configuration list for PBXProject "Tapped" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D74331965D0EA3B55E99AC3D /* Debug */,
+				F0C2960B582373B61219A33D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		73A5C76EC2A6EEE3CD142A13 /* Build configuration list for PBXNativeTarget "Tapped" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E262C79388F667163F77FCBC /* Debug */,
+				0D18E13C0C80B36DFB83B5A6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AF93835929144B983573F9AF /* Build configuration list for PBXNativeTarget "TappedTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F85F2163F4D1E6963B0BE01A /* Debug */,
+				5A9F46E1C94C4DB08B19973E /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		402482DEC7B74D69B738A339 /* XCLocalSwiftPackageReference "Packages/TappedDomain" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TappedDomain;
+		};
+		5D24FD4D48FF24645B2A4668 /* XCLocalSwiftPackageReference "Packages/TappedData" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TappedData;
+		};
+		5D8DA3C33F61C370B8904F41 /* XCLocalSwiftPackageReference "Packages/TappedUI" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/TappedUI;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9D5A0730E9D1DF3BFF0E94E9 /* TappedData */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TappedData;
+		};
+		B4BDBF99AED8CAADB1DE5CD1 /* TappedUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TappedUI;
+		};
+		F84EBB5E6788B3EC3EFDC2F4 /* TappedDomain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TappedDomain;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 59C2C9CE84DD6B1668861C4C /* Project object */;
+}

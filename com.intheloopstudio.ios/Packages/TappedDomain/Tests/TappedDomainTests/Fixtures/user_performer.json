@@ -1,0 +1,16 @@
+{
+  "id": "performer-1",
+  "timestamp": 1719878400000,
+  "username": "djnova",
+  "artistName": "",
+  "occupations": ["DJ", "Music Producer"],
+  "performerInfo": {
+    "genres": ["electronic", "house"],
+    "reviewCount": 3,
+    "category": "hometownHero",
+    "averageTicketPrice": 2500,
+    "label": null
+  },
+  "bookerInfo": { "rating": 4.5, "reviewCount": 1 },
+  "stripeConnectedAccountId": "acct_123"
+}

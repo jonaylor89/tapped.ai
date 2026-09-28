@@ -1,0 +1,7 @@
+[
+  { "id": "a1", "type": "follow", "toUserId": "u1", "fromUserId": "u2", "timestamp": { "_seconds": 1720000000 } },
+  { "id": "a2", "type": "bookingRequest", "toUserId": "u1", "fromUserId": "u2", "bookingId": "b1", "markedRead": true },
+  { "id": "a3", "type": "bookingUpdate", "toUserId": "u1", "fromUserId": "u2", "bookingId": "b1", "status": "canceled" },
+  { "id": "a4", "type": "bookingReminder", "toUserId": "u1", "fromUserId": "u2", "bookingId": "b1" },
+  { "id": "a5", "type": "searchAppearance", "toUserId": "u1", "count": 12 }
+]

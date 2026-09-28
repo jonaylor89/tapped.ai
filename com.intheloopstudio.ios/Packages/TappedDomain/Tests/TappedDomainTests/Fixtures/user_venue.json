@@ -1,0 +1,26 @@
+{
+  "id": "venue-1",
+  "timestamp": { "_seconds": 1719878400, "_nanoseconds": 500000000 },
+  "username": "  TheCameo  ",
+  "email": "booking@thecameo.com",
+  "artistName": "The Camel",
+  "profilePicture": "https://example.com/camel.jpg",
+  "bio": "richmond's home for live music",
+  "occupations": "Venue",
+  "location": { "placeId": "ChIJ7cmZVwkRsYkRxTxC4m0-2L8", "lat": 37.5407246, "lng": -77.4360481 },
+  "badgesCount": 2,
+  "venueInfo": {
+    "bookingEmail": "booking@thecameo.com",
+    "capacity": 250,
+    "genres": ["rock", "punk"],
+    "venuePhotos": [],
+    "type": "bar",
+    "topPerformerIds": ["performer-1"],
+    "bookingsByDayOfWeek": [0, 1, 2, 3, 8, 12, 9],
+    "responseRate": 0.82
+  },
+  "socialFollowing": { "instagramHandle": "thecamel", "instagramFollowers": 12000, "tiktokFollowers": 300 },
+  "emailNotifications": { "appReleases": false },
+  "deleted": false,
+  "latestAppVersion": "4.2.0"
+}
