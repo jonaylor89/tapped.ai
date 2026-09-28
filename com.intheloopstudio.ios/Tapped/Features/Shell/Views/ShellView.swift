@@ -27,6 +27,9 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
+        .task {
+            if router.isAtRoot, !session.launchOptions.routes.isEmpty { router.path = session.launchOptions.routes }
+        }
     }
 }
 

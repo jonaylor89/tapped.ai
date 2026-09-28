@@ -46,6 +46,9 @@ enum Route: Hashable {
     case bookingHistory(UserModel)
     case addCollaborators(maxCollaborators: Int = 5, initialCollaborators: [UserModel] = [])
     case tasks
+    /// Native-only: `OpportunitiesResultsView` / `OpportunityFeedView` are pushed without a Dart `TappedRoute`.
+    case opportunities([Opportunity])
+    case opportunityFeed
 
     /// Dart `routeName`, lowercased for display.
     var title: String {
@@ -85,6 +88,8 @@ enum Route: Hashable {
         case .bookingHistory: "booking history"
         case .addCollaborators: "add collaborators"
         case .tasks: "tasks"
+        case .opportunities: "opportunities"
+        case .opportunityFeed: "gig feed"
         }
     }
 
@@ -95,7 +100,8 @@ enum Route: Hashable {
         case .profile, .settings, .shareProfile, .tasks, .activities, .image: 2
         case .bookings, .booking, .bookingConfirmation, .createBooking, .requestToPerform, .requestToPerformConfirmation,
              .serviceSelection, .service, .createService, .bookingHistory, .addPastBooking, .addCollaborators: 3
-        case .search, .advancedSearch, .gigSearch, .opportunity, .interestedUsers, .reviews, .locationForm: 4
+        case .search, .advancedSearch, .gigSearch, .opportunity, .interestedUsers, .reviews, .locationForm,
+             .opportunities, .opportunityFeed: 4
         case .onboarding: 5
         case .paywall, .streamChannel, .messagingChannelList, .videoCall, .admin: 6
         }

@@ -139,6 +139,33 @@ public enum Samples {
             genres: [Genre.jazz.rawValue],
             venueId: "venue-vagabond"
         ),
+        Opportunity(
+            id: "op-open-decks",
+            userId: "venue-broadberry",
+            location: venues[2].location ?? .rva,
+            timestamp: referenceDate,
+            startTime: referenceDate.addingTimeInterval(7 * 24 * 60 * 60),
+            endTime: referenceDate.addingTimeInterval(7 * 24 * 60 * 60 + 3 * 60 * 60),
+            deadline: referenceDate.addingTimeInterval(4 * 24 * 60 * 60),
+            title: "open decks thursday",
+            description: "bring a usb. 45-minute sets, house and disco welcome. drink tickets for every dj.",
+            isPaid: false,
+            genres: [Genre.electronic.rawValue, Genre.dance.rawValue],
+            venueId: "venue-broadberry"
+        ),
+        Opportunity(
+            id: "op-patio-sessions",
+            userId: "venue-hardywood",
+            location: venues[5].location ?? .rva,
+            timestamp: referenceDate,
+            startTime: referenceDate.addingTimeInterval(14 * 24 * 60 * 60),
+            endTime: referenceDate.addingTimeInterval(14 * 24 * 60 * 60 + 3 * 60 * 60),
+            title: "patio sessions",
+            description: "saturday afternoon acoustic sets on the brewery patio. folk, americana and funk-leaning bands.",
+            isPaid: true,
+            genres: [Genre.folk.rawValue, Genre.americana.rawValue, Genre.funk.rawValue],
+            venueId: "venue-hardywood"
+        ),
     ]
 
     public static let bookings: [Booking] = [

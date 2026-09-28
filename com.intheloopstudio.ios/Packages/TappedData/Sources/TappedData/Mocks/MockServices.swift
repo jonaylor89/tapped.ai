@@ -14,7 +14,12 @@ public struct MockSearchRepository: SearchRepository {
     }
 
     public func queryUsers(_ input: String, filters: UserSearchFilters, lat: Double?, lng: Double?, radius: Int, limit: Int) async throws -> [UserModel] {
-        Array(users.filter { matches($0, input: input, filters: filters) }.prefix(limit))
+        Array(users.filter { user in
+            if let lat, let lng {
+                guard let location = user.location, Self.meters(from: (lat, lng), to: (location.lat, location.lng)) <= Double(radius) else { return false }
+            }
+            return matches(user, input: input, filters: filters)
+        }.prefix(limit))
     }
 
     public func queryUsersInBoundingBox(_ input: String, bounds: GeoBounds, filters: UserSearchFilters, limit: Int) async throws -> [UserModel] {
@@ -31,7 +36,18 @@ public struct MockSearchRepository: SearchRepository {
     }
 
     public func queryOpportunities(_ input: String, lat: Double?, lng: Double?, radius: Int, startTime: Date?) async throws -> [Opportunity] {
-        opportunities.filter { input.isEmpty || $0.title.localizedCaseInsensitiveContains(input) }
+        opportunities.filter { opportunity in
+            if let lat, let lng, Self.meters(from: (lat, lng), to: (opportunity.location.lat, opportunity.location.lng)) > Double(radius) { return false }
+            return input.isEmpty || opportunity.title.localizedCaseInsensitiveContains(input)
+        }
+    }
+
+    /// Haversine distance, mirroring Typesense's `location:(lat, lng, r km)` radius filter.
+    static func meters(from a: (lat: Double, lng: Double), to b: (lat: Double, lng: Double)) -> Double {
+        let r = 6_371_000.0
+        let dLat = (b.lat - a.lat) * .pi / 180, dLng = (b.lng - a.lng) * .pi / 180
+        let h = sin(dLat / 2) * sin(dLat / 2) + cos(a.lat * .pi / 180) * cos(b.lat * .pi / 180) * sin(dLng / 2) * sin(dLng / 2)
+        return 2 * r * asin(min(1, sqrt(h)))
     }
 
     public func queryOpportunitiesInBoundingBox(_ input: String, bounds: GeoBounds, limit: Int, startTime: Date?) async throws -> [Opportunity] {

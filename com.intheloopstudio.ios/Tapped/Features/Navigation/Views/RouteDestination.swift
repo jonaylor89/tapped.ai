@@ -14,6 +14,9 @@ struct RouteDestination: View {
             SignupView(dependencies: dependencies)
         case .forgotPassword:
             ForgotPasswordView(dependencies: dependencies)
+        case .search, .advancedSearch, .gigSearch, .locationForm, .opportunity, .opportunities, .opportunityFeed,
+             .interestedUsers, .reviews:
+            SearchOpportunitiesDestination(route: route)
         default:
             PlaceholderScreen(title: route.title, owner: route.owner)
         }

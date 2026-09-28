@@ -4,7 +4,7 @@ import TappedDomain
 
 /// `lib/data/prod/firestore_database_impl.dart`.
 ///
-/// Implemented: the subset Discover and the profile header need. Everything else throws `NotImplemented`
+/// Implemented: the subset Discover, the profile header, opportunities and reviews need. Everything else throws `NotImplemented`
 /// and is marked `TODO(session-N)` with the owning follow-up session (see README "Screen ownership").
 public struct FirestoreDatabaseRepository: DatabaseRepository {
     /// Flutter `tccUserId`: featured gigs always include this account's opportunities.
@@ -167,6 +167,116 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         return try await ids.concurrentCompactMap { try await self.getUserById($0) }
     }
 
+    // MARK: - opportunities (session 4)
+
+    private var opportunityFeeds: CollectionReference { db.collection("opportunityFeeds") }
+    private var credits: CollectionReference { db.collection("credits") }
+
+    public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] {
+        var query = opportunities.order(by: "timestamp", descending: true).limit(to: limit)
+        if let lastOpportunityId {
+            query = query.start(afterDocument: try await opportunities.document(lastOpportunityId).getDocument())
+        }
+        return try await query.getDocuments().documents.compactMap { try? $0.decoded(Opportunity.self) }
+    }
+
+    /// `opportunityFeeds/{userId}/opportunities`, upcoming and not yet liked/disliked.
+    public func getOpportunityFeedByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] {
+        let feed = opportunityFeeds.document(userId).collection("opportunities")
+        var query = feed
+            .order(by: "startTime", descending: true)
+            .whereField("startTime", isGreaterThanOrEqualTo: Timestamp(date: .now))
+            .whereField("touched", isEqualTo: NSNull())
+            .limit(to: limit)
+        if let lastOpportunityId {
+            query = query.start(afterDocument: try await feed.document(lastOpportunityId).getDocument())
+        }
+        return try await query.getDocuments().documents.compactMap { try? $0.decoded(Opportunity.self) }
+    }
+
+    public func getInterestedUsers(_ opportunity: Opportunity) async throws -> [UserModel] {
+        let ids = try await opportunities.document(opportunity.id).collection("interestedUsers").getDocuments().documents.map(\.documentID)
+        return try await ids.concurrentCompactMap { try? await self.getUserById($0) }
+    }
+
+    public func applyForOpportunity(opportunity: Opportunity, userId: String, userComment: String) async throws {
+        try await opportunities.document(opportunity.id).collection("interestedUsers").document(userId).setData([
+            "timestamp": Timestamp(date: .now),
+            "userComment": userComment,
+        ])
+        try await opportunityFeeds.document(userId).collection("opportunities").document(opportunity.id).setData([
+            "touched": OpportunityInteraction.like.rawValue,
+            "userComment": userComment,
+        ], merge: true)
+    }
+
+    public func dislikeOpportunity(opportunity: Opportunity, userId: String) async throws {
+        try await opportunityFeeds.document(userId).collection("opportunities").document(opportunity.id).updateData([
+            "touched": OpportunityInteraction.dislike.rawValue,
+        ])
+    }
+
+    public func getAppliedOpportunitiesByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] {
+        let feed = opportunityFeeds.document(userId).collection("opportunities")
+        var query = feed
+            .order(by: "startTime", descending: true)
+            .whereField("startTime", isGreaterThanOrEqualTo: Timestamp(date: .now))
+            .whereField("touched", isEqualTo: OpportunityInteraction.like.rawValue)
+            .limit(to: limit)
+        if let lastOpportunityId {
+            query = query.start(afterDocument: try await feed.document(lastOpportunityId).getDocument())
+        }
+        return try await query.getDocuments().documents.compactMap { try? $0.decoded(Opportunity.self) }
+    }
+
+    /// `credits/{userId}.opportunityQuota`, defaulting to 0.
+    public func getUserOpportunityQuota(_ userId: String) async throws -> Int {
+        let snapshot = try await credits.document(userId).getDocument()
+        return (snapshot.get("opportunityQuota") as? NSNumber)?.intValue ?? 0
+    }
+
+    public func getUserOpportunityQuotaObserver(_ userId: String) -> AsyncThrowingStream<Int, any Error> {
+        let document = credits.document(userId)
+        return AsyncThrowingStream { continuation in
+            let registration = document.addSnapshotListener { snapshot, error in
+                if let error {
+                    continuation.finish(throwing: error)
+                    return
+                }
+                continuation.yield((snapshot?.get("opportunityQuota") as? NSNumber)?.intValue ?? 0)
+            }
+            let box = ListenerBox(registration)
+            continuation.onTermination = { _ in box.value.remove() }
+        }
+    }
+
+    /// Best-effort like Dart: failures are swallowed.
+    public func decrementUserOpportunityQuota(_ userId: String) async throws {
+        try? await credits.document(userId).updateData(["opportunityQuota": FieldValue.increment(Int64(-1))])
+    }
+
+    // MARK: - reviews (session 4)
+
+    public func createPerformerReview(_ review: PerformerReview) async throws {
+        try reviews.document(review.fields.performerId).collection("performerReviews").document(review.id).setData(from: review)
+    }
+
+    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? {
+        let snapshot = try await reviews.document(revieweeId).collection("performerReviews").document(reviewId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(PerformerReview.self)
+    }
+
+    public func createBookerReview(_ review: BookerReview) async throws {
+        try reviews.document(review.fields.bookerId).collection("bookerReviews").document(review.id).setData(from: review)
+    }
+
+    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? {
+        let snapshot = try await reviews.document(revieweeId).collection("bookerReviews").document(reviewId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(BookerReview.self)
+    }
+
     // MARK: - stubs (owned by follow-up sessions)
 
     // TODO(session-5): onboarding writes latestAppVersion on launch.
@@ -199,26 +309,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func getUserServices(_ userId: String) async throws -> [Service] { throw NotImplemented() }
     // TODO(session-3): services.
     public func deleteService(_ userId: String, _ serviceId: String) async throws { throw NotImplemented() }
-    // TODO(session-4): opportunities feed.
-    public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
-    // TODO(session-4): opportunities feed.
-    public func getOpportunityFeedByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
-    // TODO(session-4): opportunities.
-    public func getInterestedUsers(_ opportunity: Opportunity) async throws -> [UserModel] { throw NotImplemented() }
-    // TODO(session-4): opportunities.
-    public func applyForOpportunity(opportunity: Opportunity, userId: String, userComment: String) async throws { throw NotImplemented() }
-    // TODO(session-4): opportunities.
-    public func dislikeOpportunity(opportunity: Opportunity, userId: String) async throws { throw NotImplemented() }
-    // TODO(session-4): opportunities.
-    public func getAppliedOpportunitiesByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
-    // TODO(session-4): opportunities quota.
-    public func getUserOpportunityQuota(_ userId: String) async throws -> Int { throw NotImplemented() }
-    // TODO(session-4): opportunities quota.
-    public func getUserOpportunityQuotaObserver(_ userId: String) -> AsyncThrowingStream<Int, any Error> {
-        AsyncThrowingStream { $0.finish(throwing: NotImplemented()) }
-    }
-    // TODO(session-4): opportunities quota.
-    public func decrementUserOpportunityQuota(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-6): admin → add gig.
     public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
     // TODO(session-6): admin → add gig.
@@ -233,14 +323,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool { throw NotImplemented() }
     // TODO(session-2): profile → report.
     public func reportUser(reported: UserModel, reporter: UserModel) async throws { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func createPerformerReview(_ review: PerformerReview) async throws { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
     // TODO(session-6): paywall waitlist.
     public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-2): settings → feedback.
