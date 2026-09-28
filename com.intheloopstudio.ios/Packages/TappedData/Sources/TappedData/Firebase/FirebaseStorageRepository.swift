@@ -13,4 +13,12 @@ public struct FirebaseStorageRepository: StorageRepository {
         _ = try await ref.putDataAsync(imageData, metadata: metadata)
         return try await ref.downloadURL()
     }
+
+    public func uploadOpportunityFlier(opportunityId: String, jpegData: Data) async throws -> URL {
+        let ref = Storage.storage().reference().child("images/opportunities/\(opportunityId).jpg")
+        let metadata = StorageMetadata()
+        metadata.contentType = "image/jpeg"
+        _ = try await ref.putDataAsync(jpegData, metadata: metadata)
+        return try await ref.downloadURL()
+    }
 }

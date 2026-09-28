@@ -1,4 +1,5 @@
 import Foundation
+import TappedDomain
 import TappedUI
 
 /// Mock-mode-only launch environment used for deterministic screenshots and UI checks.

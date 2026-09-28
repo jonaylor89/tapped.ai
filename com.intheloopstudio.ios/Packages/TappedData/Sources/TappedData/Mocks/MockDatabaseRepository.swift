@@ -7,6 +7,9 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var users: [String: UserModel]
     public private(set) var opportunities: [String: Opportunity]
     public private(set) var bookings: [String: Booking]
+    /// `opportunityFeeds/{userId}/opportunities/{opportunityId}`.
+    public private(set) var opportunityFeeds: [String: [String: Opportunity]] = [:]
+    public private(set) var premiumWaitlist: Set<String> = []
     public var featuredPerformerIds: [String]
     public var featuredOpportunityIds: [String]
     public private(set) var activities: [String: Activity]
@@ -32,7 +35,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var opportunityQuotas: [String: Int]
     public var defaultOpportunityQuota: Int
     private var quotaContinuations: [UUID: (userId: String, continuation: AsyncThrowingStream<Int, any Error>.Continuation)] = [:]
-    public private(set) var premiumWaitlist: Set<String> = []
 
     public init(
         users: [UserModel] = Samples.performers + Samples.venues,
@@ -262,9 +264,12 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
-    public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws { throw NotImplemented() }
-    public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
+    public func createOpportunity(_ opportunity: Opportunity) async throws { opportunities[opportunity.id] = opportunity }
+    public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws {
+        let recipients = users.values.filter { $0.id != opportunity.userId && !$0.deleted && !$0.email.hasSuffix("tapped.ai") }
+        for user in recipients { opportunityFeeds[user.id, default: [:]][opportunity.id] = opportunity }
+    }
+    public func deleteOpportunity(_ opportunityId: String) async throws { opportunities[opportunityId]?.deleted = true }
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers

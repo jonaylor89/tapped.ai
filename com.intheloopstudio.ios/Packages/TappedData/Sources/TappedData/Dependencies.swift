@@ -18,6 +18,7 @@ public struct Dependencies: Sendable {
     public var analytics: any AnalyticsRepository
     public var remoteConfig: any RemoteConfigRepository
     public var notifications: any NotificationRepository
+    public var chat: any ChatRepository
     public var storage: any StorageRepository
     public var venueOutreach: any VenueOutreachRepository
 
@@ -31,6 +32,7 @@ public struct Dependencies: Sendable {
         analytics: any AnalyticsRepository,
         remoteConfig: any RemoteConfigRepository,
         notifications: any NotificationRepository = MockNotificationRepository(),
+        chat: any ChatRepository = MockChatRepository(),
         storage: any StorageRepository = MockStorageRepository(),
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository()
     ) {
@@ -43,6 +45,7 @@ public struct Dependencies: Sendable {
         self.analytics = analytics
         self.remoteConfig = remoteConfig
         self.notifications = notifications
+        self.chat = chat
         self.storage = storage
         self.venueOutreach = venueOutreach
     }
@@ -60,6 +63,7 @@ public struct Dependencies: Sendable {
             analytics: PostHogAnalytics(),
             remoteConfig: FirebaseRemoteConfigRepository(),
             notifications: FirebaseNotificationRepository(),
+            chat: StreamChatRepository(apiKey: config.streamAPIKey, tokenProvider: FirebaseStreamToken.fetch),
             storage: FirebaseStorageRepository(),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL)
         )
@@ -75,6 +79,7 @@ public struct Dependencies: Sendable {
         minimumAppVersion: String = "",
         latestAppVersion: String = "",
         premiumWaitlist: Bool = false,
+        storeKitPurchases: Bool = false,
         notifications: any NotificationRepository = MockNotificationRepository(),
         storage: any StorageRepository = MockStorageRepository()
     ) -> Dependencies {
@@ -87,7 +92,9 @@ public struct Dependencies: Sendable {
             database: MockDatabaseRepository(),
             search: MockSearchRepository(),
             places: MockPlacesRepository(),
-            purchases: MockPurchasesRepository(isPremium: isPremium),
+            purchases: storeKitPurchases
+                ? StoreKitPurchasesRepository(productIds: TappedConfig.defaultPremiumProductIds)
+                : MockPurchasesRepository(isPremium: isPremium),
             analytics: MockAnalytics(),
             remoteConfig: MockRemoteConfigRepository(
                 downForMaintenance: downForMaintenance,
@@ -96,6 +103,7 @@ public struct Dependencies: Sendable {
                 premiumWaitlistEnabled: premiumWaitlist
             ),
             notifications: notifications,
+            chat: MockChatRepository(),
             storage: storage,
             venueOutreach: MockVenueOutreachRepository()
         )
@@ -120,7 +128,8 @@ public struct Dependencies: Sendable {
     /// `TAPPED_MOCK_SIGNED_IN=1` starts signed in, `TAPPED_MOCK_PREMIUM=1` grants premium,
     /// `TAPPED_MOCK_ONBOARDING=1` starts as a new account without a user doc (`TAPPED_MOCK_UNVERIFIED=1` → confirm email),
     /// `TAPPED_MOCK_MAINTENANCE=1`, `TAPPED_MOCK_MIN_VERSION=<v>`, `TAPPED_MOCK_LATEST_VERSION=<v>`, `TAPPED_MOCK_WAITLIST=1`
-    /// drive the Remote Config gates.
+    /// drive the Remote Config gates. `TAPPED_MOCK_ADMIN=1` grants the `admin` claim, `TAPPED_MOCK_STOREKIT=1` uses real StoreKit 2
+    /// (pair with the scheme's `Tapped.storekit` configuration).
     public static func resolve(environment: [String: String] = ProcessInfo.processInfo.environment) -> Dependencies {
         switch resolveMode(environment: environment) {
         case .live:
@@ -129,12 +138,14 @@ public struct Dependencies: Sendable {
             return .mock(
                 signedIn: environment["TAPPED_MOCK_SIGNED_IN"] == "1",
                 isPremium: environment["TAPPED_MOCK_PREMIUM"] == "1",
+                claims: environment["TAPPED_MOCK_ADMIN"] == "1" ? [.admin] : [],
                 downForMaintenance: environment["TAPPED_MOCK_MAINTENANCE"] == "1",
                 onboarding: environment["TAPPED_MOCK_ONBOARDING"] == "1" || environment["TAPPED_MOCK_UNVERIFIED"] == "1",
                 emailVerified: environment["TAPPED_MOCK_UNVERIFIED"] != "1",
                 minimumAppVersion: environment["TAPPED_MOCK_MIN_VERSION"] ?? "",
                 latestAppVersion: environment["TAPPED_MOCK_LATEST_VERSION"] ?? "",
-                premiumWaitlist: environment["TAPPED_MOCK_WAITLIST"] == "1"
+                premiumWaitlist: environment["TAPPED_MOCK_WAITLIST"] == "1",
+                storeKitPurchases: environment["TAPPED_MOCK_STOREKIT"] == "1"
             )
         }
     }

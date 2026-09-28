@@ -8,13 +8,32 @@ import TappedDomain
 @MainActor
 final class ShellViewModel {
     private(set) var currentUser: UserModel
-    /// TODO(session-6): drive from Stream Chat `totalUnreadCount`.
+    /// Total unread messages from `ChatRepository.unreadCountUpdates()`.
     private(set) var unreadMessages = 0
     /// Unread `activities` for the current user; driven by `observeActivities(database:)`.
     private(set) var unreadActivities = 0
+    private(set) var isChatConnected = false
 
-    init(currentUser: UserModel) {
+    private let chat: (any ChatRepository)?
+
+    init(currentUser: UserModel, chat: (any ChatRepository)? = nil) {
         self.currentUser = currentUser
+        self.chat = chat
+    }
+
+    /// Connects chat for the signed-in user and keeps `unreadMessages` current. Runs for the shell's lifetime.
+    func run() async {
+        guard let chat else { return }
+        do {
+            try await chat.connectUser(currentUser)
+            isChatConnected = true
+        } catch {
+            FirebaseBootstrap.record(error: error)
+            return
+        }
+        for await count in chat.unreadCountUpdates() {
+            unreadMessages = count
+        }
     }
 
     /// Keeps `unreadActivities` in sync with the activity listener until the calling task is cancelled.

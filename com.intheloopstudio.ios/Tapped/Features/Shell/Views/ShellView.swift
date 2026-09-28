@@ -12,8 +12,8 @@ struct ShellView: View {
     @State private var shell: ShellViewModel
     @State private var showsReauthentication = false
 
-    init(currentUser: UserModel) {
-        _shell = State(initialValue: ShellViewModel(currentUser: currentUser))
+    init(currentUser: UserModel, chat: (any ChatRepository)? = nil) {
+        _shell = State(initialValue: ShellViewModel(currentUser: currentUser, chat: chat))
     }
 
     var body: some View {
@@ -29,6 +29,7 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
+        .task { await shell.run() }
         .task { await shell.observeActivities(database: dependencies.database) }
         .task { await applyLaunchOptions() }
         .task(id: inbound?.pending) { await openPendingLink() }

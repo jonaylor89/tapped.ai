@@ -10,6 +10,10 @@ extension Route {
         let opportunity = Samples.opportunities[0]
         return switch name {
         case "paywall": [.paywall]
+        case "messages": [.messagingChannelList]
+        case "channel": [.messagingChannelList, .streamChannel(channelId: Samples.conversations[0].id)]
+        case "admin": [.admin]
+        case "videocall": [.videoCall]
         case "search": [.search]
         case "advanced-search": [.advancedSearch]
         case "location-form": [.locationForm(initialPlace: MockPlacesRepository.places.first)]

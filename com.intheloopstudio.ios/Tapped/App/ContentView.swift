@@ -32,7 +32,7 @@ struct ContentView: View {
                         .id(uid)
                 case let .signedIn(user):
                     if session.availableUpdate == nil {
-                        ShellView(currentUser: user)
+                        ShellView(currentUser: user, chat: dependencies.chat)
                             .id(user.id)
                     } else {
                         SplashView()

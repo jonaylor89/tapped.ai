@@ -21,16 +21,39 @@ public struct Entitlement: RawRepresentable, Sendable, Hashable {
 }
 
 public struct PremiumProduct: Sendable, Hashable, Identifiable {
+    public enum Period: String, Sendable, Hashable {
+        case day, week, month, year
+    }
+
     public var id: String
     public var displayName: String
     public var description: String
     public var displayPrice: String
+    /// Subscription renewal period; `nil` for non-subscriptions.
+    public var period: Period?
 
-    public init(id: String, displayName: String, description: String, displayPrice: String) {
+    public init(id: String, displayName: String, description: String, displayPrice: String, period: Period? = nil) {
         self.id = id
         self.displayName = displayName
         self.description = description
         self.displayPrice = displayPrice
+        self.period = period
+    }
+}
+
+/// Fan-out for entitlement changes that StoreKit's `Transaction.updates` does not report
+/// (in-app purchases and restores), shared by every `entitlementUpdates()` stream.
+actor EntitlementBroadcaster {
+    private var continuations: [UUID: AsyncStream<Set<Entitlement>>.Continuation] = [:]
+
+    func register(_ id: UUID, _ continuation: AsyncStream<Set<Entitlement>>.Continuation) {
+        continuations[id] = continuation
+    }
+
+    func unregister(_ id: UUID) { continuations[id] = nil }
+
+    func publish(_ entitlements: Set<Entitlement>) {
+        for continuation in continuations.values { continuation.yield(entitlements) }
     }
 }
 

@@ -45,9 +45,24 @@ targets:
         CODE_SIGN_STYLE: Automatic
         OTHER_LDFLAGS: $(inherited) -ObjC
         TAPPED_GOOGLE_PLACES_API_KEY: ""
+        DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
       configs:
         Debug:
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
+    postBuildScripts:
+      - name: Upload Crashlytics dSYMs
+        basedOnDependencyAnalysis: false
+        script: |
+          # Release only; skipped when Firebase isn't configured (placeholder plist).
+          [ "${CONFIGURATION}" = "Release" ] || exit 0
+          grep -q PLACEHOLDER "${SRCROOT}/Tapped/Resources/GoogleService-Info.plist" && exit 0
+          "${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
+        inputFiles:
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}
+          - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist
+          - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist
+          - $(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)
   TappedTests:
     type: bundle.unit-test
     platform: iOS
@@ -86,6 +101,7 @@ schemes:
         Tapped: all
     run:
       config: Debug
+      storeKitConfiguration: StoreKit/Tapped.storekit
       environmentVariables:
         TAPPED_MOCK: "1"
     archive:
