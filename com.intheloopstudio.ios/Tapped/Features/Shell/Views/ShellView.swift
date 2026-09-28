@@ -29,14 +29,18 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
-        .task { applyLaunchOptions() }
+        .task { await applyLaunchOptions() }
         .task(id: inbound?.pending) { await openPendingLink() }
         .reauthenticationSheet(isPresented: $showsReauthentication, reason: "enter your password to continue") {}
     }
 
-    private func applyLaunchOptions() {
+    private func applyLaunchOptions() async {
         if let route = session.launchOptions.route { router.push(route) }
-        showsReauthentication = session.launchOptions.sheet == .reauth
+        guard session.launchOptions.sheet == .reauth else { return }
+        // Destructive actions live on pushed screens; the Discover sheet must be gone before another sheet presents.
+        if router.isAtRoot { router.push(.settings) }
+        try? await Task.sleep(for: .milliseconds(600))
+        showsReauthentication = true
     }
 
     /// Universal links / notification taps buffered by `InboundLinks` (cold start included).

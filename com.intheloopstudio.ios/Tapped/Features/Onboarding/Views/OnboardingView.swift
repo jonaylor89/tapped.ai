@@ -22,7 +22,8 @@ struct OnboardingView: View {
                 .navigationTitle("step \(model.stepIndex + 1) of \(OnboardingViewModel.Step.allCases.count)")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { toolbar }
-                .safeAreaInset(edge: .bottom) { controls }
+                .safeAreaBar(edge: .bottom) { controls }
+                .scrollEdgeEffectStyle(.hard, for: .bottom)
         }
         .animation(GlassMotion.ease, value: model.step)
         .alert("uh oh", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {

@@ -31,8 +31,12 @@ struct ContentView: View {
                     OnboardingView(dependencies: dependencies, initialStep: session.launchOptions.onboardingStep)
                         .id(uid)
                 case let .signedIn(user):
-                    ShellView(currentUser: user)
-                        .id(user.id)
+                    if session.availableUpdate == nil {
+                        ShellView(currentUser: user)
+                            .id(user.id)
+                    } else {
+                        SplashView()
+                    }
                 }
             }
         }
@@ -57,6 +61,7 @@ struct ContentView: View {
         }
     }
 
+    /// The shell (and its Discover sheet) stays behind the splash until the prompt is answered.
     private var updatePromptBinding: Binding<Bool> {
         Binding(
             get: { session.availableUpdate != nil && session.currentUser != nil },

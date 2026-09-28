@@ -21,6 +21,7 @@ struct OnboardingStepContent: View {
             case .complete: CompleteStep(model: model)
             }
         }
+        .textCase(nil)
         .scrollDismissesKeyboard(.interactively)
     }
 }
@@ -30,17 +31,17 @@ struct OnboardingHeader: View {
     let subtitle: String
 
     var body: some View {
-        Section {
+        Section {} header: {
             VStack(alignment: .leading, spacing: TappedSpacing.sm) {
                 Text(title)
                     .font(.largeTitle.bold())
+                    .foregroundStyle(.primary)
                 Text(subtitle)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
