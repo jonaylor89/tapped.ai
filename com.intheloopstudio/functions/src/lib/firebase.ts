@@ -81,6 +81,7 @@ export const OPEN_AI_KEY = defineSecret("OPEN_AI_KEY");
 export const GOOGLE_PLACES_API_KEY = defineSecret("GOOGLE_PLACES_API_KEY");
 export const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
 export const MAIL_API_SECRET = defineSecret("MAIL_API_SECRET");
+export const MAIL_INGRESS_SECRET = defineSecret("MAIL_INGRESS_SECRET");
 export const SLACK_WEBHOOK_URL = defineSecret("SLACK_WEBHOOK_URL");
 export const SPOTIFY_CLIENT_ID = defineSecret("SPOTIFY_CLIENT_ID");
 export const SPOTIFY_CLIENT_SECRET = defineSecret("SPOTIFY_CLIENT_SECRET");

@@ -34,13 +34,13 @@ TYPESENSE_PROTOCOL
 TYPESENSE_SEARCH_API_KEY
 ```
 
-In Postmark, configure the inbound webhook as:
+When the Postmark plan permits editing inbound webhooks, configure:
 
 ```text
 https://postmark:<MAIL_INGRESS_SECRET>@api.tapped.ai/webhooks/postmark/inbound
 ```
 
-Postmark sends HTTP Basic authentication from the URL credentials. Use HTTPS and a dedicated random secret. The API also retains signed `POST /internal/mail/inbound` for local Haraka delivery.
+Postmark sends HTTP Basic authentication from the URL credentials. Use HTTPS and a dedicated random secret. Until inbound processing is enabled on the Postmark account, the existing `inboundEmailWebhook` Firebase URL remains stable and acts only as an authenticated proxy to this Rust endpoint. The API also retains signed `POST /internal/mail/inbound` for local Haraka delivery.
 
 ## Local mail stack
 
@@ -86,7 +86,7 @@ No production DNS changes are required for this stack.
 - [ ] Confirm `/health`, API logs, worker startup, SQLite WAL creation, and Postmark API connectivity.
 - [ ] Authenticate Application Default Credentials with `gcloud auth application-default login`, then preview the legacy migration with `python3 services/mail-gateway/tools/backfill_mail_threads.py`.
 - [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible and written counts match.
-- [ ] Configure Postmark's inbound webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records.
+- [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records. Until then, deploy the `inboundEmailWebhook` proxy function against the unchanged Postmark URL.
 - [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`.
 - [ ] Build and release the Flutter app that calls `POST /app/v1/venue-email-threads`.
 - [ ] Run **Post-deploy mail smoke** manually. IMAP is used only by this optional end-to-end deliverability test, not by production infrastructure.

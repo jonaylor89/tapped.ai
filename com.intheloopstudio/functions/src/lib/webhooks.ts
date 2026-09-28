@@ -1,27 +1,17 @@
 /* eslint-disable import/no-unresolved */
 
-import { debug, error, info } from "firebase-functions/logger";
+import { error, info } from "firebase-functions/logger";
 import { onRequest } from "firebase-functions/v2/https";
 import { type Message, StreamChat, type User } from "stream-chat";
 import type { UserModel } from "../types/models";
 import { addUserToPremiumChat, removeUserFromPremiumChat } from "./direct_messaging";
-import { sendStreamMessage } from "./dm_email_sync/messaging";
 import { sendEmailToVenueFromStreamMessage } from "./dm_email_sync/venue_contacting";
 import {
   sendEmailSubscriptionExpiration,
   sendEmailSubscriptionPurchase,
   sendEmailToPerformerFromStreamMessage,
 } from "./email_triggers";
-import {
-  contactVenuesRef,
-  MAIL_API_SECRET,
-  orphanEmailsRef,
-  SLACK_WEBHOOK_URL,
-  streamKey,
-  streamSecret,
-  usersRef,
-} from "./firebase";
-import { slackNotification } from "./notifications";
+import { MAIL_API_SECRET, MAIL_INGRESS_SECRET, streamKey, streamSecret, usersRef } from "./firebase";
 
 // send email on subscription purchase
 export const sendEmailOnSubscriptionPurchase = onRequest(
@@ -153,84 +143,24 @@ export const streamBeforeMessageWebhook = onRequest(
   },
 );
 
-// Deprecated: Postmark should deliver inbound email to api.tapped.ai. Kept during rollout for rollback safety.
-export const inboundEmailWebhook = onRequest(
-  { secrets: [MAIL_API_SECRET, streamKey, streamSecret, SLACK_WEBHOOK_URL] },
-  async (req, res) => {
-    const body = req.body;
-    try {
-      const subject = body.Subject;
-      const to = body.To;
-      const from = body.From;
-      const references = body.Headers.find((h: { Name: string; Value: string }) => h.Name === "References")?.Value;
-      const replyToMessageId = body.Headers.find(
-        (h: { Name: string; Value: string }) => h.Name === "In-Reply-To",
-      )?.Value;
-      const latestMessageId = body.Headers.find((h: { Name: string; Value: string }) => h.Name === "Message-ID")?.Value;
-
-      if (!subject || !replyToMessageId) {
-        throw new Error("no subject or reply-to messageId found");
-      }
-
-      const username = to.split("@")[0];
-      const userSnap = await usersRef.where("username", "==", username).limit(1).get();
-      if (userSnap.empty) {
-        debug(`no user found for this username (${username})`);
-        throw new Error("no user found for this username");
-      }
-
-      const userId = userSnap.docs[0].id;
-
-      const venueContactsSnap = await contactVenuesRef
-        .doc(userId)
-        .collection("venuesContacted")
-        .where("latestMessageId", "==", replyToMessageId)
-        .limit(1)
-        .get();
-      if (venueContactsSnap.empty) {
-        debug(`no venue contact found for this user and messageId (${userId},${references})`);
-        throw new Error("no venue contact found for this user and messageId");
-      }
-      const venueContactData = venueContactsSnap.docs[0].data();
-      const allEmails = venueContactData.allEmails ?? [];
-      const newAllEmails = allEmails.concat([from]).filter((e: string, i: number, a: string[]) => a.indexOf(e) === i);
-
-      const venueId = venueContactsSnap.docs[0].id;
-
-      // add email to emails collection
-      await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).collection("emailsSent").add(body);
-
-      const messageContent = body.StrippedTextReply ?? body.TextBody;
-
-      const streamChat = new StreamChat(streamKey.value(), streamSecret.value());
-      await sendStreamMessage({
-        streamClient: streamChat,
-        receiverId: userId,
-        senderId: venueId,
-        message: messageContent,
-      });
-
-      await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).update({
-        allEmails: newAllEmails,
-        latestMessageId,
-      });
-
-      slackNotification({
-        title: "NEW EMAIL!!!",
-        body: `New email from ${from} in response to ${username}`,
-        slackWebhookUrl: SLACK_WEBHOOK_URL.value(),
-      });
-
-      res.status(200).send("ok");
-    } catch (e: any) {
-      error(e.message);
-      await orphanEmailsRef.add({
-        email: {
-          ...body,
-        },
-        error: e.message,
-      });
-      res.status(500).send("error");
-    }
-  },
-);
+// Transitional proxy: the current Postmark plan cannot update its existing inbound webhook URL.
+// Keep this function URL stable while all parsing, persistence, and Stream side effects run in Rust.
+export const inboundEmailWebhook = onRequest({ secrets: [MAIL_INGRESS_SECRET] }, async (req, res) => {
+  try {
+    const apiUrl = process.env.TAPPED_API_URL ?? "https://api.tapped.ai";
+    const authorization = Buffer.from(`postmark:${MAIL_INGRESS_SECRET.value()}`).toString("base64");
+    const response = await fetch(`${apiUrl}/webhooks/postmark/inbound`, {
+      method: "POST",
+      headers: {
+        authorization: `Basic ${authorization}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(req.body),
+    });
+    const responseBody = await response.text();
+    res.status(response.status).send(responseBody);
+  } catch (cause) {
+    error("Failed to proxy Postmark inbound email", cause);
+    res.status(502).send("mail API unavailable");
+  }
+});
