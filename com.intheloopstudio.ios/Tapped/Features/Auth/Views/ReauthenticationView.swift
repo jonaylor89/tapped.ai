@@ -98,7 +98,7 @@ private struct ReauthenticationSheetModifier: ViewModifier {
             NavigationStack {
                 ReauthenticationView(dependencies: dependencies, reason: reason, onSuccess: onSuccess)
             }
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.large])
         }
     }
 }
