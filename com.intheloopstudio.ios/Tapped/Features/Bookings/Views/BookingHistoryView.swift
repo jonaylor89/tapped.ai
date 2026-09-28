@@ -108,6 +108,7 @@ struct BookingHistoryView: View {
                 }
                 .scrollTargetLayout()
             }
+            .fixedSize(horizontal: false, vertical: true)
             .scrollPosition(id: $model.selectedBookingId, anchor: .center)
             .scrollTargetBehavior(.viewAligned)
             .scrollIndicators(.hidden)
