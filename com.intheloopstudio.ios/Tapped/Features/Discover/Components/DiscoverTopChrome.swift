@@ -7,6 +7,7 @@ import TappedUI
 struct DiscoverTopChrome: View {
     @Bindable var model: DiscoverViewModel
     let unreadMessages: Int
+    var unreadActivities = 0
     let push: (Route) -> Void
 
     var body: some View {
@@ -20,6 +21,9 @@ struct DiscoverTopChrome: View {
                         .tappedGlass(in: Circle(), interactive: true)
                 }
                 .buttonStyle(GlassPressStyle())
+                .overlay(alignment: .topTrailing) {
+                    UnreadBadge(count: unreadActivities).offset(x: 4, y: -4)
+                }
                 .accessibilityLabel("profile")
 
                 GlassSearchField(action: { push(.search) })

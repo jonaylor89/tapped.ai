@@ -27,6 +27,13 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
+        .task { await shell.observeActivities(database: dependencies.database) }
+        .task {
+            if let name = session.launchOptions.route, router.path.isEmpty,
+               let route = Route.mockLaunch(name, currentUser: shell.currentUser) {
+                router.push(route)
+            }
+        }
     }
 }
 

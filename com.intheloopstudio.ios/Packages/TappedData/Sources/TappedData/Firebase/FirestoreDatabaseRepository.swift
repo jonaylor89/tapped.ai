@@ -22,6 +22,11 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     private var opportunities: CollectionReference { db.collection("opportunities") }
     private var premiumWaitlist: CollectionReference { db.collection("premiumWaitlist") }
     private var contactVenues: CollectionReference { db.collection("contactVenues") }
+    private var services: CollectionReference { db.collection("services") }
+    private var blockers: CollectionReference { db.collection("blockers") }
+    private var mail: CollectionReference { db.collection("mail") }
+    /// Dart `blockerSubcollection`.
+    static let blockerSubcollection = "blockedUsers"
 
     // MARK: - implemented
 
@@ -178,9 +183,7 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     // TODO(session-5): onboarding → performer classification Cloud Function.
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
     // TODO(session-2): activity feed.
-    public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws { throw NotImplemented() }
     // TODO(session-2): activity feed.
-    public func markActivityAsRead(_ activity: Activity) async throws { throw NotImplemented() }
     // TODO(session-3): bookings.
     public func createBooking(_ booking: Booking) async throws { throw NotImplemented() }
     // TODO(session-3): bookings.
@@ -194,11 +197,8 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     // TODO(session-3): services.
     public func updateService(_ service: Service) async throws { throw NotImplemented() }
     // TODO(session-3): services.
-    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? { throw NotImplemented() }
     // TODO(session-3): services.
-    public func getUserServices(_ userId: String) async throws -> [Service] { throw NotImplemented() }
     // TODO(session-3): services.
-    public func deleteService(_ userId: String, _ serviceId: String) async throws { throw NotImplemented() }
     // TODO(session-4): opportunities feed.
     public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     // TODO(session-4): opportunities feed.
@@ -226,13 +226,9 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     // TODO(session-6): admin.
     public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
     // TODO(session-2): profile → block.
-    public func blockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     // TODO(session-2): profile → block.
-    public func unblockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     // TODO(session-2): profile → block.
-    public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool { throw NotImplemented() }
     // TODO(session-2): profile → report.
-    public func reportUser(reported: UserModel, reporter: UserModel) async throws { throw NotImplemented() }
     // TODO(session-4): reviews.
     public func createPerformerReview(_ review: PerformerReview) async throws { throw NotImplemented() }
     // TODO(session-4): reviews.
@@ -245,6 +241,81 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-2): settings → feedback.
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
+
+    // MARK: - activities (session 2)
+
+    public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws {
+        _ = try await activities.addDocument(data: [
+            "toUserId": visitedUserId,
+            "fromUserId": currentUserId,
+            "timestamp": Timestamp(date: .now),
+            "type": type.rawValue,
+        ])
+    }
+
+    public func markActivityAsRead(_ activity: Activity) async throws {
+        guard !activity.common.markedRead else { return }
+        try await activities.document(activity.id).updateData(["markedRead": true])
+    }
+
+    // MARK: - services (session 2 reads/deletes)
+
+    private func userServices(_ userId: String) -> CollectionReference {
+        services.document(userId).collection("userServices")
+    }
+
+    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? {
+        let snapshot = try await userServices(userId).document(serviceId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(Service.self)
+    }
+
+    public func getUserServices(_ userId: String) async throws -> [Service] {
+        let snapshot = try await userServices(userId).whereField("deleted", isNotEqualTo: true).getDocuments()
+        return snapshot.documents.compactMap { try? $0.decoded(Service.self) }
+    }
+
+    public func deleteService(_ userId: String, _ serviceId: String) async throws {
+        try await userServices(userId).document(serviceId).updateData(["userId": userId, "deleted": true])
+    }
+
+    // MARK: - blocking + reporting (session 2)
+
+    private func blockedUser(_ currentUserId: String, _ blockedUserId: String) -> DocumentReference {
+        blockers.document(currentUserId).collection(Self.blockerSubcollection).document(blockedUserId)
+    }
+
+    public func blockUser(currentUserId: String, blockedUserId: String) async throws {
+        try await blockedUser(currentUserId, blockedUserId).setData(["timestamp": Timestamp(date: .now)])
+    }
+
+    public func unblockUser(currentUserId: String, blockedUserId: String) async throws {
+        try await blockedUser(currentUserId, blockedUserId).delete()
+    }
+
+    public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool {
+        try await blockedUser(currentUserId, blockedUserId).getDocument().exists
+    }
+
+    /// Dart `reportUser`: queues an email through the Firebase "Trigger Email" extension (`mail` collection).
+    public func reportUser(reported: UserModel, reporter: UserModel) async throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = .sortedKeys
+        let reporterJSON = String(decoding: try encoder.encode(reporter), as: UTF8.self)
+        let reportedJSON = String(decoding: try encoder.encode(reported), as: UTF8.self)
+        let html = """
+            <p>Report from:</p>
+            <p>\(reporterJSON)<p>
+            <p>User:</p>
+            <p>\(reportedJSON)</p>
+        """
+        _ = try await mail.addDocument(data: [
+            "to": ["support@tapped.ai"],
+            "cc": ["johannes@tapped.ai", "ilias@tapped.ai"],
+            "message": ["subject": "User Reported", "html": html],
+        ])
+    }
 
     // MARK: - helpers
 

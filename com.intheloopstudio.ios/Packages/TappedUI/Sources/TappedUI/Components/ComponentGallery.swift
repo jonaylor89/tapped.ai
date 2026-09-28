@@ -29,6 +29,10 @@ public struct ComponentGallery: View {
                     UserCard(user: Samples.performers[1], isLocked: true)
                 }
                 OpportunityCard(opportunity: Samples.opportunities[0], venueName: "the camel")
+                HStack {
+                    RatingStars(4.5)
+                    QRCodeView("https://app.tapped.ai/u/djnova").frame(width: 96, height: 96)
+                }
                 ErrorView(retry: {})
                 WaitlistView(isOnWaitlist: false) {}
             }
