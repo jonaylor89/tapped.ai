@@ -35,10 +35,10 @@ struct OnboardingHeader: View {
             VStack(alignment: .leading, spacing: TappedSpacing.sm) {
                 Text(title)
                     .font(.largeTitle.bold())
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(Color(uiColor: .label))
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(uiColor: .secondaryLabel))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
