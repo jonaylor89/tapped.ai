@@ -75,6 +75,9 @@ public extension Samples {
         "messaging:!members-" + [a, b].sorted().joined(separator: "-")
     }
 
+    /// Chat timestamps are relative ("15 min ago"), so they must never be in the future.
+    static let chatReferenceDate = min(referenceDate, Date())
+
     /// Sample DMs between `performer` and a couple of venues.
     static let conversations: [Conversation] = [
         Conversation(
@@ -82,7 +85,7 @@ public extension Samples {
             name: venues[0].displayName,
             memberIds: [performer.id, venues[0].id],
             lastMessageText: "sounds good — load in is at 7",
-            lastMessageAt: referenceDate.addingTimeInterval(-15 * 60),
+            lastMessageAt: chatReferenceDate.addingTimeInterval(-15 * 60),
             unreadCount: 2
         ),
         Conversation(
@@ -90,7 +93,7 @@ public extension Samples {
             name: venues[3].displayName,
             memberIds: [performer.id, venues[3].id],
             lastMessageText: "thanks for applying! we'll be in touch",
-            lastMessageAt: referenceDate.addingTimeInterval(-26 * 60 * 60),
+            lastMessageAt: chatReferenceDate.addingTimeInterval(-26 * 60 * 60),
             unreadCount: 1
         ),
         Conversation(
@@ -98,7 +101,7 @@ public extension Samples {
             name: performers[2].displayName,
             memberIds: [performer.id, performers[2].id],
             lastMessageText: "down to split the bill at balliceaux?",
-            lastMessageAt: referenceDate.addingTimeInterval(-4 * 24 * 60 * 60)
+            lastMessageAt: chatReferenceDate.addingTimeInterval(-4 * 24 * 60 * 60)
         ),
     ]
 
@@ -109,7 +112,7 @@ public extension Samples {
                 text: text,
                 authorId: user.id,
                 authorName: user.displayName,
-                createdAt: referenceDate.addingTimeInterval(-minutesAgo * 60),
+                createdAt: chatReferenceDate.addingTimeInterval(-minutesAgo * 60),
                 isFromCurrentUser: user.id == performer.id
             )
         }

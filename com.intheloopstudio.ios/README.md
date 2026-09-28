@@ -76,7 +76,7 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
 | `TAPPED_MOCK_ADMIN` | `1` | grant the `admin` custom claim (admin form) |
 | `TAPPED_MOCK_STOREKIT` | `1` | real StoreKit 2 purchases against `StoreKit/Tapped.storekit` (set in the `Tapped Mock` scheme) |
-| `TAPPED_MOCK_ROUTE` | `paywall` \| `messages` \| `channel` \| `admin` | push a route on top of Discover once signed in |
+| `TAPPED_MOCK_ROUTE` | `paywall` \| `messages` \| `channel` \| `admin` \| `videocall` | push a route on top of Discover once signed in |
 
 Mock sign-in: any email + password works, except the password `wrong` (which returns an auth error).
 

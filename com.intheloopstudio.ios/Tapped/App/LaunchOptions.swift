@@ -7,7 +7,7 @@ import TappedUI
 /// - `TAPPED_MOCK_SIGNED_IN=1`   start signed in (handled by `Dependencies.resolve`)
 /// - `TAPPED_MOCK_SCREEN=splash|login|signup|forgot`  hold the auth gate on a screen
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
-/// - `TAPPED_MOCK_ROUTE=paywall|messages|channel|admin`  push a route on top of Discover once signed in
+/// - `TAPPED_MOCK_ROUTE=paywall|messages|channel|admin|videocall`  push a route on top of Discover once signed in
 struct LaunchOptions: Equatable {
     enum Screen: String {
         case splash, login, signup, forgot
@@ -40,6 +40,7 @@ struct LaunchOptions: Equatable {
         case "messages": .messagingChannelList
         case "channel": .streamChannel(channelId: Samples.conversations[0].id)
         case "admin": .admin
+        case "videocall": .videoCall
         default: nil
         }
         return LaunchOptions(
