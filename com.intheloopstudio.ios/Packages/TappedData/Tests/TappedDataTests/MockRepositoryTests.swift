@@ -25,7 +25,7 @@ struct MockRepositoryTests {
     @Test func unimplementedMethodsThrowNotImplemented() async {
         let database = MockDatabaseRepository()
         await #expect(throws: NotImplemented.self) { try await database.deleteUser("x") }
-        await #expect(throws: NotImplemented.self) { try await FirestoreDatabaseRepository().createBooking(Samples.bookings[0]) }
+        await #expect(throws: NotImplemented.self) { try await FirestoreDatabaseRepository().deleteUser("x") }
     }
 
     @Test func mockSearchFiltersVenuesByBoundsAndGenre() async throws {

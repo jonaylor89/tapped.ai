@@ -159,69 +159,6 @@ struct ProfileSocialsRow: View {
     }
 }
 
-struct ServiceRow: View {
-    let service: Service
-
-    var body: some View {
-        HStack(alignment: .top, spacing: TappedSpacing.md) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(service.title.lowercased())
-                    .font(.headline)
-                if !service.description.isEmpty {
-                    Text(service.description.lowercased())
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                }
-            }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(ProfileViewModel.currency(service.rate))
-                    .font(.headline)
-                    .monospacedDigit()
-                Text(service.rateType == .hourly ? "per hour" : "flat rate")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-}
-
-struct BookingCard: View {
-    let booking: Booking
-    let counterpart: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: TappedSpacing.xs) {
-            HStack {
-                Image(systemName: "calendar")
-                    .foregroundStyle(TappedColors.accent)
-                Text(booking.startTime.formatted(.dateTime.month(.abbreviated).day().year()).lowercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if booking.startTime > .now {
-                    Text("upcoming")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(TappedColors.accent)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .overlay(Capsule().stroke(TappedColors.accent, lineWidth: 1))
-                }
-            }
-            Text(counterpart.lowercased())
-                .font(.headline)
-                .lineLimit(1)
-            Text((booking.name ?? "booking").lowercased())
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-        }
-        .frame(width: 220, alignment: .leading)
-        .profileCard()
-    }
-}
-
 struct ReviewCard: View {
     let review: Review
     let reviewer: UserModel?
@@ -257,7 +194,7 @@ struct ReviewCard: View {
                     .padding(.horizontal)
             }
             ProfileSection(title: "bookings") {
-                BookingCard(booking: Samples.bookings[0], counterpart: "the camel").padding(.horizontal)
+                BookingCard(booking: Samples.bookings[0], counterpart: Samples.venues[0]).padding(.horizontal)
             }
             ProfileSection(title: "reviews") {
                 ReviewCard(review: .performer(Samples.performerReviews[0]), reviewer: Samples.venues[0]).padding(.horizontal)

@@ -29,9 +29,10 @@ struct ShellView: View {
         .environment(shell)
         .task { await shell.observeActivities(database: dependencies.database) }
         .task {
-            if let name = session.launchOptions.route, router.path.isEmpty,
-               let route = Route.mockLaunch(name, currentUser: shell.currentUser) {
-                router.push(route)
+            if router.isAtRoot, let name = session.launchOptions.route {
+                router.path = Route.mockLaunchPath(name, currentUser: shell.currentUser)
+                    ?? Route.mockLaunch(name, currentUser: shell.currentUser).map { [$0] }
+                    ?? []
             }
         }
     }

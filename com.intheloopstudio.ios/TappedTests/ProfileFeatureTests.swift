@@ -206,7 +206,7 @@ struct ActivityViewModelTests {
         await model.refresh()
         let request = model.activities[0]
         let route = await model.open(request)
-        #expect(route == .booking(Samples.profileBookings[0]))
+        #expect(route == .booking(Samples.bookings[1]))
         #expect(model.activities[0].common.markedRead)
 
         let follow = model.activities[1]

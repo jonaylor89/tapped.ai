@@ -11,6 +11,8 @@ public struct TappedConfig: Sendable, Hashable {
     public var postHogHost: String
     /// StoreKit product IDs that grant the `premium` entitlement.
     public var premiumProductIds: [String]
+    /// Dart `TAPPED_API_URL` (`TappedApiClient`).
+    public var tappedAPIURL: URL
 
     public init(
         typesenseHost: String = "search.tapped.ai",
@@ -20,7 +22,8 @@ public struct TappedConfig: Sendable, Hashable {
         googlePlacesAPIKey: String = "",
         postHogAPIKey: String = "",
         postHogHost: String = "https://us.i.posthog.com",
-        premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds
+        premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds,
+        tappedAPIURL: URL = TappedConfig.defaultTappedAPIURL
     ) {
         self.typesenseHost = typesenseHost
         self.typesensePort = typesensePort
@@ -30,7 +33,10 @@ public struct TappedConfig: Sendable, Hashable {
         self.postHogAPIKey = postHogAPIKey
         self.postHogHost = postHogHost
         self.premiumProductIds = premiumProductIds
+        self.tappedAPIURL = tappedAPIURL
     }
+
+    public static let defaultTappedAPIURL = URL(string: "https://api.tapped.ai")!
 
     /// No RevenueCat / `.storekit` configuration exists in the Flutter repo, so these are placeholders
     /// until App Store Connect products are confirmed.
@@ -54,7 +60,8 @@ public struct TappedConfig: Sendable, Hashable {
             googlePlacesAPIKey: string("TappedGooglePlacesAPIKey") ?? "",
             postHogAPIKey: string("TappedPostHogAPIKey") ?? "",
             postHogHost: string("TappedPostHogHost") ?? defaults.postHogHost,
-            premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds
+            premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds,
+            tappedAPIURL: string("TappedAPIURL").flatMap(URL.init(string:)) ?? defaults.tappedAPIURL
         )
     }
 }

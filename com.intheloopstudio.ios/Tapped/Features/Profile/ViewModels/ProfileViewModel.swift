@@ -190,9 +190,13 @@ final class ProfileViewModel {
         }
     }
 
-    func counterpartName(for booking: Booking) -> String {
+    func counterpart(for booking: Booking) -> UserModel? {
         let otherId = booking.requesteeId == userId ? booking.requesterId : booking.requesteeId
-        return otherId.flatMap { bookingCounterparts[$0]?.displayName } ?? booking.name ?? "booking"
+        return otherId.flatMap { bookingCounterparts[$0] }
+    }
+
+    func counterpartName(for booking: Booking) -> String {
+        counterpart(for: booking)?.displayName ?? booking.name ?? "booking"
     }
 
     // MARK: - loading

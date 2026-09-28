@@ -194,7 +194,8 @@ struct ProfileView: View {
                         HStack(spacing: TappedSpacing.sm) {
                             ForEach(model.latestBookings) { booking in
                                 Button { router.push(.booking(booking)) } label: {
-                                    BookingCard(booking: booking, counterpart: model.counterpartName(for: booking))
+                                    BookingCard(booking: booking, counterpart: model.counterpart(for: booking), showsStatus: false)
+                                        .frame(width: 280)
                                 }
                                 .buttonStyle(.plain)
                             }

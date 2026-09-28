@@ -172,6 +172,77 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         return try await ids.concurrentCompactMap { try await self.getUserById($0) }
     }
 
+    public func createBooking(_ booking: Booking) async throws {
+        try await bookings.document(booking.id).setData(Firestore.Encoder().encode(booking))
+    }
+
+    public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] {
+        try await bookings.whereField("referenceEventId", isEqualTo: eventId).getDocuments().documents
+            .compactMap { try? $0.decoded(Booking.self) }
+    }
+
+    public func getBookingsByRequesterRequestee(_ requesterId: String, _ requesteeId: String, limit: Int, lastBookingRequestId: String?, status: BookingStatus?) async throws -> [Booking] {
+        var query: Query = bookings
+            .whereField("requesterId", isEqualTo: requesterId)
+            .whereField("requesteeId", isEqualTo: requesteeId)
+        if let status { query = query.whereField("status", isEqualTo: status.rawValue) }
+        query = query.order(by: "startTime", descending: true).limit(to: limit)
+        if let lastBookingRequestId {
+            query = query.start(afterDocument: try await bookings.document(lastBookingRequestId).getDocument())
+        }
+        return try await query.getDocuments().documents.compactMap { try? $0.decoded(Booking.self) }
+    }
+
+    public func updateBooking(_ booking: Booking) async throws {
+        try await bookings.document(booking.id).setData(Firestore.Encoder().encode(booking))
+    }
+
+    public func createService(_ service: Service) async throws {
+        try await userServices(service.userId).document(service.id).setData(Firestore.Encoder().encode(service))
+    }
+
+    public func updateService(_ service: Service) async throws {
+        try await userServices(service.userId).document(service.id).setData(Firestore.Encoder().encode(service))
+    }
+
+    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? {
+        let snapshot = try await userServices(userId).document(serviceId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(Service.self)
+    }
+
+    public func getUserServices(_ userId: String) async throws -> [Service] {
+        try await userServices(userId).whereField("deleted", isNotEqualTo: true).getDocuments().documents
+            .compactMap { try? $0.decoded(Service.self) }
+    }
+
+    /// Soft delete, like Dart: `{userId, deleted: true}`.
+    public func deleteService(_ userId: String, _ serviceId: String) async throws {
+        try await userServices(userId).document(serviceId).updateData(["userId": userId, "deleted": true])
+    }
+
+    public func createPerformerReview(_ review: PerformerReview) async throws {
+        try await reviews.document(review.fields.performerId).collection("performerReviews").document(review.id)
+            .setData(Firestore.Encoder().encode(review))
+    }
+
+    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? {
+        let snapshot = try await reviews.document(revieweeId).collection("performerReviews").document(reviewId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(PerformerReview.self)
+    }
+
+    public func createBookerReview(_ review: BookerReview) async throws {
+        try await reviews.document(review.fields.bookerId).collection("bookerReviews").document(review.id)
+            .setData(Firestore.Encoder().encode(review))
+    }
+
+    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? {
+        let snapshot = try await reviews.document(revieweeId).collection("bookerReviews").document(reviewId).getDocument()
+        guard snapshot.exists else { return nil }
+        return try snapshot.decoded(BookerReview.self)
+    }
+
     // MARK: - stubs (owned by follow-up sessions)
 
     // TODO(session-5): onboarding writes latestAppVersion on launch.
@@ -184,21 +255,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
     // TODO(session-2): activity feed.
     // TODO(session-2): activity feed.
-    // TODO(session-3): bookings.
-    public func createBooking(_ booking: Booking) async throws { throw NotImplemented() }
-    // TODO(session-3): bookings.
-    public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] { throw NotImplemented() }
-    // TODO(session-3): bookings.
-    public func getBookingsByRequesterRequestee(_ requesterId: String, _ requesteeId: String, limit: Int, lastBookingRequestId: String?, status: BookingStatus?) async throws -> [Booking] { throw NotImplemented() }
-    // TODO(session-3): bookings.
-    public func updateBooking(_ booking: Booking) async throws { throw NotImplemented() }
-    // TODO(session-3): services.
-    public func createService(_ service: Service) async throws { throw NotImplemented() }
-    // TODO(session-3): services.
-    public func updateService(_ service: Service) async throws { throw NotImplemented() }
-    // TODO(session-3): services.
-    // TODO(session-3): services.
-    // TODO(session-3): services.
     // TODO(session-4): opportunities feed.
     public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     // TODO(session-4): opportunities feed.
@@ -229,14 +285,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     // TODO(session-2): profile → block.
     // TODO(session-2): profile → block.
     // TODO(session-2): profile → report.
-    // TODO(session-4): reviews.
-    public func createPerformerReview(_ review: PerformerReview) async throws { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
-    // TODO(session-4): reviews.
-    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
     // TODO(session-6): paywall waitlist.
     public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-2): settings → feedback.
@@ -259,25 +307,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     }
 
     // MARK: - services (session 2 reads/deletes)
-
-    private func userServices(_ userId: String) -> CollectionReference {
-        services.document(userId).collection("userServices")
-    }
-
-    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? {
-        let snapshot = try await userServices(userId).document(serviceId).getDocument()
-        guard snapshot.exists else { return nil }
-        return try snapshot.decoded(Service.self)
-    }
-
-    public func getUserServices(_ userId: String) async throws -> [Service] {
-        let snapshot = try await userServices(userId).whereField("deleted", isNotEqualTo: true).getDocuments()
-        return snapshot.documents.compactMap { try? $0.decoded(Service.self) }
-    }
-
-    public func deleteService(_ userId: String, _ serviceId: String) async throws {
-        try await userServices(userId).document(serviceId).updateData(["userId": userId, "deleted": true])
-    }
 
     // MARK: - blocking + reporting (session 2)
 

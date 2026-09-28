@@ -33,6 +33,7 @@ public struct ComponentGallery: View {
                     RatingStars(4.5)
                     QRCodeView("https://app.tapped.ai/u/djnova").frame(width: 96, height: 96)
                 }
+                BookingCard(booking: Samples.bookings[1], counterpart: Samples.venues[3])
                 ErrorView(retry: {})
                 WaitlistView(isOnWaitlist: false) {}
             }

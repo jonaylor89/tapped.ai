@@ -18,6 +18,7 @@ public struct Dependencies: Sendable {
     public var analytics: any AnalyticsRepository
     public var remoteConfig: any RemoteConfigRepository
     public var storage: any StorageRepository
+    public var venueOutreach: any VenueOutreachRepository
 
     public init(
         mode: Mode,
@@ -28,7 +29,8 @@ public struct Dependencies: Sendable {
         purchases: any PurchasesRepository,
         analytics: any AnalyticsRepository,
         remoteConfig: any RemoteConfigRepository,
-        storage: any StorageRepository
+        storage: any StorageRepository,
+        venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -39,6 +41,7 @@ public struct Dependencies: Sendable {
         self.analytics = analytics
         self.remoteConfig = remoteConfig
         self.storage = storage
+        self.venueOutreach = venueOutreach
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -53,7 +56,8 @@ public struct Dependencies: Sendable {
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
             remoteConfig: FirebaseRemoteConfigRepository(),
-            storage: FirebaseStorageRepository()
+            storage: FirebaseStorageRepository(),
+            venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL)
         )
     }
 
@@ -72,7 +76,8 @@ public struct Dependencies: Sendable {
             purchases: MockPurchasesRepository(isPremium: isPremium),
             analytics: MockAnalytics(),
             remoteConfig: MockRemoteConfigRepository(downForMaintenance: downForMaintenance),
-            storage: MockStorageRepository()
+            storage: MockStorageRepository(),
+            venueOutreach: MockVenueOutreachRepository()
         )
     }
 
