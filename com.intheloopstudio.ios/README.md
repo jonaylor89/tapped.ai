@@ -74,6 +74,15 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
+| `TAPPED_MOCK_ONBOARDING` | `1` | start as a new account with no `users/{uid}` doc (→ onboarding) |
+| `TAPPED_MOCK_UNVERIFIED` | `1` | new unverified email/password account (→ confirm email) |
+| `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `occupation` \| `genres` \| `location` \| `socials` \| `avatar` \| `complete` | open onboarding on a step with sample answers |
+| `TAPPED_MOCK_MAINTENANCE` | `1` | Remote Config `down_for_maintenance` |
+| `TAPPED_MOCK_MIN_VERSION` / `TAPPED_MOCK_LATEST_VERSION` | e.g. `99.0.0` | force the update-required gate / update-available alert |
+| `TAPPED_MOCK_WAITLIST` | `1` | Remote Config `premium_waitlist_enabled` (`Route.paywall` → waitlist) |
+| `TAPPED_MOCK_ROUTE` | `paywall` \| `settings` | push a route on launch |
+| `TAPPED_MOCK_SHEET` | `reauth` | present the re-authentication sheet |
+| `TAPPED_MOCK_LINK` | a URL | deliver a deep link at launch (cold start) |
 
 Mock sign-in: any email + password works, except the password `wrong` (which returns an auth error).
 
@@ -104,7 +113,20 @@ Dependency direction: `Tapped → TappedUI, TappedData → TappedDomain`. `Tappe
 
 `TappedApp` resolves `Dependencies` once and injects it with `.environment(\.dependencies, …)` alongside `AppSession`
 and `Router`. `AppSession.run()` (the port of `AuthenticationBloc` + `DownForMaintenanceBloc`) drives
-`ContentView`: `splash → maintenance | signedOut (AuthFlowView) | onboarding (placeholder) | signedIn (ShellView)`.
+`ContentView`: `splash → maintenance | updateRequired | signedOut (AuthFlowView) | confirmEmail | onboarding
+(OnboardingView) | signedIn (ShellView)`. Entering `signedIn` publishes `latestAppVersion`, requests push permission
+and saves the FCM token to `device_tokens/{uid}/tokens/{token}`.
+
+Links: `TappedApp.onOpenURL` (universal links on the associated domains + the `com.intheloopstudio://` scheme) and
+notification taps (`AppDelegate` → `NotificationPayload`, which reads Flutter's `url` key) feed `InboundLinks`, which
+buffers a `DeepLink` until `ShellView` is on screen; `DeepLinkResolver` turns it into a `Route`. So cold-start
+links survive splash/auth/onboarding.
+
+Remote Config: `down_for_maintenance`, `booking_fee`, `ios_minimum_app_version` (hard gate, replaces `upgrader`),
+`ios_latest_app_version` (dismissible alert: update now / later / ignore), `premium_waitlist_enabled`.
+
+Destructive actions: wrap them in `.reauthenticationSheet(isPresented:reason:onSuccess:)`; it offers the account's
+linked providers (password / apple / google).
 `ShellView` is a `NavigationStack(path: $router.path)` whose root is `DiscoverView`; profile and messages are pushed
 from Discover's top chrome, like Flutter.
 
@@ -190,11 +212,13 @@ map-like gradient) so glass is visible. `ComponentGallery` shows everything at o
   (users by id/username, username availability, featured performers/opportunities, booking/booker leaders,
   activities + observer, bookings by requester/requestee + observers, opportunities, reviews + observers, premium
   waitlist, contacted venues); everything else throws `NotImplemented`.
-- Every `Route` except `login`/`signUp`/`forgotPassword`/`discovery` resolves to `PlaceholderScreen`.
-- Onboarding (phase `.onboarding`) is a placeholder; unread message count is `0` until Stream Chat lands.
+- Every `Route` except `login`/`signUp`/`forgotPassword`/`discovery`/`onboarding` resolves to `PlaceholderScreen`
+  (`paywall` shows the waitlist when `premium_waitlist_enabled` is on).
+- Unread message count is `0` until Stream Chat lands.
 - StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` are placeholders (Flutter uses RevenueCat
   offerings; no StoreKit config exists in the repo).
-- Push: APNs token is forwarded to FCM; topic subscription/deep-link routing is session 5.
+- Push: no topic subscriptions (Flutter has none either); Stream Chat device registration is session 6.
+- `classifyPerformer` (onboarding → performer classification Cloud Function) is still `NotImplemented`.
 
 ## Screen ownership (follow-up sessions)
 

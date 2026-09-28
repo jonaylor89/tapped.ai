@@ -158,6 +158,17 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         try await premiumWaitlist.document(userId).getDocument().exists
     }
 
+    public func joinPremiumWaitlist(_ userId: String) async throws {
+        try await premiumWaitlist.document(userId).setData(["timestamp": Timestamp(date: .now)])
+    }
+
+    /// Dart writes `PackageInfo` `version+buildNumber`.
+    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String {
+        let version = AppVersion.current().firestoreValue
+        try await users.document(currentUserId).setData(["latestAppVersion": version], merge: true)
+        return version
+    }
+
     public func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool {
         try await contactVenues.document(user.id).collection("venuesContacted").document(venue.id).getDocument().exists
     }
@@ -169,8 +180,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
 
     // MARK: - stubs (owned by follow-up sessions)
 
-    // TODO(session-5): onboarding writes latestAppVersion on launch.
-    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String { throw NotImplemented() }
     // TODO(session-2): settings → delete account.
     public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-4): geohash search (Discover uses Typesense instead).
@@ -241,8 +250,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
     // TODO(session-4): reviews.
     public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
-    // TODO(session-6): paywall waitlist.
-    public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     // TODO(session-2): settings → feedback.
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 

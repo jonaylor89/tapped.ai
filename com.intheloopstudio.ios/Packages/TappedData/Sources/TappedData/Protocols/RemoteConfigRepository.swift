@@ -6,4 +6,10 @@ public protocol RemoteConfigRepository: Sendable {
     func fetchAndActivate() async throws -> Bool
     func getDownForMaintenanceStatus() async -> Bool
     func getBookingFee() async -> Double
+    /// Hard gate that replaces Flutter `upgrader`: builds below this version must update. Empty = no gate.
+    func getMinimumAppVersion() async -> String
+    /// Soft prompt: builds below this version see a dismissible "update available" alert. Empty = no prompt.
+    func getLatestAppVersion() async -> String
+    /// When true, `Route.paywall` shows the premium waitlist instead of the StoreKit paywall.
+    func getPremiumWaitlistEnabled() async -> Bool
 }

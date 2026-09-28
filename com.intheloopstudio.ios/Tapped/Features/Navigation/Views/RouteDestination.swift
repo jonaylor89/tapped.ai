@@ -14,6 +14,10 @@ struct RouteDestination: View {
             SignupView(dependencies: dependencies)
         case .forgotPassword:
             ForgotPasswordView(dependencies: dependencies)
+        case .onboarding:
+            OnboardingView(dependencies: dependencies)
+        case .paywall:
+            PaywallGate { PlaceholderScreen(title: route.title, owner: route.owner) }
         default:
             PlaceholderScreen(title: route.title, owner: route.owner)
         }

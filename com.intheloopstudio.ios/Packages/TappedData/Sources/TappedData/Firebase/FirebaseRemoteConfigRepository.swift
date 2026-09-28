@@ -5,6 +5,9 @@ import Foundation
 public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
     static let downForMaintenanceKey = "down_for_maintenance"
     static let bookingFeeKey = "booking_fee"
+    static let minimumAppVersionKey = "ios_minimum_app_version"
+    static let latestAppVersionKey = "ios_latest_app_version"
+    static let premiumWaitlistKey = "premium_waitlist_enabled"
 
     public init() {}
 
@@ -14,6 +17,9 @@ public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
         remoteConfig.setDefaults([
             Self.downForMaintenanceKey: false as NSNumber,
             Self.bookingFeeKey: 0.0 as NSNumber,
+            Self.minimumAppVersionKey: "" as NSString,
+            Self.latestAppVersionKey: "" as NSString,
+            Self.premiumWaitlistKey: false as NSNumber,
         ])
         return try await remoteConfig.fetchAndActivate() != .error
     }
@@ -24,5 +30,17 @@ public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
 
     public func getBookingFee() async -> Double {
         remoteConfig.configValue(forKey: Self.bookingFeeKey).numberValue.doubleValue
+    }
+
+    public func getMinimumAppVersion() async -> String {
+        remoteConfig.configValue(forKey: Self.minimumAppVersionKey).stringValue
+    }
+
+    public func getLatestAppVersion() async -> String {
+        remoteConfig.configValue(forKey: Self.latestAppVersionKey).stringValue
+    }
+
+    public func getPremiumWaitlistEnabled() async -> Bool {
+        remoteConfig.configValue(forKey: Self.premiumWaitlistKey).boolValue
     }
 }

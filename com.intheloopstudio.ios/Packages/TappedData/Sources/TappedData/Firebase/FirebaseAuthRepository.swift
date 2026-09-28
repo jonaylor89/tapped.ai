@@ -52,47 +52,48 @@ public struct FirebaseAuthRepository: AuthRepository {
     }
 
     public func signInWithCredentials(email: String, password: String) async throws -> SignInPayload? {
-        let result = try await auth.signIn(withEmail: email, password: password)
+        let result = try await mapAuthErrors { try await auth.signIn(withEmail: email, password: password) }
         return SignInPayload(result.user)
     }
 
     public func reauthenticateWithCredentials(email: String, password: String) async throws {
         guard let user = auth.currentUser else { throw AuthError.notSignedIn }
-        _ = try await user.reauthenticate(with: EmailAuthProvider.credential(withEmail: email, password: password))
+        _ = try await mapAuthErrors { try await user.reauthenticate(with: EmailAuthProvider.credential(withEmail: email, password: password)) }
     }
 
     public func signUpWithCredentials(email: String, password: String) async throws -> SignInPayload? {
-        let result = try await auth.createUser(withEmail: email, password: password)
+        let result = try await mapAuthErrors { try await auth.createUser(withEmail: email, password: password) }
         return SignInPayload(result.user)
     }
 
     public func signInWithGoogle() async throws -> SignInPayload? {
-        let tokens = try await GoogleSignInFlow.run()
+        let tokens = try await mapAuthErrors { try await GoogleSignInFlow.run() }
         let credential = GoogleAuthProvider.credential(withIDToken: tokens.idToken, accessToken: tokens.accessToken)
-        let result = try await auth.signIn(with: credential)
+        let result = try await mapAuthErrors { try await auth.signIn(with: credential) }
         return SignInPayload(result.user)
     }
 
     public func reauthenticateWithGoogle() async throws {
         guard let user = auth.currentUser else { throw AuthError.notSignedIn }
-        let tokens = try await GoogleSignInFlow.run()
-        _ = try await user.reauthenticate(with: GoogleAuthProvider.credential(withIDToken: tokens.idToken, accessToken: tokens.accessToken))
+        let tokens = try await mapAuthErrors { try await GoogleSignInFlow.run() }
+        let credential = GoogleAuthProvider.credential(withIDToken: tokens.idToken, accessToken: tokens.accessToken)
+        _ = try await mapAuthErrors { try await user.reauthenticate(with: credential) }
     }
 
     public func signInWithApple() async throws -> SignInPayload? {
         let nonce = AppleNonce.random()
-        let apple = try await AppleSignInFlow.run(hashedNonce: AppleNonce.sha256(nonce))
+        let apple = try await mapAuthErrors { try await AppleSignInFlow.run(hashedNonce: AppleNonce.sha256(nonce)) }
         let credential = OAuthProvider.appleCredential(withIDToken: apple.idToken, rawNonce: nonce, fullName: apple.fullName)
-        let result = try await auth.signIn(with: credential)
+        let result = try await mapAuthErrors { try await auth.signIn(with: credential) }
         return SignInPayload(result.user)
     }
 
     public func reauthenticateWithApple() async throws {
         guard let user = auth.currentUser else { throw AuthError.notSignedIn }
         let nonce = AppleNonce.random()
-        let apple = try await AppleSignInFlow.run(hashedNonce: AppleNonce.sha256(nonce))
+        let apple = try await mapAuthErrors { try await AppleSignInFlow.run(hashedNonce: AppleNonce.sha256(nonce)) }
         let credential = OAuthProvider.appleCredential(withIDToken: apple.idToken, rawNonce: nonce, fullName: apple.fullName)
-        _ = try await user.reauthenticate(with: credential)
+        _ = try await mapAuthErrors { try await user.reauthenticate(with: credential) }
     }
 
     public func logout() async throws {
@@ -101,18 +102,76 @@ public struct FirebaseAuthRepository: AuthRepository {
     }
 
     public func recoverPassword(email: String) async throws {
-        try await auth.sendPasswordReset(withEmail: email)
+        try await mapAuthErrors { try await auth.sendPasswordReset(withEmail: email) }
     }
 
     public func deleteUser() async throws {
         guard let user = auth.currentUser else { throw AuthError.notSignedIn }
-        try await user.delete()
+        try await mapAuthErrors { try await user.delete() }
+    }
+
+    public func sendEmailVerification() async throws {
+        guard let user = auth.currentUser else { throw AuthError.notSignedIn }
+        try await mapAuthErrors { try await user.sendEmailVerification() }
+    }
+
+    public func reloadUser() async throws -> AuthUser? {
+        guard let user = auth.currentUser else { return nil }
+        try await mapAuthErrors { try await user.reload() }
+        return auth.currentUser.map(AuthUser.init)
+    }
+}
+
+/// Maps Firebase / Apple / Google errors onto `AuthError` so every surface shows the same lowercase copy.
+private func mapAuthErrors<T>(_ operation: () async throws -> T) async throws -> T {
+    do {
+        return try await operation()
+    } catch let error as AuthError {
+        throw error
+    } catch {
+        throw AuthError(error)
+    }
+}
+
+extension AuthError {
+    init(_ error: any Error) {
+        let nsError = error as NSError
+        if nsError.domain == ASAuthorizationError.errorDomain, nsError.code == ASAuthorizationError.canceled.rawValue {
+            self = .cancelled
+            return
+        }
+        if nsError.domain == kGIDSignInErrorDomain, nsError.code == GIDSignInError.canceled.rawValue {
+            self = .cancelled
+            return
+        }
+        guard nsError.domain == AuthErrorDomain, let code = AuthErrorCode(rawValue: nsError.code) else {
+            self = .underlying(error.localizedDescription)
+            return
+        }
+        self = switch code {
+        case .wrongPassword, .invalidCredential, .userMismatch: .invalidCredentials
+        case .emailAlreadyInUse, .credentialAlreadyInUse, .accountExistsWithDifferentCredential: .emailAlreadyInUse
+        case .invalidEmail: .invalidEmail
+        case .weakPassword: .weakPassword
+        case .userNotFound: .userNotFound
+        case .userDisabled: .userDisabled
+        case .tooManyRequests: .tooManyRequests
+        case .networkError: .network
+        case .requiresRecentLogin: .requiresRecentLogin
+        default: .underlying(error.localizedDescription)
+        }
     }
 }
 
 private extension AuthUser {
     init(_ user: User) {
-        self.init(uid: user.uid, email: user.email, displayName: user.displayName, isEmailVerified: user.isEmailVerified)
+        self.init(
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName,
+            isEmailVerified: user.isEmailVerified,
+            providerIds: user.providerData.map(\.providerID)
+        )
     }
 }
 

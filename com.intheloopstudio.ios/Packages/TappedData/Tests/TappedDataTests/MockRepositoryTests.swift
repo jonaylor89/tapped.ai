@@ -52,4 +52,42 @@ struct MockRepositoryTests {
         #expect(try await purchases.purchase(productId: "x") == .purchased)
         #expect(await purchases.isPremium())
     }
+
+    @Test func mockSignUpCreatesUnverifiedAccount() async throws {
+        let auth = MockAuthRepository()
+        await #expect(throws: AuthError.weakPassword) {
+            try await auth.signUpWithCredentials(email: "new@example.com", password: "123")
+        }
+        _ = try await auth.signUpWithCredentials(email: "new@example.com", password: "secret1")
+        let user = try #require(await auth.getAuthUser())
+        #expect(user.requiresEmailVerification)
+        try await auth.sendEmailVerification()
+        #expect(await auth.verificationEmailsSent == 1)
+        #expect(try await auth.reloadUser()?.isEmailVerified == true)
+    }
+
+    @Test func providerDrivenVerificationAndReauth() {
+        #expect(AuthUser(uid: "a", providerIds: ["password"]).requiresEmailVerification)
+        #expect(!AuthUser(uid: "a", providerIds: ["apple.com"]).requiresEmailVerification)
+        #expect(!AuthUser(uid: "a", isEmailVerified: true, providerIds: ["password"]).requiresEmailVerification)
+        #expect(AuthUser(uid: "a", providerIds: ["google.com", "apple.com"]).reauthMethods == [.apple, .google])
+        #expect(AuthUser(uid: "a").reauthMethods == [.password])
+    }
+
+    @Test func mockDeviceTokensUseFlutterPath() async throws {
+        let notifications = MockNotificationRepository()
+        _ = try await notifications.requestAuthorization()
+        try await notifications.saveDeviceToken(userId: "u1")
+        #expect(await notifications.savedTokens == ["u1": [MockNotificationRepository.sampleToken: "ios"]])
+        let denied = MockNotificationRepository(grantsPermission: false)
+        try await denied.saveDeviceToken(userId: "u1")
+        #expect(await denied.savedTokens.isEmpty)
+    }
+
+    @Test func mockWaitlist() async throws {
+        let database = MockDatabaseRepository()
+        #expect(try await !database.isOnPremiumWailist("u1"))
+        try await database.joinPremiumWaitlist("u1")
+        #expect(try await database.isOnPremiumWailist("u1"))
+    }
 }

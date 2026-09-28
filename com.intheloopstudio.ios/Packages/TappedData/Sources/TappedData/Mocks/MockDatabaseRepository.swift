@@ -9,6 +9,7 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var bookings: [String: Booking]
     public var featuredPerformerIds: [String]
     public var featuredOpportunityIds: [String]
+    public private(set) var premiumWaitlist: Set<String> = []
 
     public init(
         users: [UserModel] = Samples.performers + Samples.venues,
@@ -72,13 +73,18 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public nonisolated func getBookerReviewsByBookerIdObserver(_ bookerId: String, limit: Int) -> AsyncThrowingStream<[BookerReview], any Error> {
         AsyncThrowingStream { $0.yield([]) }
     }
-    public func isOnPremiumWailist(_ userId: String) async throws -> Bool { false }
+    public func isOnPremiumWailist(_ userId: String) async throws -> Bool { premiumWaitlist.contains(userId) }
+    public func joinPremiumWaitlist(_ userId: String) async throws { premiumWaitlist.insert(userId) }
+    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String {
+        let version = AppVersion.current().firestoreValue
+        users[currentUserId]?.latestAppVersion = version
+        return version
+    }
     public func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool { false }
     public func getContactedVenues(_ userId: String) async throws -> [UserModel] { [] }
 
     // MARK: - not implemented (same surface as FirestoreDatabaseRepository)
 
-    public func publishLatestAppVersion(_ currentUserId: String) async throws -> String { throw NotImplemented() }
     public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
@@ -115,7 +121,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
     public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
     public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
-    public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers

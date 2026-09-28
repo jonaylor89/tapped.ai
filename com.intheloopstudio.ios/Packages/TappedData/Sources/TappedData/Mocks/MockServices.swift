@@ -120,13 +120,28 @@ public actor MockAnalytics: AnalyticsRepository {
 public struct MockRemoteConfigRepository: RemoteConfigRepository {
     public var downForMaintenance: Bool
     public var bookingFee: Double
+    public var minimumAppVersion: String
+    public var latestAppVersion: String
+    public var premiumWaitlistEnabled: Bool
 
-    public init(downForMaintenance: Bool = false, bookingFee: Double = 0.1) {
+    public init(
+        downForMaintenance: Bool = false,
+        bookingFee: Double = 0.1,
+        minimumAppVersion: String = "",
+        latestAppVersion: String = "",
+        premiumWaitlistEnabled: Bool = false
+    ) {
         self.downForMaintenance = downForMaintenance
         self.bookingFee = bookingFee
+        self.minimumAppVersion = minimumAppVersion
+        self.latestAppVersion = latestAppVersion
+        self.premiumWaitlistEnabled = premiumWaitlistEnabled
     }
 
     public func fetchAndActivate() async throws -> Bool { true }
     public func getDownForMaintenanceStatus() async -> Bool { downForMaintenance }
     public func getBookingFee() async -> Double { bookingFee }
+    public func getMinimumAppVersion() async -> String { minimumAppVersion }
+    public func getLatestAppVersion() async -> String { latestAppVersion }
+    public func getPremiumWaitlistEnabled() async -> Bool { premiumWaitlistEnabled }
 }

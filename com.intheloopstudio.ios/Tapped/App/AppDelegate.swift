@@ -7,18 +7,20 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        // Set before launch finishes so a notification tap that cold-starts the app is delivered to `didReceive`.
+        UNUserNotificationCenter.current().delegate = self
         guard AppEnvironment.dependencies.mode == .live else { return true }
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
-        UNUserNotificationCenter.current().delegate = self
-        // Permission is requested during onboarding (session 5); registering is harmless before that.
+        // Permission is requested after sign in / onboarding (`AppSession`); registering first is harmless.
         application.registerForRemoteNotifications()
         return true
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         FirebaseBootstrap.setAPNSToken(deviceToken)
+        AppEnvironment.inbound.apnsTokenRegistered()
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
@@ -29,6 +31,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .badge, .sound]
+        [.banner, .list, .badge, .sound]
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse
+    ) async {
+        let payload = NotificationPayload(userInfo: response.notification.request.content.userInfo)
+        await MainActor.run { AppEnvironment.inbound.receive(payload) }
     }
 }

@@ -7,11 +7,16 @@ import TappedDomain
 @Observable
 @MainActor
 final class ShellViewModel {
-    let currentUser: UserModel
+    private(set) var currentUser: UserModel
     /// TODO(session-6): drive from Stream Chat `totalUnreadCount`.
     private(set) var unreadMessages = 0
 
     init(currentUser: UserModel) {
         self.currentUser = currentUser
+    }
+
+    func update(_ user: UserModel) {
+        guard user.id == currentUser.id else { return }
+        currentUser = user
     }
 }

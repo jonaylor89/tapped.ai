@@ -92,7 +92,10 @@ final class SignupViewModel: AuthFormViewModel {
         let email = email.trimmingCharacters(in: .whitespaces)
         let password = password
         await submit(event: "sign_up", method: "email") {
-            try await self.auth.signUpWithCredentials(email: email, password: password)
+            let payload = try await self.auth.signUpWithCredentials(email: email, password: password)
+            // `AppSession` holds the new account on the confirm-email gate until this link is tapped.
+            try? await self.auth.sendEmailVerification()
+            return payload
         }
     }
 }
