@@ -1,5 +1,7 @@
 use anyhow::{Context, bail};
 use base64::{Engine, engine::general_purpose::STANDARD};
+use reqwest::Client;
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -8,10 +10,42 @@ use tokio::{
 };
 use uuid::Uuid;
 
-use super::mail_bridge::{QueuedEmail, SqliteMailStore};
+use super::mail_bridge::{EncodedAttachment, QueuedEmail, SqliteMailStore};
+
+const POSTMARK_EMAIL_ENDPOINT: &str = "https://api.postmarkapp.com/email";
+
+#[derive(Clone)]
+pub enum MailTransport {
+    Smtp {
+        address: String,
+    },
+    Postmark {
+        client: Client,
+        server_token: String,
+    },
+}
 
 fn safe_header(value: &str) -> String {
     value.replace(['\r', '\n'], " ")
+}
+
+async fn download_attachments(email: &QueuedEmail) -> anyhow::Result<Vec<EncodedAttachment>> {
+    let mut attachments = email.encoded_attachments.clone();
+    for (index, url) in email.attachments.iter().enumerate() {
+        let response = reqwest::get(url).await?.error_for_status()?;
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_owned();
+        attachments.push(EncodedAttachment {
+            name: format!("attachment-{}", index + 1),
+            content_type,
+            content: STANDARD.encode(response.bytes().await?),
+        });
+    }
+    Ok(attachments)
 }
 
 async fn render_email(email: &QueuedEmail) -> anyhow::Result<Vec<u8>> {
@@ -42,30 +76,13 @@ async fn render_email(email: &QueuedEmail) -> anyhow::Result<Vec<u8>> {
     }
     message.push_str(&format!(
         "MIME-Version: 1.0\r\nContent-Type: multipart/mixed; boundary=\"{}\"\r\n\r\n--{}\r\nContent-Type: {}; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n{}\r\n",
-        boundary, boundary, body_type, body.replace("\n", "\r\n"),
+        boundary,
+        boundary,
+        body_type,
+        body.replace('\n', "\r\n"),
     ));
 
-    for (index, url) in email.attachments.iter().enumerate() {
-        let response = reqwest::get(url).await?.error_for_status()?;
-        let content_type = response
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .unwrap_or("application/octet-stream")
-            .to_owned();
-        let content = STANDARD.encode(response.bytes().await?);
-        let wrapped = content
-            .as_bytes()
-            .chunks(76)
-            .map(|chunk| String::from_utf8_lossy(chunk).into_owned())
-            .collect::<Vec<_>>()
-            .join("\r\n");
-        message.push_str(&format!(
-            "--{}\r\nContent-Type: {}\r\nContent-Disposition: attachment; filename=\"attachment-{}\"\r\nContent-Transfer-Encoding: base64\r\n\r\n{}\r\n",
-            boundary, safe_header(&content_type), index + 1, wrapped,
-        ));
-    }
-    for attachment in &email.encoded_attachments {
+    for attachment in download_attachments(email).await? {
         let wrapped = attachment
             .content
             .as_bytes()
@@ -75,7 +92,10 @@ async fn render_email(email: &QueuedEmail) -> anyhow::Result<Vec<u8>> {
             .join("\r\n");
         message.push_str(&format!(
             "--{}\r\nContent-Type: {}\r\nContent-Disposition: attachment; filename=\"{}\"\r\nContent-Transfer-Encoding: base64\r\n\r\n{}\r\n",
-            boundary, safe_header(&attachment.content_type), safe_header(&attachment.name), wrapped,
+            boundary,
+            safe_header(&attachment.content_type),
+            safe_header(&attachment.name),
+            wrapped,
         ));
     }
     message.push_str(&format!("--{}--\r\n", boundary));
@@ -150,13 +170,107 @@ pub async fn submit_smtp(address: &str, email: &QueuedEmail) -> anyhow::Result<(
     Ok(())
 }
 
-pub async fn run_worker(store: Arc<SqliteMailStore>, smtp_address: String) -> ! {
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct PostmarkHeader {
+    name: String,
+    value: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct PostmarkAttachment {
+    name: String,
+    content: String,
+    content_type: String,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct PostmarkEmail {
+    from: String,
+    to: String,
+    subject: String,
+    text_body: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    html_body: Option<String>,
+    headers: Vec<PostmarkHeader>,
+    attachments: Vec<PostmarkAttachment>,
+    message_stream: &'static str,
+}
+
+pub async fn submit_postmark(
+    client: &Client,
+    endpoint: &str,
+    server_token: &str,
+    email: &QueuedEmail,
+) -> anyhow::Result<()> {
+    let mut headers = vec![PostmarkHeader {
+        name: "Message-ID".into(),
+        value: email.message_id.clone(),
+    }];
+    if !email.in_reply_to.is_empty() {
+        headers.push(PostmarkHeader {
+            name: "In-Reply-To".into(),
+            value: email.in_reply_to.clone(),
+        });
+    }
+    if !email.references.is_empty() {
+        headers.push(PostmarkHeader {
+            name: "References".into(),
+            value: email.references.clone(),
+        });
+    }
+    let attachments = download_attachments(email)
+        .await?
+        .into_iter()
+        .map(|attachment| PostmarkAttachment {
+            name: attachment.name,
+            content: attachment.content,
+            content_type: attachment.content_type,
+        })
+        .collect();
+    let payload = PostmarkEmail {
+        from: email.from.clone(),
+        to: email.to.join(","),
+        subject: email.subject.clone(),
+        text_body: email.text_body.clone(),
+        html_body: email.html_body.clone(),
+        headers,
+        attachments,
+        message_stream: "outbound",
+    };
+    let response = client
+        .post(endpoint)
+        .header("X-Postmark-Server-Token", server_token)
+        .json(&payload)
+        .send()
+        .await?;
+    if !response.status().is_success() {
+        let status = response.status();
+        let body = response.text().await.unwrap_or_default();
+        bail!("Postmark rejected email ({status}): {body}")
+    }
+    Ok(())
+}
+
+pub async fn run_worker(store: Arc<SqliteMailStore>, transport: MailTransport) -> ! {
     loop {
         match store.claim_outbound(20) {
             Ok(messages) if messages.is_empty() => sleep(Duration::from_secs(2)).await,
             Ok(messages) => {
                 for message in messages {
-                    match submit_smtp(&smtp_address, &message).await {
+                    let result = match &transport {
+                        MailTransport::Smtp { address } => submit_smtp(address, &message).await,
+                        MailTransport::Postmark {
+                            client,
+                            server_token,
+                        } => {
+                            submit_postmark(client, POSTMARK_EMAIL_ENDPOINT, server_token, &message)
+                                .await
+                        }
+                    };
+                    match result {
                         Ok(()) => {
                             if let Err(error) = store.mark_outbound_sent(&message.event_id) {
                                 tracing::error!(
@@ -170,7 +284,7 @@ pub async fn run_worker(store: Arc<SqliteMailStore>, smtp_address: String) -> ! 
                             tracing::error!(
                                 ?error,
                                 event_id = message.event_id,
-                                "SMTP submission failed"
+                                "mail submission failed"
                             );
                             let _ = store.mark_outbound_failed(&message.event_id);
                         }

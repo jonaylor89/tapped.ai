@@ -4,19 +4,12 @@ import { Timestamp } from "firebase-admin/firestore";
 import { debug, info } from "firebase-functions/logger";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import type { Booking, Opportunity, UserModel, VenueContactRequest } from "../../types/models";
-import {
-  bookingsRef,
-  contactVenuesRef,
-  OPEN_AI_KEY,
-  opportunitiesRef,
-  POSTMARK_SERVER_ID,
-  usersRef,
-} from "../firebase";
+import { bookingsRef, contactVenuesRef, MAIL_API_SECRET, OPEN_AI_KEY, opportunitiesRef, usersRef } from "../firebase";
 import * as postmark from "../mail_client";
 import { _appendNewContactRequestToThread } from "./venue_contacting";
 
 export const notifyVenueOfInterestedOpportunities = onCall(
-  { secrets: [POSTMARK_SERVER_ID, OPEN_AI_KEY] },
+  { secrets: [MAIL_API_SECRET, OPEN_AI_KEY] },
   async (request) => {
     // update update
     const { opportunityIds, userId, note } = request.data;
@@ -144,7 +137,7 @@ export const notifyVenueOfInterestedOpportunities = onCall(
       }
 
       // if there is, add to the thread with context on the performance opportunity
-      const emailClient = new postmark.ServerClient(POSTMARK_SERVER_ID.value());
+      const emailClient = new postmark.ServerClient(MAIL_API_SECRET.value());
       await _appendNewContactRequestToThread({
         userId: userId,
         venueId: venue.id,

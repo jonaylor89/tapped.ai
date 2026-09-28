@@ -1,7 +1,8 @@
+use axum::{Router, body::Bytes, http::HeaderMap, routing::post};
 use std::sync::{Arc, Mutex};
 use tapped_api_rs::domain::{
     mail_bridge::{EncodedAttachment, QueuedEmail},
-    mail_worker::submit_smtp,
+    mail_worker::{submit_postmark, submit_smtp},
 };
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -84,4 +85,65 @@ async fn worker_submits_thread_headers_and_body_over_smtp() {
     assert!(message.contains("Can we play?"));
     assert!(message.contains("filename=\"hello.txt\""));
     assert!(message.contains("aGVsbG8="));
+}
+
+#[tokio::test]
+async fn worker_submits_threaded_email_through_postmark() {
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let captured = Arc::new(Mutex::new(None));
+    let server_capture = captured.clone();
+    let app = Router::new().route(
+        "/email",
+        post(move |headers: HeaderMap, body: Bytes| {
+            let server_capture = server_capture.clone();
+            async move {
+                *server_capture.lock().unwrap() = Some((headers, body));
+                r#"{"ErrorCode":0,"Message":"OK","MessageID":"postmark-id"}"#
+            }
+        }),
+    );
+    let server = tokio::spawn(async move { axum::serve(listener, app).await.unwrap() });
+    let email = QueuedEmail {
+        event_id: "event-2".into(),
+        thread_id: "thread-2".into(),
+        from: "artist@booking.tapped.ai".into(),
+        to: vec!["venue@example.com".into()],
+        subject: "Performance Inquiry".into(),
+        text_body: "Can we play?".into(),
+        html_body: Some("<p>Can we play?</p>".into()),
+        message_id: "<new@booking.tapped.ai>".into(),
+        in_reply_to: "<old@example.com>".into(),
+        references: "<old@example.com>".into(),
+        attachments: vec![],
+        encoded_attachments: vec![EncodedAttachment {
+            name: "hello.txt".into(),
+            content_type: "text/plain".into(),
+            content: "aGVsbG8=".into(),
+        }],
+    };
+
+    submit_postmark(
+        &reqwest::Client::new(),
+        &format!("http://{address}/email"),
+        "postmark-token",
+        &email,
+    )
+    .await
+    .unwrap();
+    server.abort();
+
+    let captured = captured.lock().unwrap();
+    let (headers, body) = captured.as_ref().unwrap();
+    assert_eq!(headers["x-postmark-server-token"], "postmark-token");
+    let payload: serde_json::Value = serde_json::from_slice(body).unwrap();
+    assert_eq!(payload["From"], "artist@booking.tapped.ai");
+    assert_eq!(payload["To"], "venue@example.com");
+    assert_eq!(payload["MessageStream"], "outbound");
+    assert_eq!(payload["Attachments"][0]["Content"], "aGVsbG8=");
+    assert!(payload["Headers"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|header| header["Name"] == "In-Reply-To" && header["Value"] == "<old@example.com>"));
 }

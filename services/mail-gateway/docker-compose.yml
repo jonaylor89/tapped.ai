@@ -29,6 +29,7 @@ services:
     restart: unless-stopped
     environment:
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      MAIL_TRANSPORT: smtp
       SMTP_ADDRESS: postfix:25
     volumes:
       - mail-data:/data
