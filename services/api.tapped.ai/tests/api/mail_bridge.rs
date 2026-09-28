@@ -539,6 +539,31 @@ async fn postmark_inbound_requires_basic_authentication() {
 }
 
 #[tokio::test]
+async fn postmark_acknowledges_and_persists_unknown_threads() {
+    let (app, store, stream) = test_app().await;
+    let authorization = format!("Basic {}", STANDARD.encode("postmark:ingress-secret"));
+    let response = app
+        .api_client
+        .post(format!("{}/webhooks/postmark/inbound", app.address))
+        .header("authorization", authorization)
+        .json(&serde_json::json!({
+            "To": "the-band@booking.tapped.ai",
+            "MessageID": "unknown-postmark-id",
+            "TextBody": "Unknown thread",
+            "Headers": [
+                {"Name": "Message-ID", "Value": "<unknown@venue.example>"},
+                {"Name": "In-Reply-To", "Value": "<missing@booking.tapped.ai>"}
+            ]
+        }))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    assert!(stream.deliveries.lock().unwrap().is_empty());
+    assert_eq!(store.orphan_count(), 1);
+}
+
+#[tokio::test]
 async fn signed_smtp_envelope_recipient_takes_precedence_over_to_header() {
     let (app, _, stream) = test_app().await;
     let raw = b"From: venue@example.com\r\nTo: somebody-else@example.com\r\nMessage-ID: <envelope@venue.example>\r\nIn-Reply-To: <initial@booking.tapped.ai>\r\n\r\nEnvelope routed".to_vec();

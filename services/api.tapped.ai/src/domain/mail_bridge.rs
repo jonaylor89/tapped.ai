@@ -1048,7 +1048,7 @@ pub async fn postmark_inbound_email(
         .stripped_text_reply
         .filter(|value| !value.trim().is_empty())
         .unwrap_or(message.text_body);
-    deliver_inbound(
+    let result = deliver_inbound(
         &state,
         &body,
         mailbox_username(recipient),
@@ -1056,7 +1056,15 @@ pub async fn postmark_inbound_email(
         references,
         text,
     )
-    .await
+    .await;
+    if matches!(
+        result.0,
+        StatusCode::NOT_FOUND | StatusCode::UNPROCESSABLE_ENTITY
+    ) {
+        (StatusCode::OK, "accepted orphan")
+    } else {
+        result
+    }
 }
 
 #[derive(Debug, Deserialize)]
