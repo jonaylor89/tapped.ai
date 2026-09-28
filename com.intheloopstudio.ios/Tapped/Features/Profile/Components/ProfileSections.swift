@@ -159,31 +159,6 @@ struct ProfileSocialsRow: View {
     }
 }
 
-struct ReviewCard: View {
-    let review: Review
-    let reviewer: UserModel?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: TappedSpacing.sm) {
-            HStack(spacing: TappedSpacing.sm) {
-                if let reviewer { UserAvatar(user: reviewer, size: 32) }
-                VStack(alignment: .leading, spacing: 0) {
-                    Text((reviewer?.displayName ?? "anonymous").lowercased())
-                        .font(.subheadline.weight(.semibold))
-                    Text(review.fields.timestamp.formatted(.relative(presentation: .named)).lowercased())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                RatingStars(Double(review.fields.overallRating))
-            }
-            Text(review.fields.overallReview.lowercased())
-                .font(.subheadline)
-        }
-        .profileCard()
-    }
-}
-
 #Preview("sections") {
     ScrollView {
         VStack(alignment: .leading, spacing: TappedSpacing.xl) {

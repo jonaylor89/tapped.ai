@@ -36,6 +36,9 @@ struct RouteDestination: View {
         case .bookings, .booking, .bookingConfirmation, .createBooking, .addPastBooking, .requestToPerform,
              .requestToPerformConfirmation, .serviceSelection, .service, .createService, .bookingHistory:
             BookingsRouteDestination(route: route)
+        case .search, .advancedSearch, .gigSearch, .locationForm, .opportunity, .opportunities, .opportunityFeed,
+             .interestedUsers, .reviews:
+            SearchOpportunitiesDestination(route: route)
         default:
             PlaceholderScreen(title: route.title, owner: route.owner)
         }

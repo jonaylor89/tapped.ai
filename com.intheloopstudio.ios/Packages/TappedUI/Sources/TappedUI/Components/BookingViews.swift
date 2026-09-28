@@ -218,36 +218,6 @@ public struct ConfirmationHero: View {
     }
 }
 
-/// 1–5 star picker for review prompts.
-public struct StarRatingPicker: View {
-    @Binding var rating: Int
-    let maximum: Int
-
-    public init(rating: Binding<Int>, maximum: Int = 5) {
-        _rating = rating
-        self.maximum = maximum
-    }
-
-    public var body: some View {
-        HStack(spacing: TappedSpacing.sm) {
-            ForEach(1...maximum, id: \.self) { value in
-                Button {
-                    withAnimation(GlassMotion.spring) { rating = value }
-                } label: {
-                    Image(systemName: value <= rating ? "star.fill" : "star")
-                        .font(.title2)
-                        .foregroundStyle(value <= rating ? TappedColors.warning : .secondary)
-                        .frame(minWidth: TappedSizing.minTapTarget, minHeight: TappedSizing.minTapTarget)
-                }
-                .buttonStyle(GlassPressStyle())
-                .accessibilityLabel("\(value) star\(value == 1 ? "" : "s")")
-                .accessibilityAddTraits(value == rating ? .isSelected : [])
-            }
-        }
-        .sensoryFeedback(.selection, trigger: rating)
-    }
-}
-
 #Preview("BookingStatusBadge") {
     HStack {
         ForEach(BookingStatus.allCases, id: \.self) { BookingStatusBadge($0) }
@@ -287,9 +257,4 @@ public struct StarRatingPicker: View {
     ConfirmationHero("booking requested", message: "your booking will be confirmed once the performer accepts.")
         .padding()
         .background(PreviewBackdrop())
-}
-
-#Preview("StarRatingPicker") {
-    @Previewable @State var rating = 4
-    StarRatingPicker(rating: $rating).padding()
 }

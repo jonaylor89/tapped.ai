@@ -64,8 +64,8 @@ extension Route {
         }
     }
 
-    /// `TAPPED_MOCK_ROUTE` (mock mode only): opens a session-3 screen on launch for screenshots.
-    static func mockLaunchPath(_ name: String, currentUser: UserModel) -> [Route]? {
+    /// Bookings/services `TAPPED_MOCK_ROUTE` names (see `Route.mockLaunchPath`).
+    static func bookingsMockLaunchPath(_ name: String, currentUser: UserModel) -> [Route]? {
         let mara = Samples.performers.first { $0.id == "performer-mara" }
         switch name {
         case "bookings": return [.bookings(userId: currentUser.id)]

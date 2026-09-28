@@ -16,7 +16,7 @@ struct ProfileViewModelTests {
         #expect(model.services.map(\.id) == ["service-dj-set", "service-opener", "service-private"])
         #expect(model.latestBookings.map(\.id) == ["booking-1", "booking-4", "booking-5", "booking-6", "booking-7"])
         #expect(model.counterpartName(for: model.latestBookings[0]) == "The Camel")
-        #expect(model.latestReview?.id == "review-nova-camel")
+        #expect(model.latestReview?.id == "review-camel-nova")
         #expect(model.latestReviewer?.id == "venue-camel")
         #expect(model.placeName == "Richmond, VA, USA")
         #expect(model.showAudience)

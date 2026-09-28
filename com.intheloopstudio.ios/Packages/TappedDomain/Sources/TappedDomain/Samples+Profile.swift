@@ -7,42 +7,6 @@ public extension Samples {
     /// Activities sit a few days before `referenceDate` so relative times read as the past.
     private static let activityAnchor = referenceDate.addingTimeInterval(-5 * day)
 
-    static let performerReviews: [PerformerReview] = [
-        PerformerReview(fields: ReviewFields(
-            id: "review-nova-camel",
-            bookerId: "venue-camel",
-            performerId: performer.id,
-            bookingId: "booking-1",
-            timestamp: referenceDate.addingTimeInterval(-5 * day),
-            overallRating: 5,
-            overallReview: "packed the floor all night. easy to work with and showed up early for soundcheck.",
-            type: .performer
-        )),
-        PerformerReview(fields: ReviewFields(
-            id: "review-nova-broadberry",
-            bookerId: "venue-broadberry",
-            performerId: performer.id,
-            bookingId: "booking-3",
-            timestamp: referenceDate.addingTimeInterval(-20 * day),
-            overallRating: 4,
-            overallReview: "great set, crowd loved the disco edits.",
-            type: .performer
-        )),
-    ]
-
-    static let bookerReviews: [BookerReview] = [
-        BookerReview(fields: ReviewFields(
-            id: "review-camel-nova",
-            bookerId: "venue-camel",
-            performerId: performer.id,
-            bookingId: "booking-1",
-            timestamp: referenceDate.addingTimeInterval(-4 * day),
-            overallRating: 5,
-            overallReview: "paid on time and the sound guy was great.",
-            type: .booker
-        )),
-    ]
-
     /// Activities for `Samples.performer`, newest first. Enough rows to exercise pagination (page size 20).
     static let activities: [Activity] = {
         let to = performer.id

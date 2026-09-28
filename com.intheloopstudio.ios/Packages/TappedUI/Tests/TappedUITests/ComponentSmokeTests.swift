@@ -26,6 +26,12 @@ struct ComponentSmokeTests {
         ("RatingStars", AnyView(RatingStars(4.5))),
         ("GlassToast", AnyView(GlassToast("link copied"))),
         ("QRCodeView", AnyView(QRCodeView("https://app.tapped.ai/u/djnova").frame(width: 200, height: 200))),
+        ("OpportunityFlier", AnyView(OpportunityFlier(opportunity: Samples.opportunities[0]).frame(width: 340, height: 200))),
+        ("OpportunityTile", AnyView(OpportunityTile(opportunity: Samples.opportunities[0], venueName: "the camel").frame(width: 340))),
+        ("SelectionIndicator", AnyView(SelectionIndicator(isSelected: true))),
+        ("StarRatingPicker", AnyView(StarRatingPicker(rating: .constant(4)))),
+        ("ReviewCard", AnyView(ReviewCard(review: .performer(Samples.performerReviews[0]), reviewer: Samples.venues[0]).frame(width: 340))),
+        ("MultiSelectList", AnyView(NavigationStack { MultiSelectList("genres", items: ["rock", "jazz"], selection: .constant(["jazz"])) { $0 } }.frame(width: 390, height: 400))),
         ("ComponentGallery", AnyView(ComponentGallery().frame(width: 390, height: 844))),
     ]
 
