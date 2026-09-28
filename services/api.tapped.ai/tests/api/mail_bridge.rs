@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use axum::response::IntoResponse;
 use hmac::{Hmac, Mac};
 use sha2::Sha256;
 use std::sync::{
@@ -6,10 +7,17 @@ use std::sync::{
     atomic::{AtomicUsize, Ordering},
 };
 use tapped_api_rs::{
-    data::{database::MockDatabase, search::MockSearch},
-    domain::mail_bridge::{
-        EmailThread, InMemoryMailStore, MailBridge, MailStore, QueuedEmail, SqliteMailStore,
-        StreamDelivery, StreamGateway,
+    data::{
+        database::{Database, MockDatabase},
+        search::MockSearch,
+    },
+    domain::{
+        firebase_auth::FirebaseUser,
+        mail_bridge::{
+            CreateEmailThread, EmailThread, InMemoryMailStore, MailBridge, MailStore, QueuedEmail,
+            SqliteMailStore, StreamDelivery, StreamGateway, create_email_thread,
+        },
+        models::{booking::Booking, review::Review, user::UserModel},
     },
     state::AppStateDyn,
 };
@@ -17,6 +25,54 @@ use tapped_api_rs::{
 use super::helpers::spawn_app_with_state;
 
 type HmacSha256 = Hmac<Sha256>;
+
+struct ThreadDatabase;
+
+#[async_trait]
+impl Database for ThreadDatabase {
+    async fn get_user_from_api_key(&self, _api_key: &str) -> anyhow::Result<String> {
+        unreachable!()
+    }
+
+    async fn get_user_by_id(&self, id: &str) -> anyhow::Result<UserModel> {
+        Ok(serde_json::from_value(if id == "artist-1" {
+            serde_json::json!({
+                "id": id, "email": "artist@example.com", "username": "the-band", "deleted": false
+            })
+        } else {
+            serde_json::json!({
+                "id": id, "email": "venue@example.com", "username": "the-venue", "deleted": false,
+                "venueInfo": {"bookingEmail": "booking@venue.example"}
+            })
+        })?)
+    }
+
+    async fn get_user_by_username(&self, _username: &str) -> anyhow::Result<UserModel> {
+        unreachable!()
+    }
+
+    async fn get_bookings_by_performer_id(
+        &self,
+        _performer_id: &str,
+    ) -> anyhow::Result<Vec<Booking>> {
+        unreachable!()
+    }
+
+    async fn get_bookings_by_booker_id(&self, _booker_id: &str) -> anyhow::Result<Vec<Booking>> {
+        unreachable!()
+    }
+
+    async fn get_reviews_by_performer_id(
+        &self,
+        _performer_id: &str,
+    ) -> anyhow::Result<Vec<Review>> {
+        unreachable!()
+    }
+
+    async fn get_reviews_by_booker_id(&self, _booker_id: &str) -> anyhow::Result<Vec<Review>> {
+        unreachable!()
+    }
+}
 
 #[derive(Default)]
 struct RecordingStream {
@@ -194,6 +250,54 @@ async fn existing_thread_id_cannot_be_reassigned_to_another_performer() {
 }
 
 #[tokio::test]
+async fn repeated_venue_request_appends_to_the_existing_email_thread() {
+    let store = Arc::new(InMemoryMailStore::default());
+    let state = AppStateDyn {
+        database: Arc::new(ThreadDatabase),
+        search: Arc::new(MockSearch),
+        firebase_project_id: "test-project".into(),
+        mail: MailBridge {
+            store: store.clone(),
+            stream: Arc::new(RecordingStream::default()),
+            stream_webhook_secret: "stream-secret".into(),
+            ingress_secret: "ingress-secret".into(),
+            service_secret: "service-secret".into(),
+            booking_domain: "booking.tapped.ai".into(),
+        },
+    };
+    let user = FirebaseUser {
+        uid: "artist-1".into(),
+        email: Some("artist@example.com".into()),
+    };
+
+    for (id, subject, text) in [
+        ("request-1", "Original subject", "First request"),
+        ("request-2", "Ignored replacement", "Follow-up request"),
+    ] {
+        let response = create_email_thread(
+            axum::extract::State(state.clone()),
+            user.clone(),
+            axum::Json(CreateEmailThread {
+                id: id.into(),
+                venue_id: "venue-1".into(),
+                subject: subject.into(),
+                text_body: text.into(),
+            }),
+        )
+        .await
+        .into_response();
+        assert_eq!(response.status(), reqwest::StatusCode::ACCEPTED);
+    }
+
+    let queued = store.outbound();
+    assert_eq!(queued.len(), 2);
+    assert_eq!(queued[1].thread_id, queued[0].thread_id);
+    assert_eq!(queued[1].subject, "Original subject");
+    assert_eq!(queued[1].in_reply_to, queued[0].message_id);
+    assert_eq!(queued[1].references, queued[0].message_id);
+}
+
+#[tokio::test]
 async fn creating_email_thread_requires_firebase_authentication() {
     let (app, store, _) = test_app().await;
     let response = app
@@ -283,6 +387,41 @@ async fn signed_service_email_is_queued_without_postmark() {
         Some("<strong>Hello</strong>")
     );
     assert_eq!(queued[0].encoded_attachments[0].name, "hello.txt");
+}
+
+#[tokio::test]
+async fn signed_backfill_registers_an_existing_email_thread() {
+    let (app, store, _) = test_app().await;
+    let body = serde_json::to_vec(&serde_json::json!({
+        "id": "legacy-thread",
+        "performer_id": "legacy-artist",
+        "performer_username": "legacy-name",
+        "venue_id": "legacy-venue",
+        "recipients": ["booking@venue.example"],
+        "subject": "Legacy inquiry",
+        "latest_message_id": "<legacy@booking.tapped.ai>"
+    }))
+    .unwrap();
+    let timestamp = chrono::Utc::now().timestamp().to_string();
+    let signed = [timestamp.as_bytes(), b".", b"", b".", body.as_slice()].concat();
+    let response = app
+        .api_client
+        .post(format!("{}/internal/mail/backfill-thread", app.address))
+        .header("x-tapped-timestamp", &timestamp)
+        .header("x-tapped-signature", sign("service-secret", &signed))
+        .body(body)
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
+    let thread = store
+        .thread_for_stream("legacy-artist", "legacy-venue")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(thread.id, "legacy-thread");
+    assert_eq!(thread.latest_message_id, "<legacy@booking.tapped.ai>");
 }
 
 #[tokio::test]

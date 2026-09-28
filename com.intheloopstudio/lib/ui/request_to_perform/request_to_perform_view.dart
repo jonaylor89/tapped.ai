@@ -1,6 +1,6 @@
 import 'package:avatar_stack/avatar_stack.dart';
 import 'package:avatar_stack/positions.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:intheloopapp/data/prod/tapped_api_client.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +18,7 @@ import 'package:intheloopapp/ui/user_avatar.dart';
 import 'package:intheloopapp/utils/app_logger.dart';
 import 'package:intheloopapp/utils/bloc_utils.dart';
 import 'package:intheloopapp/utils/current_user_builder.dart';
+import 'package:uuid/uuid.dart';
 
 class RequestToPerformView extends StatefulWidget {
   const RequestToPerformView({
@@ -34,6 +35,7 @@ class RequestToPerformView extends StatefulWidget {
 }
 
 class _RequestToPerformViewState extends State<RequestToPerformView> {
+  final TappedApiClient _api = TappedApiClient();
   String _note = '';
   List<UserModel> _collaborators = [];
 
@@ -82,16 +84,23 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
     }
 
     try {
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('genericContactVenues');
-      await callable<void>({
-        'userId': currentUser.id,
-        'venueIds': _venues.map((venue) => venue.id).toList(),
-        'note': _note,
-        'collaborators': _collaborators.map((collaborator) {
-          return collaborator.id;
-        }).toList(),
-      });
+      final requestId = const Uuid().v4();
+      final collaboratorNames = _collaborators
+          .map((collaborator) => collaborator.displayName)
+          .join(', ');
+      final textBody = collaboratorNames.isEmpty
+          ? _note
+          : '$_note\n\nCollaborators: $collaboratorNames';
+      await Future.wait(
+        _venues.map(
+          (venue) => _api.createVenueEmailThread(
+            id: '$requestId:${venue.id}',
+            venueId: venue.id,
+            subject: 'Performance inquiry from ${currentUser.displayName}',
+            textBody: textBody,
+          ),
+        ),
+      );
       await EasyLoading.dismiss();
       nav.push(RequestToPerformConfirmationPage(venues: _venues));
     } catch (error, stackTrace) {
@@ -123,10 +132,10 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
           onPressed: _note.isEmpty
               ? null
               : () => _send(
-                  context,
-                  currentUser: currentUser,
-                  safeModeOn: safeModeOn,
-                ),
+                    context,
+                    currentUser: currentUser,
+                    safeModeOn: safeModeOn,
+                  ),
         );
       },
     );
@@ -305,8 +314,7 @@ class _RequestToPerformViewState extends State<RequestToPerformView> {
             SliverToBoxAdapter(
               child: GlassSection(
                 header: 'collaborators',
-                footer:
-                    "you're far more likely to get booked when you're "
+                footer: "you're far more likely to get booked when you're "
                     'on a bill with a local act.',
                 children: [
                   for (final collaborator in _collaborators)

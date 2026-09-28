@@ -1,0 +1,30 @@
+name: Post-deploy mail smoke
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [mail-deployed]
+  schedule:
+    - cron: "17 7 * * *"
+
+jobs:
+  stream-email-round-trip:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.2.2
+      - name: Test deployed email round trip
+        env:
+          MAIL_SMOKE_API_URL: ${{ vars.MAIL_SMOKE_API_URL }}
+          MAIL_SMOKE_VENUE_ID: ${{ vars.MAIL_SMOKE_VENUE_ID }}
+          MAIL_SMOKE_IMAP_HOST: ${{ vars.MAIL_SMOKE_IMAP_HOST }}
+          MAIL_SMOKE_SMTP_HOST: ${{ vars.MAIL_SMOKE_SMTP_HOST }}
+          MAIL_SMOKE_SMTP_PORT: ${{ vars.MAIL_SMOKE_SMTP_PORT }}
+          FIREBASE_WEB_API_KEY: ${{ secrets.FIREBASE_WEB_API_KEY }}
+          FIREBASE_TEST_EMAIL: ${{ secrets.FIREBASE_TEST_EMAIL }}
+          FIREBASE_TEST_PASSWORD: ${{ secrets.FIREBASE_TEST_PASSWORD }}
+          MAIL_SMOKE_IMAP_USERNAME: ${{ secrets.MAIL_SMOKE_IMAP_USERNAME }}
+          MAIL_SMOKE_IMAP_PASSWORD: ${{ secrets.MAIL_SMOKE_IMAP_PASSWORD }}
+          STREAM_KEY: ${{ secrets.STREAM_KEY }}
+          STREAM_SECRET: ${{ secrets.STREAM_SECRET }}
+        run: python3 services/mail-gateway/tools/mail_deployment_smoke.py

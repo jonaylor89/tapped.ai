@@ -155,10 +155,17 @@ impl InMemoryMailStore {
 
 #[async_trait]
 impl MailStore for InMemoryMailStore {
-    async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()> {
+    async fn upsert_thread(&self, mut thread: EmailThread) -> anyhow::Result<()> {
         let mut state = self.state.lock().unwrap();
-        state.threads.retain(|item| item.id != thread.id);
-        state.threads.push(thread);
+        if let Some(existing) = state.threads.iter_mut().find(|item| {
+            item.id == thread.id
+                || (item.performer_id == thread.performer_id && item.venue_id == thread.venue_id)
+        }) {
+            thread.id.clone_from(&existing.id);
+            *existing = thread;
+        } else {
+            state.threads.push(thread);
+        }
         Ok(())
     }
 
@@ -419,11 +426,18 @@ impl MailStore for SqliteMailStore {
     async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()> {
         self.connection.lock().unwrap().execute(
             "INSERT INTO email_threads VALUES (?1,?2,?3,?4,?5,?6,?7)
-             ON CONFLICT(id) DO UPDATE SET performer_id=excluded.performer_id,
-             performer_username=excluded.performer_username, venue_id=excluded.venue_id,
-             recipients=excluded.recipients, subject=excluded.subject, latest_message_id=excluded.latest_message_id",
-            params![thread.id, thread.performer_id, thread.performer_username, thread.venue_id,
-                serde_json::to_string(&thread.recipients)?, thread.subject, thread.latest_message_id],
+             ON CONFLICT DO UPDATE SET performer_username=excluded.performer_username,
+             recipients=excluded.recipients, subject=excluded.subject,
+             latest_message_id=excluded.latest_message_id",
+            params![
+                thread.id,
+                thread.performer_id,
+                thread.performer_username,
+                thread.venue_id,
+                serde_json::to_string(&thread.recipients)?,
+                thread.subject,
+                thread.latest_message_id
+            ],
         )?;
         Ok(())
     }
@@ -1020,6 +1034,49 @@ pub async fn enqueue_service_email(
     }
 }
 
+pub async fn backfill_email_thread(
+    State(state): State<AppStateDyn>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> impl IntoResponse {
+    let timestamp = headers
+        .get("x-tapped-timestamp")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let signature = headers
+        .get("x-tapped-signature")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let Ok(timestamp_number) = timestamp.parse::<i64>() else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    if (Utc::now().timestamp() - timestamp_number).abs() > 300 {
+        return StatusCode::UNAUTHORIZED;
+    }
+    let signed = [timestamp.as_bytes(), b".", b"", b".", &body].concat();
+    if !valid_signature(&state.mail.service_secret, &signed, signature) {
+        return StatusCode::UNAUTHORIZED;
+    }
+    let thread: EmailThread = match serde_json::from_slice(&body) {
+        Ok(thread) => thread,
+        Err(_) => return StatusCode::BAD_REQUEST,
+    };
+    if thread.id.is_empty()
+        || thread.performer_id.is_empty()
+        || thread.performer_username.is_empty()
+        || thread.venue_id.is_empty()
+        || thread.recipients.is_empty()
+        || thread.subject.is_empty()
+        || thread.latest_message_id.is_empty()
+    {
+        return StatusCode::BAD_REQUEST;
+    }
+    match state.mail.store.upsert_thread(thread).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateEmailThread {
     pub id: String,
@@ -1045,8 +1102,39 @@ pub async fn create_email_thread(
     let Some(recipient) = venue.booking_email().map(str::to_owned) else {
         return StatusCode::BAD_REQUEST;
     };
-    let recipients = vec![recipient];
     let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
+    let existing = match state
+        .mail
+        .store
+        .thread_for_stream(&user.uid, &command.venue_id)
+        .await
+    {
+        Ok(thread) => thread,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+
+    if let Some(thread) = existing {
+        let email = QueuedEmail {
+            event_id: format!("venue-contact:{}", command.id),
+            thread_id: thread.id,
+            from: format!("{}@{}", performer.username, state.mail.booking_domain),
+            to: thread.recipients,
+            subject: thread.subject,
+            text_body: command.text_body,
+            html_body: None,
+            message_id,
+            in_reply_to: thread.latest_message_id.clone(),
+            references: thread.latest_message_id,
+            attachments: vec![],
+            encoded_attachments: vec![],
+        };
+        return match state.mail.store.enqueue_outbound(email).await {
+            Ok(_) => StatusCode::ACCEPTED,
+            Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+    }
+
+    let recipients = vec![recipient];
     let thread = EmailThread {
         id: command.id.clone(),
         performer_id: user.uid,
