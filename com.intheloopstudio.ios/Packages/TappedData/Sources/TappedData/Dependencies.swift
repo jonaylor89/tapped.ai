@@ -17,6 +17,7 @@ public struct Dependencies: Sendable {
     public var purchases: any PurchasesRepository
     public var analytics: any AnalyticsRepository
     public var remoteConfig: any RemoteConfigRepository
+    public var venueOutreach: any VenueOutreachRepository
 
     public init(
         mode: Mode,
@@ -26,7 +27,8 @@ public struct Dependencies: Sendable {
         places: any PlacesRepository,
         purchases: any PurchasesRepository,
         analytics: any AnalyticsRepository,
-        remoteConfig: any RemoteConfigRepository
+        remoteConfig: any RemoteConfigRepository,
+        venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -36,6 +38,7 @@ public struct Dependencies: Sendable {
         self.purchases = purchases
         self.analytics = analytics
         self.remoteConfig = remoteConfig
+        self.venueOutreach = venueOutreach
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -49,7 +52,8 @@ public struct Dependencies: Sendable {
             places: GooglePlacesRepository(apiKey: config.googlePlacesAPIKey),
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
-            remoteConfig: FirebaseRemoteConfigRepository()
+            remoteConfig: FirebaseRemoteConfigRepository(),
+            venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL)
         )
     }
 
@@ -67,7 +71,8 @@ public struct Dependencies: Sendable {
             places: MockPlacesRepository(),
             purchases: MockPurchasesRepository(isPremium: isPremium),
             analytics: MockAnalytics(),
-            remoteConfig: MockRemoteConfigRepository(downForMaintenance: downForMaintenance)
+            remoteConfig: MockRemoteConfigRepository(downForMaintenance: downForMaintenance),
+            venueOutreach: MockVenueOutreachRepository()
         )
     }
 

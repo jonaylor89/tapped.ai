@@ -7,6 +7,10 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var users: [String: UserModel]
     public private(set) var opportunities: [String: Opportunity]
     public private(set) var bookings: [String: Booking]
+    /// Keyed by `userId`, then service id (`services/{userId}/userServices/{id}`).
+    public private(set) var services: [String: [String: Service]]
+    public private(set) var performerReviews: [String: PerformerReview] = [:]
+    public private(set) var bookerReviews: [String: BookerReview] = [:]
     public var featuredPerformerIds: [String]
     public var featuredOpportunityIds: [String]
 
@@ -14,12 +18,14 @@ public actor MockDatabaseRepository: DatabaseRepository {
         users: [UserModel] = Samples.performers + Samples.venues,
         opportunities: [Opportunity] = Samples.opportunities,
         bookings: [Booking] = Samples.bookings,
+        services: [Service] = Samples.services,
         featuredPerformerIds: [String] = Samples.performers.map(\.id),
         featuredOpportunityIds: [String] = Samples.opportunities.map(\.id)
     ) {
         self.users = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.opportunities = Dictionary(uniqueKeysWithValues: opportunities.map { ($0.id, $0) })
         self.bookings = Dictionary(uniqueKeysWithValues: bookings.map { ($0.id, $0) })
+        self.services = Dictionary(grouping: services, by: \.userId).mapValues { Dictionary(uniqueKeysWithValues: $0.map { ($0.id, $0) }) }
         self.featuredPerformerIds = featuredPerformerIds
         self.featuredOpportunityIds = featuredOpportunityIds
     }
@@ -76,6 +82,32 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool { false }
     public func getContactedVenues(_ userId: String) async throws -> [UserModel] { [] }
 
+    public func createBooking(_ booking: Booking) async throws { bookings[booking.id] = booking }
+    public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] {
+        bookings.values.filter { $0.referenceEventId == eventId }.sorted { $0.startTime > $1.startTime }
+    }
+    public func getBookingsByRequesterRequestee(_ requesterId: String, _ requesteeId: String, limit: Int, lastBookingRequestId: String?, status: BookingStatus?) async throws -> [Booking] {
+        filterBookings { $0.requesterId == requesterId && $0.requesteeId == requesteeId }(status, limit)
+    }
+    public func updateBooking(_ booking: Booking) async throws { bookings[booking.id] = booking }
+    public func createService(_ service: Service) async throws { services[service.userId, default: [:]][service.id] = service }
+    public func updateService(_ service: Service) async throws { services[service.userId, default: [:]][service.id] = service }
+    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? { services[userId]?[serviceId] }
+    public func getUserServices(_ userId: String) async throws -> [Service] {
+        (services[userId].map { Array($0.values) } ?? []).filter { !$0.deleted }.sorted { $0.rate < $1.rate }
+    }
+    public func deleteService(_ userId: String, _ serviceId: String) async throws {
+        services[userId]?[serviceId]?.deleted = true
+    }
+    public func createPerformerReview(_ review: PerformerReview) async throws { performerReviews[review.id] = review }
+    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? {
+        performerReviews[reviewId].flatMap { $0.fields.performerId == revieweeId ? $0 : nil }
+    }
+    public func createBookerReview(_ review: BookerReview) async throws { bookerReviews[review.id] = review }
+    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? {
+        bookerReviews[reviewId].flatMap { $0.fields.bookerId == revieweeId ? $0 : nil }
+    }
+
     // MARK: - not implemented (same surface as FirestoreDatabaseRepository)
 
     public func publishLatestAppVersion(_ currentUserId: String) async throws -> String { throw NotImplemented() }
@@ -84,15 +116,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
     public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws { throw NotImplemented() }
     public func markActivityAsRead(_ activity: Activity) async throws { throw NotImplemented() }
-    public func createBooking(_ booking: Booking) async throws { throw NotImplemented() }
-    public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] { throw NotImplemented() }
-    public func getBookingsByRequesterRequestee(_ requesterId: String, _ requesteeId: String, limit: Int, lastBookingRequestId: String?, status: BookingStatus?) async throws -> [Booking] { throw NotImplemented() }
-    public func updateBooking(_ booking: Booking) async throws { throw NotImplemented() }
-    public func createService(_ service: Service) async throws { throw NotImplemented() }
-    public func updateService(_ service: Service) async throws { throw NotImplemented() }
-    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? { throw NotImplemented() }
-    public func getUserServices(_ userId: String) async throws -> [Service] { throw NotImplemented() }
-    public func deleteService(_ userId: String, _ serviceId: String) async throws { throw NotImplemented() }
     public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     public func getOpportunityFeedByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     public func getInterestedUsers(_ opportunity: Opportunity) async throws -> [UserModel] { throw NotImplemented() }
@@ -111,10 +134,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func unblockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
     public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool { throw NotImplemented() }
     public func reportUser(reported: UserModel, reporter: UserModel) async throws { throw NotImplemented() }
-    public func createPerformerReview(_ review: PerformerReview) async throws { throw NotImplemented() }
-    public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
-    public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
-    public func getBookerReviewById(revieweeId: String, reviewId: String) async throws -> BookerReview? { throw NotImplemented() }
     public func joinPremiumWaitlist(_ userId: String) async throws { throw NotImplemented() }
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 

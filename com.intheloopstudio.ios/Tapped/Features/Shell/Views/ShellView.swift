@@ -27,6 +27,11 @@ struct ShellView: View {
             .tappedRouteDestinations()
         }
         .environment(shell)
+        .task {
+            if router.isAtRoot, let name = session.launchOptions.route {
+                router.path = Route.mockLaunchPath(name, currentUser: shell.currentUser) ?? []
+            }
+        }
     }
 }
 

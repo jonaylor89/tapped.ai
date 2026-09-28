@@ -14,6 +14,9 @@ struct RouteDestination: View {
             SignupView(dependencies: dependencies)
         case .forgotPassword:
             ForgotPasswordView(dependencies: dependencies)
+        case .bookings, .booking, .bookingConfirmation, .createBooking, .addPastBooking, .requestToPerform,
+             .requestToPerformConfirmation, .serviceSelection, .service, .createService, .bookingHistory:
+            BookingsRouteDestination(route: route)
         default:
             PlaceholderScreen(title: route.title, owner: route.owner)
         }

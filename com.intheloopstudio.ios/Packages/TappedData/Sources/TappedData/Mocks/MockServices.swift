@@ -58,8 +58,12 @@ public struct MockPlacesRepository: PlacesRepository {
     public static let places: [PlaceData] = [
         PlaceData(placeId: Location.rva.placeId, name: "Richmond", shortFormattedAddress: "Richmond, VA, USA", lat: Location.rva.lat, lng: Location.rva.lng, locality: "Richmond"),
         PlaceData(placeId: Location.nyc.placeId, name: "New York", shortFormattedAddress: "New York, NY, USA", lat: Location.nyc.lat, lng: Location.nyc.lng, locality: "New York"),
-        PlaceData(placeId: "ChIJW-T2Wt7Gt4kRKl2I1CJFUsI", name: "Washington", shortFormattedAddress: "Washington, DC, USA", lat: 38.9072, lng: -77.0369, locality: "Washington"),
-    ]
+        PlaceData(placeId: Samples.washington.placeId, name: "Washington", shortFormattedAddress: "Washington, DC, USA", lat: Samples.washington.lat, lng: Samples.washington.lng, locality: "Washington"),
+    ] + Samples.venues.compactMap { venue in
+        venue.location.map {
+            PlaceData(placeId: $0.placeId, name: venue.displayName, shortFormattedAddress: "\(venue.displayName), Richmond, VA", lat: $0.lat, lng: $0.lng, locality: "Richmond")
+        }
+    }
 
     public init() {}
 
@@ -129,4 +133,19 @@ public struct MockRemoteConfigRepository: RemoteConfigRepository {
     public func fetchAndActivate() async throws -> Bool { true }
     public func getDownForMaintenanceStatus() async -> Bool { downForMaintenance }
     public func getBookingFee() async -> Double { bookingFee }
+}
+
+/// Records every venue email thread instead of calling the Tapped API.
+public actor MockVenueOutreachRepository: VenueOutreachRepository {
+    public private(set) var threads: [VenueEmailThread] = []
+    public var failure: VenueOutreachError?
+
+    public init(failure: VenueOutreachError? = nil) {
+        self.failure = failure
+    }
+
+    public func createVenueEmailThread(id: String, venueId: String, subject: String, textBody: String) async throws {
+        if let failure { throw failure }
+        threads.append(VenueEmailThread(id: id, venueId: venueId, subject: subject, textBody: textBody))
+    }
 }

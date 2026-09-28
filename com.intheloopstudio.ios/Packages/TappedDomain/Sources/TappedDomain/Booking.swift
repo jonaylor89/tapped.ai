@@ -94,3 +94,22 @@ public enum BookingStatus: String, Codable, Sendable, CaseIterable, Hashable {
     case confirmed
     case canceled
 }
+
+/// `BookingHelpers` / `BookingStatusX` in `booking.dart`.
+public extension Booking {
+    var isPending: Bool { status == .pending }
+    var isConfirmed: Bool { status == .confirmed }
+    var isCanceled: Bool { status == .canceled }
+    var duration: TimeInterval { endTime.timeIntervalSince(startTime) }
+
+    func isExpired(now: Date = .now) -> Bool { now > endTime }
+
+    func involves(_ userId: String) -> Bool { requesterId == userId || requesteeId == userId }
+
+    /// The other party from `userId`'s point of view.
+    func counterpartId(for userId: String) -> String? { requesteeId == userId ? requesterId : requesteeId }
+}
+
+public extension BookingStatus {
+    var formattedName: String { rawValue }
+}

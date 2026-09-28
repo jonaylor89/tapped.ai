@@ -29,6 +29,7 @@ public struct ComponentGallery: View {
                     UserCard(user: Samples.performers[1], isLocked: true)
                 }
                 OpportunityCard(opportunity: Samples.opportunities[0], venueName: "the camel")
+                BookingCard(booking: Samples.bookings[1], counterpart: Samples.venues[3])
                 ErrorView(retry: {})
                 WaitlistView(isOnWaitlist: false) {}
             }

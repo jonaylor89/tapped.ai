@@ -141,13 +141,20 @@ public enum Samples {
         ),
     ]
 
+    private static let day: TimeInterval = 24 * 60 * 60
+    private static let hour: TimeInterval = 60 * 60
+
+    /// Richmond venues' `Location.placeId`s are `sample-<venue id>`; this one resolves in `MockPlacesRepository`.
+    public static let washington = Location(placeId: "ChIJW-T2Wt7Gt4kRKl2I1CJFUsI", lat: 38.9072, lng: -77.0369)
+
+    /// `performer`'s bookings: pending + upcoming + past + canceled, as requestee and as requester.
     public static let bookings: [Booking] = [
         Booking(
             id: "booking-1",
             requesteeId: performer.id,
             status: .confirmed,
-            startTime: referenceDate.addingTimeInterval(3 * 24 * 60 * 60),
-            endTime: referenceDate.addingTimeInterval(3 * 24 * 60 * 60 + 2 * 60 * 60),
+            startTime: referenceDate.addingTimeInterval(3 * day),
+            endTime: referenceDate.addingTimeInterval(3 * day + 2 * hour),
             timestamp: referenceDate,
             requesterId: "venue-camel",
             name: "camel sessions",
@@ -155,5 +162,96 @@ public enum Samples {
             genres: [Genre.dance.rawValue],
             location: venues[0].location
         ),
+        Booking(
+            id: "booking-2",
+            requesteeId: performer.id,
+            status: .pending,
+            startTime: referenceDate.addingTimeInterval(10 * day + 23 * hour),
+            endTime: referenceDate.addingTimeInterval(11 * day + 3 * hour),
+            timestamp: referenceDate,
+            requesterId: "venue-canal",
+            name: "late night house",
+            note: "headline slot after our resident. we have cdjs + a djm-900.",
+            genres: [Genre.dance.rawValue, Genre.electronic.rawValue],
+            location: venues[3].location
+        ),
+        Booking(
+            id: "booking-3",
+            requesteeId: "performer-mara",
+            status: .pending,
+            startTime: referenceDate.addingTimeInterval(14 * day + 19 * hour),
+            endTime: referenceDate.addingTimeInterval(14 * day + 21 * hour),
+            timestamp: referenceDate,
+            requesterId: performer.id,
+            name: "b2b at balliceaux",
+            note: "would love a live vocal set over my closing hour.",
+            location: venues[7].location
+        ),
+        Booking(
+            id: "booking-4",
+            requesteeId: performer.id,
+            status: .confirmed,
+            startTime: referenceDate.addingTimeInterval(-20 * day),
+            endTime: referenceDate.addingTimeInterval(-20 * day + 3 * hour),
+            timestamp: referenceDate.addingTimeInterval(-40 * day),
+            requesterId: "venue-broadberry",
+            name: "broadberry disco night",
+            genres: [Genre.funk.rawValue],
+            location: venues[2].location
+        ),
+        Booking(
+            id: "booking-5",
+            requesteeId: performer.id,
+            status: .confirmed,
+            startTime: referenceDate.addingTimeInterval(-45 * day),
+            endTime: referenceDate.addingTimeInterval(-45 * day + 2 * hour),
+            timestamp: referenceDate.addingTimeInterval(-60 * day),
+            requesterId: "venue-national",
+            name: "support slot",
+            location: venues[1].location
+        ),
+        Booking(
+            id: "booking-6",
+            requesteeId: performer.id,
+            status: .confirmed,
+            startTime: referenceDate.addingTimeInterval(-80 * day),
+            endTime: referenceDate.addingTimeInterval(-80 * day + 4 * hour),
+            timestamp: referenceDate.addingTimeInterval(-80 * day),
+            verified: true,
+            name: "hardywood block party",
+            addedByUser: true,
+            location: venues[5].location
+        ),
+        Booking(
+            id: "booking-7",
+            requesteeId: performer.id,
+            status: .confirmed,
+            startTime: referenceDate.addingTimeInterval(-120 * day),
+            endTime: referenceDate.addingTimeInterval(-120 * day + 3 * hour),
+            timestamp: referenceDate.addingTimeInterval(-120 * day),
+            verified: true,
+            name: "dc warehouse party",
+            addedByUser: true,
+            location: washington
+        ),
+        Booking(
+            id: "booking-8",
+            requesteeId: performer.id,
+            status: .canceled,
+            startTime: referenceDate.addingTimeInterval(-12 * day),
+            endTime: referenceDate.addingTimeInterval(-12 * day + 2 * hour),
+            timestamp: referenceDate.addingTimeInterval(-30 * day),
+            requesterId: "venue-vagabond",
+            name: "sunday brunch set",
+            location: venues[9].location
+        ),
+    ]
+
+    public static let services: [Service] = [
+        Service(id: "service-dj-set", userId: performer.id, title: "dj set", description: "house + disco, bring-your-own-decks optional.", rate: 15_000, rateType: .hourly, count: 18),
+        Service(id: "service-opener", userId: performer.id, title: "opening set", description: "60–90 minute warm-up before your headliner.", rate: 25_000, rateType: .fixed, count: 9),
+        Service(id: "service-private", userId: performer.id, title: "private event", description: "weddings, launches and birthdays. sound system included.", rate: 80_000, rateType: .fixed, count: 4),
+        Service(id: "service-mara-live", userId: "performer-mara", title: "live vocal set", description: "45 minutes of originals with a backing track.", rate: 30_000, rateType: .fixed, count: 12),
+        Service(id: "service-mara-feature", userId: "performer-mara", title: "feature vocals", description: "top-line vocals over a dj set.", rate: 12_000, rateType: .hourly, count: 5),
     ]
 }
