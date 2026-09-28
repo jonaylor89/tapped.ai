@@ -46,6 +46,7 @@ struct ServiceSelectionView: View {
                             Image(systemName: "calendar.badge.plus").foregroundStyle(TappedColors.accent)
                         }
                     }
+                    .foregroundStyle(.primary)
                 }
                 if !model.services.isEmpty {
                     Section("services") {

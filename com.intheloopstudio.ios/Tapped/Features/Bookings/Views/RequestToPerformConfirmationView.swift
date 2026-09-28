@@ -15,7 +15,7 @@ struct RequestToPerformConfirmationView: View {
         case 2: "\(names[0]) and \(names[1])"
         default: "\(names[0]) and \(names.count - 1) others"
         }
-        return "we'll let you know when \(who) replies."
+        return "we'll let you know when \(who) \(names.count > 1 ? "reply" : "replies")."
     }
 
     var body: some View {
