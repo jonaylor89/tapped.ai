@@ -50,7 +50,7 @@ struct DiscoverView: View {
                 )
                 .ignoresSafeArea()
 
-                DiscoverTopChrome(model: model, unreadMessages: shell.unreadMessages, push: router.push)
+                DiscoverTopChrome(model: model, unreadMessages: shell.unreadMessages, unreadActivities: shell.unreadActivities, push: router.push)
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).maxY } action: { topChromeBottom = $0 }
 
                 DiscoverMapControls(model: model)

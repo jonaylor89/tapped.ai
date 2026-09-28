@@ -23,6 +23,9 @@ struct ComponentSmokeTests {
         ("UserTile", AnyView(UserTile(user: Samples.venues[0]).frame(width: 340))),
         ("UserCard", AnyView(UserCard(user: Samples.performer))),
         ("OpportunityCard", AnyView(OpportunityCard(opportunity: Samples.opportunities[0]))),
+        ("RatingStars", AnyView(RatingStars(4.5))),
+        ("GlassToast", AnyView(GlassToast("link copied"))),
+        ("QRCodeView", AnyView(QRCodeView("https://app.tapped.ai/u/djnova").frame(width: 200, height: 200))),
         ("ComponentGallery", AnyView(ComponentGallery().frame(width: 390, height: 844))),
     ]
 
@@ -51,6 +54,12 @@ struct ComponentSmokeTests {
         for detent in MapsSheetDetent.allCases {
             #expect(MapsSheetDetent(detent.presentationDetent) == detent)
         }
+    }
+
+    @Test func qrCodeEncodesProfileLinks() throws {
+        let image = try #require(QRCode.image(for: "https://app.tapped.ai/u/djnova", scale: 10))
+        #expect(image.width == image.height)
+        #expect(image.width >= 210)
     }
 
     @Test func tokensMatchFlutter() {

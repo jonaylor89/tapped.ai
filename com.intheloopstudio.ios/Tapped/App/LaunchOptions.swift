@@ -6,6 +6,7 @@ import TappedUI
 /// - `TAPPED_MOCK_SIGNED_IN=1`   start signed in (handled by `Dependencies.resolve`)
 /// - `TAPPED_MOCK_SCREEN=splash|login|signup|forgot`  hold the auth gate on a screen
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
+/// - `TAPPED_MOCK_ROUTE=<name>`  push a route after sign-in (see `Route.mockLaunch(_:currentUser:)`)
 struct LaunchOptions: Equatable {
     enum Screen: String {
         case splash, login, signup, forgot
@@ -13,6 +14,7 @@ struct LaunchOptions: Equatable {
 
     var screen: Screen?
     var detent: MapsSheetDetent?
+    var route: String?
 
     static let none = LaunchOptions()
 
@@ -32,6 +34,10 @@ struct LaunchOptions: Equatable {
         case "large": .large
         default: nil
         }
-        return LaunchOptions(screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)), detent: detent)
+        return LaunchOptions(
+            screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)),
+            detent: detent,
+            route: environment["TAPPED_MOCK_ROUTE"]
+        )
     }
 }

@@ -9,19 +9,42 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var bookings: [String: Booking]
     public var featuredPerformerIds: [String]
     public var featuredOpportunityIds: [String]
+    public private(set) var activities: [String: Activity]
+    public private(set) var services: [String: Service]
+    public private(set) var performerReviews: [PerformerReview]
+    public private(set) var bookerReviews: [BookerReview]
+    /// `blockers/{currentUserId}/blockedUsers/{blockedUserId}`
+    public private(set) var blockedUserIds: [String: Set<String>] = [:]
+    /// `(reportedId, reporterId)` pairs written by `reportUser`.
+    public private(set) var reports: [(reported: String, reporter: String)] = []
+    private var activityObservers: [UUID: ActivityObserver] = [:]
+
+    private struct ActivityObserver {
+        let userId: String
+        let limit: Int
+        let continuation: AsyncThrowingStream<[Activity], any Error>.Continuation
+    }
 
     public init(
         users: [UserModel] = Samples.performers + Samples.venues,
         opportunities: [Opportunity] = Samples.opportunities,
-        bookings: [Booking] = Samples.bookings,
+        bookings: [Booking] = Samples.bookings + Samples.profileBookings,
         featuredPerformerIds: [String] = Samples.performers.map(\.id),
-        featuredOpportunityIds: [String] = Samples.opportunities.map(\.id)
+        featuredOpportunityIds: [String] = Samples.opportunities.map(\.id),
+        activities: [Activity] = Samples.activities,
+        services: [Service] = Samples.services,
+        performerReviews: [PerformerReview] = Samples.performerReviews,
+        bookerReviews: [BookerReview] = Samples.bookerReviews
     ) {
         self.users = Dictionary(uniqueKeysWithValues: users.map { ($0.id, $0) })
         self.opportunities = Dictionary(uniqueKeysWithValues: opportunities.map { ($0.id, $0) })
         self.bookings = Dictionary(uniqueKeysWithValues: bookings.map { ($0.id, $0) })
         self.featuredPerformerIds = featuredPerformerIds
         self.featuredOpportunityIds = featuredOpportunityIds
+        self.activities = Dictionary(uniqueKeysWithValues: activities.map { ($0.id, $0) })
+        self.services = Dictionary(uniqueKeysWithValues: services.map { ($0.id, $0) })
+        self.performerReviews = performerReviews
+        self.bookerReviews = bookerReviews
     }
 
     public func userEmailExists(_ email: String) async throws -> Bool { users.values.contains { $0.email == email } }
@@ -40,10 +63,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func getFeaturedPerformers() async throws -> [UserModel] { featuredPerformerIds.compactMap { users[$0] } }
     public func getFeaturedOpportunities() async throws -> [Opportunity] {
         featuredOpportunityIds.compactMap { opportunities[$0] }.sorted { $0.startTime > $1.startTime }
-    }
-    public func getActivities(_ userId: String, limit: Int, lastActivityId: String?) async throws -> [Activity] { [] }
-    public nonisolated func activitiesObserver(_ userId: String, limit: Int) -> AsyncThrowingStream<[Activity], any Error> {
-        AsyncThrowingStream { $0.yield([]) }
     }
     public func isVerified(_ userId: String) async throws -> Bool { false }
     public func getBookingById(_ bookRequestId: String) async throws -> Booking? { bookings[bookRequestId] }
@@ -64,17 +83,94 @@ public actor MockDatabaseRepository: DatabaseRepository {
         Array(opportunities.values.filter { $0.userId == userId && !$0.deleted }.sorted { $0.timestamp > $1.timestamp }.prefix(limit))
     }
     public func isUserAppliedForOpportunity(opportunityId: String, userId: String) async throws -> Bool { false }
-    public func getPerformerReviewsByPerformerId(_ performerId: String, limit: Int, lastReviewId: String?) async throws -> [PerformerReview] { [] }
-    public nonisolated func getPerformerReviewsByPerformerIdObserver(_ performerId: String, limit: Int) -> AsyncThrowingStream<[PerformerReview], any Error> {
-        AsyncThrowingStream { $0.yield([]) }
-    }
-    public func getBookerReviewsByBookerId(_ bookerId: String, limit: Int, lastReviewId: String?) async throws -> [BookerReview] { [] }
-    public nonisolated func getBookerReviewsByBookerIdObserver(_ bookerId: String, limit: Int) -> AsyncThrowingStream<[BookerReview], any Error> {
-        AsyncThrowingStream { $0.yield([]) }
-    }
     public func isOnPremiumWailist(_ userId: String) async throws -> Bool { false }
     public func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool { false }
     public func getContactedVenues(_ userId: String) async throws -> [UserModel] { [] }
+
+    // MARK: - activities
+
+    public func getActivities(_ userId: String, limit: Int, lastActivityId: String?) async throws -> [Activity] {
+        let sorted = sortedActivities(for: userId)
+        let start = lastActivityId.flatMap { id in sorted.firstIndex { $0.id == id }.map { $0 + 1 } } ?? 0
+        return Array(sorted.dropFirst(start).prefix(limit))
+    }
+
+    public nonisolated func activitiesObserver(_ userId: String, limit: Int) -> AsyncThrowingStream<[Activity], any Error> {
+        AsyncThrowingStream { continuation in
+            let id = UUID()
+            Task { await self.addActivityObserver(id, ActivityObserver(userId: userId, limit: limit, continuation: continuation)) }
+            continuation.onTermination = { _ in Task { await self.removeActivityObserver(id) } }
+        }
+    }
+
+    public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws {
+        // Dart `addActivity` only writes `toUserId`/`fromUserId`/`timestamp`/`type`, so only `follow` round-trips.
+        guard type == .follow else { throw NotImplemented("addActivity(type: \(type.rawValue))") }
+        let activity = Activity.follow(.init(
+            common: .init(id: UUID().uuidString, toUserId: visitedUserId, timestamp: .now),
+            fromUserId: currentUserId
+        ))
+        activities[activity.id] = activity
+        notifyActivityObservers()
+    }
+
+    public func markActivityAsRead(_ activity: Activity) async throws {
+        guard !activity.common.markedRead, let stored = activities[activity.id] else { return }
+        activities[activity.id] = stored.copyAsRead()
+        notifyActivityObservers()
+    }
+
+    // MARK: - services
+
+    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? {
+        services[serviceId].flatMap { $0.userId == userId ? $0 : nil }
+    }
+
+    public func getUserServices(_ userId: String) async throws -> [Service] {
+        services.values.filter { $0.userId == userId && !$0.deleted }.sorted { $0.id < $1.id }
+    }
+
+    public func deleteService(_ userId: String, _ serviceId: String) async throws {
+        guard var service = services[serviceId], service.userId == userId else { return }
+        service.deleted = true
+        services[serviceId] = service
+    }
+
+    // MARK: - reviews
+
+    public func getPerformerReviewsByPerformerId(_ performerId: String, limit: Int, lastReviewId: String?) async throws -> [PerformerReview] {
+        page(performerReviews.filter { $0.fields.performerId == performerId }, limit: limit, after: lastReviewId) { $0.fields.timestamp }
+    }
+
+    public nonisolated func getPerformerReviewsByPerformerIdObserver(_ performerId: String, limit: Int) -> AsyncThrowingStream<[PerformerReview], any Error> {
+        stream { try await $0.getPerformerReviewsByPerformerId(performerId, limit: limit, lastReviewId: nil) }
+    }
+
+    public func getBookerReviewsByBookerId(_ bookerId: String, limit: Int, lastReviewId: String?) async throws -> [BookerReview] {
+        page(bookerReviews.filter { $0.fields.bookerId == bookerId }, limit: limit, after: lastReviewId) { $0.fields.timestamp }
+    }
+
+    public nonisolated func getBookerReviewsByBookerIdObserver(_ bookerId: String, limit: Int) -> AsyncThrowingStream<[BookerReview], any Error> {
+        stream { try await $0.getBookerReviewsByBookerId(bookerId, limit: limit, lastReviewId: nil) }
+    }
+
+    // MARK: - blocking + reporting
+
+    public func blockUser(currentUserId: String, blockedUserId: String) async throws {
+        blockedUserIds[currentUserId, default: []].insert(blockedUserId)
+    }
+
+    public func unblockUser(currentUserId: String, blockedUserId: String) async throws {
+        blockedUserIds[currentUserId]?.remove(blockedUserId)
+    }
+
+    public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool {
+        blockedUserIds[currentUserId]?.contains(blockedUserId) ?? false
+    }
+
+    public func reportUser(reported: UserModel, reporter: UserModel) async throws {
+        reports.append((reported: reported.id, reporter: reporter.id))
+    }
 
     // MARK: - not implemented (same surface as FirestoreDatabaseRepository)
 
@@ -82,17 +178,12 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
-    public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws { throw NotImplemented() }
-    public func markActivityAsRead(_ activity: Activity) async throws { throw NotImplemented() }
     public func createBooking(_ booking: Booking) async throws { throw NotImplemented() }
     public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] { throw NotImplemented() }
     public func getBookingsByRequesterRequestee(_ requesterId: String, _ requesteeId: String, limit: Int, lastBookingRequestId: String?, status: BookingStatus?) async throws -> [Booking] { throw NotImplemented() }
     public func updateBooking(_ booking: Booking) async throws { throw NotImplemented() }
     public func createService(_ service: Service) async throws { throw NotImplemented() }
     public func updateService(_ service: Service) async throws { throw NotImplemented() }
-    public func getServiceById(_ userId: String, _ serviceId: String) async throws -> Service? { throw NotImplemented() }
-    public func getUserServices(_ userId: String) async throws -> [Service] { throw NotImplemented() }
-    public func deleteService(_ userId: String, _ serviceId: String) async throws { throw NotImplemented() }
     public func getOpportunities(limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     public func getOpportunityFeedByUserId(_ userId: String, limit: Int, lastOpportunityId: String?) async throws -> [Opportunity] { throw NotImplemented() }
     public func getInterestedUsers(_ opportunity: Opportunity) async throws -> [UserModel] { throw NotImplemented() }
@@ -107,10 +198,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func createOpportunity(_ opportunity: Opportunity) async throws { throw NotImplemented() }
     public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws { throw NotImplemented() }
     public func deleteOpportunity(_ opportunityId: String) async throws { throw NotImplemented() }
-    public func blockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
-    public func unblockUser(currentUserId: String, blockedUserId: String) async throws { throw NotImplemented() }
-    public func isBlocked(currentUserId: String, blockedUserId: String) async throws -> Bool { throw NotImplemented() }
-    public func reportUser(reported: UserModel, reporter: UserModel) async throws { throw NotImplemented() }
     public func createPerformerReview(_ review: PerformerReview) async throws { throw NotImplemented() }
     public func getPerformerReviewById(revieweeId: String, reviewId: String) async throws -> PerformerReview? { throw NotImplemented() }
     public func createBookerReview(_ review: BookerReview) async throws { throw NotImplemented() }
@@ -119,6 +206,33 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers
+
+    private func sortedActivities(for userId: String) -> [Activity] {
+        activities.values.filter { $0.common.toUserId == userId }.sorted {
+            ($0.common.timestamp, $0.id) > ($1.common.timestamp, $1.id)
+        }
+    }
+
+    private func addActivityObserver(_ id: UUID, _ observer: ActivityObserver) {
+        activityObservers[id] = observer
+        observer.continuation.yield(Array(sortedActivities(for: observer.userId).prefix(observer.limit)))
+    }
+
+    private func removeActivityObserver(_ id: UUID) {
+        activityObservers[id] = nil
+    }
+
+    private func notifyActivityObservers() {
+        for observer in activityObservers.values {
+            observer.continuation.yield(Array(sortedActivities(for: observer.userId).prefix(observer.limit)))
+        }
+    }
+
+    private func page<T: Identifiable>(_ items: [T], limit: Int, after lastId: T.ID?, timestamp: (T) -> Date) -> [T] {
+        let sorted = items.sorted { timestamp($0) > timestamp($1) }
+        let start = lastId.flatMap { id in sorted.firstIndex { $0.id == id }.map { $0 + 1 } } ?? 0
+        return Array(sorted.dropFirst(start).prefix(limit))
+    }
 
     private func filterBookings(_ predicate: @escaping (Booking) -> Bool) -> (BookingStatus?, Int) -> [Booking] {
         let all = bookings.values

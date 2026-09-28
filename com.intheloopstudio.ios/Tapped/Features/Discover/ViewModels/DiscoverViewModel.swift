@@ -210,15 +210,13 @@ final class DiscoverViewModel {
         return performer.category.suggestedMaxCapacity >= capacity && !venueGenres.isDisjoint(with: userGenres)
     }
 
-    /// `TasksBanner`: genres, audience, a confirmed booking, a contacted venue.
+    /// `TasksBanner`: the same five checklist items as the tasks screen.
     var incompleteTaskCount: Int {
-        let tasks = [
-            !(currentUser.performerInfo?.genres.isEmpty ?? true),
-            currentUser.socialFollowing.audienceSize > 0,
-            confirmedBookingsCount > 0,
-            contactedVenuesCount > 0,
-        ]
-        return tasks.filter { !$0 }.count
+        TasksViewModel.tasks(
+            for: currentUser,
+            hasBookings: confirmedBookingsCount > 0,
+            contactedVenuesCount: contactedVenuesCount
+        ).filter { !$0.isCompleted }.count
     }
 
     var tasksBannerMessage: String? {

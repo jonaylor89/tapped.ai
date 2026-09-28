@@ -7,6 +7,7 @@ struct TappedApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var session: AppSession
     @State private var router = Router()
+    @AppStorage(Appearance.storageKey) private var appearance = Appearance.system
 
     private let dependencies: Dependencies
 
@@ -23,6 +24,7 @@ struct TappedApp: App {
                 .environment(session)
                 .environment(router)
                 .tint(TappedColors.accent)
+                .preferredColorScheme(appearance.colorScheme)
                 .onOpenURL { url in
                     _ = FirebaseBootstrap.handle(url: url)
                 }

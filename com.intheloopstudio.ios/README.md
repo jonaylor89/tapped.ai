@@ -74,6 +74,7 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
+| `TAPPED_MOCK_ROUTE` | `profile` \| `profile:<userId>` \| `settings` \| `activities` \| `tasks` \| `shareProfile` | push a screen after sign-in (screenshots) |
 
 Mock sign-in: any email + password works, except the password `wrong` (which returns an auth error).
 
