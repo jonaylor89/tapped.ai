@@ -31,6 +31,7 @@ This is a Turborepo monorepo. Frontend apps live in `apps/`, backend services in
 | `services/venue-enrichment/` | Rust | Venue data enrichment |
 | `services/midia-to-threads/` | Python | Midia to threads |
 | `com.intheloopstudio/` | Flutter | Mobile app |
+| `com.intheloopstudio.ios/` | SwiftUI | Native iOS rewrite (see its README) |
 | `platform/` | Terraform | Infrastructure |
 | `packages/` | TypeScript | Shared code |
 
@@ -54,9 +55,24 @@ Every dependency and toolchain version is pinned exactly — no `^`, `~`, `>=`, 
 - Flutter toolchain: `3.41.5` in `.github/workflows/flutter.yml`, `com.intheloopstudio/ios/ci_scripts/ci_post_clone.sh`, and `pubspec.yaml`. Bump all three together.
 - Node: `pnpm install --frozen-lockfile`; `packageManager` in `package.json` and `node-version` in `.github/workflows/node.yml` are exact.
 - Rust: `Cargo.lock` is committed.
+- iOS native (`com.intheloopstudio.ios/`): SPM only, every package `.package(url:…, exact: "x.y.z")`; `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is committed and CI resolves with `-disableAutomaticPackageResolution`.
 
 ## CI/CD
 
 - `node.yml` - Lint, typecheck, build all Node.js packages
 - `rust.yml` - Build and clippy for Rust projects  
 - `flutter.yml` - Test and build Flutter app
+- `ios.yml` - Build and test the native SwiftUI app on an iPhone simulator
+
+## iOS native app (`com.intheloopstudio.ios/`)
+
+Swift 6 (strict concurrency), SwiftUI, iOS 26, xcodegen (`project.yml`) + local packages `TappedDomain`, `TappedData`, `TappedUI`. The Flutter app is its read-only spec; never edit `com.intheloopstudio/` from iOS work. Branches `ios/…`, PR titles `feat(ios): …`.
+
+```bash
+cd com.intheloopstudio.ios
+xcodegen generate   # after editing project.yml
+xcodebuild build test -project Tapped.xcodeproj -scheme Tapped -destination 'platform=iOS Simulator,name=iPhone 17'
+(cd Packages/TappedData && xcodebuild test -scheme TappedData -destination 'platform=iOS Simulator,name=iPhone 17')
+```
+
+Without a real `GoogleService-Info.plist` (or with `TAPPED_MOCK=1`, the `Tapped Mock` scheme) the app runs on mock repositories.

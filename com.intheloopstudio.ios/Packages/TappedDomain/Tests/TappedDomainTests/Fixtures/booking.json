@@ -1,0 +1,12 @@
+{
+  "id": "booking-1",
+  "requesteeId": "performer-1",
+  "requesterId": "venue-1",
+  "status": "confirmed",
+  "startTime": { "_seconds": 1720000000, "_nanoseconds": 0 },
+  "endTime": { "_seconds": 1720007200, "_nanoseconds": 0 },
+  "timestamp": "2024-07-01T12:00:00Z",
+  "rate": 25000,
+  "genres": ["electronic"],
+  "location": { "placeId": "abc", "lat": 1.5, "lng": 2.5 }
+}

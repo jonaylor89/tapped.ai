@@ -1,0 +1,13 @@
+{
+  "id": "op-1",
+  "userId": "venue-1",
+  "location": { "placeId": "abc", "lat": 37.54, "lng": -77.43 },
+  "timestamp": { "seconds": 1720000000 },
+  "startTime": { "_seconds": 1721000000 },
+  "endTime": { "_seconds": 1721007200 },
+  "deadline": null,
+  "title": "friday night openers",
+  "isPaid": true,
+  "touched": "like",
+  "genres": ["rock"]
+}
