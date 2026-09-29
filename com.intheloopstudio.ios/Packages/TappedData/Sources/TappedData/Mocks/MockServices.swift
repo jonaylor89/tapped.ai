@@ -94,6 +94,17 @@ public struct MockPlacesRepository: PlacesRepository {
     public func getPlaceIdByLatLng(lat: Double, lng: Double) async throws -> String? { Location.rva.placeId }
 }
 
+/// Always reports Richmond, VA (`Location.rva`) unless given another result.
+public struct MockLocationRepository: LocationRepository {
+    public var result: Result<GeoCoordinate, LocationError>
+
+    public init(result: Result<GeoCoordinate, LocationError> = .success(GeoCoordinate(lat: Location.rva.lat, lng: Location.rva.lng))) {
+        self.result = result
+    }
+
+    public func currentCoordinate() async throws -> GeoCoordinate { try result.get() }
+}
+
 public actor MockPurchasesRepository: PurchasesRepository {
     private var entitlements: Set<Entitlement>
     private let broadcaster = EntitlementBroadcaster()
