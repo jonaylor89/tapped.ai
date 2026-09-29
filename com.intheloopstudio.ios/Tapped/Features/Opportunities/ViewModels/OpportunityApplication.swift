@@ -13,7 +13,7 @@ struct OpportunityApplication: Sendable {
     let database: any DatabaseRepository
     let analytics: any AnalyticsRepository
     let userId: String
-    let isPremium: Bool
+    var isPremium: Bool
 
     init(dependencies: Dependencies, userId: String, isPremium: Bool) {
         database = dependencies.database

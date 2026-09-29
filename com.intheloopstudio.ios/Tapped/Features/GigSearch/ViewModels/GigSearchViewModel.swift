@@ -19,7 +19,7 @@ final class GigSearchViewModel {
     }
 
     let currentUser: UserModel
-    let isPremium: Bool
+    var isPremium: Bool
 
     var place: PlaceData?
     var genres: Set<Genre>

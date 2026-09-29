@@ -27,7 +27,7 @@ final class OpportunityViewModel {
     private(set) var errorMessage: String?
 
     private let database: any DatabaseRepository
-    private let application: OpportunityApplication
+    private var application: OpportunityApplication
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, claims: [CustomClaim], opportunityId: String, opportunity: Opportunity?) {
         self.opportunityId = opportunityId
@@ -39,7 +39,13 @@ final class OpportunityViewModel {
         application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
     }
 
-    var isPremium: Bool { application.isPremium }
+    var isPremium: Bool {
+        get { application.isPremium }
+        set {
+            application.isPremium = newValue
+            if newValue { remainingQuota = nil }
+        }
+    }
     var canSeeApplicants: Bool { opportunity?.userId == currentUser.id || claims.contains(.admin) }
     var canApply: Bool { opportunity.map { $0.userId != currentUser.id } ?? false }
     var isPastDeadline: Bool { opportunity?.deadline.map { $0 < .now } ?? false }

@@ -27,12 +27,20 @@ final class OpportunityFeedViewModel {
     private var isFetchingMore = false
 
     private let database: any DatabaseRepository
-    private let application: OpportunityApplication
+    private var application: OpportunityApplication
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
         self.currentUser = currentUser
         database = dependencies.database
         application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
+    }
+
+    var isPremium: Bool {
+        get { application.isPremium }
+        set {
+            application.isPremium = newValue
+            if newValue { remainingQuota = nil }
+        }
     }
 
     var current: Opportunity? { opportunities.indices.contains(currentIndex) ? opportunities[currentIndex] : nil }

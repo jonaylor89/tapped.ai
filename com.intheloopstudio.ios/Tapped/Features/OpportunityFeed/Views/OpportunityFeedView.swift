@@ -7,16 +7,22 @@ import TappedUI
 struct OpportunityFeedView: View {
     static let swipeThreshold: CGFloat = 120
 
+    private let isPremium: Bool
     @State private var model: OpportunityFeedViewModel
     @State private var offset: CGSize = .zero
     @State private var isAnimatingOut = false
     @Environment(Router.self) private var router
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
+        self.isPremium = isPremium
         _model = State(initialValue: OpportunityFeedViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium))
     }
 
     var body: some View {
+        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+    }
+
+    @ViewBuilder private var screen: some View {
         Group {
             if model.isLoading && model.opportunities.isEmpty {
                 LoadingView()

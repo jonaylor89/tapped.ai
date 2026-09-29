@@ -5,17 +5,23 @@ import TappedUI
 
 /// Port of `gig_search_view.dart` / `venue_filter_form.dart`. Search is premium-only (→ paywall).
 struct GigSearchView: View {
+    private let isPremium: Bool
     @State private var model: GigSearchViewModel
     @State private var showsResults: Bool
     @State private var validationMessage: String?
     @Environment(Router.self) private var router
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, model: GigSearchViewModel? = nil, showsResults: Bool = false) {
+        self.isPremium = isPremium
         _model = State(initialValue: model ?? GigSearchViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium))
         _showsResults = State(initialValue: showsResults)
     }
 
     var body: some View {
+        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+    }
+
+    @ViewBuilder private var screen: some View {
         Form {
             Section {
                 VStack(alignment: .leading, spacing: TappedSpacing.xs) {

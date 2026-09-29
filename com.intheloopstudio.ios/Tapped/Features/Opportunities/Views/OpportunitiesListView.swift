@@ -5,14 +5,20 @@ import TappedUI
 
 /// Port of `opportunities_results_view.dart`: tiles with applied state; "select" enables batch apply.
 struct OpportunitiesListView: View {
+    private let isPremium: Bool
     @State private var model: OpportunitiesListViewModel
     @Environment(Router.self) private var router
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, opportunities: [Opportunity]) {
+        self.isPremium = isPremium
         _model = State(initialValue: OpportunitiesListViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium, opportunities: opportunities))
     }
 
     var body: some View {
+        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+    }
+
+    @ViewBuilder private var screen: some View {
         List {
             Section {
                 ForEach(model.opportunities) { opportunity in

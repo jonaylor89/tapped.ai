@@ -19,7 +19,7 @@ final class OpportunitiesListViewModel {
     var selectedIds: Set<String> = []
 
     private let database: any DatabaseRepository
-    private let application: OpportunityApplication
+    private var application: OpportunityApplication
     private let currentUser: UserModel
 
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, opportunities: [Opportunity]) {
@@ -29,7 +29,13 @@ final class OpportunitiesListViewModel {
         application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
     }
 
-    var isPremium: Bool { application.isPremium }
+    var isPremium: Bool {
+        get { application.isPremium }
+        set {
+            application.isPremium = newValue
+            if newValue { remainingQuota = nil }
+        }
+    }
     var selectable: [Opportunity] { opportunities.filter { !appliedIds.contains($0.id) && $0.userId != currentUser.id } }
     var allSelected: Bool { !selectable.isEmpty && selectedIds.count == selectable.count }
     var selectedOpportunities: [Opportunity] { opportunities.filter { selectedIds.contains($0.id) } }

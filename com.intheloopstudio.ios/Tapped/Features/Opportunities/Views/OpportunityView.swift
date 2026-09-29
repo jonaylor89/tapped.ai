@@ -5,6 +5,7 @@ import TappedUI
 
 /// Port of `opportunity_view.dart`: flier hero, facts, venue/booker, floating apply bar.
 struct OpportunityView: View {
+    private let isPremium: Bool
     @State private var model: OpportunityViewModel
     @State private var showsApplySheet: Bool
     @Environment(Router.self) private var router
@@ -14,6 +15,7 @@ struct OpportunityView: View {
         dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, claims: [CustomClaim],
         opportunityId: String, opportunity: Opportunity?, showsApplySheet: Bool = false
     ) {
+        self.isPremium = isPremium
         _model = State(initialValue: OpportunityViewModel(
             dependencies: dependencies, currentUser: currentUser, isPremium: isPremium, claims: claims,
             opportunityId: opportunityId, opportunity: opportunity
@@ -22,6 +24,10 @@ struct OpportunityView: View {
     }
 
     var body: some View {
+        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+    }
+
+    @ViewBuilder private var screen: some View {
         Group {
             switch model.phase {
             case .loading:

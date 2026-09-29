@@ -5,6 +5,7 @@ import TappedUI
 
 /// Port of `lib/ui/discover/discover_view.dart`: full-bleed map, floating glass chrome, Maps-style sheet.
 struct DiscoverView: View {
+    private let isPremium: Bool
     @State private var model: DiscoverViewModel
     @Environment(Router.self) private var router
     @Environment(ShellViewModel.self) private var shell
@@ -19,6 +20,7 @@ struct DiscoverView: View {
         claims: [CustomClaim],
         initialDetent: MapsSheetDetent? = nil
     ) {
+        self.isPremium = isPremium
         _model = State(initialValue: DiscoverViewModel(
             dependencies: dependencies,
             currentUser: currentUser,
@@ -29,6 +31,10 @@ struct DiscoverView: View {
     }
 
     var body: some View {
+        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+    }
+
+    @ViewBuilder private var screen: some View {
         GeometryReader { proxy in
             let frame = proxy.frame(in: .global)
             let screenBottom = frame.maxY + proxy.safeAreaInsets.bottom
