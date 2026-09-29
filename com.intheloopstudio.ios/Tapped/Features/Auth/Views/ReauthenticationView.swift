@@ -18,11 +18,21 @@ struct ReauthenticationView: View {
 
     var body: some View {
         Form {
-            AuthHeader("confirm it's you", subtitle: reason)
+            Section {
+                VStack(alignment: .leading, spacing: TappedSpacing.xs) {
+                    Text(reason)
+                    if !model.email.isEmpty {
+                        Text(model.email)
+                            .font(TappedTypography.bodySm)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
+            }
 
             if model.methods.contains(.password) {
                 Section {
-                    LabeledContent("email", value: model.email)
                     SecureField("password", text: $model.password)
                         .textContentType(.password)
                         .submitLabel(.continue)
@@ -60,11 +70,11 @@ struct ReauthenticationView: View {
                 }
             }
         }
-        .navigationTitle("confirm it's you")
+        .navigationTitle("Confirm It's You")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("cancel", systemImage: "xmark") { dismiss() }
+                Button("Cancel", systemImage: "xmark") { dismiss() }
             }
         }
         .task { await model.load() }

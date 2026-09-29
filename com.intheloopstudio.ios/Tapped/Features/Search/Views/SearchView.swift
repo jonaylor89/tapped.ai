@@ -7,6 +7,7 @@ import TappedUI
 struct SearchView: View {
     @State private var model: SearchViewModel
     @Environment(Router.self) private var router
+    @Environment(AppSession.self) private var session: AppSession?
 
     init(dependencies: Dependencies, currentUser: UserModel, recents: RecentSearches = RecentSearches(), initialQuery: String = "") {
         let model = SearchViewModel(dependencies: dependencies, currentUser: currentUser, recents: recents)
@@ -44,7 +45,7 @@ struct SearchView: View {
                 if model.isSearching && model.results.isEmpty {
                     LoadingView()
                 } else if model.failed {
-                    ErrorView("search is unavailable right now") { model.scheduleSearch(immediately: true) }
+                    ErrorView(ErrorCopy.action("search right now")) { model.scheduleSearch(immediately: true) }
                 } else if model.results.isEmpty {
                     GlassEmptyState("no results", message: "try a different name or username", systemImage: "person.fill.questionmark")
                 }
@@ -79,7 +80,7 @@ struct SearchView: View {
         }
         Section("explore") {
             exploreRow("gig feed", systemImage: "rectangle.stack.fill", route: .opportunityFeed)
-            exploreRow("search a city for venues", systemImage: "map.fill", route: .gigSearch)
+            exploreRow("find venues", systemImage: "map.fill", route: .gigSearch, isPremiumOnly: true)
             exploreRow("advanced search", systemImage: "slider.horizontal.3", route: .advancedSearch)
         }
         if !model.nearbyOpportunities.isEmpty {
@@ -103,13 +104,19 @@ struct SearchView: View {
         }
     }
 
-    private func exploreRow(_ title: String, systemImage: String, route: Route) -> some View {
-        Button {
+    private func exploreRow(_ title: String, systemImage: String, route: Route, isPremiumOnly: Bool = false) -> some View {
+        let isLocked = isPremiumOnly && session?.isPremium != true
+        return Button {
             router.push(route)
         } label: {
-            SwiftUI.Label(title, systemImage: systemImage)
-                .foregroundStyle(.primary)
+            HStack {
+                SwiftUI.Label(title, systemImage: systemImage)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: TappedSpacing.sm)
+                if isLocked { PremiumBadge() }
+            }
         }
+        .accessibilityHint(isLocked ? "premium feature" : "")
     }
 
     @ViewBuilder

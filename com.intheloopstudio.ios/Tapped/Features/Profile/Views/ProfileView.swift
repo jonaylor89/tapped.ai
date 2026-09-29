@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var model: ProfileViewModel
     @State private var isShowingOptions = false
     @State private var isConfirmingBlock = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(dependencies: Dependencies, currentUser: UserModel, userId: String, user: UserModel? = nil) {
         _model = State(initialValue: ProfileViewModel(dependencies: dependencies, currentUser: currentUser, userId: userId, user: user))
@@ -17,20 +18,21 @@ struct ProfileView: View {
 
     var body: some View {
         content
-            .navigationTitle(model.user?.displayName.lowercased() ?? "profile")
+            .navigationTitle(model.user?.displayName ?? "profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
             .toolbar { toolbar }
             .confirmationDialog("more options", isPresented: $isShowingOptions, titleVisibility: .hidden) { moreOptions }
             .confirmationDialog(
-                "block \(model.user?.displayName.lowercased() ?? "user")?",
+                "Block \(model.user?.displayName ?? "this user")?",
                 isPresented: $isConfirmingBlock,
                 titleVisibility: .visible
             ) {
-                Button("block", role: .destructive) { Task { await model.block() } }
+                Button("Block", role: .destructive) { Task { await model.block() } }
             } message: {
                 Text("they won't be able to find your profile or message you")
             }
+            .offlineBanner(isOffline: NetworkMonitor.shared.isOffline)
             .glassToast($model.toast)
             .task { await model.load() }
             .refreshable { await model.load() }
@@ -67,9 +69,14 @@ struct ProfileView: View {
                 actionBar(user)
                     .padding(.horizontal, TappedSpacing.lg)
 
+                if model.needsPhoto {
+                    ProfilePhotoPrompt(isUploading: model.isUploadingPhoto) { await model.uploadPhoto($0) }
+                        .padding(.horizontal, TappedSpacing.lg)
+                }
+
                 if !user.bio.isEmpty {
                     ProfileSection(title: "about") {
-                        ProfileBio(bio: user.bio.lowercased()).padding(.horizontal, TappedSpacing.lg)
+                        ProfileBio(bio: user.bio).padding(.horizontal, TappedSpacing.lg)
                     }
                 }
 
@@ -122,16 +129,31 @@ struct ProfileView: View {
     // MARK: - action bar
 
     @ViewBuilder private func actionBar(_ user: UserModel) -> some View {
+        let stacks = dynamicTypeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.sm))
+            : AnyLayout(HStackLayout(spacing: TappedSpacing.sm))
         GlassEffectContainer(spacing: TappedSpacing.sm) {
-            HStack(spacing: TappedSpacing.sm) {
+            layout {
                 if model.isCurrentUser {
                     GlassCapsuleButton("edit profile", systemImage: "pencil", style: .accent) { router.push(.settings) }
                     GlassCapsuleButton("share", systemImage: "square.and.arrow.up") {
                         router.push(.shareProfile(userId: user.id, user: user))
                     }
+                    if model.setupProgress < 1 {
+                        if !stacks { Spacer(minLength: 0) }
+                        Button { router.push(.tasks) } label: {
+                            HStack(spacing: TappedSpacing.sm) {
+                                ProfileCompletenessRing(progress: model.setupProgress)
+                                if stacks { Text("finish your profile").font(TappedTypography.label) }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("opens your setup checklist")
+                    }
                 } else {
                     if model.canRequestToPerform {
-                        GlassCapsuleButton("request to perform", systemImage: "music.mic", style: .accent) {
+                        GlassCapsuleButton("pitch", systemImage: "music.mic", style: .accent) {
                             router.push(.requestToPerform(venues: [user], collaborators: []))
                         }
                     }
@@ -145,6 +167,7 @@ struct ProfileView: View {
                     }
                 }
             }
+            .glassCapsuleFillsWidth(stacks)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

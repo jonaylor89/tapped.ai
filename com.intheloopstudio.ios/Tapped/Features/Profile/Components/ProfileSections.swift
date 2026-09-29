@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 import TappedDomain
 import TappedUI
@@ -50,24 +51,64 @@ struct ProfileStats: View {
     }
 
     let stats: [Stat]
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    enum Arrangement: Equatable {
+        case row, grid, list
+    }
+
+    /// Four columns normally, 2×2 from xxLarge, labelled rows at accessibility sizes.
+    static func arrangement(for size: DynamicTypeSize) -> Arrangement {
+        if size.isAccessibilitySize { return .list }
+        return size >= .xxLarge ? .grid : .row
+    }
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(stats) { stat in
-                VStack(spacing: 2) {
-                    Text(stat.value)
-                        .font(.title3.weight(.bold))
-                        .monospacedDigit()
-                    Text(stat.label)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+        Group {
+            switch Self.arrangement(for: dynamicTypeSize) {
+            case .row:
+                HStack(spacing: 0) {
+                    ForEach(stats) { cell($0).frame(maxWidth: .infinity) }
                 }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
+                .padding(.vertical, TappedSpacing.md)
+            case .grid:
+                Grid(horizontalSpacing: 0, verticalSpacing: TappedSpacing.md) {
+                    ForEach(Array(stride(from: 0, to: stats.count, by: 2)), id: \.self) { start in
+                        GridRow {
+                            ForEach(stats[start..<min(start + 2, stats.count)]) { cell($0).frame(maxWidth: .infinity) }
+                        }
+                    }
+                }
+                .padding(.vertical, TappedSpacing.md)
+            case .list:
+                VStack(spacing: 0) {
+                    ForEach(stats) { stat in
+                        LabeledContent(stat.label) {
+                            Text(stat.value).font(.headline).monospacedDigit().foregroundStyle(.primary)
+                        }
+                        .padding(.vertical, TappedSpacing.sm)
+                        if stat.id != stats.last?.id { Divider() }
+                    }
+                }
+                .padding(.horizontal, TappedSpacing.lg)
+                .padding(.vertical, TappedSpacing.xs)
             }
         }
-        .padding(.vertical, TappedSpacing.md)
         .glassEffect(.regular, in: RoundedRectangle(cornerRadius: TappedRadius.lg, style: .continuous))
+    }
+
+    private func cell(_ stat: Stat) -> some View {
+        VStack(spacing: 2) {
+            Text(stat.value)
+                .font(.title3.weight(.bold))
+                .monospacedDigit()
+            Text(stat.label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+        }
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -176,4 +217,80 @@ struct ProfileSocialsRow: View {
             }
         }
     }
+}
+
+
+/// Inline "add a photo" prompt shown on your own profile until a photo is set.
+struct ProfilePhotoPrompt: View {
+    let isUploading: Bool
+    let onPick: (Data) async -> Void
+    @State private var item: PhotosPickerItem?
+
+    static let title = "add a photo"
+    static let message = "profiles with a photo get more bookings"
+
+    var body: some View {
+        PhotosPicker(selection: $item, matching: .images) {
+            HStack(spacing: TappedSpacing.md) {
+                Image(systemName: "camera.fill")
+                    .font(.title3)
+                    .foregroundStyle(TappedColors.accentText)
+                    .frame(width: 44, height: 44)
+                    .background(TappedColors.accent.opacity(0.12), in: Circle())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(Self.title).font(TappedTypography.headingXs).foregroundStyle(.primary)
+                    Text(Self.message).font(TappedTypography.bodySm).foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if isUploading {
+                    ProgressView()
+                } else {
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+            }
+            .profileCard()
+        }
+        .buttonStyle(.plain)
+        .disabled(isUploading)
+        .accessibilityLabel("\(Self.title) — \(Self.message)")
+        .onChange(of: item) { _, item in
+            guard let item else { return }
+            Task {
+                if let data = try? await item.loadTransferable(type: Data.self) { await onPick(data) }
+                self.item = nil
+            }
+        }
+    }
+}
+
+/// Setup-checklist progress ring (same tasks as `TasksView`).
+struct ProfileCompletenessRing: View {
+    let progress: Double
+    @ScaledMetric(relativeTo: .body) private var size: CGFloat = 44
+
+    var body: some View {
+        ZStack {
+            Circle().stroke(.quaternary, lineWidth: 4)
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(TappedColors.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            Text(progress, format: .percent.precision(.fractionLength(0)))
+                .font(.caption2.weight(.bold))
+                .monospacedDigit()
+                .minimumScaleFactor(0.6)
+                .padding(6)
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("profile \(Int((progress * 100).rounded())) percent complete")
+    }
+}
+
+#Preview("setup") {
+    VStack(spacing: TappedSpacing.lg) {
+        ProfilePhotoPrompt(isUploading: false) { _ in }
+        ProfileCompletenessRing(progress: 0.6)
+    }
+    .padding()
 }

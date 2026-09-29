@@ -19,8 +19,8 @@ struct MessageUserButton: View {
         .disabled(isLoading)
         .accessibilityHint("opens a direct message")
         .sensoryFeedback(.error, trigger: failed)
-        .alert("couldn't start a conversation", isPresented: $failed) {
-            Button("okay", role: .cancel) {}
+        .alert("Couldn't Start Conversation", isPresented: $failed) {
+            Button("OK", role: .cancel) {}
         }
     }
 

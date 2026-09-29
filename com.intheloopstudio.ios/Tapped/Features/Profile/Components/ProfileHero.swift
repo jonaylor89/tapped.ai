@@ -9,15 +9,18 @@ struct ProfileHero: View {
     var onTapImage: ((URL) -> Void)?
 
     nonisolated static let height: CGFloat = 440
+    /// Photo-less profiles get a short gradient band instead of a giant-initials hero.
+    nonisolated static let compactHeight: CGFloat = 260
     /// How far `ProfileStats` is pulled up over the bottom of the hero.
     static let statsOverlap: CGFloat = TappedSpacing.xxxl + TappedSpacing.lg
 
     private var imageURL: URL? { user.profilePicture.flatMap(URL.init(string:)) }
+    private var height: CGFloat { imageURL == nil ? Self.compactHeight : Self.height }
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             artwork
-                .frame(height: Self.height)
+                .frame(height: height)
                 .frame(maxWidth: .infinity)
                 .clipped()
                 .contentShape(Rectangle())
@@ -38,8 +41,9 @@ struct ProfileHero: View {
                 }
                 Text(user.displayName)
                     .font(.largeTitle.weight(.heavy))
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("@\(user.username.username)")
                     .font(.headline)
                     .opacity(0.85)
@@ -48,7 +52,7 @@ struct ProfileHero: View {
             .padding(.horizontal, TappedSpacing.lg)
             .padding(.bottom, Self.statsOverlap + TappedSpacing.lg)
         }
-        .frame(height: Self.height)
+        .frame(minHeight: height)
         .stretchyHeader()
     }
 
@@ -67,20 +71,11 @@ struct ProfileHero: View {
     }
 
     private var placeholder: some View {
-        ZStack {
-            LinearGradient(
-                colors: [TappedColors.accent.opacity(0.9), TappedColors.accent.opacity(0.35), .black],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            Text(initials)
-                .font(.system(size: 120, weight: .black, design: .rounded))
-                .foregroundStyle(.white.opacity(0.25))
-        }
-    }
-
-    private var initials: String {
-        String(user.displayName.split(separator: " ").prefix(2).compactMap(\.first)).lowercased()
+        LinearGradient(
+            colors: [TappedColors.accent.opacity(0.9), TappedColors.accent.opacity(0.35), .black],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 }
 

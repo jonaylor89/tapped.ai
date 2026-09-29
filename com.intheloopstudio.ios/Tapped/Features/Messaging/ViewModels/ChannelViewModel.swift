@@ -41,6 +41,20 @@ final class ChannelViewModel {
         return index == 0 || messages[index - 1].authorId != messages[index].authorId
     }
 
+    /// Messages cluster until the sender changes or more than five minutes pass; each cluster gets one timestamp.
+    static let clusterGap: TimeInterval = 5 * 60
+
+    func showsTimestamp(at index: Int) -> Bool {
+        Self.startsCluster(messages, at: index)
+    }
+
+    static func startsCluster(_ messages: [ConversationMessage], at index: Int) -> Bool {
+        guard messages.indices.contains(index) else { return false }
+        guard index > 0 else { return true }
+        let previous = messages[index - 1], current = messages[index]
+        return previous.authorId != current.authorId || current.createdAt.timeIntervalSince(previous.createdAt) > clusterGap
+    }
+
     func observe() async {
         conversation = try? await chat.conversation(id: conversationId)
         do {

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 
 /// `lib/ui/bookings/bookings_cubit.dart` + `user_bookings_feed.dart`: the user's bookings as requestee
 /// and requester, bucketed into pending / upcoming / past.
@@ -51,7 +52,7 @@ final class BookingsViewModel {
             }
             await loadCounterparts()
         } catch {
-            if bookings.isEmpty { state = .failed("couldn't load your bookings") }
+            if bookings.isEmpty { state = .failed(ErrorCopy.load("your bookings")) }
         }
     }
 
