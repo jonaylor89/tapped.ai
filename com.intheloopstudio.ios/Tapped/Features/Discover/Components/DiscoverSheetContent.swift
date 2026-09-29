@@ -80,6 +80,7 @@ struct DiscoverSheetContent: View {
                         .hidden()
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onHeaderHeight($0) }
                 }
+                .background(TappedColors.surface)
         }
         .toolbarVisibility(.hidden, for: .navigationBar)
     }
