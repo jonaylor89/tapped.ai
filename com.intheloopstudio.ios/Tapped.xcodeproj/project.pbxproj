@@ -195,7 +195,7 @@
 		6FE9D1BABA2F7AFBD3107F3F /* ProfileSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSections.swift; sourceTree = "<group>"; };
 		73E8D622F190666A5B0404DD /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		74719AE7E972D16A9BA3463B /* TappedDomain */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedDomain; path = Packages/TappedDomain; sourceTree = SOURCE_ROOT; };
-		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		75216B1D095D6FEAF7740614 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
 		75DCFE00C96CCAB712DD182A /* BookingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailViewModel.swift; sourceTree = "<group>"; };
 		7B7D29D7FC9B351D1FE2BE48 /* ChannelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelViewModel.swift; sourceTree = "<group>"; };
@@ -1425,12 +1425,16 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = "$(inherited) -ObjC";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
 				PRODUCT_NAME = Tapped;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				TAPPED_GOOGLE_PLACES_API_KEY = "";
+				"TAPPED_GOOGLE_PLACES_API_KEY[arch=*]" = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -1535,13 +1539,17 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = "$(inherited) -ObjC";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
 				PRODUCT_NAME = Tapped;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				TAPPED_GOOGLE_PLACES_API_KEY = "";
+				"TAPPED_GOOGLE_PLACES_API_KEY[arch=*]" = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
