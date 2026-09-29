@@ -14,6 +14,7 @@
 		0E834F0D957CEE0491DB0F66 /* OnboardingViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2630F97C55EBC28BDFBA224 /* OnboardingViewModelTests.swift */; };
 		11DB390C15FDCF7ED41F0689 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A43462D9DF4E8600BB0D57C /* ActivityView.swift */; };
 		12B50CF2B1573F4EAC474E22 /* InterestedUsersViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E2B2E51A56814445B3666FB /* InterestedUsersViewModel.swift */; };
+		13378C00A285E8620B03248E /* NextGigWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29F16FBB37D0B549D0613C77 /* NextGigWidget.swift */; };
 		159203EA74977DF066CD1D69 /* OpportunityDetailContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD82A7BF9601DEA521B64444 /* OpportunityDetailContent.swift */; };
 		1BE8E6C258EB4EEE235A1F78 /* ChannelListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 973B6E8EF4B7E225863A478A /* ChannelListView.swift */; };
 		1C6BD83700708E13FEA35E98 /* MessageUserButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8245E4A6DD48EDA71B2C2009 /* MessageUserButton.swift */; };
@@ -52,46 +53,62 @@
 		4BD7A247B7DEAFFF48111719 /* AddPastBookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B5518FE696F7F970677111A /* AddPastBookingView.swift */; };
 		50304DC0F2F35EE583E495D9 /* ServiceSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED4F4ECB746A5D89C7351F91 /* ServiceSelectionView.swift */; };
 		546BC0B6EE7C0EF8BAFA8623 /* SessionGateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 938594C331672461DC9D6D14 /* SessionGateTests.swift */; };
+		54C510A1536C143CD0366237 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 004F235075B9E15E3BAF6DA0 /* WidgetKit.framework */; };
 		55FB09889C4F23EE8054E689 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3B24094DFC276545B1B206D /* LoginView.swift */; };
+		5752E0DAC7B6F04A235611A8 /* AppIntents.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9662C80639CD09CA7E37624 /* AppIntents.framework */; };
 		5791CB33338E1CCB2DA30DCD /* ConversationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584CEB6102765FAC8978CA85 /* ConversationRow.swift */; };
+		58B717A5DAADA47D8904B5D5 /* TappedDomain in Frameworks */ = {isa = PBXBuildFile; productRef = 98E0AFC330BF93A87661BD7F /* TappedDomain */; };
 		58DC174268823DE40B5C055E /* UserReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBE929ABCAA59AE363781F8B /* UserReviewsView.swift */; };
+		5CB99F259EE133F09120F5E2 /* NotificationActionRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A99EA832C946090279ECA52 /* NotificationActionRouter.swift */; };
 		5E63F3B53DA037FCD29491CD /* ChannelListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CDF84421DA0C3892C8D27497 /* ChannelListViewModel.swift */; };
 		6045D39A747DED92AADF1105 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = EE258A141BCCEA88B15A65F9 /* Assets.xcassets */; };
 		61EEFFF24D37B6F595CBDB7F /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F24B713ACA82E028E98F350C /* AdminView.swift */; };
 		629F8C29294CC14B238F74F9 /* TappedApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B0DB4000CE514C948214AF4 /* TappedApp.swift */; };
 		62DAF5DCDF09471637345EF7 /* GenrePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCF825348D251A2231CB1BB9 /* GenrePickerView.swift */; };
 		64A4752BDE78A439BB56E152 /* ConfirmEmailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1029B28118138D10B69E78C4 /* ConfirmEmailView.swift */; };
+		65FFBFD051D16AEB229DDA0B /* TappedWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 4288922041782DAA88EA4B3E /* TappedWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		667E3F9553317993688E21B5 /* SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = B75B4A1B9AFA19DF793F73A2 /* SearchViewModel.swift */; };
 		67908D8AB22D9FCFB9ADB112 /* ShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A594B655FAA927AA5AE497D /* ShellView.swift */; };
 		68D3ABDE907B8169FFD3FF49 /* CreateBookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 347BDC5D6504E56301F94ADD /* CreateBookingView.swift */; };
 		6B13C6FD19046012AB1B8B23 /* ImageViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1214DDF36A367507E54B3F5 /* ImageViewerView.swift */; };
+		6C17B429E90351F686F77EAF /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9479D6B07E53B66E5E227DC /* ActivityKit.framework */; };
 		6C3541DF63F1809D5E3571AD /* PaywallViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8FD55C2E63EE9D8532B893 /* PaywallViewModel.swift */; };
 		6D725FEA5664D5BC9893BBBC /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D79EB50543D67CB134584C0B /* ProfileViewModel.swift */; };
 		7034335E7AB620B1A6A7F3CC /* InboundLinks.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFE487A78246E22D2BA1FCDA /* InboundLinks.swift */; };
 		724658FBA0296DCF2573C5BC /* TappedDomain in Frameworks */ = {isa = PBXBuildFile; productRef = F84EBB5E6788B3EC3EFDC2F4 /* TappedDomain */; };
+		74213AABC0CB2DD18E04B363 /* GigNightLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = 09E68C7196D6EF8C103A4383 /* GigNightLiveActivity.swift */; };
+		7458571FB227D979A957A6D9 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29E8DEAB2DB1DEE5A7624EE1 /* SwiftUI.framework */; };
+		75B190EEB52A8B4405A9DEC1 /* NotificationCategories.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453C485DF76C90713D60940F /* NotificationCategories.swift */; };
 		7724C7AFAA515F1119C2F011 /* GigSearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F4BCA1AB0E130406B49DC95 /* GigSearchViewModel.swift */; };
 		77432339E9868F21C82767C0 /* AuthViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20D7E4503FDDE40D4B230DD8 /* AuthViewModelTests.swift */; };
 		78BA9AF3C756D481EEBE7368 /* ServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF031B182DE9DC39B88BA12B /* ServiceView.swift */; };
 		78DBA8CFBA17DDF9C9697D1D /* ProfileSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FE9D1BABA2F7AFBD3107F3F /* ProfileSections.swift */; };
 		79A9DB35066E1F08EDFE8432 /* PaywallMessagingAdminTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFF1D76FFBE99321C07607D3 /* PaywallMessagingAdminTests.swift */; };
+		7A5C04AF7DDDE8660F480BE5 /* TappedWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FFB3D8BCBC4A1F0E03E72BB /* TappedWidgetsBundle.swift */; };
 		7F5D9A3E3964595FFE67EC19 /* ReauthenticationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA61B077D194FEF18C1D1640 /* ReauthenticationViewModel.swift */; };
+		7FA9C9008B0DD36DEE6B9A29 /* GigNightBookingHooks.swift in Sources */ = {isa = PBXBuildFile; fileRef = 352B96BE4780332B9B2F2A47 /* GigNightBookingHooks.swift */; };
 		81219DC152C294113CAA7BF6 /* ApplySheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF014AB3EF75474BD9408A67 /* ApplySheet.swift */; };
 		88E2EC11374D63EC1875EA5B /* ActivityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8E4A3D14BE8F560ABE67986 /* ActivityViewModel.swift */; };
 		8A3874DD7E7C99A95F4C5795 /* MessageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABF9EDE200314F0E9F0921DE /* MessageComposer.swift */; };
 		8A86903FFC5A89B4EC95797D /* Route+MockLaunch.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4BE4BA08159C7D539AA8D24 /* Route+MockLaunch.swift */; };
 		8F38A0610634C7321601F3BE /* ChannelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 548A9B9685935762C5862C1D /* ChannelView.swift */; };
 		90B0751CDB8DAD50D92F4931 /* BookingsFeatureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDF65831FE461AB00D6C5C7 /* BookingsFeatureTests.swift */; };
+		91F93E3C1A8995FBA4F560CF /* ActivityKitLiveActivityRepository.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A7E7758BB24FD832B9D20C7 /* ActivityKitLiveActivityRepository.swift */; };
 		936448C4BAE11CF8EEFCF572 /* DiscoverViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1C18130990FB0FFDE1E68C6 /* DiscoverViewModel.swift */; };
 		938B71D027B9A5935D62519C /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC83BBF1E64A26D3E8FF20C6 /* OnboardingView.swift */; };
 		93F0C97027F9A3AF82312176 /* BookingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 872156A7771524485A03591B /* BookingHistoryView.swift */; };
+		95E1E37972D2760728368E73 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0D341290573613BEB0B1A47A /* Assets.xcassets */; };
+		982D71E8FAE9F6D077537762 /* TappedShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D86CBC4C8E000B97CA2859BA /* TappedShortcuts.swift */; };
 		991CF6621938B14074538268 /* OpportunityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DD3128B6DFBB050013A28F /* OpportunityView.swift */; };
 		9A3D7F80E8A5FFB6870BFC63 /* DeepLinkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CEABFDFA1D8E9F30732EFC5C /* DeepLinkTests.swift */; };
 		9CD47EF8E1D3C65E83A193BD /* AppShellTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C594726B687A5102B4C9DD2 /* AppShellTests.swift */; };
+		9D92175A43E82A8E17FA4E3B /* GigNightAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 310B9C1919A6306415FD24E0 /* GigNightAttributes.swift */; };
 		9EE13DDFA85523FA73FA3DF0 /* InterestedUsersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81805D0E13E30D90E55E8BCF /* InterestedUsersView.swift */; };
 		9F612D53B728292E4C5797CE /* TasksView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD02C3A8E7F047C26DD728C1 /* TasksView.swift */; };
 		A1EF822716A7D142A07B2E3F /* DeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6A424C2828E35A09A80F1DD /* DeepLink.swift */; };
 		A4363A16886232D6104763F6 /* DiscoverViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A40989F6D343229DBBB2841E /* DiscoverViewModelTests.swift */; };
 		A4D22122CD6007686E94FE3F /* OpportunityFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F640694DFD5364EAF99C783A /* OpportunityFeedView.swift */; };
+		A4FB629308D619E0B03CC940 /* GigNightIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EC75966ACEEA6FC39546CB3 /* GigNightIntents.swift */; };
 		A515A4F86B36008670410DE6 /* TasksViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5C970FD1F594B9F5E9C33DE /* TasksViewModel.swift */; };
 		A5C5D07BEDE723DBDF6032E1 /* LocationFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65FD872A01A65E042E67AD5F /* LocationFormView.swift */; };
 		AAB4EB65044A4F57306C8F4E /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AF301E9FD593BD9E20C13E6 /* PaywallView.swift */; };
@@ -113,9 +130,11 @@
 		C7B0B9C016717A3AC49D267D /* DiscoverSheetSections.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9CAC87F02402DD06322BAB9 /* DiscoverSheetSections.swift */; };
 		CA5026B913216424F2D9C720 /* CreateOpportunityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D08F6931128B5681A285C0EE /* CreateOpportunityViewModel.swift */; };
 		CB32324F2C83DA051FF5C98F /* RequestToPerformView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C3D73E31683DB5098D703C0 /* RequestToPerformView.swift */; };
+		CB3BD7EAE33C5A84D5F19FE8 /* GigNightIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EC75966ACEEA6FC39546CB3 /* GigNightIntents.swift */; };
 		CB6B200254D9938D85DBF1C7 /* DiscoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D16076AC51CDFA56D8F57AF /* DiscoverView.swift */; };
 		CE651E402B135F2C7D7614C7 /* SearchOpportunitiesDestination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6B33F98E2E236D22DE3BB3D5 /* SearchOpportunitiesDestination.swift */; };
 		D21837C583BED40781B9449A /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A79A64B39443589064DB02B /* BookingsView.swift */; };
+		D21D117E53C1F160A4B28B91 /* GigNightCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0109DC16DC669CE37E7F129 /* GigNightCoordinator.swift */; };
 		D27B97E940F153A6DD7DE104 /* RequestToPerformConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58B32071E0AD39AB9D1456F4 /* RequestToPerformConfirmationView.swift */; };
 		D30622D2B83B536F4F6B88B3 /* OnboardingSteps.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B302E11DB2CF819B61793C8 /* OnboardingSteps.swift */; };
 		D376BB397536394803666ACB /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E4FD759996F1BB49961C5DD0 /* ForgotPasswordView.swift */; };
@@ -130,6 +149,7 @@
 		E41F1B8B404C6B8B64E6D737 /* Appearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75216B1D095D6FEAF7740614 /* Appearance.swift */; };
 		E6D5AFBF6F7A1A1F20CD99EC /* GigSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 622A468CD9D607AD5162B820 /* GigSearchView.swift */; };
 		EAE162D504BA39D7B9C112FC /* AppSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6205BF0BD01A9F72495BAEF7 /* AppSession.swift */; };
+		EE475B4C45A98FC29D1FE7E6 /* GigNightAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 310B9C1919A6306415FD24E0 /* GigNightAttributes.swift */; };
 		F357D17C10FE1FDB11E11F48 /* VideoCallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1E880124ABF69ADE2CCE81 /* VideoCallView.swift */; };
 		F80EB71DA3FD5851B5199555 /* SearchOpportunitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E88D3F44AE2DC37207591AEB /* SearchOpportunitiesTests.swift */; };
 		FD1AD84609219DC3DA106696 /* LocationSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 535D789E350EC2CB1E9F2088 /* LocationSearchSheet.swift */; };
@@ -145,14 +165,38 @@
 			remoteGlobalIDString = D2A2AA6732B9632BBAB71469;
 			remoteInfo = Tapped;
 		};
+		EA9A20833C77DFA99FF2169F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59C2C9CE84DD6B1668861C4C /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 08321849DF001CACDE129F23;
+			remoteInfo = TappedWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		CB76C0359B1817992D6698A0 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				65FFBFD051D16AEB229DDA0B /* TappedWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		004F235075B9E15E3BAF6DA0 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		00C8A2E010D8B9A4DC2A8A5B /* BookingsRouteDestination.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsRouteDestination.swift; sourceTree = "<group>"; };
 		0733067C0DDCF0F2D7F9CBF1 /* BookingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsViewModel.swift; sourceTree = "<group>"; };
+		09E68C7196D6EF8C103A4383 /* GigNightLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigNightLiveActivity.swift; sourceTree = "<group>"; };
 		0A4F9D5215A27AF48CAD49B1 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0A79A64B39443589064DB02B /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
 		0C665FB6901CC28533A37850 /* ShareProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareProfileView.swift; sourceTree = "<group>"; };
+		0D341290573613BEB0B1A47A /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0DB931AECF1E5A120D9E96A2 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		1029B28118138D10B69E78C4 /* ConfirmEmailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfirmEmailView.swift; sourceTree = "<group>"; };
 		12B0305DEA6E40E305C8DBF8 /* ShareProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareProfileViewModel.swift; sourceTree = "<group>"; };
@@ -160,15 +204,22 @@
 		1FED81C02C1F735C820FC7CA /* RecentSearches.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSearches.swift; sourceTree = "<group>"; };
 		20D7E4503FDDE40D4B230DD8 /* AuthViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModelTests.swift; sourceTree = "<group>"; };
 		2486FBCBB135341F7712F1B4 /* UserReviewsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserReviewsViewModel.swift; sourceTree = "<group>"; };
+		29E8DEAB2DB1DEE5A7624EE1 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		29F16FBB37D0B549D0613C77 /* NextGigWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NextGigWidget.swift; sourceTree = "<group>"; };
 		2C3D73E31683DB5098D703C0 /* RequestToPerformView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestToPerformView.swift; sourceTree = "<group>"; };
 		2F4BCA1AB0E130406B49DC95 /* GigSearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigSearchViewModel.swift; sourceTree = "<group>"; };
 		2FE5D5FD465E5B79895D9CE5 /* TappedData */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedData; path = Packages/TappedData; sourceTree = SOURCE_ROOT; };
+		310B9C1919A6306415FD24E0 /* GigNightAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigNightAttributes.swift; sourceTree = "<group>"; };
 		347BDC5D6504E56301F94ADD /* CreateBookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateBookingView.swift; sourceTree = "<group>"; };
+		352B96BE4780332B9B2F2A47 /* GigNightBookingHooks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigNightBookingHooks.swift; sourceTree = "<group>"; };
 		3A036B2DF6F86DC6C0226BB9 /* OpportunitiesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunitiesListView.swift; sourceTree = "<group>"; };
 		3A594B655FAA927AA5AE497D /* ShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellView.swift; sourceTree = "<group>"; };
 		3BF61D00CEF173A8D72DB47B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3FFB3D8BCBC4A1F0E03E72BB /* TappedWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappedWidgetsBundle.swift; sourceTree = "<group>"; };
+		4288922041782DAA88EA4B3E /* TappedWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = TappedWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		4378243589118654E911388A /* BookingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailView.swift; sourceTree = "<group>"; };
 		443EB7DFF439E2147D5583C2 /* Tapped.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tapped.entitlements; sourceTree = "<group>"; };
+		453C485DF76C90713D60940F /* NotificationCategories.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationCategories.swift; sourceTree = "<group>"; };
 		4935825C589AF60937B6E2C8 /* DiscoverMapControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverMapControls.swift; sourceTree = "<group>"; };
 		4DB0E68F9D9E2454DC024F2C /* Router.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Router.swift; sourceTree = "<group>"; };
 		4E2B2E51A56814445B3666FB /* InterestedUsersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestedUsersViewModel.swift; sourceTree = "<group>"; };
@@ -198,16 +249,21 @@
 		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		75216B1D095D6FEAF7740614 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
 		75DCFE00C96CCAB712DD182A /* BookingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailViewModel.swift; sourceTree = "<group>"; };
+		7A99EA832C946090279ECA52 /* NotificationActionRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActionRouter.swift; sourceTree = "<group>"; };
 		7B7D29D7FC9B351D1FE2BE48 /* ChannelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelViewModel.swift; sourceTree = "<group>"; };
 		7C043A7BFC7EFB2799CC0F3F /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		7DDF65831FE461AB00D6C5C7 /* BookingsFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsFeatureTests.swift; sourceTree = "<group>"; };
 		7E32F949C72AEC6CE2AF2B8D /* OpportunityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityViewModel.swift; sourceTree = "<group>"; };
+		7EC75966ACEEA6FC39546CB3 /* GigNightIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigNightIntents.swift; sourceTree = "<group>"; };
 		7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
 		81805D0E13E30D90E55E8BCF /* InterestedUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestedUsersView.swift; sourceTree = "<group>"; };
 		8245E4A6DD48EDA71B2C2009 /* MessageUserButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageUserButton.swift; sourceTree = "<group>"; };
 		84107349167E742B0D523187 /* BookingFormViewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingFormViewModels.swift; sourceTree = "<group>"; };
 		85450D5AB1F381BF830CAFA1 /* SignupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignupView.swift; sourceTree = "<group>"; };
 		872156A7771524485A03591B /* BookingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingHistoryView.swift; sourceTree = "<group>"; };
+		8807F93B8E67A1E84DF7A1B6 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		8A7E7758BB24FD832B9D20C7 /* ActivityKitLiveActivityRepository.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityKitLiveActivityRepository.swift; sourceTree = "<group>"; };
+		8AC372B617E1831C9EAEF760 /* TappedWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TappedWidgets.entitlements; sourceTree = "<group>"; };
 		8B302E11DB2CF819B61793C8 /* OnboardingSteps.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingSteps.swift; sourceTree = "<group>"; };
 		9054990CB16F08448F68562B /* DiscoverTopChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverTopChrome.swift; sourceTree = "<group>"; };
 		938594C331672461DC9D6D14 /* SessionGateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionGateTests.swift; sourceTree = "<group>"; };
@@ -237,11 +293,13 @@
 		C3B24094DFC276545B1B206D /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		C5C970FD1F594B9F5E9C33DE /* TasksViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksViewModel.swift; sourceTree = "<group>"; };
 		C80949563E7EFF33770F6A1B /* LaunchOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchOptions.swift; sourceTree = "<group>"; };
+		C9479D6B07E53B66E5E227DC /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
 		CB3F369039EE4E690BD524FC /* AuthFormViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthFormViewModel.swift; sourceTree = "<group>"; };
 		CCF825348D251A2231CB1BB9 /* GenrePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GenrePickerView.swift; sourceTree = "<group>"; };
 		CDF84421DA0C3892C8D27497 /* ChannelListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelListViewModel.swift; sourceTree = "<group>"; };
 		CEABFDFA1D8E9F30732EFC5C /* DeepLinkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkTests.swift; sourceTree = "<group>"; };
 		CFE487A78246E22D2BA1FCDA /* InboundLinks.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InboundLinks.swift; sourceTree = "<group>"; };
+		D0109DC16DC669CE37E7F129 /* GigNightCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GigNightCoordinator.swift; sourceTree = "<group>"; };
 		D08F6931128B5681A285C0EE /* CreateOpportunityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateOpportunityViewModel.swift; sourceTree = "<group>"; };
 		D25557C29CF7B267EA696956 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D42A4E5EFC761829A980568B /* ReauthenticationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReauthenticationView.swift; sourceTree = "<group>"; };
@@ -249,6 +307,7 @@
 		D6A424C2828E35A09A80F1DD /* DeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLink.swift; sourceTree = "<group>"; };
 		D794DED21F61758844A2FB59 /* AdvancedSearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedSearchViewModel.swift; sourceTree = "<group>"; };
 		D79EB50543D67CB134584C0B /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		D86CBC4C8E000B97CA2859BA /* TappedShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappedShortcuts.swift; sourceTree = "<group>"; };
 		D9CAC87F02402DD06322BAB9 /* DiscoverSheetSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverSheetSections.swift; sourceTree = "<group>"; };
 		DA89BA37FB50BD87F32D8EDB /* ServicesViewModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesViewModels.swift; sourceTree = "<group>"; };
 		DD02C3A8E7F047C26DD728C1 /* TasksView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TasksView.swift; sourceTree = "<group>"; };
@@ -264,6 +323,7 @@
 		E7D454668DD4E94DDA5F9B48 /* CreateOpportunityForm.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateOpportunityForm.swift; sourceTree = "<group>"; };
 		E88D3F44AE2DC37207591AEB /* SearchOpportunitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchOpportunitiesTests.swift; sourceTree = "<group>"; };
 		E8E4A3D14BE8F560ABE67986 /* ActivityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityViewModel.swift; sourceTree = "<group>"; };
+		E9662C80639CD09CA7E37624 /* AppIntents.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppIntents.framework; path = System/Library/Frameworks/AppIntents.framework; sourceTree = SDKROOT; };
 		EA61B077D194FEF18C1D1640 /* ReauthenticationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReauthenticationViewModel.swift; sourceTree = "<group>"; };
 		EC05585B31736B75158DFE53 /* DiscoverAllResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverAllResultsView.swift; sourceTree = "<group>"; };
 		ED4F4ECB746A5D89C7351F91 /* ServiceSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceSelectionView.swift; sourceTree = "<group>"; };
@@ -290,6 +350,18 @@
 				724658FBA0296DCF2573C5BC /* TappedDomain in Frameworks */,
 				4A9AF8BF4967800090FEAF0E /* TappedData in Frameworks */,
 				3E960C44CADEF5E8B35F2319 /* TappedUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		EB19D71ED860295292F1F506 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				58B717A5DAADA47D8904B5D5 /* TappedDomain in Frameworks */,
+				54C510A1536C143CD0366237 /* WidgetKit.framework in Frameworks */,
+				7458571FB227D979A957A6D9 /* SwiftUI.framework in Frameworks */,
+				6C17B429E90351F686F77EAF /* ActivityKit.framework in Frameworks */,
+				5752E0DAC7B6F04A235611A8 /* AppIntents.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -321,6 +393,14 @@
 				4FD28CAA55CE6169030A528A /* Views */,
 			);
 			path = Bookings;
+			sourceTree = "<group>";
+		};
+		0795E87C1EA7E0E973DD79C5 /* Intents */ = {
+			isa = PBXGroup;
+			children = (
+				D86CBC4C8E000B97CA2859BA /* TappedShortcuts.swift */,
+			);
+			path = Intents;
 			sourceTree = "<group>";
 		};
 		0FE017F5E029F5639C015BB4 /* Views */ = {
@@ -372,9 +452,12 @@
 				4880639D57B34A76E1945510 /* Discover */,
 				40B978223400CB12AA5D4102 /* Gates */,
 				676235FDFD02603E813DF07F /* GigSearch */,
+				0795E87C1EA7E0E973DD79C5 /* Intents */,
+				E6B719AE368E94847BD14EB5 /* LiveActivity */,
 				5828C42D40F2C51AF39BFEB3 /* LocationForm */,
 				59EEB7700C45E81D3AA1DA0F /* Messaging */,
 				F05D5F5578C0AB733A0DC2C9 /* Navigation */,
+				B98A83BD2E3176F1EC376808 /* Notifications */,
 				65BDC85E5DA365B7A271CACB /* Onboarding */,
 				3EA6CFB5A51FEA55B3F10A11 /* Opportunities */,
 				A66D2934411088D81625F2E5 /* OpportunityFeed */,
@@ -426,6 +509,7 @@
 			children = (
 				74EDF7A5C1C82CD6959263EE /* Tapped.app */,
 				BF2DAB8C39ACC121141BB1E2 /* TappedTests.xctest */,
+				4288922041782DAA88EA4B3E /* TappedWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -488,6 +572,19 @@
 				7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		3C076FD9A4B8A36832D0C8C1 /* TappedWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				0D341290573613BEB0B1A47A /* Assets.xcassets */,
+				09E68C7196D6EF8C103A4383 /* GigNightLiveActivity.swift */,
+				8807F93B8E67A1E84DF7A1B6 /* Info.plist */,
+				29F16FBB37D0B549D0613C77 /* NextGigWidget.swift */,
+				8AC372B617E1831C9EAEF760 /* TappedWidgets.entitlements */,
+				3FFB3D8BCBC4A1F0E03E72BB /* TappedWidgetsBundle.swift */,
+			);
+			path = TappedWidgets;
 			sourceTree = "<group>";
 		};
 		3D2BE0E37FA8ADAC3460D30E /* Components */ = {
@@ -742,6 +839,14 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		8CE1BC901AA54FC1CAAB34DB /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				352B96BE4780332B9B2F2A47 /* GigNightBookingHooks.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
 		91AA6AE1D11BF1AF59026044 /* Reviews */ = {
 			isa = PBXGroup;
 			children = (
@@ -832,6 +937,14 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		A31C49313AF876B8234C2B4C /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				8A7E7758BB24FD832B9D20C7 /* ActivityKitLiveActivityRepository.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
 		A66D2934411088D81625F2E5 /* OpportunityFeed */ = {
 			isa = PBXGroup;
 			children = (
@@ -885,12 +998,22 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		B06243E01BC3D15121C24CF5 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				D0109DC16DC669CE37E7F129 /* GigNightCoordinator.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
 		B3963748B455BE7BE074C285 = {
 			isa = PBXGroup;
 			children = (
 				AAF5E79B8D06A4C5F4980F03 /* Packages */,
 				1BB23876092AA0776F1161B4 /* Tapped */,
 				BFC344D3AB3F87AA912F2F8F /* TappedTests */,
+				3C076FD9A4B8A36832D0C8C1 /* TappedWidgets */,
+				CCDC56B061432402AC6FD0B6 /* Frameworks */,
 				1F0EED8779704F0BE17E3ED9 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -909,6 +1032,15 @@
 				DA89BA37FB50BD87F32D8EDB /* ServicesViewModels.swift */,
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		B98A83BD2E3176F1EC376808 /* Notifications */ = {
+			isa = PBXGroup;
+			children = (
+				7A99EA832C946090279ECA52 /* NotificationActionRouter.swift */,
+				453C485DF76C90713D60940F /* NotificationCategories.swift */,
+			);
+			path = Notifications;
 			sourceTree = "<group>";
 		};
 		BFC344D3AB3F87AA912F2F8F /* TappedTests */ = {
@@ -945,6 +1077,26 @@
 				6B33F98E2E236D22DE3BB3D5 /* SearchOpportunitiesDestination.swift */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		CCDC56B061432402AC6FD0B6 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C9479D6B07E53B66E5E227DC /* ActivityKit.framework */,
+				E9662C80639CD09CA7E37624 /* AppIntents.framework */,
+				29E8DEAB2DB1DEE5A7624EE1 /* SwiftUI.framework */,
+				004F235075B9E15E3BAF6DA0 /* WidgetKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		CCFF2EF649D4AEFF4DE581BA /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				310B9C1919A6306415FD24E0 /* GigNightAttributes.swift */,
+				7EC75966ACEEA6FC39546CB3 /* GigNightIntents.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		CFAE4EBC28ACCE594B7ECC6C /* Views */ = {
@@ -1019,6 +1171,17 @@
 				535D789E350EC2CB1E9F2088 /* LocationSearchSheet.swift */,
 			);
 			path = Components;
+			sourceTree = "<group>";
+		};
+		E6B719AE368E94847BD14EB5 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				A31C49313AF876B8234C2B4C /* Services */,
+				CCFF2EF649D4AEFF4DE581BA /* Shared */,
+				B06243E01BC3D15121C24CF5 /* ViewModels */,
+				8CE1BC901AA54FC1CAAB34DB /* Views */,
+			);
+			path = LiveActivity;
 			sourceTree = "<group>";
 		};
 		E813A009F415F6384CA0C574 /* Views */ = {
@@ -1141,6 +1304,26 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		08321849DF001CACDE129F23 /* TappedWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 11448CCB42527E62417A9D57 /* Build configuration list for PBXNativeTarget "TappedWidgets" */;
+			buildPhases = (
+				195EFF9B53F536512F181C7E /* Sources */,
+				4DFF55E80535985E4A8A13B5 /* Resources */,
+				EB19D71ED860295292F1F506 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = TappedWidgets;
+			packageProductDependencies = (
+				98E0AFC330BF93A87661BD7F /* TappedDomain */,
+			);
+			productName = TappedWidgets;
+			productReference = 4288922041782DAA88EA4B3E /* TappedWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		0D13F765338C37DC3EC6FE96 /* TappedTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = AF93835929144B983573F9AF /* Build configuration list for PBXNativeTarget "TappedTests" */;
@@ -1166,11 +1349,13 @@
 				F1E768A09E9FF6BD9A60097E /* Sources */,
 				2530953B252A359B1578A647 /* Resources */,
 				1527EA70A1CC5AD92A6F9DAE /* Frameworks */,
+				CB76C0359B1817992D6698A0 /* Embed Foundation Extensions */,
 				BA4B08F00A4BDBB35E770D27 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				D689C2D21F42001FD8F10492 /* PBXTargetDependency */,
 			);
 			name = Tapped;
 			packageProductDependencies = (
@@ -1191,6 +1376,10 @@
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
+					08321849DF001CACDE129F23 = {
+						DevelopmentTeam = "";
+						ProvisioningStyle = Automatic;
+					};
 					D2A2AA6732B9632BBAB71469 = {
 						DevelopmentTeam = "";
 						ProvisioningStyle = Automatic;
@@ -1217,6 +1406,7 @@
 			projectRoot = "";
 			targets = (
 				D2A2AA6732B9632BBAB71469 /* Tapped */,
+				08321849DF001CACDE129F23 /* TappedWidgets */,
 				0D13F765338C37DC3EC6FE96 /* TappedTests */,
 			);
 		};
@@ -1229,6 +1419,14 @@
 			files = (
 				6045D39A747DED92AADF1105 /* Assets.xcassets in Resources */,
 				BDC106741EC207B2B6B6839B /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4DFF55E80535985E4A8A13B5 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				95E1E37972D2760728368E73 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1262,6 +1460,18 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		195EFF9B53F536512F181C7E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EE475B4C45A98FC29D1FE7E6 /* GigNightAttributes.swift in Sources */,
+				A4FB629308D619E0B03CC940 /* GigNightIntents.swift in Sources */,
+				74213AABC0CB2DD18E04B363 /* GigNightLiveActivity.swift in Sources */,
+				13378C00A285E8620B03248E /* NextGigWidget.swift in Sources */,
+				7A5C04AF7DDDE8660F480BE5 /* TappedWidgetsBundle.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		9DEFF420AE89DF7D3C1F1B82 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -1283,6 +1493,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				91F93E3C1A8995FBA4F560CF /* ActivityKitLiveActivityRepository.swift in Sources */,
 				11DB390C15FDCF7ED41F0689 /* ActivityView.swift in Sources */,
 				88E2EC11374D63EC1875EA5B /* ActivityViewModel.swift in Sources */,
 				B70FCBB08C011745743904D1 /* AddCollaboratorsView.swift in Sources */,
@@ -1332,6 +1543,10 @@
 				FD5D85D11C4A09F5C41DFD4E /* FilterRows.swift in Sources */,
 				D376BB397536394803666ACB /* ForgotPasswordView.swift in Sources */,
 				62DAF5DCDF09471637345EF7 /* GenrePickerView.swift in Sources */,
+				9D92175A43E82A8E17FA4E3B /* GigNightAttributes.swift in Sources */,
+				7FA9C9008B0DD36DEE6B9A29 /* GigNightBookingHooks.swift in Sources */,
+				D21D117E53C1F160A4B28B91 /* GigNightCoordinator.swift in Sources */,
+				CB3BD7EAE33C5A84D5F19FE8 /* GigNightIntents.swift in Sources */,
 				E6D5AFBF6F7A1A1F20CD99EC /* GigSearchView.swift in Sources */,
 				7724C7AFAA515F1119C2F011 /* GigSearchViewModel.swift in Sources */,
 				6B13C6FD19046012AB1B8B23 /* ImageViewerView.swift in Sources */,
@@ -1346,6 +1561,8 @@
 				55FB09889C4F23EE8054E689 /* LoginView.swift in Sources */,
 				8A3874DD7E7C99A95F4C5795 /* MessageComposer.swift in Sources */,
 				1C6BD83700708E13FEA35E98 /* MessageUserButton.swift in Sources */,
+				5CB99F259EE133F09120F5E2 /* NotificationActionRouter.swift in Sources */,
+				75B190EEB52A8B4405A9DEC1 /* NotificationCategories.swift in Sources */,
 				D30622D2B83B536F4F6B88B3 /* OnboardingSteps.swift in Sources */,
 				938B71D027B9A5935D62519C /* OnboardingView.swift in Sources */,
 				28D9CB13D6698148D38CF523 /* OnboardingViewModel.swift in Sources */,
@@ -1390,6 +1607,7 @@
 				D64F40C7FB83F6347499114A /* SignupView.swift in Sources */,
 				35EB10C0D6104C05BA46D1A2 /* SplashView.swift in Sources */,
 				629F8C29294CC14B238F74F9 /* TappedApp.swift in Sources */,
+				982D71E8FAE9F6D077537762 /* TappedShortcuts.swift in Sources */,
 				9F612D53B728292E4C5797CE /* TasksView.swift in Sources */,
 				A515A4F86B36008670410DE6 /* TasksViewModel.swift in Sources */,
 				BF1FC064431D23AEC2E0155E /* UnreadBadge.swift in Sources */,
@@ -1406,6 +1624,11 @@
 			isa = PBXTargetDependency;
 			target = D2A2AA6732B9632BBAB71469 /* Tapped */;
 			targetProxy = ACACBAEA019961A00AFB6970 /* PBXContainerItemProxy */;
+		};
+		D689C2D21F42001FD8F10492 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 08321849DF001CACDE129F23 /* TappedWidgets */;
+			targetProxy = EA9A20833C77DFA99FF2169F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1431,6 +1654,28 @@
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				TAPPED_GOOGLE_PLACES_API_KEY = "";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		24BBD733601CB2CD5206F5D3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TappedWidgets/TappedWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = TappedWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio.TappedWidgets;
+				PRODUCT_NAME = TappedWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = TAPPED_WIDGET_EXTENSION;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -1607,6 +1852,28 @@
 			};
 			name = Release;
 		};
+		F255F415243431D5815CCA72 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = TappedWidgets/TappedWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				INFOPLIST_FILE = TappedWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio.TappedWidgets;
+				PRODUCT_NAME = TappedWidgets;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG TAPPED_WIDGET_EXTENSION";
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
 		F85F2163F4D1E6963B0BE01A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1627,6 +1894,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		11448CCB42527E62417A9D57 /* Build configuration list for PBXNativeTarget "TappedWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F255F415243431D5815CCA72 /* Debug */,
+				24BBD733601CB2CD5206F5D3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		2685221CB60E59B3FE170A46 /* Build configuration list for PBXProject "Tapped" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -1672,6 +1948,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		98E0AFC330BF93A87661BD7F /* TappedDomain */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TappedDomain;
+		};
 		9D5A0730E9D1DF3BFF0E94E9 /* TappedData */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TappedData;

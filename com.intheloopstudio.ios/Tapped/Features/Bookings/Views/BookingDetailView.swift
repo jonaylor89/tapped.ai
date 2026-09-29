@@ -132,6 +132,8 @@ struct BookingDetailView: View {
             BookingReviewSheet(model: model)
         }
         .task { await model.load() }
+        .sensoryFeedback(.success, trigger: model.booking.status) { old, new in old != .confirmed && new == .confirmed }
+        .gigNight(model, showsReview: $showsReview)
     }
 
     private var header: some View {
