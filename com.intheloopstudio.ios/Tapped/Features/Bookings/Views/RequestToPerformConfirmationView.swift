@@ -19,6 +19,13 @@ struct RequestToPerformConfirmationView: View {
     }
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            confirmation
+            ScrollView { confirmation }
+        }
+    }
+
+    private var confirmation: some View {
         VStack(spacing: TappedSpacing.xl) {
             Spacer()
             ConfirmationHero("request sent", message: message, systemImage: "paperplane.fill")
