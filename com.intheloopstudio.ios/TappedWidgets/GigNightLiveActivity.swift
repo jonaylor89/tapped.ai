@@ -16,14 +16,18 @@ struct GigNightLiveActivity: Widget {
             let phase = phase(context)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Label {
-                        Text(gig.venueName).font(.headline).lineLimit(1)
-                    } icon: {
-                        Image(systemName: "music.mic").foregroundStyle(WidgetStyle.accent)
-                    }
+                    Image(systemName: phase == .review ? "star.fill" : "music.mic")
+                        .font(.title3)
+                        .foregroundStyle(WidgetStyle.accent)
+                }
+                DynamicIslandExpandedRegion(.center) {
+                    Text(gig.venueName)
+                        .font(.headline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if phase == .upcoming {
+                    if phase == .upcoming || phase == .onStage {
                         GigCountdown(gig: gig, phase: phase).font(.headline).foregroundStyle(WidgetStyle.accent)
                     }
                 }
@@ -33,9 +37,9 @@ struct GigNightLiveActivity: Widget {
             } compactLeading: {
                 Image(systemName: phase == .review ? "star.fill" : "music.mic").foregroundStyle(WidgetStyle.accent)
             } compactTrailing: {
-                GigCountdown(gig: gig, phase: phase).foregroundStyle(WidgetStyle.accent)
+                GigCountdown(gig: gig, phase: phase, width: 56).foregroundStyle(WidgetStyle.accent)
             } minimal: {
-                GigCountdown(gig: gig, phase: phase, minimal: true).foregroundStyle(WidgetStyle.accent)
+                GigCountdown(gig: gig, phase: phase, minimal: true, width: 40).foregroundStyle(WidgetStyle.accent)
             }
             .widgetURL(gig.bookingURL)
             .keylineTint(WidgetStyle.accent)
@@ -52,6 +56,7 @@ struct GigCountdown: View {
     let gig: GigNight
     let phase: GigNightPhase
     var minimal = false
+    var width: CGFloat?
 
     var body: some View {
         switch phase {
@@ -59,13 +64,15 @@ struct GigCountdown: View {
             Text(timerInterval: Date.now...max(gig.startTime, .now), countsDown: true, showsHours: !minimal)
                 .monospacedDigit()
                 .multilineTextAlignment(.trailing)
-                .frame(maxWidth: minimal ? 40 : 64)
+                .frame(width: width)
+                .fixedSize(horizontal: width == nil, vertical: false)
                 .accessibilityLabel("starts in \(GigFormat.countdown(from: .now, to: gig.startTime))")
         case .onStage:
             Text(timerInterval: Date.now...max(gig.endTime, .now), countsDown: true, showsHours: !minimal)
                 .monospacedDigit()
                 .multilineTextAlignment(.trailing)
-                .frame(maxWidth: minimal ? 40 : 64)
+                .frame(width: width)
+                .fixedSize(horizontal: width == nil, vertical: false)
                 .accessibilityLabel("on stage, \(GigFormat.countdown(from: .now, to: gig.endTime)) left")
         case .review, .over:
             Image(systemName: "star.fill").accessibilityLabel(GigFormat.reviewPrompt(gig.venueName))
@@ -80,7 +87,7 @@ struct GigNightLockScreenView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                Image("TappedLogo").resizable().scaledToFit().frame(height: 14)
+                Image("TappedLogo").renderingMode(.template).resizable().scaledToFit().frame(height: 14)
                 Spacer()
                 Text(phase == .upcoming ? "gig night" : phase == .onStage ? "on stage" : "wrapped")
                     .font(.caption.weight(.semibold))
