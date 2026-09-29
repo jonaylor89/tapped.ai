@@ -109,7 +109,7 @@ public struct BookingDateTile: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            Text(date.formatted(.dateTime.month(.abbreviated)).lowercased())
+            Text(date.formatted(.dateTime.month(.abbreviated)))
                 .font(TappedTypography.caption.weight(.semibold))
                 .foregroundStyle(tint)
             Text(date.formatted(.dateTime.day()))
@@ -151,7 +151,7 @@ public struct MapSnapshotView: View {
                     Rectangle().fill(.fill.tertiary)
                 }
                 Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 30, weight: .semibold))
+                    .font(.title.weight(.semibold))
                     .foregroundStyle(.white, TappedColors.error)
                     .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
             }
@@ -184,6 +184,7 @@ public struct ConfirmationHero: View {
     let message: String?
     let systemImage: String
     let tint: Color
+    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 120
 
     public init(_ title: String, message: String? = nil, systemImage: String = "checkmark", tint: Color = TappedColors.success) {
         self.title = title
@@ -195,9 +196,10 @@ public struct ConfirmationHero: View {
     public var body: some View {
         VStack(spacing: TappedSpacing.xl) {
             Image(systemName: systemImage)
-                .font(.system(size: 52, weight: .semibold))
+                .font(.largeTitle.weight(.semibold))
+                .imageScale(.large)
                 .foregroundStyle(tint)
-                .frame(width: 120, height: 120)
+                .frame(width: heroSize, height: heroSize)
                 .tappedGlass(.regular, in: Circle())
                 .overlay(Circle().strokeBorder(tint.opacity(0.35), lineWidth: 1))
                 .tappedShadow()

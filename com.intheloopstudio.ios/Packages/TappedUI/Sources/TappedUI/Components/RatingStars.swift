@@ -4,6 +4,7 @@ import SwiftUI
 public struct RatingStars: View {
     let rating: Double
     let size: CGFloat
+    @ScaledMetric(relativeTo: .footnote) private var scale: CGFloat = 1
 
     public init(_ rating: Double, size: CGFloat = 14) {
         self.rating = rating
@@ -14,7 +15,10 @@ public struct RatingStars: View {
         HStack(spacing: 2) {
             ForEach(0..<5, id: \.self) { index in
                 Image(systemName: symbol(for: index))
-                    .font(.system(size: size, weight: .semibold))
+                    .resizable()
+                    .scaledToFit()
+                    .fontWeight(.semibold)
+                    .frame(width: size * scale, height: size * scale)
                     .foregroundStyle(TappedColors.accent)
             }
         }

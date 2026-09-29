@@ -26,8 +26,12 @@ public enum TappedSizing {
 }
 
 public enum TappedColors {
-    /// Brand accent. Use as tint/outline, not large fills.
-    public static let accent = Color(hex: 0x0086CC)
+    /// Brand accent. Use as tint/outline, not large fills. Darkens to `accentTextLight` under Increase Contrast.
+    public static let accent = Color(light: Color(hex: 0x0086CC), dark: Color(hex: 0x0086CC), highContrastLight: accentTextLight, highContrastDark: Color(hex: 0x4DB8F0))
+    /// ≈5.8:1 on white; small light-mode text and links.
+    public static let accentTextLight = Color(hex: 0x006BA3)
+    /// Accent for small text/links: `#006BA3` in light mode (AA on white), brand accent in dark mode.
+    public static let accentText = Color(light: accentTextLight, dark: Color(hex: 0x0086CC), highContrastLight: Color(hex: 0x005580), highContrastDark: Color(hex: 0x4DB8F0))
     public static let success = Color(hex: 0x34C759)
     public static let error = Color(hex: 0xFF3B30)
     public static let warning = Color(hex: 0xFF9500)
@@ -50,8 +54,8 @@ public enum TappedColors {
 
 /// `TappedTypography`, mapped onto the system font (SF Pro) so Dynamic Type still applies.
 public enum TappedTypography {
-    public static let displayLg = Font.system(size: 36, weight: .heavy)
-    public static let displayMd = Font.system(size: 32, weight: .heavy)
+    public static let displayLg = Font.system(.largeTitle, weight: .heavy)
+    public static let displayMd = Font.system(.title, weight: .heavy)
     public static let headingLg = Font.system(.title, weight: .bold)
     public static let headingMd = Font.system(.title2, weight: .bold)
     public static let headingSm = Font.system(.title3, weight: .semibold)
@@ -77,6 +81,19 @@ public extension Color {
     init(light: Color, dark: Color) {
         self.init(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark ? UIColor(dark) : UIColor(light)
+        })
+    }
+
+    /// Adaptive colour that also honours Increase Contrast (`colorSchemeContrast == .increased`).
+    init(light: Color, dark: Color, highContrastLight: Color, highContrastDark: Color) {
+        self.init(uiColor: UIColor { traits in
+            let high = traits.accessibilityContrast == .high
+            return switch (traits.userInterfaceStyle == .dark, high) {
+            case (true, true): UIColor(highContrastDark)
+            case (true, false): UIColor(dark)
+            case (false, true): UIColor(highContrastLight)
+            case (false, false): UIColor(light)
+            }
         })
     }
 }

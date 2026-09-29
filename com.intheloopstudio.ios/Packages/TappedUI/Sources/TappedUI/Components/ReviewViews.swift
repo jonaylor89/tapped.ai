@@ -5,6 +5,7 @@ import TappedDomain
 public struct StarRatingPicker: View {
     @Binding var rating: Int
     let size: CGFloat
+    @ScaledMetric(relativeTo: .title) private var scale: CGFloat = 1
 
     public init(rating: Binding<Int>, size: CGFloat = 32) {
         _rating = rating
@@ -18,7 +19,10 @@ public struct StarRatingPicker: View {
                     withAnimation(GlassMotion.spring) { rating = star }
                 } label: {
                     Image(systemName: star <= rating ? "star.fill" : "star")
-                        .font(.system(size: size, weight: .semibold))
+                        .resizable()
+                        .scaledToFit()
+                        .fontWeight(.semibold)
+                        .frame(width: size * scale, height: size * scale)
                         .foregroundStyle(star <= rating ? TappedColors.warning : Color.secondary)
                         .symbolEffect(.bounce, value: rating == star)
                         .frame(minWidth: TappedSizing.minTapTarget, minHeight: TappedSizing.minTapTarget)
@@ -50,11 +54,11 @@ public struct ReviewCard: View {
                     Circle().fill(.fill.tertiary).frame(width: 40, height: 40)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(reviewer?.displayName.lowercased() ?? "tapped user")
+                    Text(reviewer?.displayName ?? "tapped user")
                         .font(TappedTypography.headingXs)
                         .lineLimit(1)
                         .redacted(reason: reviewer == nil ? .placeholder : [])
-                    Text(review.fields.timestamp.formatted(.dateTime.month(.abbreviated).day().year()).lowercased())
+                    Text(review.fields.timestamp.formatted(.dateTime.month(.abbreviated).day().year()))
                         .font(TappedTypography.bodySm)
                         .foregroundStyle(.secondary)
                 }

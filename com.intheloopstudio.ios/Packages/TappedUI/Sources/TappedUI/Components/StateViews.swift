@@ -52,23 +52,26 @@ public struct LoadingView: View {
     }
 }
 
+/// Failure state: what failed, the likely cause and the next step (see `ErrorCopy`), plus a retry button.
 public struct ErrorView: View {
     let message: String
+    let systemImage: String
     let retry: (() -> Void)?
 
-    public init(_ message: String = "something went wrong", retry: (() -> Void)? = nil) {
+    public init(_ message: String = ErrorCopy.load("this"), systemImage: String = "wifi.exclamationmark", retry: (() -> Void)? = nil) {
         self.message = message
+        self.systemImage = systemImage
         self.retry = retry
     }
 
     public var body: some View {
         ContentUnavailableView {
-            Label("uh oh", systemImage: "exclamationmark.triangle")
+            Label(ErrorCopy.headline(message), systemImage: systemImage)
         } description: {
-            Text(message)
+            Text(ErrorCopy.detail(message))
         } actions: {
             if let retry {
-                Button("try again", action: retry)
+                Button("try again", systemImage: "arrow.clockwise", action: retry)
                     .buttonStyle(.glass)
                     .tint(TappedColors.accent)
             }
@@ -130,7 +133,8 @@ public struct WaitlistView: View {
     public var body: some View {
         VStack(spacing: TappedSpacing.xl) {
             Image(systemName: isOnWaitlist ? "checkmark.seal" : "crown")
-                .font(.system(size: 48, weight: .semibold))
+                .font(.largeTitle.weight(.semibold))
+                .imageScale(.large)
                 .foregroundStyle(TappedColors.accent)
             VStack(spacing: TappedSpacing.sm) {
                 Text(isOnWaitlist ? "you're on the list" : "tapped premium")
