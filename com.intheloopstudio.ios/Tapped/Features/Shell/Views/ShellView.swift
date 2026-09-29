@@ -15,6 +15,7 @@ struct ShellView: View {
     @State private var discover: DiscoverViewModel
     @State private var showsReauthentication = false
     @State private var headerHeight: CGFloat = 0
+    @State private var containerHeight: CGFloat = 0
     /// Room for the sheet's tab bar below the Gigs header.
     @ScaledMetric(relativeTo: .caption2) private var tabBarHeight: CGFloat = 58
 
@@ -44,11 +45,15 @@ struct ShellView: View {
     /// Measured Gigs header + tab bar, so the collapsed sheet shows exactly the "is there work for me?" lines.
     private var collapsedHeight: CGFloat {
         guard headerHeight > 0 else { return MapsSheetDetent.defaultCollapsedHeight }
-        return (headerHeight + min(tabBarHeight, 72)).rounded()
+        let height = headerHeight + min(tabBarHeight, 72)
+        // Stay below `.medium` so the three detents keep their order at accessibility sizes.
+        let cap = containerHeight > 0 ? containerHeight * 0.42 : height
+        return min(height, cap).rounded()
     }
 
     var body: some View {
         DiscoverView(model: discover, collapsedHeight: collapsedHeight, open: navigator.open)
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { containerHeight = $0 }
             .mapsStyleSheet(
                 isPresented: Binding(get: { scenePhase != .background }, set: { _ in }),
                 detent: Binding(get: { navigator.detent }, set: { navigator.setDetent($0) }),

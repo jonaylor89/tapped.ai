@@ -16,10 +16,22 @@ struct DiscoverSheetContent: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     /// The collapsed detent only has room for the header; the list fades in as the sheet rises.
+    private var isAccessibilitySize: Bool { dynamicTypeSize.isAccessibilitySize }
+
     private var bodyOpacity: CGFloat { min(max(model.sheetProgress / 0.1, 0), 1) }
 
     var body: some View {
         List {
+            if model.isPerformerFirst, isAccessibilitySize {
+                Section {
+                    Button(action: expand) {
+                        Text("\(model.venuesHeadline) ›")
+                            .font(TappedTypography.bodySm)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
             if let quota = model.quotaMessage {
                 Section {
                     Button { router.push(.paywall) } label: {
@@ -61,7 +73,13 @@ struct DiscoverSheetContent: View {
         .allowsHitTesting(bodyOpacity > 0.5)
         .safeAreaInset(edge: .top, spacing: 0) {
             header
-                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onHeaderHeight($0) }
+                .background {
+                    // Ideal height, not the laid-out one, so a short sheet can't shrink its own measurement.
+                    header
+                        .fixedSize(horizontal: false, vertical: true)
+                        .hidden()
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onHeaderHeight($0) }
+                }
         }
         .toolbarVisibility(.hidden, for: .navigationBar)
     }
@@ -100,7 +118,7 @@ struct DiscoverSheetContent: View {
                         .foregroundStyle(TappedColors.accent)
                 }
             }
-            if model.isPerformerFirst {
+            if model.isPerformerFirst, !isAccessibilitySize {
                 Button(action: expand) {
                     Text("\(model.venuesHeadline) ›")
                         .font(TappedTypography.bodySm)
@@ -120,7 +138,7 @@ struct DiscoverSheetContent: View {
     private var gigsLine: AttributedString {
         var line = AttributedString(model.gigsHeadline)
         line.font = TappedTypography.headingSm.bold()
-        let weekend = model.gigsThisWeekendCount
+        let weekend = isAccessibilitySize ? 0 : model.gigsThisWeekendCount
         var rest = AttributedString(weekend > 0 ? " · \(weekend) this weekend ›" : " ›")
         rest.font = TappedTypography.bodySm
         rest.foregroundColor = .secondary
