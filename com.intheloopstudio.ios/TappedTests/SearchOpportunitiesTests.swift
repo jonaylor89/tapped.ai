@@ -202,6 +202,18 @@ struct OpportunityTests {
         #expect(try await application.apply(to: Samples.opportunities, comment: "") == .applied)
     }
 
+    @Test func applyingNotifiesTheVenues() async throws {
+        let functions = MockFunctionsRepository()
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.functions = functions
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: false)
+        let opportunities = Array(Samples.opportunities.prefix(2))
+        #expect(try await application.apply(to: opportunities, comment: "pick me") == .applied)
+        #expect(await functions.venueNotifications == [
+            .init(opportunityIds: opportunities.map(\.id), userId: Samples.performer.id, note: "pick me"),
+        ])
+    }
+
     @Test func detailLoadsVenueAndApplies() async {
         let model = OpportunityViewModel(
             dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [],

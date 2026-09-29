@@ -155,6 +155,20 @@ struct BookingsFeatureTests {
         #expect(try await database.getBookingById("past") != nil)
     }
 
+    @Test func addPastBookingReclassifiesThePerformer() async throws {
+        var legendary = me
+        legendary.performerInfo?.category = .legendary
+        // A self-added booking has no venue requester, so with no other bookings the performer is undiscovered.
+        let database = MockDatabaseRepository(users: [legendary], bookings: [])
+        let model = AddPastBookingViewModel(dependencies: dependencies(database: database), currentUser: legendary, now: { now }, makeId: { "past" })
+        model.name = "warehouse"
+        model.place = MockPlacesRepository.places[1]
+        model.start = now.addingTimeInterval(-3 * 24 * 60 * 60)
+        _ = try #require(await model.submit())
+        #expect(model.updatedUser?.performerInfo?.category == .undiscovered)
+        #expect(try await database.getUserById(me.id)?.performerInfo?.category == .undiscovered)
+    }
+
     // MARK: request to perform
 
     @Test func requestToPerformSendsOneThreadPerVenue() async throws {

@@ -122,10 +122,11 @@ struct SettingsViewModelTests {
         #expect(try await dependencies.database.getUserServices(Samples.performer.id).count == 2)
     }
 
-    @Test func deleteAccountSignsOut() async {
+    @Test func deleteAccountDeletesTheUserDocumentAndSignsOut() async throws {
         let dependencies = Dependencies.mock(signedIn: true)
         let model = SettingsViewModel(dependencies: dependencies, currentUser: Samples.performer)
         #expect(await model.deleteAccount())
+        #expect(try await dependencies.database.getUserById(Samples.performer.id) == nil)
         #expect(await !dependencies.auth.isSignedIn())
     }
 

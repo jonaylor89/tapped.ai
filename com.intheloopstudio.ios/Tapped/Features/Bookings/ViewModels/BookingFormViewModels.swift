@@ -142,6 +142,8 @@ final class AddPastBookingViewModel {
     private(set) var isSubmitting = false
     var errorMessage: String?
     var place: PlaceData?
+    /// The current user with the `performerInfo.category` re-classified after the booking was added.
+    private(set) var updatedUser: UserModel?
 
     let currentUser: UserModel
     let now: () -> Date
@@ -210,11 +212,22 @@ final class AddPastBookingViewModel {
             genres: currentUser.performerInfo?.genres ?? [],
             location: place.location
         )
-        return await submit(failure: "couldn't add the booking") {
+        let created = await submit(failure: "couldn't add the booking") {
             try await database.createBooking(booking)
             await analytics.track("past_booking_added", properties: ["booking_id": .string(booking.id)])
             return booking
         }
+        if created != nil { await reclassify() }
+        return created
+    }
+
+    /// Dart `classifyPerformer` + `UpdateOnboardedUser`; best-effort since the booking already exists.
+    private func reclassify() async {
+        guard let category = try? await database.classifyPerformer(currentUser.id) else { return }
+        var user = (try? await database.getUserById(currentUser.id)) ?? currentUser
+        user.performerInfo?.category = category
+        guard (try? await database.updateUserData(user)) != nil else { return }
+        updatedUser = user
     }
 }
 

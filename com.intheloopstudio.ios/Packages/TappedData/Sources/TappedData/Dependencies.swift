@@ -21,6 +21,7 @@ public struct Dependencies: Sendable {
     public var chat: any ChatRepository
     public var storage: any StorageRepository
     public var venueOutreach: any VenueOutreachRepository
+    public var functions: any FunctionsRepository
 
     public init(
         mode: Mode,
@@ -34,7 +35,8 @@ public struct Dependencies: Sendable {
         notifications: any NotificationRepository = MockNotificationRepository(),
         chat: any ChatRepository = MockChatRepository(),
         storage: any StorageRepository = MockStorageRepository(),
-        venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository()
+        venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
+        functions: any FunctionsRepository = MockFunctionsRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -48,6 +50,7 @@ public struct Dependencies: Sendable {
         self.chat = chat
         self.storage = storage
         self.venueOutreach = venueOutreach
+        self.functions = functions
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -65,7 +68,8 @@ public struct Dependencies: Sendable {
             notifications: FirebaseNotificationRepository(),
             chat: StreamChatRepository(apiKey: config.streamAPIKey, tokenProvider: FirebaseStreamToken.fetch),
             storage: FirebaseStorageRepository(),
-            venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL)
+            venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
+            functions: FirebaseFunctionsRepository()
         )
     }
 
@@ -105,7 +109,8 @@ public struct Dependencies: Sendable {
             notifications: notifications,
             chat: MockChatRepository(),
             storage: storage,
-            venueOutreach: MockVenueOutreachRepository()
+            venueOutreach: MockVenueOutreachRepository(),
+            functions: MockFunctionsRepository()
         )
     }
 

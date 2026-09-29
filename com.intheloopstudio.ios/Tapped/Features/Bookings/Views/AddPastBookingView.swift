@@ -8,6 +8,8 @@ struct AddPastBookingView: View {
     let dependencies: Dependencies
     @State private var model: AddPastBookingViewModel
     @Environment(Router.self) private var router
+    @Environment(AppSession.self) private var session: AppSession?
+    @Environment(ShellViewModel.self) private var shell: ShellViewModel?
 
     init(dependencies: Dependencies, currentUser: UserModel, now: @escaping () -> Date = { .now }) {
         self.dependencies = dependencies
@@ -46,7 +48,12 @@ struct AddPastBookingView: View {
         .safeAreaInset(edge: .bottom) {
             GlassSubmitButton("add booking", isSubmitting: model.isSubmitting, isEnabled: model.canSubmit) {
                 Task {
-                    if await model.submit() != nil { router.pop() }
+                    guard await model.submit() != nil else { return }
+                    if let user = model.updatedUser {
+                        shell?.update(user)
+                        session?.updateCurrentUser(user)
+                    }
+                    router.pop()
                 }
             }
         }

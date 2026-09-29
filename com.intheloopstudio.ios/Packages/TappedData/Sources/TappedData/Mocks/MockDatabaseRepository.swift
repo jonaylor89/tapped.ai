@@ -261,9 +261,9 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func updateBooking(_ booking: Booking) async throws { bookings[booking.id] = booking }
     public func createService(_ service: Service) async throws { services[service.id] = service }
     public func updateService(_ service: Service) async throws { services[service.id] = service }
-    public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
+    public func deleteUser(_ userId: String) async throws { users[userId] = nil }
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
-    public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
+    public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { try await computePerformerCategory(userId) }
     public func createOpportunity(_ opportunity: Opportunity) async throws { opportunities[opportunity.id] = opportunity }
     public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws {
         let recipients = users.values.filter { $0.id != opportunity.userId && !$0.deleted && !$0.email.hasSuffix("tapped.ai") }

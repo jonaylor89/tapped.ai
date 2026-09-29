@@ -4,8 +4,7 @@ import TappedDomain
 
 /// `lib/data/prod/firestore_database_impl.dart`.
 ///
-/// Implemented: the subset Discover, the profile header, opportunities and reviews need. Everything else throws `NotImplemented`
-/// and is marked `TODO(session-N)` with the owning follow-up session (see README "Screen ownership").
+/// `searchUsersByLocation` and `sendFeedback` intentionally throw `NotImplemented`.
 public struct FirestoreDatabaseRepository: DatabaseRepository {
     /// Flutter `tccUserId`: featured gigs always include this account's opportunities.
     static let tccUserId = "yfjw9oCMwPVzAxgENxGxecPcNym1"
@@ -346,16 +345,17 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         try? await credits.document(userId).updateData(["opportunityQuota": FieldValue.increment(Int64(-1))])
     }
 
-    // MARK: - stubs (owned by follow-up sessions)
+    // MARK: - account deletion, classification + intentional stubs
 
-    // TODO(session-2): settings → delete account.
-    public func deleteUser(_ userId: String) async throws { throw NotImplemented() }
-    // TODO(session-4): geohash search (Discover uses Typesense instead).
+    /// Best-effort like Dart: failures are swallowed.
+    public func deleteUser(_ userId: String) async throws {
+        try? await users.document(userId).delete()
+    }
+    /// Intentionally unimplemented: the Dart geohash fallback is unused because Discover searches Typesense.
     public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
-    // TODO(session-5): onboarding → performer classification Cloud Function.
-    public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { throw NotImplemented() }
-    // TODO(session-2): activity feed.
-    // TODO(session-2): activity feed.
+    public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? {
+        try await computePerformerCategory(userId)
+    }
     public func createOpportunity(_ opportunity: Opportunity) async throws {
         try await opportunities.document(opportunity.id).setData(Firestore.Encoder().encode(opportunity))
     }
@@ -381,11 +381,7 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func deleteOpportunity(_ opportunityId: String) async throws {
         try await opportunities.document(opportunityId).updateData(["deleted": true])
     }
-    // TODO(session-2): profile → block.
-    // TODO(session-2): profile → block.
-    // TODO(session-2): profile → block.
-    // TODO(session-2): profile → report.
-    // TODO(session-2): settings → feedback.
+    /// Intentionally unimplemented: the app has no feedback entry point.
     public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - activities (session 2)

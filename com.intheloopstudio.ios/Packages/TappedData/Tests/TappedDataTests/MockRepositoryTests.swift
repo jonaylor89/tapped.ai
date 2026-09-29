@@ -24,8 +24,60 @@ struct MockRepositoryTests {
 
     @Test func unimplementedMethodsThrowNotImplemented() async {
         let database = MockDatabaseRepository()
-        await #expect(throws: NotImplemented.self) { try await database.deleteUser("x") }
-        await #expect(throws: NotImplemented.self) { try await FirestoreDatabaseRepository().deleteUser("x") }
+        await #expect(throws: NotImplemented.self) {
+            try await database.searchUsersByLocation(lat: 0, lng: 0, radiusInMeters: 1, limit: 1, lastUserId: nil)
+        }
+        await #expect(throws: NotImplemented.self) {
+            try await FirestoreDatabaseRepository().searchUsersByLocation(lat: 0, lng: 0, radiusInMeters: 1, limit: 1, lastUserId: nil)
+        }
+    }
+
+    @Test func deleteUserRemovesTheUser() async throws {
+        let database = MockDatabaseRepository()
+        let userId = Samples.performer.id
+        #expect(try await database.getUserById(userId) != nil)
+        try await database.deleteUser(userId)
+        #expect(try await database.getUserById(userId) == nil)
+    }
+
+    @Test func classifyPerformerWeighsBookedVenueCapacities() async throws {
+        let now = Date.now
+        let performer = Samples.performer
+        var bigVenue = Samples.venues[0]
+        bigVenue.venueInfo?.capacity = 2000
+        var noCapacityVenue = Samples.venues[1]
+        noCapacityVenue.venueInfo?.capacity = nil
+        func booking(_ id: String, requesterId: String?) -> Booking {
+            var booking = Samples.bookings[0]
+            booking.id = id
+            booking.requesteeId = performer.id
+            booking.requesterId = requesterId
+            booking.startTime = now.addingTimeInterval(-24 * 60 * 60)
+            return booking
+        }
+        let database = MockDatabaseRepository(
+            users: [performer, bigVenue, noCapacityVenue],
+            bookings: [
+                booking("big", requesterId: bigVenue.id),
+                booking("no-capacity", requesterId: noCapacityVenue.id),
+                booking("no-requester", requesterId: nil),
+            ]
+        )
+        let expected = PerformerClassification.categorizeWithWeightedDate(
+            audience: performer.socialFollowing.audienceSize,
+            capacities: [.init(capacity: 2000, startTime: now)],
+            now: now
+        )
+        #expect(expected == .mainstream)
+        #expect(try await database.classifyPerformer(performer.id) == expected)
+        #expect(try await MockDatabaseRepository(users: [performer], bookings: []).classifyPerformer(performer.id) == .undiscovered)
+        #expect(try await database.classifyPerformer("missing") == nil)
+    }
+
+    @Test func mockFunctionsRecordsVenueNotifications() async throws {
+        let functions = MockFunctionsRepository()
+        try await functions.notifyVenueOfInterestedOpportunities(opportunityIds: ["a", "b"], userId: "me", note: "hi")
+        #expect(await functions.venueNotifications == [.init(opportunityIds: ["a", "b"], userId: "me", note: "hi")])
     }
 
     @Test func mockSearchFiltersVenuesByBoundsAndGenre() async throws {

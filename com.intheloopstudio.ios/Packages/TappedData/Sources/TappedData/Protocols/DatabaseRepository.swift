@@ -152,3 +152,24 @@ public extension DatabaseRepository {
         try await getBookerReviewsByBookerId(bookerId, limit: 20, lastReviewId: nil)
     }
 }
+
+extension DatabaseRepository {
+    /// Dart `classifyPerformer`: the user's audience plus the capacities of the venues that booked them (bookings
+    /// without a requester, or whose requester has no venue capacity, are skipped). `nil` when the user doesn't exist.
+    func computePerformerCategory(_ userId: String, now: Date = .now) async throws -> PerformerCategory? {
+        guard let user = try await getUserById(userId) else { return nil }
+        let bookings = try await getBookingsByRequestee(userId)
+        let capacities = try await bookings.concurrentCompactMap { booking -> PerformerClassification.VenueCapacity? in
+            guard let requesterId = booking.requesterId,
+                  let capacity = try await self.getUserById(requesterId)?.venueInfo?.capacity,
+                  capacity != 0
+            else { return nil }
+            return .init(capacity: capacity, startTime: booking.startTime)
+        }
+        return PerformerClassification.categorizeWithWeightedDate(
+            audience: user.socialFollowing.audienceSize,
+            capacities: capacities,
+            now: now
+        )
+    }
+}

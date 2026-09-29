@@ -190,3 +190,26 @@ public actor MockVenueOutreachRepository: VenueOutreachRepository {
         threads.append(VenueEmailThread(id: id, venueId: venueId, subject: subject, textBody: textBody))
     }
 }
+
+/// Records every callable invocation instead of hitting Cloud Functions.
+public actor MockFunctionsRepository: FunctionsRepository {
+    public struct VenueNotification: Sendable, Hashable {
+        public var opportunityIds: [String]
+        public var userId: String
+        public var note: String
+
+        public init(opportunityIds: [String], userId: String, note: String) {
+            self.opportunityIds = opportunityIds
+            self.userId = userId
+            self.note = note
+        }
+    }
+
+    public private(set) var venueNotifications: [VenueNotification] = []
+
+    public init() {}
+
+    public func notifyVenueOfInterestedOpportunities(opportunityIds: [String], userId: String, note: String) async throws {
+        venueNotifications.append(VenueNotification(opportunityIds: opportunityIds, userId: userId, note: note))
+    }
+}

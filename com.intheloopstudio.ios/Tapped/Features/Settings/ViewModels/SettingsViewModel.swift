@@ -163,11 +163,12 @@ final class SettingsViewModel {
         }
     }
 
-    /// Dart `deleteUser` (after re-auth): deleting the auth user signs the session out.
+    /// Dart `deleteUser` (after re-auth): removes `users/{uid}`, then the auth user, which signs the session out.
     func deleteAccount() async -> Bool {
         isDeleting = true
         defer { isDeleting = false }
         do {
+            try await database.deleteUser(original.id)
             try await auth.deleteUser()
             await analytics.track("delete_account")
             return true
