@@ -28,7 +28,7 @@ struct GigNightLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if phase == .upcoming || phase == .onStage {
-                        GigCountdown(gig: gig, phase: phase).font(.headline).foregroundStyle(WidgetStyle.accent)
+                        GigCountdown(gig: gig, phase: phase, width: 76).font(.headline).foregroundStyle(WidgetStyle.accent)
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -56,7 +56,7 @@ struct GigCountdown: View {
     let gig: GigNight
     let phase: GigNightPhase
     var minimal = false
-    var width: CGFloat?
+    var width: CGFloat = 64
 
     var body: some View {
         switch phase {
@@ -64,15 +64,13 @@ struct GigCountdown: View {
             Text(timerInterval: Date.now...max(gig.startTime, .now), countsDown: true, showsHours: !minimal)
                 .monospacedDigit()
                 .multilineTextAlignment(.trailing)
-                .frame(width: width)
-                .fixedSize(horizontal: width == nil, vertical: false)
+                .frame(width: width, alignment: .trailing)
                 .accessibilityLabel("starts in \(GigFormat.countdown(from: .now, to: gig.startTime))")
         case .onStage:
             Text(timerInterval: Date.now...max(gig.endTime, .now), countsDown: true, showsHours: !minimal)
                 .monospacedDigit()
                 .multilineTextAlignment(.trailing)
-                .frame(width: width)
-                .fixedSize(horizontal: width == nil, vertical: false)
+                .frame(width: width, alignment: .trailing)
                 .accessibilityLabel("on stage, \(GigFormat.countdown(from: .now, to: gig.endTime)) left")
         case .review, .over:
             Image(systemName: "star.fill").accessibilityLabel(GigFormat.reviewPrompt(gig.venueName))
@@ -99,7 +97,7 @@ struct GigNightLockScreenView: View {
                     .lineLimit(2)
                 Spacer()
                 if phase == .upcoming || phase == .onStage {
-                    GigCountdown(gig: gig, phase: phase).font(.title3.weight(.semibold)).foregroundStyle(WidgetStyle.accent)
+                    GigCountdown(gig: gig, phase: phase, width: 96).font(.title3.weight(.semibold)).foregroundStyle(WidgetStyle.accent)
                 }
             }
             GigNightDetail(gig: gig, phase: phase, compact: false)
