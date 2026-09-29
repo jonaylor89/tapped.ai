@@ -24,7 +24,7 @@ private struct NotificationsPromptCardContent: View {
     let venueId: String?
 
     var body: some View {
-        Group {
+        VStack(spacing: 0) {
             if let model, model.isVisible {
                 card(model).transition(.opacity.combined(with: .move(edge: .bottom)))
             }
