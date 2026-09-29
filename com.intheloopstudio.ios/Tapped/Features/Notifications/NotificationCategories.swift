@@ -1,8 +1,8 @@
 import Foundation
 import UserNotifications
 
-/// Actionable push categories. Cloud Functions select one with the FCM `notification.clickAction`
-/// (sent to APNs as `aps.category`) and pass the target in `data.bookingId` / `data.opportunityId` / `data.url`.
+/// Actionable push categories. Cloud Functions select one with the FCM `apns.payload.aps.category`
+/// and pass the target in `data.bookingId` / `data.opportunityId` / `data.url`.
 enum NotificationCategories {
     static let newGig = "NEW_GIG"
     static let bookingRequest = "BOOKING_REQUEST"
