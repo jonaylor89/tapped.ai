@@ -167,6 +167,14 @@ struct TasksViewModelTests {
         let tasks = TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 2)
         #expect(tasks.allSatisfy { $0.isCompleted })
     }
+
+    @Test func socialHandleWithoutFollowerCountCompletesSocials() {
+        var user = Samples.performer
+        user.socialFollowing = .empty
+        #expect(TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 0)[2].isCompleted == false)
+        user.socialFollowing.instagramHandle = "nova.waves"
+        #expect(TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 0)[2].isCompleted)
+    }
 }
 
 @MainActor

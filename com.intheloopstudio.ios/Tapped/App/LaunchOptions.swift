@@ -9,7 +9,7 @@ import TappedUI
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
 /// - `TAPPED_MOCK_ROUTE=<name>`  push a route on launch (see `Route.mockLaunchPath`)
 /// - `TAPPED_MOCK_ROUTE_DETAIL=<value>`  screen-specific extra state (search query, open sheet/results)
-/// - `TAPPED_MOCK_ONBOARDING_STEP=name|occupation|genres|location|socials|avatar|complete`  open onboarding on a
+/// - `TAPPED_MOCK_ONBOARDING_STEP=name|occupation|genres|location`  open onboarding on a
 ///   step with sample answers filled in (combine with `TAPPED_MOCK_ONBOARDING=1`)
 /// - `TAPPED_MOCK_SHEET=reauth`  present the re-authentication sheet over the shell
 /// - `TAPPED_MOCK_LINK=<url>`  deliver a deep link on launch (cold start)

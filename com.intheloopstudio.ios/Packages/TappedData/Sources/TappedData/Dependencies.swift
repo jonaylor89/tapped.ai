@@ -22,6 +22,7 @@ public struct Dependencies: Sendable {
     public var storage: any StorageRepository
     public var venueOutreach: any VenueOutreachRepository
     public var functions: any FunctionsRepository
+    public var location: any LocationRepository
 
     public init(
         mode: Mode,
@@ -36,7 +37,8 @@ public struct Dependencies: Sendable {
         chat: any ChatRepository = MockChatRepository(),
         storage: any StorageRepository = MockStorageRepository(),
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
-        functions: any FunctionsRepository = MockFunctionsRepository()
+        functions: any FunctionsRepository = MockFunctionsRepository(),
+        location: any LocationRepository = MockLocationRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -51,6 +53,7 @@ public struct Dependencies: Sendable {
         self.storage = storage
         self.venueOutreach = venueOutreach
         self.functions = functions
+        self.location = location
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -69,7 +72,8 @@ public struct Dependencies: Sendable {
             chat: StreamChatRepository(apiKey: config.streamAPIKey, tokenProvider: FirebaseStreamToken.fetch),
             storage: FirebaseStorageRepository(),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
-            functions: FirebaseFunctionsRepository()
+            functions: FirebaseFunctionsRepository(),
+            location: CoreLocationRepository()
         )
     }
 
