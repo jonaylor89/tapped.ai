@@ -51,6 +51,7 @@ struct PaywallView: View {
         .subscriptionStoreControlStyle(.picker)
         .subscriptionStoreButtonLabel(.multiline)
         .storeButton(.visible, for: .restorePurchases)
+        .storeButton(.hidden, for: .cancellation)
         .subscriptionStorePolicyDestination(url: PaywallViewModel.termsURL, for: .termsOfService)
         .subscriptionStorePolicyDestination(url: PaywallViewModel.privacyURL, for: .privacyPolicy)
         .subscriptionStorePolicyForegroundStyle(TappedColors.accentText)

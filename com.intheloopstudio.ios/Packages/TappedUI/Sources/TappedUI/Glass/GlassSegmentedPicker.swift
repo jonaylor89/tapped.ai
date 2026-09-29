@@ -6,6 +6,7 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
     let options: [Value]
     let title: (Value) -> String
     @Namespace private var namespace
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     public init(selection: Binding<Value>, options: [Value], title: @escaping (Value) -> String) {
         _selection = selection
@@ -14,7 +15,9 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
     }
 
     public var body: some View {
-        HStack(spacing: 0) {
+        // Accessibility sizes stack the segments so labels never hyphenate mid-word.
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        layout {
             ForEach(options, id: \.self) { option in
                 let isSelected = option == selection
                 Button {
@@ -22,7 +25,10 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
                 } label: {
                     Text(title(option))
                         .font(TappedTypography.label)
-                        .foregroundStyle(isSelected ? TappedColors.accent : .secondary)
+                        .foregroundStyle(isSelected ? TappedColors.accentText : .secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, TappedSpacing.sm)
                         .frame(maxWidth: .infinity, minHeight: 36)
                         .background {
                             if isSelected {
@@ -39,7 +45,7 @@ public struct GlassSegmentedPicker<Value: Hashable>: View {
             }
         }
         .padding(TappedSpacing.xs)
-        .tappedGlass(in: Capsule())
+        .tappedGlass(in: RoundedRectangle(cornerRadius: dynamicTypeSize.isAccessibilitySize ? GlassRadius.card : 999, style: .continuous))
     }
 }
 

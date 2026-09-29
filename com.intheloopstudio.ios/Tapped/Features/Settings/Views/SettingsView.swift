@@ -128,6 +128,7 @@ struct SettingsView: View {
                             .overlay(alignment: .bottomTrailing) {
                                 Image(systemName: "camera.fill")
                                     .font(.footnote.weight(.semibold))
+                                    .dynamicTypeSize(...DynamicTypeSize.xLarge)
                                     .foregroundStyle(.white)
                                     .padding(7)
                                     .background(TappedColors.accent, in: Circle())
@@ -195,7 +196,7 @@ struct SettingsView: View {
                 }
                 .tint(.primary)
                 Picker("category", selection: $model.performer.category) {
-                    ForEach(PerformerCategory.allCases) { Text($0.formattedName).tag($0) }
+                    ForEach(PerformerCategory.allCases) { Text($0.formattedName.lowercased()).tag($0) }
                 }
                 Picker("label", selection: $model.performer.label) {
                     ForEach(TappedDomain.Label.all) { Text($0.rawValue).tag($0.rawValue) }

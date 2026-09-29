@@ -109,11 +109,16 @@ struct SearchView: View {
         return Button {
             router.push(route)
         } label: {
-            HStack {
-                SwiftUI.Label(title, systemImage: systemImage)
-                    .foregroundStyle(.primary)
-                Spacer(minLength: TappedSpacing.sm)
-                if isLocked { PremiumBadge() }
+            ViewThatFits(in: .horizontal) {
+                HStack {
+                    SwiftUI.Label(title, systemImage: systemImage).foregroundStyle(.primary).fixedSize()
+                    Spacer(minLength: TappedSpacing.sm)
+                    if isLocked { PremiumBadge() }
+                }
+                VStack(alignment: .leading, spacing: TappedSpacing.xs) {
+                    SwiftUI.Label(title, systemImage: systemImage).foregroundStyle(.primary)
+                    if isLocked { PremiumBadge() }
+                }
             }
         }
         .accessibilityHint(isLocked ? "premium feature" : "")

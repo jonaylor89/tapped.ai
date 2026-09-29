@@ -138,7 +138,7 @@ final class ProfileViewModel {
             let type = Self.spaced(venue.type.rawValue)
             return venue.capacity.map { "\(type) · \($0.formatted()) cap" } ?? type
         }
-        return user.performerInfo.map { $0.category.formattedName } ?? user.occupations.first
+        return user.performerInfo.map { $0.category.formattedName.lowercased() } ?? user.occupations.first
     }
 
     var infoRows: [ProfileInfoRow] {

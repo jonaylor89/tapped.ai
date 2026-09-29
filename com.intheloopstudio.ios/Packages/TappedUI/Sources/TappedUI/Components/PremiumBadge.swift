@@ -7,6 +7,8 @@ public struct PremiumBadge: View {
     public var body: some View {
         SwiftUI.Label(Self.title, systemImage: "lock.fill")
             .font(TappedTypography.label)
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(TappedColors.accentText)
             .padding(.horizontal, TappedSpacing.sm)
             .padding(.vertical, 3)

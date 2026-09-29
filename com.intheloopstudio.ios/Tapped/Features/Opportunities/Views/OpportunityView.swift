@@ -119,6 +119,7 @@ struct OpportunityView: View {
                     .padding(.horizontal, TappedSpacing.md)
                     .padding(.vertical, TappedSpacing.xs)
                     .tappedGlass(.regular, in: Capsule())
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                     .accessibilityIdentifier("quota-caption")
             }
             Button {

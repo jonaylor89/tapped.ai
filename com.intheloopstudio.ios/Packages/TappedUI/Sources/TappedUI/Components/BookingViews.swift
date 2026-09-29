@@ -31,6 +31,8 @@ public struct BookingStatusBadge: View {
     public var body: some View {
         Label(status.formattedName, systemImage: status.systemImage)
             .font(TappedTypography.label)
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(status.tint)
             .padding(.horizontal, TappedSpacing.sm)
             .padding(.vertical, TappedSpacing.xs)
@@ -46,6 +48,7 @@ public struct BookingCard: View {
     let booking: Booking
     let counterpart: UserModel?
     let showsStatus: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     public init(booking: Booking, counterpart: UserModel?, showsStatus: Bool = true) {
         self.booking = booking
@@ -54,18 +57,22 @@ public struct BookingCard: View {
     }
 
     public var body: some View {
-        HStack(spacing: TappedSpacing.md) {
+        let stacks = dynamicTypeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.sm))
+            : AnyLayout(HStackLayout(spacing: TappedSpacing.md))
+        layout {
             BookingDateTile(date: booking.startTime, tint: booking.isCanceled ? .secondary : TappedColors.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(booking.name?.isEmpty == false ? booking.name! : "booking")
                     .font(TappedTypography.headingXs)
-                    .lineLimit(1)
+                    .lineLimit(stacks ? 3 : 1)
                     .strikethrough(booking.isCanceled, color: .secondary)
                 if let counterpart {
                     HStack(spacing: TappedSpacing.xs) {
                         UserAvatar(user: counterpart, size: 18)
                         Text(counterpart.displayName)
-                            .lineLimit(1)
+                            .lineLimit(stacks ? 2 : 1)
                     }
                     .font(TappedTypography.bodySm)
                     .foregroundStyle(.secondary)
@@ -79,11 +86,12 @@ public struct BookingCard: View {
                     .foregroundStyle(.tertiary)
                     .monospacedDigit()
             }
-            Spacer(minLength: 0)
+            if !stacks { Spacer(minLength: 0) }
             if showsStatus {
                 BookingStatusBadge(booking.status)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(TappedSpacing.md)
         .contentShape(RoundedRectangle(cornerRadius: GlassRadius.card, style: .continuous))
         .tappedGlass(in: RoundedRectangle(cornerRadius: GlassRadius.card, style: .continuous), interactive: true)

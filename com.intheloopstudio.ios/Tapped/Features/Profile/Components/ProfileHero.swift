@@ -10,7 +10,7 @@ struct ProfileHero: View {
 
     nonisolated static let height: CGFloat = 440
     /// Photo-less profiles get a short gradient band instead of a giant-initials hero.
-    nonisolated static let compactHeight: CGFloat = 260
+    nonisolated static let compactHeight: CGFloat = 320
     /// How far `ProfileStats` is pulled up over the bottom of the hero.
     static let statsOverlap: CGFloat = TappedSpacing.xxxl + TappedSpacing.lg
 
@@ -18,20 +18,8 @@ struct ProfileHero: View {
     private var height: CGFloat { imageURL == nil ? Self.compactHeight : Self.height }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
-            artwork
-                .frame(height: height)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .contentShape(Rectangle())
-                .onTapGesture { if let imageURL { onTapImage?(imageURL) } }
-                .accessibilityAddTraits(imageURL == nil ? [] : .isButton)
-                .accessibilityLabel("profile photo")
-
-            LinearGradient(colors: [.clear, .black.opacity(0.15), .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
-                .allowsHitTesting(false)
-
-            VStack(alignment: .leading, spacing: TappedSpacing.xs) {
+        VStack(alignment: .leading, spacing: TappedSpacing.xs) {
+            Spacer(minLength: 0)
                 if let subtitle {
                     Text(subtitle)
                         .font(.footnote.weight(.semibold))
@@ -48,11 +36,24 @@ struct ProfileHero: View {
                     .font(.headline)
                     .opacity(0.85)
             }
-            .foregroundStyle(.white)
-            .padding(.horizontal, TappedSpacing.lg)
-            .padding(.bottom, Self.statsOverlap + TappedSpacing.lg)
+        .foregroundStyle(.white)
+        .padding(.horizontal, TappedSpacing.lg)
+        .padding(.bottom, Self.statsOverlap + TappedSpacing.lg)
+        .padding(.top, 120)
+        .frame(maxWidth: .infinity, minHeight: height, alignment: .bottomLeading)
+        .background {
+            ZStack {
+                artwork
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .contentShape(Rectangle())
+                    .onTapGesture { if let imageURL { onTapImage?(imageURL) } }
+                    .accessibilityAddTraits(imageURL == nil ? [] : .isButton)
+                    .accessibilityLabel("profile photo")
+                LinearGradient(colors: [.clear, .black.opacity(0.15), .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                    .allowsHitTesting(false)
+            }
         }
-        .frame(minHeight: height)
         .stretchyHeader()
     }
 

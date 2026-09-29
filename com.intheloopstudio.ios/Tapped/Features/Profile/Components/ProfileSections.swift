@@ -83,8 +83,10 @@ struct ProfileStats: View {
             case .list:
                 VStack(spacing: 0) {
                     ForEach(stats) { stat in
-                        LabeledContent(stat.label) {
-                            Text(stat.value).font(.headline).monospacedDigit().foregroundStyle(.primary)
+                        LabeledContent {
+                            Text(stat.value).font(.headline).monospacedDigit().foregroundStyle(.primary).fixedSize()
+                        } label: {
+                            Text(stat.label).lineLimit(1).minimumScaleFactor(0.5)
                         }
                         .padding(.vertical, TappedSpacing.sm)
                         if stat.id != stats.last?.id { Divider() }
