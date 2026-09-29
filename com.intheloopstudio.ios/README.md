@@ -205,16 +205,14 @@ with `NavigationLink(destination:)`.
 ### Adding a repository method
 
 1. Add it to the protocol (e.g. `DatabaseRepository`), keeping the Dart method name and arguments.
-2. Implement it in `FirestoreDatabaseRepository` (or the relevant live impl) — replace the
-   `throw NotImplemented("…")` stub.
+2. Implement it in `FirestoreDatabaseRepository` (or the relevant live impl).
 3. Implement it in the mock (`MockDatabaseRepository`) against `Samples`.
 4. Add a `TappedDataTests` test for the mock (and a decoding fixture in `TappedDomainTests` if new JSON).
-5. Unimplemented methods must `throw NotImplemented(#function)` — never `fatalError`.
 
 ### Dependency injection
 
 `Dependencies` is a `Sendable` struct of protocol existentials (`auth`, `database`, `search`, `places`,
-`purchases`, `analytics`, `remoteConfig`, `notifications`, `storage`, `venueOutreach`, `chat`). Read with `@Environment(\.dependencies)`; pass into view models' inits.
+`purchases`, `analytics`, `remoteConfig`, `notifications`, `storage`, `venueOutreach`, `chat`, `functions`). Read with `@Environment(\.dependencies)`; pass into view models' inits.
 Tests and previews use `Dependencies.mock(signedIn:isPremium:claims:downForMaintenance:)`; override a single repo
 by constructing `Dependencies(...)` with your own mock.
 
@@ -251,10 +249,6 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 
 ## What's stubbed
 
-- `DatabaseRepository.deleteUser`, `searchUsersByLocation`, `classifyPerformer` and `sendFeedback` throw
-  `NotImplemented` in the live implementation; onboarding skips `classifyPerformer`. Delete account calls
-  `AuthRepository.deleteUser()` only, so Firestore cleanup relies on a backend trigger.
-- Opportunity apply doesn't call Dart's `notifyVenueOfInterestedOpportunities` (no Functions equivalent yet).
 - Video call is a "coming soon" screen (Flutter's `VideoCallView` is empty too).
 - StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` and prices in `StoreKit/Tapped.storekit` are
   placeholders until App Store Connect products exist (Flutter used RevenueCat offerings).

@@ -42,6 +42,16 @@ struct ProfileDataTests {
         #expect(!follow.common.markedRead)
     }
 
+    @Test func addActivitySupportsEveryType() async throws {
+        let database = MockDatabaseRepository(activities: [])
+        for type in ActivityType.allCases {
+            try await database.addActivity(currentUserId: "a", visitedUserId: me, type: type)
+        }
+        let activities = try await database.getActivities(me)
+        #expect(Set(activities.map(\.type)) == Set(ActivityType.allCases))
+        #expect(activities.allSatisfy { $0.common.toUserId == me })
+    }
+
     @Test func servicesSoftDelete() async throws {
         let database = MockDatabaseRepository()
         let services = try await database.getUserServices(me)

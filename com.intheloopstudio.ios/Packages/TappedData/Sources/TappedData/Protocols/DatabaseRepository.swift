@@ -8,7 +8,6 @@ import TappedDomain
 /// - Dart `Stream<T>` (Firestore listener) → `AsyncThrowingStream<[T], any Error>` that yields the full
 ///   current result set for every snapshot (not per-document diffs like the Dart version).
 /// - Dart default arguments live in the `extension DatabaseRepository` below.
-/// - Unimplemented methods throw `NotImplemented` (see `FirestoreDatabaseRepository`).
 public protocol DatabaseRepository: Sendable {
     func publishLatestAppVersion(_ currentUserId: String) async throws -> String
 
@@ -18,7 +17,6 @@ public protocol DatabaseRepository: Sendable {
     func deleteUser(_ userId: String) async throws
     func getUserByUsername(_ username: String?) async throws -> UserModel?
     func getUserById(_ userId: String) async throws -> UserModel?
-    func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel]
     func updateUserData(_ user: UserModel) async throws
     func classifyPerformer(_ userId: String) async throws -> PerformerCategory?
     func checkUsernameAvailability(_ username: String, userId: String) async throws -> Bool
@@ -93,17 +91,12 @@ public protocol DatabaseRepository: Sendable {
     func joinPremiumWaitlist(_ userId: String) async throws
     /// Name (including the Dart typo) kept so grep across both codebases lines up.
     func isOnPremiumWailist(_ userId: String) async throws -> Bool
-    func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws
     func hasUserSentContactRequest(user: UserModel, venue: UserModel) async throws -> Bool
     func getContactedVenues(_ userId: String) async throws -> [UserModel]
 }
 
 /// Dart default arguments.
 public extension DatabaseRepository {
-    func searchUsersByLocation(lat: Double, lng: Double) async throws -> [UserModel] {
-        try await searchUsersByLocation(lat: lat, lng: lng, radiusInMeters: 50_000, limit: 100, lastUserId: nil)
-    }
-
     func getActivities(_ userId: String) async throws -> [Activity] {
         try await getActivities(userId, limit: 100, lastActivityId: nil)
     }

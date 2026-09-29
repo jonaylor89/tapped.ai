@@ -1,8 +1,7 @@
 import Foundation
 import TappedDomain
 
-/// In-memory database seeded from `Samples`. Mirrors the implemented subset of `FirestoreDatabaseRepository`;
-/// other methods throw `NotImplemented` just like the live implementation.
+/// In-memory database seeded from `Samples`, mirroring `FirestoreDatabaseRepository`.
 public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var users: [String: UserModel]
     public private(set) var opportunities: [String: Opportunity]
@@ -201,12 +200,16 @@ public actor MockDatabaseRepository: DatabaseRepository {
     }
 
     public func addActivity(currentUserId: String, visitedUserId: String, type: ActivityType) async throws {
-        // Dart `addActivity` only writes `toUserId`/`fromUserId`/`timestamp`/`type`, so only `follow` round-trips.
-        guard type == .follow else { throw NotImplemented("addActivity(type: \(type.rawValue))") }
-        let activity = Activity.follow(.init(
-            common: .init(id: UUID().uuidString, toUserId: visitedUserId, timestamp: .now),
-            fromUserId: currentUserId
-        ))
+        // Dart `addActivity` only writes `toUserId`/`fromUserId`/`timestamp`/`type`; fields it doesn't write
+        // (`bookingId`, `status`, `count`) get empty defaults.
+        let common = Activity.Common(id: UUID().uuidString, toUserId: visitedUserId, timestamp: .now)
+        let activity: Activity = switch type {
+        case .follow: .follow(.init(common: common, fromUserId: currentUserId))
+        case .bookingRequest: .bookingRequest(.init(common: common, fromUserId: currentUserId, bookingId: ""))
+        case .bookingUpdate: .bookingUpdate(.init(common: common, fromUserId: currentUserId, bookingId: "", status: nil))
+        case .bookingReminder: .bookingReminder(.init(common: common, fromUserId: currentUserId, bookingId: ""))
+        case .searchAppearance: .searchAppearance(.init(common: common, count: 0))
+        }
         activities[activity.id] = activity
         notifyActivityObservers()
     }
@@ -262,7 +265,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func createService(_ service: Service) async throws { services[service.id] = service }
     public func updateService(_ service: Service) async throws { services[service.id] = service }
     public func deleteUser(_ userId: String) async throws { users[userId] = nil }
-    public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? { try await computePerformerCategory(userId) }
     public func createOpportunity(_ opportunity: Opportunity) async throws { opportunities[opportunity.id] = opportunity }
     public func copyOpportunityToFeeds(_ opportunity: Opportunity) async throws {
@@ -270,7 +272,6 @@ public actor MockDatabaseRepository: DatabaseRepository {
         for user in recipients { opportunityFeeds[user.id, default: [:]][opportunity.id] = opportunity }
     }
     public func deleteOpportunity(_ opportunityId: String) async throws { opportunities[opportunityId]?.deleted = true }
-    public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - helpers
 

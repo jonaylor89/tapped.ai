@@ -22,16 +22,6 @@ struct MockRepositoryTests {
         }
     }
 
-    @Test func unimplementedMethodsThrowNotImplemented() async {
-        let database = MockDatabaseRepository()
-        await #expect(throws: NotImplemented.self) {
-            try await database.searchUsersByLocation(lat: 0, lng: 0, radiusInMeters: 1, limit: 1, lastUserId: nil)
-        }
-        await #expect(throws: NotImplemented.self) {
-            try await FirestoreDatabaseRepository().searchUsersByLocation(lat: 0, lng: 0, radiusInMeters: 1, limit: 1, lastUserId: nil)
-        }
-    }
-
     @Test func deleteUserRemovesTheUser() async throws {
         let database = MockDatabaseRepository()
         let userId = Samples.performer.id

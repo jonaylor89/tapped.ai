@@ -3,8 +3,6 @@ import Foundation
 import TappedDomain
 
 /// `lib/data/prod/firestore_database_impl.dart`.
-///
-/// `searchUsersByLocation` and `sendFeedback` intentionally throw `NotImplemented`.
 public struct FirestoreDatabaseRepository: DatabaseRepository {
     /// Flutter `tccUserId`: featured gigs always include this account's opportunities.
     static let tccUserId = "yfjw9oCMwPVzAxgENxGxecPcNym1"
@@ -345,14 +343,12 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         try? await credits.document(userId).updateData(["opportunityQuota": FieldValue.increment(Int64(-1))])
     }
 
-    // MARK: - account deletion, classification + intentional stubs
+    // MARK: - account deletion + classification
 
     /// Best-effort like Dart: failures are swallowed.
     public func deleteUser(_ userId: String) async throws {
         try? await users.document(userId).delete()
     }
-    /// Intentionally unimplemented: the Dart geohash fallback is unused because Discover searches Typesense.
-    public func searchUsersByLocation(lat: Double, lng: Double, radiusInMeters: Int, limit: Int, lastUserId: String?) async throws -> [UserModel] { throw NotImplemented() }
     public func classifyPerformer(_ userId: String) async throws -> PerformerCategory? {
         try await computePerformerCategory(userId)
     }
@@ -381,8 +377,6 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     public func deleteOpportunity(_ opportunityId: String) async throws {
         try await opportunities.document(opportunityId).updateData(["deleted": true])
     }
-    /// Intentionally unimplemented: the app has no feedback entry point.
-    public func sendFeedback(_ userId: String, feedback: UserFeedback, imageUrl: String) async throws { throw NotImplemented() }
 
     // MARK: - activities (session 2)
 
