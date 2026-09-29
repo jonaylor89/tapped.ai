@@ -26,6 +26,7 @@ struct ApplySheet: View {
                     } actions: {
                         Button("done") { dismiss() }
                             .buttonStyle(.glassProminent)
+                        NotificationsPromptCard(context: .application, venueId: opportunity.venueId ?? opportunity.userId)
                     }
                     .transition(.scale.combined(with: .opacity))
                 } else {

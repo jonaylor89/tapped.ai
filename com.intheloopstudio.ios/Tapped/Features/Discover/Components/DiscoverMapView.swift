@@ -25,6 +25,8 @@ struct DiscoverMapView: UIViewRepresentable {
     let cameraRequest: MapCameraRequest?
     let onRegionChange: (GeoBounds) -> Void
     let onSelect: (String) -> Void
+    /// Receives the `MKMapView` so `DiscoverCompass` can track its heading.
+    var link: MapViewLink?
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -37,6 +39,7 @@ struct DiscoverMapView: UIViewRepresentable {
         map.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: Coordinator.markerID)
         map.register(MKMarkerAnnotationView.self, forAnnotationViewWithReuseIdentifier: MKMapViewDefaultClusterAnnotationViewReuseIdentifier)
         map.setRegion(Self.region(initialCenter, span: initialSpanDegrees), animated: false)
+        if let link { Task { @MainActor in link.mapView = map } }
         return map
     }
 
@@ -62,11 +65,6 @@ struct DiscoverMapView: UIViewRepresentable {
         switch request.kind {
         case let .center(location, span):
             map.setRegion(region(location, span: span), animated: true)
-        case let .zoom(factor):
-            var region = map.region
-            region.span.latitudeDelta = min(max(region.span.latitudeDelta * factor, 0.002), 90)
-            region.span.longitudeDelta = min(max(region.span.longitudeDelta * factor, 0.002), 90)
-            map.setRegion(region, animated: true)
         }
     }
 
@@ -154,4 +152,26 @@ private extension CLAuthorizationStatus {
         onSelect: { _ in }
     )
     .ignoresSafeArea()
+}
+
+/// Hands the UIKit map to sibling views (compass) without making it SwiftUI state of the map itself.
+@Observable
+@MainActor
+final class MapViewLink {
+    var mapView: MKMapView?
+}
+
+/// `MKCompassButton` bound to the Discover map; visible only while the map is rotated.
+struct DiscoverCompass: UIViewRepresentable {
+    let mapView: MKMapView
+
+    func makeUIView(context: Context) -> MKCompassButton {
+        let button = MKCompassButton(mapView: mapView)
+        button.compassVisibility = .adaptive
+        return button
+    }
+
+    func updateUIView(_ button: MKCompassButton, context: Context) {
+        button.mapView = mapView
+    }
 }

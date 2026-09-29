@@ -2,34 +2,6 @@ import SwiftUI
 import TappedDomain
 import TappedUI
 
-/// `SheetHandle`: result count + active genre filter pill. Visible at the collapsed detent.
-struct SheetHeader: View {
-    let title: String
-    let filterLabel: String?
-    let isSearching: Bool
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(TappedTypography.headingMd)
-                .contentTransition(.numericText())
-            if isSearching { ProgressView().controlSize(.small) }
-            Spacer()
-            if let filterLabel {
-                Label(filterLabel, systemImage: "slider.horizontal.3")
-                    .font(TappedTypography.label)
-                    .foregroundStyle(TappedColors.accent)
-                    .padding(.horizontal, TappedSpacing.md)
-                    .padding(.vertical, TappedSpacing.xs + 2)
-                    .overlay(Capsule().strokeBorder(TappedColors.accent.opacity(0.5)))
-            }
-        }
-        .padding(.horizontal, GlassMetrics.edgeInset + TappedSpacing.xs)
-        .padding(.top, TappedSpacing.xl)
-        .padding(.bottom, TappedSpacing.lg)
-    }
-}
-
 /// `SheetQuickActions`.
 struct SheetQuickActions: View {
     let actions: [QuickAction]
@@ -161,7 +133,7 @@ struct OpportunityRow: View {
                 .frame(width: 44, height: 44)
                 .background(TappedColors.accent.opacity(0.12), in: Circle())
             VStack(alignment: .leading, spacing: 2) {
-                Text(opportunity.title.lowercased()).font(TappedTypography.headingXs).lineLimit(1)
+                Text(opportunity.title).font(TappedTypography.headingXs).lineLimit(1)
                 Text(opportunity.startTime, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
                     .font(TappedTypography.bodySm)
                     .foregroundStyle(.secondary)

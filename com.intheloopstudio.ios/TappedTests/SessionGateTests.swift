@@ -89,7 +89,8 @@ struct SessionGateTests {
         await session.deviceRegistration?.value
 
         let userId = MockAuthRepository.sampleUser.uid
-        #expect(await notifications.authorizationRequests == 1)
+        #expect(await notifications.provisionalRequests == 1)
+        #expect(await notifications.authorizationRequests == 0)
         #expect(await notifications.savedTokens[userId] == [MockNotificationRepository.sampleToken: "ios"])
         #expect(try await dependencies.database.getUserById(userId)?.latestAppVersion == AppVersion.current().firestoreValue)
     }

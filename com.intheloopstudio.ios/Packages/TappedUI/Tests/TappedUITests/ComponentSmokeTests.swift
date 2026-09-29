@@ -49,8 +49,7 @@ struct ComponentSmokeTests {
         typealias Sheet = MapsStyleSheet<EmptyView>
         #expect(Sheet.progress(sheetHeight: 100, containerHeight: 1000) == 0)
         #expect(Sheet.progress(sheetHeight: 1000, containerHeight: 1000) == 1)
-        #expect(Sheet.morph(Sheet.mediumProgress) == 0)
-        #expect(Sheet.morph(1) == 1)
+        #expect(Sheet.progress(sheetHeight: 500, containerHeight: 1000) == Sheet.mediumProgress)
         #expect(Sheet.chromeOpacity(0) == 1)
         #expect(Sheet.chromeOpacity(Sheet.mediumProgress) == 1)
         #expect(Sheet.chromeOpacity(1) == 0)

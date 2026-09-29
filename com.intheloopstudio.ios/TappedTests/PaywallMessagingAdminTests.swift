@@ -45,7 +45,8 @@ struct PaywallMessagingAdminTests {
         #expect(route.requiringPremium(false) == .paywall)
         let router = Router()
         router.push(.admin, requiresPremium: false)
-        #expect(router.path == [.paywall])
+        #expect(router.path.isEmpty)
+        #expect(router.sheet == .paywall)
     }
 
     // MARK: messaging

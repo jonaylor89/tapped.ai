@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
-        // Permission is requested after sign in / onboarding (`AppSession`); registering first is harmless.
+        // Provisional permission at sign in (`AppSession`), full prompt from `NotificationsPromptCard`.
         application.registerForRemoteNotifications()
         return true
     }
