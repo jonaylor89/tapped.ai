@@ -1,50 +1,81 @@
 import SwiftUI
 import TappedData
 import TappedDomain
+import TappedUI
 
-/// Signed-in root. Mirrors Flutter: there is no tab bar — Discover is the shell, and profile/messages
-/// are pushed from its top chrome.
+/// Signed-in shell: the full-bleed Discover map is the permanent background and a persistent, non-dismissable
+/// sheet holds the five tabs, each with its own `NavigationStack` (`ShellNavigator`).
 struct ShellView: View {
-    @Environment(Router.self) private var router
     @Environment(AppSession.self) private var session
     @Environment(\.dependencies) private var dependencies
     @Environment(InboundLinks.self) private var inbound: InboundLinks?
+    @Environment(\.scenePhase) private var scenePhase
     @State private var shell: ShellViewModel
+    @State private var navigator: ShellNavigator
+    @State private var discover: DiscoverViewModel
     @State private var showsReauthentication = false
+    @State private var headerHeight: CGFloat = 0
+    /// Room for the sheet's tab bar below the Gigs header.
+    @ScaledMetric(relativeTo: .caption2) private var tabBarHeight: CGFloat = 58
 
-    init(currentUser: UserModel, chat: (any ChatRepository)? = nil) {
-        _shell = State(initialValue: ShellViewModel(currentUser: currentUser, chat: chat))
+    init(
+        currentUser: UserModel,
+        dependencies: Dependencies,
+        isPremium: Bool,
+        claims: [CustomClaim],
+        launchOptions: LaunchOptions = .none
+    ) {
+        let now: () -> Date = dependencies.mode == .mock ? { Samples.referenceDate } : { .now }
+        _shell = State(initialValue: ShellViewModel(currentUser: currentUser, chat: dependencies.chat, now: now))
+        _navigator = State(initialValue: ShellNavigator(
+            currentUserId: currentUser.id,
+            tab: launchOptions.tab ?? .gigs,
+            detent: launchOptions.detent
+        ))
+        _discover = State(initialValue: DiscoverViewModel(
+            dependencies: dependencies,
+            currentUser: currentUser,
+            isPremium: isPremium,
+            claims: claims,
+            now: now
+        ))
+    }
+
+    /// Measured Gigs header + tab bar, so the collapsed sheet shows exactly the "is there work for me?" lines.
+    private var collapsedHeight: CGFloat {
+        guard headerHeight > 0 else { return MapsSheetDetent.defaultCollapsedHeight }
+        return (headerHeight + min(tabBarHeight, 72)).rounded()
     }
 
     var body: some View {
-        @Bindable var router = router
-        NavigationStack(path: $router.path) {
-            DiscoverView(
-                dependencies: dependencies,
-                currentUser: shell.currentUser,
-                isPremium: session.isPremium,
-                claims: session.claims,
-                initialDetent: session.launchOptions.detent
-            )
-            .tappedRouteDestinations()
-        }
-        .environment(shell)
-        .task { await shell.run() }
-        .task { await shell.observeActivities(database: dependencies.database) }
-        .task { await applyLaunchOptions() }
-        .task(id: inbound?.pending) { await openPendingLink() }
-        .reauthenticationSheet(isPresented: $showsReauthentication, reason: "enter your password to continue") {}
+        DiscoverView(model: discover, collapsedHeight: collapsedHeight, open: navigator.open)
+            .mapsStyleSheet(
+                isPresented: Binding(get: { scenePhase != .background }, set: { _ in }),
+                detent: Binding(get: { navigator.detent }, set: { navigator.setDetent($0) }),
+                collapsedHeight: collapsedHeight,
+                progress: $discover.sheetProgress,
+                sheetTop: $discover.sheetTop
+            ) {
+                ShellTabsView(navigator: navigator, discover: discover, onHeaderHeight: { headerHeight = $0 })
+                    .environment(shell)
+                    .reauthenticationSheet(isPresented: $showsReauthentication, reason: "enter your password to continue") {}
+            }
+            .environment(shell)
+            .onChange(of: session.isPremium) { _, isPremium in discover.isPremium = isPremium }
+            .task { await shell.run() }
+            .task { await shell.observeActivities(database: dependencies.database) }
+            .task { await shell.observePendingRequests(database: dependencies.database) }
+            .task { await applyLaunchOptions() }
+            .task(id: inbound?.pending) { await openPendingLink() }
     }
 
     private func applyLaunchOptions() async {
-        if router.isAtRoot, let name = session.launchOptions.route {
-            router.path = Route.mockLaunchPath(name, currentUser: shell.currentUser) ?? []
+        let options = session.launchOptions
+        if let name = options.route, let path = Route.mockLaunchPath(name, currentUser: shell.currentUser) {
+            navigator.open(path: path)
+            if let detent = options.detent { navigator.setDetent(detent) }
         }
-        guard session.launchOptions.sheet == .reauth else { return }
-        // Destructive actions live on pushed screens; the Discover sheet must be gone before another sheet presents.
-        if router.isAtRoot { router.push(.settings) }
-        try? await Task.sleep(for: .milliseconds(600))
-        showsReauthentication = true
+        if options.sheet == .reauth { showsReauthentication = true }
     }
 
     /// Universal links / notification taps buffered by `InboundLinks` (cold start included).
@@ -55,16 +86,15 @@ struct ShellView: View {
             shell.update(user)
             session.updateCurrentUser(user)
         }
-        if let route = resolution.route { router.push(route) }
+        if let route = resolution.route { navigator.open(route) }
     }
 }
 
 #Preview {
     let dependencies = Dependencies.mock(signedIn: true)
-    ShellView(currentUser: .previewPerformer)
+    ShellView(currentUser: .previewPerformer, dependencies: dependencies, isPremium: false, claims: [])
         .environment(\.dependencies, dependencies)
         .environment(AppSession(dependencies: dependencies))
-        .environment(Router())
 }
 
 extension UserModel {

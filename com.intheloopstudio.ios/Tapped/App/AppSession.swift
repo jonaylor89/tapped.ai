@@ -159,8 +159,8 @@ final class AppSession {
                 FirebaseBootstrap.record(error: error)
             }
             do {
-                // Flutter `saveDeviceToken` prompts for permission right after onboarding / sign in.
-                try await dependencies.notifications.requestAuthorization()
+                // Quiet provisional delivery only; the system prompt waits for `NotificationsPromptCard`.
+                try await dependencies.notifications.requestProvisionalAuthorization()
                 try await dependencies.notifications.saveDeviceToken(userId: user.id)
             } catch {
                 FirebaseBootstrap.record(error: error)

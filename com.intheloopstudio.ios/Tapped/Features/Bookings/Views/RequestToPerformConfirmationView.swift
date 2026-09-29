@@ -34,6 +34,7 @@ struct RequestToPerformConfirmationView: View {
                 }
                 .tappedGlass(in: RoundedRectangle(cornerRadius: GlassRadius.card, style: .continuous))
             }
+            NotificationsPromptCard(context: .requestToPerform, venueName: venues.count == 1 ? venues.first?.displayName : nil)
             Spacer()
             GlassSubmitButton("done") {
                 while let last = router.path.last, last.isRequestToPerformFlowStep { router.pop() }

@@ -118,7 +118,10 @@ struct MockRepositoryTests {
 
     @Test func mockDeviceTokensUseFlutterPath() async throws {
         let notifications = MockNotificationRepository()
-        _ = try await notifications.requestAuthorization()
+        try await notifications.requestProvisionalAuthorization()
+        #expect(await notifications.authorizationStatus() == .provisional)
+        try await notifications.requestAuthorization()
+        #expect(await notifications.authorizationStatus() == .authorized)
         try await notifications.saveDeviceToken(userId: "u1")
         #expect(await notifications.savedTokens == ["u1": [MockNotificationRepository.sampleToken: "ios"]])
         let denied = MockNotificationRepository(grantsPermission: false)

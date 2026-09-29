@@ -5,13 +5,13 @@ import TappedDomain
 import TappedUI
 
 enum MapOverlay: String, CaseIterable, Hashable, Sendable {
-    case venues
     case gigs
+    case venues
 
     var systemImage: String {
         switch self {
-        case .venues: "building.2.fill"
         case .gigs: "music.mic"
+        case .venues: "building.2"
         }
     }
 }
@@ -20,7 +20,6 @@ enum MapOverlay: String, CaseIterable, Hashable, Sendable {
 struct MapCameraRequest: Equatable {
     enum Kind: Equatable {
         case center(Location, spanDegrees: Double)
-        case zoom(factor: Double)
     }
 
     let id = UUID()
@@ -49,12 +48,14 @@ enum DiscoverModal: String, Identifiable {
 final class DiscoverViewModel {
     static let defaultSpanDegrees = 0.12
     static let capacityLimit = 1000.0
+    /// Free applications granted per day (`credits/{uid}.opportunityQuota` reset).
+    static let dailyFreeApplications = 3
 
     let currentUser: UserModel
     var isPremium: Bool
     let claims: [CustomClaim]
 
-    private(set) var overlay: MapOverlay = .venues
+    private(set) var overlay: MapOverlay
     private(set) var venueHits: [UserModel] = []
     private(set) var opportunityHits: [Opportunity] = []
     private(set) var featuredPerformers: [UserModel] = []
@@ -67,8 +68,9 @@ final class DiscoverViewModel {
     private(set) var contactedVenuesCount = 1
     private(set) var confirmedBookingsCount = 0
     private(set) var searchedBounds: GeoBounds?
+    /// `nil` for premium users (unlimited applications).
+    private(set) var remainingFreeApplications: Int?
 
-    var sheetDetent: MapsSheetDetent
     var sheetProgress: CGFloat = 0
     var sheetTop: CGFloat = 0
     var modal: DiscoverModal?
@@ -79,22 +81,32 @@ final class DiscoverViewModel {
     private let database: any DatabaseRepository
     private let search: any SearchRepository
     private let analytics: any AnalyticsRepository
+    private let now: () -> Date
 
     init(
         dependencies: Dependencies,
         currentUser: UserModel,
         isPremium: Bool,
         claims: [CustomClaim] = [],
-        initialDetent: MapsSheetDetent = .collapsed
+        now: @escaping () -> Date = { .now }
     ) {
         self.currentUser = currentUser
         self.isPremium = isPremium
         self.claims = claims
-        sheetDetent = initialDetent
+        self.now = now
+        overlay = Self.defaultOverlay(for: currentUser, claims: claims)
         database = dependencies.database
         search = dependencies.search
         analytics = dependencies.analytics
     }
+
+    /// Performers look for work first; venue and booker accounts look for venues.
+    static func defaultOverlay(for user: UserModel, claims: [CustomClaim]) -> MapOverlay {
+        user.isVenue || claims.contains(.booker) ? .venues : .gigs
+    }
+
+    /// Performer-first sheet (gigs this week, venues that fit, quota) vs. the venue/booker sheet.
+    var isPerformerFirst: Bool { Self.defaultOverlay(for: currentUser, claims: claims) == .gigs }
 
     /// Profile location, falling back to Flutter's `DiscoverState` default (Richmond, VA).
     var home: Location { currentUser.location ?? .rva }
@@ -112,6 +124,21 @@ final class DiscoverViewModel {
         featuredOpportunities = await opportunities ?? []
         contactedVenuesCount = await contacted?.count ?? 1
         confirmedBookingsCount = (await requesteeBookings?.count ?? 0) + (await requesterBookings?.count ?? 0)
+    }
+
+    /// Keeps `remainingFreeApplications` current (applying elsewhere spends quota) until cancelled.
+    func observeQuota() async {
+        guard !isPremium else {
+            remainingFreeApplications = nil
+            return
+        }
+        do {
+            for try await quota in database.getUserOpportunityQuotaObserver(currentUser.id) {
+                remainingFreeApplications = isPremium ? nil : quota
+            }
+        } catch {
+            remainingFreeApplications = nil
+        }
     }
 
     // MARK: Map
@@ -143,10 +170,6 @@ final class DiscoverViewModel {
         Task { await analytics.track("discover_seek_home") }
     }
 
-    func zoom(by factor: Double) {
-        cameraRequest = MapCameraRequest(kind: .zoom(factor: factor))
-    }
-
     // MARK: Filters (premium-gated like Flutter)
 
     /// Returns `false` when the user must see the paywall instead.
@@ -173,6 +196,54 @@ final class DiscoverViewModel {
         case .gigs: count == 1 ? "gig" : "gigs"
         }
         return "\(count)\(count >= 75 ? "+" : "") \(noun) nearby"
+    }
+
+    /// "4 open gigs near you".
+    var gigsHeadline: String {
+        let count = opportunityHits.count
+        return "\(count)\(count >= 75 ? "+" : "") open \(count == 1 ? "gig" : "gigs") near you"
+    }
+
+    /// Gigs starting between now and the end of the coming weekend (Sunday).
+    var gigsThisWeekendCount: Int {
+        let calendar = Calendar.current
+        let start = now()
+        guard let weekend = calendar.nextWeekend(startingAfter: calendar.date(byAdding: .day, value: -1, to: start) ?? start) else { return 0 }
+        return opportunityHits.count { $0.startTime >= max(start, weekend.start) && $0.startTime < weekend.end }
+    }
+
+    /// "10 venues booking indie pop" (good fits for the performer's first genre), else "10 venues nearby".
+    var venuesHeadline: String {
+        let fits = goodFitVenues.count
+        if fits > 0, let genre = currentUser.performerInfo?.genres.first {
+            return "\(fits) \(fits == 1 ? "venue" : "venues") booking \((Genre(rawValue: genre)?.formattedName ?? genre).lowercased())"
+        }
+        let count = venueHits.count
+        return "\(count)\(count >= 75 ? "+" : "") \(count == 1 ? "venue" : "venues") nearby"
+    }
+
+    /// Paid gigs in the next seven days, soonest first.
+    var paidGigsThisWeek: [Opportunity] {
+        let start = now()
+        let end = start.addingTimeInterval(7 * 24 * 60 * 60)
+        return opportunityHits
+            .filter { $0.isPaid && $0.startTime >= start && $0.startTime < end }
+            .sorted { $0.startTime < $1.startTime }
+    }
+
+    var goodFitVenues: [UserModel] { venueHits.filter(isGoodFit) }
+
+    func venueName(for opportunity: Opportunity) -> String? {
+        let venueId = opportunity.venueId ?? opportunity.userId
+        return venueHits.first { $0.id == venueId }?.displayName
+    }
+
+    /// Shown once the free daily applications are spent.
+    var quotaMessage: String? {
+        guard !isPremium, isPerformerFirst, remainingFreeApplications == 0 else { return nil }
+        let paid = opportunityHits.count(where: \.isPaid)
+        let more = paid > 0 ? " — \(paid) more paid \(paid == 1 ? "gig" : "gigs") nearby" : ""
+        return "you've used today's \(Self.dailyFreeApplications) free applications\(more)"
     }
 
     var genreFilterLabel: String? {
@@ -211,12 +282,21 @@ final class DiscoverViewModel {
     }
 
     /// `TasksBanner`: the same five checklist items as the tasks screen.
-    var incompleteTaskCount: Int {
+    private var setupTasks: [SetupTask] {
         TasksViewModel.tasks(
             for: currentUser,
             hasBookings: confirmedBookingsCount > 0,
             contactedVenuesCount: contactedVenuesCount
-        ).filter { !$0.isCompleted }.count
+        )
+    }
+
+    var incompleteTaskCount: Int { setupTasks.count { !$0.isCompleted } }
+
+    /// Completed fraction of the setup checklist (progress ring).
+    var setupProgress: Double {
+        let tasks = setupTasks
+        guard !tasks.isEmpty else { return 1 }
+        return Double(tasks.count { $0.isCompleted }) / Double(tasks.count)
     }
 
     var tasksBannerMessage: String? {
@@ -225,27 +305,21 @@ final class DiscoverViewModel {
         return "\(n) \(n == 1 ? "task" : "tasks") left to get booked"
     }
 
+    /// Bookings, settings and city search are tabs now; only bookers keep a shortcut here.
     var quickActions: [QuickAction] {
-        var actions = [
-            QuickAction(title: "search a city", systemImage: "map.fill", route: .gigSearch),
-            QuickAction(title: "my bookings", systemImage: "calendar", route: .bookings(userId: currentUser.id)),
-            QuickAction(title: "settings", systemImage: "person.crop.circle", route: .settings),
-        ]
-        if claims.contains(.admin) || claims.contains(.booker) {
-            actions.append(QuickAction(title: "add gig", systemImage: "plus", route: .admin, isDestructiveTint: true))
-        }
-        return actions
+        guard claims.contains(.admin) || claims.contains(.booker) else { return [] }
+        return [QuickAction(title: "add gig", systemImage: "plus", route: .admin, isDestructiveTint: true)]
     }
 
     var annotations: [DiscoverAnnotationItem] {
         switch overlay {
         case .venues:
             venueHits.compactMap { venue in
-                venue.location.map { DiscoverAnnotationItem(id: venue.id, kind: .venue, title: venue.displayName.lowercased(), location: $0) }
+                venue.location.map { DiscoverAnnotationItem(id: venue.id, kind: .venue, title: venue.displayName, location: $0) }
             }
         case .gigs:
             opportunityHits.map {
-                DiscoverAnnotationItem(id: $0.id, kind: .gig, title: $0.title.lowercased(), location: $0.location)
+                DiscoverAnnotationItem(id: $0.id, kind: .gig, title: $0.title, location: $0.location)
             }
         }
     }
@@ -262,18 +336,17 @@ final class DiscoverViewModel {
         isSearching = true
         errorMessage = nil
         defer { isSearching = false }
+        let capacity = Int(capacityRange.lowerBound)...Int(capacityRange.upperBound)
+        let filters = UserSearchFilters.venues(
+            genres: genreFilters.map(\.rawValue),
+            capacity: capacityRange == 0...Self.capacityLimit ? nil : capacity
+        )
+        // Both overlays are searched: the sheet header counts gigs and venues whichever is on the map.
         do {
-            switch overlay {
-            case .venues:
-                let capacity = Int(capacityRange.lowerBound)...Int(capacityRange.upperBound)
-                let filters = UserSearchFilters.venues(
-                    genres: genreFilters.map(\.rawValue),
-                    capacity: capacityRange == 0...Self.capacityLimit ? nil : capacity
-                )
-                venueHits = try await search.queryUsersInBoundingBox("", bounds: bounds, filters: filters)
-            case .gigs:
-                opportunityHits = try await search.queryOpportunitiesInBoundingBox("", bounds: bounds, startTime: .now)
-            }
+            let startTime = now()
+            async let venues = search.queryUsersInBoundingBox("", bounds: bounds, filters: filters)
+            async let gigs = search.queryOpportunitiesInBoundingBox("", bounds: bounds, startTime: startTime)
+            (venueHits, opportunityHits) = try await (venues, gigs)
             searchedBounds = bounds
             resultsExpired = false
         } catch {
