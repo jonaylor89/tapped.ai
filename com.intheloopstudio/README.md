@@ -1,6 +1,6 @@
 # Tapped for iOS (native SwiftUI)
 
-Native rewrite of the Flutter app in `../com.intheloopstudio/`. The Flutter app is the **read-only spec**:
+Native rewrite of the Flutter app in `../com.intheloopstudio.flutter/`. The Flutter app is the **read-only spec**:
 never edit it from this project.
 
 - Swift 6, `SWIFT_STRICT_CONCURRENCY=complete`, SwiftUI only, iOS 26 minimum
@@ -11,7 +11,7 @@ never edit it from this project.
 
 ```bash
 brew install xcodegen             # 2.46.0 used to generate the committed project
-cd com.intheloopstudio.ios
+cd com.intheloopstudio
 xcodegen generate                 # only needed after editing project.yml (the .xcodeproj is committed)
 open Tapped.xcodeproj
 ```
@@ -50,7 +50,7 @@ Flutter has no equivalents):
 
 ```bash
 # build + test: app tests, TappedDomain, TappedUI
-xcodebuild build test -project Tapped.xcodeproj -scheme Tapped \
+xcodebuild build test -project Tapped.xcodeproj -scheme Runner \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 
 # TappedData tests run from the package (see "Testing" for why)
@@ -110,7 +110,7 @@ Mock sign-in: any email + password works, except the password `wrong` (which ret
 ## Architecture
 
 ```
-com.intheloopstudio.ios/
+com.intheloopstudio/
 ├── project.yml                  xcodegen spec (source of truth for Tapped.xcodeproj)
 ├── Tapped/                      app target
 │   ├── App/                     TappedApp, AppDelegate, AppSession (auth gate), ContentView, LaunchOptions

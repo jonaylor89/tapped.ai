@@ -30,8 +30,8 @@ This is a Turborepo monorepo. Frontend apps live in `apps/`, backend services in
 | `services/ticket-crawler/` | Node.js | Ticket scraping service |
 | `services/venue-enrichment/` | Rust | Venue data enrichment |
 | `services/midia-to-threads/` | Python | Midia to threads |
-| `com.intheloopstudio/` | Flutter | Mobile app |
-| `com.intheloopstudio.ios/` | SwiftUI | Native iOS rewrite (see its README) |
+| `com.intheloopstudio/` | SwiftUI | Native iOS app (see its README) |
+| `com.intheloopstudio.flutter/` | Flutter | Previous mobile app, retained as the read-only spec |
 | `platform/` | Terraform | Infrastructure |
 | `packages/` | TypeScript | Shared code |
 
@@ -51,11 +51,11 @@ This is a Turborepo monorepo. Frontend apps live in `apps/`, backend services in
 
 Every dependency and toolchain version is pinned exactly — no `^`, `~`, `>=`, `stable`, or `latest`. See CONTRIBUTING.md for the full rule. In short:
 
-- Flutter (`com.intheloopstudio/pubspec.yaml`): exact versions for every dep, `environment.sdk`/`environment.flutter` pinned, git deps pinned to a commit SHA. `pubspec.lock` is committed.
-- Flutter toolchain: `3.41.5` in `.github/workflows/flutter.yml`, `com.intheloopstudio/ios/ci_scripts/ci_post_clone.sh`, and `pubspec.yaml`. Bump all three together.
+- Flutter (`com.intheloopstudio.flutter/pubspec.yaml`): exact versions for every dep, `environment.sdk`/`environment.flutter` pinned, git deps pinned to a commit SHA. `pubspec.lock` is committed.
+- Flutter toolchain: `3.41.5` in `.github/workflows/flutter.yml`, `com.intheloopstudio.flutter/ios/ci_scripts/ci_post_clone.sh`, and `pubspec.yaml`. Bump all three together.
 - Node: `pnpm install --frozen-lockfile`; `packageManager` in `package.json` and `node-version` in `.github/workflows/node.yml` are exact.
 - Rust: `Cargo.lock` is committed.
-- iOS native (`com.intheloopstudio.ios/`): SPM only, every package `.package(url:…, exact: "x.y.z")`; `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is committed and CI resolves with `-disableAutomaticPackageResolution`.
+- iOS native (`com.intheloopstudio/`): SPM only, every package `.package(url:…, exact: "x.y.z")`; `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` is committed and CI resolves with `-disableAutomaticPackageResolution`.
 
 ## CI/CD
 
@@ -64,14 +64,14 @@ Every dependency and toolchain version is pinned exactly — no `^`, `~`, `>=`, 
 - `flutter.yml` - Test and build Flutter app
 - `ios.yml` - Build and test the native SwiftUI app on an iPhone simulator
 
-## iOS native app (`com.intheloopstudio.ios/`)
+## iOS native app (`com.intheloopstudio/`)
 
-Swift 6 (strict concurrency), SwiftUI, iOS 26, xcodegen (`project.yml`) + local packages `TappedDomain`, `TappedData`, `TappedUI`. The Flutter app is its read-only spec; never edit `com.intheloopstudio/` from iOS work. Branches `ios/…`, PR titles `feat(ios): …`.
+Swift 6 (strict concurrency), SwiftUI, iOS 26, xcodegen (`project.yml`) + local packages `TappedDomain`, `TappedData`, `TappedUI`. The Flutter app is its read-only spec; never edit `com.intheloopstudio.flutter/` from iOS work. Branches `ios/…`, PR titles `feat(ios): …`.
 
 ```bash
-cd com.intheloopstudio.ios
+cd com.intheloopstudio
 xcodegen generate   # after editing project.yml
-xcodebuild build test -project Tapped.xcodeproj -scheme Tapped -destination 'platform=iOS Simulator,name=iPhone 17'
+xcodebuild build test -project Tapped.xcodeproj -scheme Runner -destination 'platform=iOS Simulator,name=iPhone 17'
 (cd Packages/TappedData && xcodebuild test -scheme TappedData -destination 'platform=iOS Simulator,name=iPhone 17')
 ```
 

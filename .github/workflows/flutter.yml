@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - 'com.intheloopstudio/**'
+      - 'com.intheloopstudio.flutter/**'
   pull_request:
     branches: [main]
     paths:
-      - 'com.intheloopstudio/**'
+      - 'com.intheloopstudio.flutter/**'
 
 jobs:
   flutter_test:
@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: com.intheloopstudio
+        working-directory: com.intheloopstudio.flutter
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
@@ -37,7 +37,7 @@ jobs:
     runs-on: macos-latest
     defaults:
       run:
-        working-directory: com.intheloopstudio
+        working-directory: com.intheloopstudio.flutter
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
@@ -60,7 +60,7 @@ jobs:
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     defaults:
       run:
-        working-directory: com.intheloopstudio
+        working-directory: com.intheloopstudio.flutter
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v3
