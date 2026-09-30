@@ -9,5 +9,3 @@ Packages/*/.swiftpm/
 Packages/*/Package.resolved
 screenshots/
 
-# Secrets — do not commit
-GoogleService-Info.plist
