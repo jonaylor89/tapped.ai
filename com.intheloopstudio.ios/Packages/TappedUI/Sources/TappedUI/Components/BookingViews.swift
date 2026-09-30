@@ -31,6 +31,8 @@ public struct BookingStatusBadge: View {
     public var body: some View {
         Label(status.formattedName, systemImage: status.systemImage)
             .font(TappedTypography.label)
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(status.tint)
             .padding(.horizontal, TappedSpacing.sm)
             .padding(.vertical, TappedSpacing.xs)
@@ -46,6 +48,7 @@ public struct BookingCard: View {
     let booking: Booking
     let counterpart: UserModel?
     let showsStatus: Bool
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     public init(booking: Booking, counterpart: UserModel?, showsStatus: Bool = true) {
         self.booking = booking
@@ -54,18 +57,22 @@ public struct BookingCard: View {
     }
 
     public var body: some View {
-        HStack(spacing: TappedSpacing.md) {
+        let stacks = dynamicTypeSize.isAccessibilitySize
+        let layout = stacks
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.sm))
+            : AnyLayout(HStackLayout(spacing: TappedSpacing.md))
+        layout {
             BookingDateTile(date: booking.startTime, tint: booking.isCanceled ? .secondary : TappedColors.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(booking.name?.isEmpty == false ? booking.name! : "booking")
                     .font(TappedTypography.headingXs)
-                    .lineLimit(1)
+                    .lineLimit(stacks ? 3 : 1)
                     .strikethrough(booking.isCanceled, color: .secondary)
                 if let counterpart {
                     HStack(spacing: TappedSpacing.xs) {
                         UserAvatar(user: counterpart, size: 18)
                         Text(counterpart.displayName)
-                            .lineLimit(1)
+                            .lineLimit(stacks ? 2 : 1)
                     }
                     .font(TappedTypography.bodySm)
                     .foregroundStyle(.secondary)
@@ -79,11 +86,12 @@ public struct BookingCard: View {
                     .foregroundStyle(.tertiary)
                     .monospacedDigit()
             }
-            Spacer(minLength: 0)
+            if !stacks { Spacer(minLength: 0) }
             if showsStatus {
                 BookingStatusBadge(booking.status)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(TappedSpacing.md)
         .contentShape(RoundedRectangle(cornerRadius: GlassRadius.card, style: .continuous))
         .tappedGlass(in: RoundedRectangle(cornerRadius: GlassRadius.card, style: .continuous), interactive: true)
@@ -109,7 +117,7 @@ public struct BookingDateTile: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            Text(date.formatted(.dateTime.month(.abbreviated)).lowercased())
+            Text(date.formatted(.dateTime.month(.abbreviated)))
                 .font(TappedTypography.caption.weight(.semibold))
                 .foregroundStyle(tint)
             Text(date.formatted(.dateTime.day()))
@@ -117,6 +125,7 @@ public struct BookingDateTile: View {
                 .monospacedDigit()
         }
         .frame(width: 48, height: 52)
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: TappedRadius.md, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: TappedRadius.md, style: .continuous).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
         .accessibilityHidden(true)
@@ -151,7 +160,7 @@ public struct MapSnapshotView: View {
                     Rectangle().fill(.fill.tertiary)
                 }
                 Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 30, weight: .semibold))
+                    .font(.title.weight(.semibold))
                     .foregroundStyle(.white, TappedColors.error)
                     .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
             }
@@ -184,6 +193,7 @@ public struct ConfirmationHero: View {
     let message: String?
     let systemImage: String
     let tint: Color
+    @ScaledMetric(relativeTo: .largeTitle) private var heroSize: CGFloat = 120
 
     public init(_ title: String, message: String? = nil, systemImage: String = "checkmark", tint: Color = TappedColors.success) {
         self.title = title
@@ -195,9 +205,10 @@ public struct ConfirmationHero: View {
     public var body: some View {
         VStack(spacing: TappedSpacing.xl) {
             Image(systemName: systemImage)
-                .font(.system(size: 52, weight: .semibold))
+                .font(.largeTitle.weight(.semibold))
+                .imageScale(.large)
                 .foregroundStyle(tint)
-                .frame(width: 120, height: 120)
+                .frame(width: heroSize, height: heroSize)
                 .tappedGlass(.regular, in: Circle())
                 .overlay(Circle().strokeBorder(tint.opacity(0.35), lineWidth: 1))
                 .tappedShadow()

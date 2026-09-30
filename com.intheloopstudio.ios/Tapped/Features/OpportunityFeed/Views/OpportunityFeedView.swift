@@ -40,10 +40,9 @@ struct OpportunityFeedView: View {
         .toolbar {
             if let quota = model.remainingQuota {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text("\(quota) left")
+                    Text(ApplicationQuota.caption(remaining: quota) ?? "")
                         .font(TappedTypography.label)
                         .foregroundStyle(.secondary)
-                        .accessibilityLabel("\(quota) free applications left")
                 }
             }
         }

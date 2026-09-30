@@ -39,7 +39,10 @@ public struct OpportunityFlier: View {
                 endPoint: .bottomTrailing
             )
             Image(systemName: Self.symbol(for: opportunity))
-                .font(.system(size: symbolSize, weight: .semibold))
+                .resizable()
+                .scaledToFit()
+                .fontWeight(.semibold)
+                .frame(width: symbolSize, height: symbolSize)
                 .foregroundStyle(.white.opacity(0.9))
         }
     }
@@ -71,15 +74,15 @@ public struct OpportunityTile<Trailing: View>: View {
                 .frame(width: 56, height: 56)
                 .clipShape(RoundedRectangle(cornerRadius: TappedRadius.md, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                Text(opportunity.title.lowercased())
+                Text(opportunity.title)
                     .font(TappedTypography.headingXs)
                     .lineLimit(1)
-                Text(opportunity.startTime.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()).lowercased())
+                Text(opportunity.startTime.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute()))
                     .font(TappedTypography.bodySm)
                     .foregroundStyle(.secondary)
                 HStack(spacing: TappedSpacing.xs) {
                     if let venueName {
-                        Text(venueName.lowercased()).lineLimit(1)
+                        Text(venueName).lineLimit(1)
                         Text("·")
                     }
                     Text(opportunity.isPaid ? "paid" : "unpaid")

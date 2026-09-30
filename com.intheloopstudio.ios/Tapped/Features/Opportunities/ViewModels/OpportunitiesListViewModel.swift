@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 
 /// Port of `opportunities_results_view.dart`: list with applied badges and batch apply.
 @Observable
@@ -89,7 +90,7 @@ final class OpportunitiesListViewModel {
             }
             return outcome
         } catch {
-            errorMessage = "error applying to opportunities"
+            errorMessage = ErrorCopy.action("send your applications")
             return nil
         }
     }

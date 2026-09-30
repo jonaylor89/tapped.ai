@@ -28,14 +28,14 @@ struct OpportunitiesListView: View {
                 if model.isSelecting { Text("select gigs to apply in one go") }
             } footer: {
                 if let quota = model.remainingQuota, !model.opportunities.isEmpty {
-                    Text("\(quota) free \(quota == 1 ? "application" : "applications") left")
+                    Text(ApplicationQuota.caption(remaining: quota) ?? "")
                 }
             }
         }
         .listStyle(.insetGrouped)
         .overlay {
             if model.opportunities.isEmpty {
-                GlassEmptyState("no opportunities here", message: "try another area on the map", systemImage: "music.mic")
+                GlassEmptyState("no gigs here", message: "try another area on the map", systemImage: "music.mic")
             }
         }
         .navigationTitle("opportunities")
@@ -77,8 +77,8 @@ struct OpportunitiesListView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .alert("something went wrong", isPresented: Binding { model.errorMessage != nil } set: { if !$0 { model.dismissError() } }) {
-            Button("ok", role: .cancel) {}
+        .alert("Couldn't Apply", isPresented: Binding { model.errorMessage != nil } set: { if !$0 { model.dismissError() } }) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
@@ -86,7 +86,7 @@ struct OpportunitiesListView: View {
     }
 
     static func applyTitle(count: Int, quota: Int?) -> String {
-        if let quota, quota < count { return "upgrade to apply to \(count)" }
+        if let quota, quota < count { return "apply to \(count) with premium" }
         return "apply to \(count) \(count == 1 ? "gig" : "gigs")"
     }
 

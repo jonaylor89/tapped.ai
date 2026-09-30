@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import TappedData
+import TappedUI
 
 /// `lib/ui/paywall/paywall_view.dart` + `subscription_bloc`, on StoreKit 2 via `PurchasesRepository`.
 @Observable
@@ -76,14 +77,28 @@ final class PaywallViewModel {
         do {
             products = try await purchases.products()
             if selectedProductId == nil { selectedProductId = products.first?.id }
-            phase = products.isEmpty && !isPremium ? .failed("error fetching offerings") : .ready
+            phase = products.isEmpty && !isPremium ? .failed(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again")) : .ready
         } catch {
             FirebaseBootstrap.record(error: error)
-            phase = isPremium ? .ready : .failed("error fetching offerings")
+            phase = isPremium ? .ready : .failed(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again"))
         }
     }
 
     /// Keeps `isPremium` in sync with transaction updates (e.g. purchases on another device, Ask to Buy).
+    /// IDs for `SubscriptionStoreView`: whatever the repository loaded, else the bundled defaults.
+    var productIds: [String] { products.isEmpty ? TappedConfig.defaultPremiumProductIds : products.map(\.id) }
+
+    /// Called from `SubscriptionStoreView`'s completion handlers.
+    func storeCompleted(purchased: Bool, restored: Bool = false) async {
+        if purchased || restored {
+            isPremium = await purchases.isPremium() || purchased
+            successCount += 1
+            await analytics.track(restored ? "restore_purchases" : "purchase_premium")
+        } else {
+            errorCount += 1
+        }
+    }
+
     func observeEntitlements() async {
         for await entitlements in purchases.entitlementUpdates() {
             isPremium = entitlements.contains(.premium)
@@ -108,7 +123,7 @@ final class PaywallViewModel {
         } catch {
             FirebaseBootstrap.record(error: error)
             errorCount += 1
-            notice = "error purchasing package"
+            notice = ErrorCopy.action("complete the purchase", hint: "you weren't charged. try again")
         }
     }
 
@@ -127,7 +142,7 @@ final class PaywallViewModel {
         } catch {
             FirebaseBootstrap.record(error: error)
             errorCount += 1
-            notice = "error restoring purchases"
+            notice = ErrorCopy.action("restore purchases")
         }
     }
 }

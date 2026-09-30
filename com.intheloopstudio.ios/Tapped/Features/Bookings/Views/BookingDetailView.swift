@@ -7,7 +7,7 @@ import TappedUI
 struct BookingDetailView: View {
     @State private var model: BookingDetailViewModel
     @State private var confirmingCancel = false
-    @State private var confirmingDeny = false
+    @State private var confirmingDecline = false
     @State private var showsReview = false
     @Environment(Router.self) private var router
     @Environment(\.openURL) private var openURL
@@ -113,18 +113,20 @@ struct BookingDetailView: View {
         .overlay { if model.isUpdating { ProgressView().controlSize(.large) } }
         .navigationTitle("booking")
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog("cancel this booking?", isPresented: $confirmingCancel, titleVisibility: .visible) {
-            Button("cancel booking", role: .destructive) { Task { await model.cancel() } }
-            Button("keep booking", role: .cancel) {}
+        .confirmationDialog("Cancel this booking?", isPresented: $confirmingCancel, titleVisibility: .visible) {
+            Button("Cancel Booking", role: .destructive) { Task { await model.cancel() } }
+            Button("Keep Booking", role: .cancel) {}
         } message: {
             Text("the other party will be notified.")
         }
-        .confirmationDialog("deny this request?", isPresented: $confirmingDeny, titleVisibility: .visible) {
-            Button("deny", role: .destructive) { Task { await model.deny() } }
-            Button("not now", role: .cancel) {}
+        .confirmationDialog(BookingDetailViewModel.declineConfirmationTitle, isPresented: $confirmingDecline, titleVisibility: .visible) {
+            Button(BookingDetailViewModel.declineTitle, role: .destructive) { Task { await model.decline() } }
+            Button("Not Now", role: .cancel) {}
+        } message: {
+            Text("the requester will be told you can't take this one.")
         }
-        .alert("booking", isPresented: errorBinding) {
-            Button("ok", role: .cancel) {}
+        .alert("Couldn't Update Booking", isPresented: errorBinding) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
@@ -150,12 +152,12 @@ struct BookingDetailView: View {
 
     private var respondBar: some View {
         HStack(spacing: TappedSpacing.md) {
-            Button(role: .destructive) { confirmingDeny = true } label: {
-                Label("deny", systemImage: "xmark").frame(maxWidth: .infinity, minHeight: 28)
+            Button(role: .destructive) { confirmingDecline = true } label: {
+                Label(BookingDetailViewModel.declineTitle, systemImage: "xmark").frame(maxWidth: .infinity, minHeight: 28)
             }
             .buttonStyle(.glass)
             Button { Task { await model.confirm() } } label: {
-                Label("accept", systemImage: "checkmark").frame(maxWidth: .infinity, minHeight: 28)
+                Label("Accept", systemImage: "checkmark").frame(maxWidth: .infinity, minHeight: 28)
             }
             .buttonStyle(.glassProminent)
         }
@@ -223,7 +225,7 @@ struct BookingReviewSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("cancel", systemImage: "xmark") { dismiss() }
+                    Button("Cancel", systemImage: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if model.isSubmittingReview {

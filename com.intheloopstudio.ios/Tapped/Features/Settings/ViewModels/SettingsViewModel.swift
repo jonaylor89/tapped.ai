@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 import UIKit
 
 /// Port of `SettingsCubit` + `SettingsState` (payments / connect-bank intentionally dropped).
@@ -41,6 +42,18 @@ final class SettingsViewModel {
 
     var hasChanges: Bool { draft != original || Username(username) != original.username || pickedImageData != nil }
 
+    /// Leaving (Cancel / back) with unsaved edits asks "Discard Changes?" first.
+    var leavingNeedsConfirmation: Bool { hasChanges && !isSaving }
+
+    /// Drops every unsaved edit, including a picked photo.
+    func discardChanges() {
+        draft = original
+        username = original.username.username
+        pickedImage = nil
+        pickedImageData = nil
+        errorMessage = nil
+    }
+
     var profilePictureURL: URL? { draft.profilePicture.flatMap(URL.init(string:)) }
 
     var bioCountLabel: String { "\(draft.bio.count)/\(Self.maxBioLength)" }
@@ -63,7 +76,7 @@ final class SettingsViewModel {
 
     var genresSummary: String {
         let genres = Genre.allCases.filter(selectedGenres.contains)
-        return genres.isEmpty ? "none" : genres.map { $0.formattedName.lowercased() }.joined(separator: ", ")
+        return genres.isEmpty ? "none" : genres.map(\.formattedName).joined(separator: ", ")
     }
 
     /// `performerInfo.averageTicketPrice` is stored in cents.
@@ -81,7 +94,7 @@ final class SettingsViewModel {
 
     func setPickedImage(_ data: Data) {
         guard let image = UIImage(data: data), let jpeg = Self.compressedJPEG(image) else {
-            errorMessage = "couldn't read that photo"
+            errorMessage = "couldn't read that photo — try a different JPEG or PNG"
             return
         }
         pickedImage = image
@@ -112,7 +125,7 @@ final class SettingsViewModel {
         do {
             try await database.deleteService(draft.id, service.id)
         } catch {
-            errorMessage = "couldn't delete service"
+            errorMessage = ErrorCopy.action("delete that service")
             services = (try? await database.getUserServices(draft.id)) ?? services
         }
     }
@@ -158,7 +171,7 @@ final class SettingsViewModel {
             self.username = user.username.username
             return user
         } catch {
-            errorMessage = "couldn't save your profile"
+            errorMessage = ErrorCopy.save("your profile")
             return nil
         }
     }
@@ -173,7 +186,7 @@ final class SettingsViewModel {
             await analytics.track("delete_account")
             return true
         } catch {
-            errorMessage = "log in again, then retry deleting your account"
+            errorMessage = "couldn't delete your account — sign in again, then retry"
             return false
         }
     }

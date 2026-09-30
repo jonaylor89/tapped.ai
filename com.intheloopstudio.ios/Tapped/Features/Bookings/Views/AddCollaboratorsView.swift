@@ -58,7 +58,7 @@ struct AddCollaboratorsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("done", systemImage: "checkmark") { dismiss() }
+                Button("Done", systemImage: "checkmark") { dismiss() }
             }
         }
     }

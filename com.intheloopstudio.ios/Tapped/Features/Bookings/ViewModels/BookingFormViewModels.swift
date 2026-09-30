@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 
 extension PlaceData {
     var location: Location { Location(placeId: placeId, lat: lat, lng: lng) }
@@ -298,7 +299,7 @@ final class RequestToPerformViewModel {
             await analytics.track("request_to_perform", properties: ["venues": .int(venues.count), "collaborators": .int(collaborators.count)])
             return venues
         } catch {
-            errorMessage = "couldn't send your request"
+            errorMessage = ErrorCopy.action("send your pitch")
             return nil
         }
     }
@@ -334,7 +335,7 @@ final class LocationSearchViewModel {
             errorMessage = nil
         } catch is CancellationError {
         } catch {
-            errorMessage = "couldn't search places"
+            errorMessage = ErrorCopy.action("search places")
         }
     }
 
@@ -344,7 +345,7 @@ final class LocationSearchViewModel {
         do {
             return try await places.getPlaceById(prediction.placeId)
         } catch {
-            errorMessage = "couldn't load that place"
+            errorMessage = ErrorCopy.load("that place")
             return nil
         }
     }

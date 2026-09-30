@@ -59,8 +59,8 @@ struct LocationSearchView: View {
         .searchable(text: $model.query, placement: .navigationBarDrawer(displayMode: .always), prompt: "search venues and addresses")
         .textInputAutocapitalization(.never)
         .task(id: model.query) { await model.search() }
-        .alert("location", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
-            Button("ok", role: .cancel) {}
+        .alert("Location Unavailable", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }

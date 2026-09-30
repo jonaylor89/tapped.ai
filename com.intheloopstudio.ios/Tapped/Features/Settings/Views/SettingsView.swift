@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var isConfirmingSignOut = false
     @State private var isConfirmingDelete = false
     @State private var isReauthenticating = false
+    @State private var isConfirmingDiscard = false
 
     init(dependencies: Dependencies, currentUser: UserModel) {
         _model = State(initialValue: SettingsViewModel(dependencies: dependencies, currentUser: currentUser))
@@ -35,33 +36,51 @@ struct SettingsView: View {
             accountActionsSection
         }
         .formStyle(.grouped)
+        .offlineBanner(isOffline: NetworkMonitor.shared.isOffline)
         .navigationTitle("settings")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
+        .navigationBarBackButtonHidden(model.hasChanges)
+        .interactiveDismissDisabled(model.hasChanges)
         .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                if model.isSaving {
-                    ProgressView()
-                } else {
-                    Button("save", systemImage: "checkmark") { Task { await save() } }
-                        .disabled(!model.hasChanges)
+            if model.hasChanges {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { isConfirmingDiscard = true }
+                        .disabled(model.isSaving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if model.isSaving {
+                        ProgressView()
+                    } else {
+                        Button("Save") { Task { await save() } }
+                            .fontWeight(.semibold)
+                    }
                 }
             }
         }
-        .alert("something went wrong", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
-            Button("ok", role: .cancel) {}
+        .confirmationDialog("Discard your changes?", isPresented: $isConfirmingDiscard, titleVisibility: .visible) {
+            Button("Discard Changes", role: .destructive) {
+                model.discardChanges()
+                if router.path.last == .settings { router.pop() }
+            }
+            Button("Keep Editing", role: .cancel) {}
+        } message: {
+            Text("your profile edits haven't been saved.")
+        }
+        .alert("Couldn't Save", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
-        .confirmationDialog("sign out?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
-            Button("sign out", role: .destructive) {
+        .confirmationDialog("Sign out?", isPresented: $isConfirmingSignOut, titleVisibility: .visible) {
+            Button("Sign Out", role: .destructive) {
                 Task {
                     await session.signOut()
                     router.popToRoot()
                 }
             }
         }
-        .confirmationDialog("delete account?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
-            Button("delete account", role: .destructive) { isReauthenticating = true }
+        .confirmationDialog("Delete your account?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Delete Account", role: .destructive) { isReauthenticating = true }
         } message: {
             Text("this permanently deletes your profile, bookings and messages")
         }
@@ -109,6 +128,7 @@ struct SettingsView: View {
                             .overlay(alignment: .bottomTrailing) {
                                 Image(systemName: "camera.fill")
                                     .font(.footnote.weight(.semibold))
+                                    .dynamicTypeSize(...DynamicTypeSize.xLarge)
                                     .foregroundStyle(.white)
                                     .padding(7)
                                     .background(TappedColors.accent, in: Circle())
@@ -147,8 +167,8 @@ struct SettingsView: View {
             }
             Button { isPickingLocation = true } label: {
                 LabeledContent("location") {
-                    Text(model.placeName?.lowercased() ?? "add location")
-                        .foregroundStyle(model.placeName == nil ? TappedColors.accent : .secondary)
+                    Text(model.placeName ?? "add location")
+                        .foregroundStyle(model.placeName == nil ? TappedColors.accentText : .secondary)
                 }
             }
             .tint(.primary)
@@ -179,7 +199,7 @@ struct SettingsView: View {
                     ForEach(PerformerCategory.allCases) { Text($0.formattedName.lowercased()).tag($0) }
                 }
                 Picker("label", selection: $model.performer.label) {
-                    ForEach(TappedDomain.Label.all) { Text($0.rawValue.lowercased()).tag($0.rawValue) }
+                    ForEach(TappedDomain.Label.all) { Text($0.rawValue).tag($0.rawValue) }
                 }
                 LabeledContent("avg. ticket price") {
                     TextField("$0", value: $model.ticketPriceDollars, format: .currency(code: "USD").precision(.fractionLength(0)))
@@ -291,9 +311,9 @@ struct SettingsView: View {
 
     private var accountActionsSection: some View {
         Section {
-            Button("sign out", role: .destructive) { isConfirmingSignOut = true }
+            Button("Sign Out", role: .destructive) { isConfirmingSignOut = true }
             Button(role: .destructive) { isConfirmingDelete = true } label: {
-                if model.isDeleting { ProgressView() } else { Text("delete account") }
+                if model.isDeleting { ProgressView() } else { Text("Delete Account") }
             }
         } footer: {
             Text("@\(model.draft.username.username) · \(model.draft.email)")

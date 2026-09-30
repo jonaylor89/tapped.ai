@@ -29,7 +29,7 @@ struct InterestedUsersView: View {
                         .buttonStyle(.plain)
                     }
                 } header: {
-                    Text(model.opportunity.title.lowercased())
+                    Text(model.opportunity.title)
                 }
             }
         }
