@@ -52,6 +52,11 @@ enum NotificationCategories {
 
     static func register(defaults: UserDefaults = .standard) {
         UNUserNotificationCenter.current().setNotificationCategories(make(applyOpensApp: defaults.bool(forKey: applyOpensAppKey)))
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["TAPPED_MOCK_PUSH_AUTH"] == "1" {
+            UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { _, _ in }
+        }
+        #endif
     }
 
     static func setApplyOpensApp(_ opensApp: Bool, defaults: UserDefaults = .standard) {

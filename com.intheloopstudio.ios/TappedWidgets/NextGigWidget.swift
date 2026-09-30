@@ -66,7 +66,7 @@ struct NextGigView: View {
     private var content: some View {
         switch (family, entry.content) {
         case let (.accessoryInline, .gig(gig)):
-            Label(format.nextGig(gig, now: entry.date), systemImage: "music.mic")
+            Text(format.nextGig(gig, now: entry.date))
         case let (.accessoryInline, .nearby(count)):
             Label(GigFormat.nearbyGigs(count), systemImage: "music.mic")
         case let (.accessoryCircular, .gig(gig)):
