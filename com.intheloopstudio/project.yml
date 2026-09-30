@@ -12,8 +12,9 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEAD_CODE_STRIPPING: YES
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    # The first native TestFlight build follows Flutter 1.2.116 (128).
+    MARKETING_VERSION: "1.2.117"
+    CURRENT_PROJECT_VERSION: "129"
 packages:
   TappedDomain:
     path: Packages/TappedDomain
@@ -36,18 +37,21 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio
         PRODUCT_NAME: Tapped
         INFOPLIST_FILE: Tapped/Resources/Info.plist
-        CODE_SIGN_ENTITLEMENTS: Tapped/Resources/Tapped.entitlements
+        # Distribution builds need the production APNs entitlement.
+        CODE_SIGN_ENTITLEMENTS: Tapped/Resources/TappedRelease.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
         SUPPORTS_MACCATALYST: NO
-        DEVELOPMENT_TEAM: ""
+        DEVELOPMENT_TEAM: "9HNXYM86C6"
         CODE_SIGN_STYLE: Automatic
         OTHER_LDFLAGS: $(inherited) -ObjC
-        TAPPED_GOOGLE_PLACES_API_KEY: ""
+        # Same iOS-restricted key shipped by the legacy Flutter app.
+        TAPPED_GOOGLE_PLACES_API_KEY: "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY"
         DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
       configs:
         Debug:
+          CODE_SIGN_ENTITLEMENTS: Tapped/Resources/TappedDebug.entitlements
           SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG
     postBuildScripts:
       - name: Upload Crashlytics dSYMs
@@ -55,7 +59,7 @@ targets:
         script: |
           # Release only; skipped when Firebase isn't configured (placeholder plist).
           [ "${CONFIGURATION}" = "Release" ] || exit 0
-          grep -q PLACEHOLDER "${SRCROOT}/Tapped/Resources/GoogleService-Info.plist" && exit 0
+          grep -q PLACEHOLDER "${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist" && exit 0
           "${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run"
         inputFiles:
           - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}

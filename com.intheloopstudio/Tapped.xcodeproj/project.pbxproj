@@ -167,8 +167,8 @@
 		3A036B2DF6F86DC6C0226BB9 /* OpportunitiesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunitiesListView.swift; sourceTree = "<group>"; };
 		3A594B655FAA927AA5AE497D /* ShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellView.swift; sourceTree = "<group>"; };
 		3BF61D00CEF173A8D72DB47B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		3DE616034A83DA5DC5D912C0 /* TappedDebug.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TappedDebug.entitlements; sourceTree = "<group>"; };
 		4378243589118654E911388A /* BookingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailView.swift; sourceTree = "<group>"; };
-		443EB7DFF439E2147D5583C2 /* Tapped.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tapped.entitlements; sourceTree = "<group>"; };
 		4935825C589AF60937B6E2C8 /* DiscoverMapControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiscoverMapControls.swift; sourceTree = "<group>"; };
 		4DB0E68F9D9E2454DC024F2C /* Router.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Router.swift; sourceTree = "<group>"; };
 		4E2B2E51A56814445B3666FB /* InterestedUsersViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestedUsersViewModel.swift; sourceTree = "<group>"; };
@@ -195,13 +195,14 @@
 		6FE9D1BABA2F7AFBD3107F3F /* ProfileSections.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSections.swift; sourceTree = "<group>"; };
 		73E8D622F190666A5B0404DD /* SplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplashView.swift; sourceTree = "<group>"; };
 		74719AE7E972D16A9BA3463B /* TappedDomain */ = {isa = PBXFileReference; lastKnownFileType = folder; name = TappedDomain; path = Packages/TappedDomain; sourceTree = SOURCE_ROOT; };
-		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74EDF7A5C1C82CD6959263EE /* Tapped.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tapped.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		75216B1D095D6FEAF7740614 /* Appearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Appearance.swift; sourceTree = "<group>"; };
 		75DCFE00C96CCAB712DD182A /* BookingDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingDetailViewModel.swift; sourceTree = "<group>"; };
 		7B7D29D7FC9B351D1FE2BE48 /* ChannelViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChannelViewModel.swift; sourceTree = "<group>"; };
 		7C043A7BFC7EFB2799CC0F3F /* SettingsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewModel.swift; sourceTree = "<group>"; };
 		7DDF65831FE461AB00D6C5C7 /* BookingsFeatureTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsFeatureTests.swift; sourceTree = "<group>"; };
 		7E32F949C72AEC6CE2AF2B8D /* OpportunityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpportunityViewModel.swift; sourceTree = "<group>"; };
+		7E801D422CA9AADAB0FA4726 /* TappedRelease.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = TappedRelease.entitlements; sourceTree = "<group>"; };
 		7FC5F4082B9D3F54CA9CB9DC /* ShellViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellViewModel.swift; sourceTree = "<group>"; };
 		81805D0E13E30D90E55E8BCF /* InterestedUsersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InterestedUsersView.swift; sourceTree = "<group>"; };
 		8245E4A6DD48EDA71B2C2009 /* MessageUserButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageUserButton.swift; sourceTree = "<group>"; };
@@ -721,7 +722,8 @@
 				EE258A141BCCEA88B15A65F9 /* Assets.xcassets */,
 				51603D61E2C91CC46E53ADEE /* GoogleService-Info.plist */,
 				3BF61D00CEF173A8D72DB47B /* Info.plist */,
-				443EB7DFF439E2147D5583C2 /* Tapped.entitlements */,
+				3DE616034A83DA5DC5D912C0 /* TappedDebug.entitlements */,
+				7E801D422CA9AADAB0FA4726 /* TappedRelease.entitlements */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -1192,7 +1194,7 @@
 				LastUpgradeCheck = 1430;
 				TargetAttributes = {
 					D2A2AA6732B9632BBAB71469 = {
-						DevelopmentTeam = "";
+						DevelopmentTeam = 9HNXYM86C6;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -1257,7 +1259,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Release only; skipped when Firebase isn't configured (placeholder plist).\n[ \"${CONFIGURATION}\" = \"Release\" ] || exit 0\ngrep -q PLACEHOLDER \"${SRCROOT}/Tapped/Resources/GoogleService-Info.plist\" && exit 0\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
+			shellScript = "# Release only; skipped when Firebase isn't configured (placeholder plist).\n[ \"${CONFIGURATION}\" = \"Release\" ] || exit 0\ngrep -q PLACEHOLDER \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\" && exit 0\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -1415,26 +1417,22 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/Tapped.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/TappedRelease.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9HNXYM86C6;
 				INFOPLIST_FILE = Tapped/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-				);
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
 				PRODUCT_NAME = Tapped;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
-				TAPPED_GOOGLE_PLACES_API_KEY = "";
-				"TAPPED_GOOGLE_PLACES_API_KEY[arch=*]" = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
+				TAPPED_GOOGLE_PLACES_API_KEY = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -1490,7 +1488,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 129;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1511,7 +1509,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.117;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1529,27 +1527,23 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/Tapped.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Tapped/Resources/TappedDebug.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 9HNXYM86C6;
 				INFOPLIST_FILE = Tapped/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				OTHER_LDFLAGS = (
-					"$(inherited)",
-					"-ObjC",
-				);
+				OTHER_LDFLAGS = "$(inherited) -ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.intheloopstudio;
 				PRODUCT_NAME = Tapped;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				TAPPED_GOOGLE_PLACES_API_KEY = "";
-				"TAPPED_GOOGLE_PLACES_API_KEY[arch=*]" = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
+				TAPPED_GOOGLE_PLACES_API_KEY = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -1588,7 +1582,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 129;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1603,7 +1597,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.2.117;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
