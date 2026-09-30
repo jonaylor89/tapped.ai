@@ -75,6 +75,8 @@ struct GigNightTests {
         #expect(format.nextGig(Self.camel, now: Self.date(2, 10).addingTimeInterval(-4 * 86_400)) == "Fri · The Camel · 9 pm")
         #expect(format.nextGig(Self.camel, now: Self.date(2, 10)) == "tonight · The Camel · 9 pm")
         #expect(format.nextGig(Self.camel, now: Self.date(1, 10)) == "tomorrow · The Camel · 9 pm")
+        #expect(format.nextGigInline(Self.camel, now: Self.date(2, 10)) == "The Camel · 9 pm")
+        #expect(format.nextGigInline(Self.camel, now: Self.date(1, 10)) == "tomorrow · The Camel · 9 pm")
         #expect(format.day(Self.date(2, 13), now: Self.date(2, 9)) == "today")
         #expect(format.time(Self.date(2, 21, 30)) == "9:30 pm")
         #expect(format.setTime(start: Self.camel.startTime, end: Self.camel.endTime) == "9 pm – 11 pm")

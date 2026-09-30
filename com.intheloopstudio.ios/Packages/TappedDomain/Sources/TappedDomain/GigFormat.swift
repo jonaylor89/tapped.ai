@@ -50,6 +50,12 @@ public struct GigFormat: Sendable {
         "\(day(gig.startTime, now: now)) · \(gig.venueName) · \(time(gig.startTime))"
     }
 
+    /// Inline Lock Screen widgets sit next to the date, so a gig today drops the day: "The Camel · 9 pm".
+    public func nextGigInline(_ gig: GigNight, now: Date) -> String {
+        guard calendar.isDate(gig.startTime, inSameDayAs: now) else { return nextGig(gig, now: now) }
+        return "\(gig.venueName) · \(time(gig.startTime))"
+    }
+
     /// "4 new gigs near you".
     public static func nearbyGigs(_ count: Int?) -> String {
         switch count {
