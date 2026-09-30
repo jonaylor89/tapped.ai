@@ -54,6 +54,8 @@
 	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow users to send pictures through direct messages</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tapped requires microphone access to capture and transmit audio</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>To allow users to search for bookings and venues in their area</string>
 	<key>NSPhotoLibraryUsageDescription</key>
