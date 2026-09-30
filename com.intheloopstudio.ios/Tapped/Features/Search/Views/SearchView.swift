@@ -8,6 +8,7 @@ struct SearchView: View {
     @State private var model: SearchViewModel
     @Environment(Router.self) private var router
     @Environment(AppSession.self) private var session: AppSession?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(dependencies: Dependencies, currentUser: UserModel, recents: RecentSearches = RecentSearches(), initialQuery: String = "") {
         let model = SearchViewModel(dependencies: dependencies, currentUser: currentUser, recents: recents)
@@ -109,16 +110,14 @@ struct SearchView: View {
         return Button {
             router.push(route)
         } label: {
-            ViewThatFits(in: .horizontal) {
-                HStack {
-                    SwiftUI.Label(title, systemImage: systemImage).foregroundStyle(.primary).fixedSize()
-                    Spacer(minLength: TappedSpacing.sm)
-                    if isLocked { PremiumBadge() }
-                }
-                VStack(alignment: .leading, spacing: TappedSpacing.xs) {
-                    SwiftUI.Label(title, systemImage: systemImage).foregroundStyle(.primary)
-                    if isLocked { PremiumBadge() }
-                }
+            let layout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.xs))
+                : AnyLayout(HStackLayout())
+            layout {
+                SwiftUI.Label(title, systemImage: systemImage)
+                    .foregroundStyle(.primary)
+                if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: TappedSpacing.sm) }
+                if isLocked { PremiumBadge() }
             }
         }
         .accessibilityHint(isLocked ? "premium feature" : "")

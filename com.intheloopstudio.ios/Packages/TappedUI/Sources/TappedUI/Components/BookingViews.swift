@@ -125,6 +125,7 @@ public struct BookingDateTile: View {
                 .monospacedDigit()
         }
         .frame(width: 48, height: 52)
+        .dynamicTypeSize(...DynamicTypeSize.large)
         .background(tint.opacity(0.1), in: RoundedRectangle(cornerRadius: TappedRadius.md, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: TappedRadius.md, style: .continuous).strokeBorder(tint.opacity(0.25), lineWidth: 0.5))
         .accessibilityHidden(true)

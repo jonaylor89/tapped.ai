@@ -8,6 +8,10 @@ import TappedUI
 struct PaywallView: View {
     @State private var model: PaywallViewModel
     @Environment(Router.self) private var router
+    /// `SubscriptionStoreView` shows a bare "Subscription Unavailable" when the storefront returns no products;
+    /// keep the marketing and give the user a next step instead.
+    @State private var storeUnavailable = false
+    @State private var storeCheck = 0
 
     init(dependencies: Dependencies) {
         _model = State(initialValue: PaywallViewModel(dependencies: dependencies))
@@ -27,6 +31,8 @@ struct PaywallView: View {
                     }
                 }
                 .scrollBounceBehavior(.basedOnSize)
+            } else if storeUnavailable {
+                unavailable
             } else {
                 store
             }
@@ -42,6 +48,33 @@ struct PaywallView: View {
         .animation(GlassMotion.ease, value: model.isPremium)
         .task { await model.load() }
         .task { await model.observeEntitlements() }
+        .task(id: storeCheck) {
+            let available = (try? await Product.products(for: model.productIds)) ?? []
+            storeUnavailable = available.isEmpty
+        }
+    }
+
+    private var unavailable: some View {
+        ScrollView {
+            VStack(spacing: TappedSpacing.xl) {
+                PaywallMarketing()
+                ErrorView(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again")) {
+                    storeCheck += 1
+                }
+                Button("Restore Purchases") {
+                    Task { try? await AppStore.sync() }
+                }
+                .font(TappedTypography.label)
+                HStack(spacing: TappedSpacing.lg) {
+                    Link("Terms of Service", destination: PaywallViewModel.termsURL)
+                    Link("Privacy Policy", destination: PaywallViewModel.privacyURL)
+                }
+                .font(TappedTypography.caption)
+                .foregroundStyle(TappedColors.accentText)
+            }
+            .padding(.bottom, TappedSpacing.xxl)
+        }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private var store: some View {
