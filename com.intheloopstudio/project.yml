@@ -14,7 +14,7 @@ settings:
     DEAD_CODE_STRIPPING: YES
     # The native TestFlight series follows Flutter 1.2.116 (128).
     MARKETING_VERSION: "1.2.117"
-    CURRENT_PROJECT_VERSION: "130"
+    CURRENT_PROJECT_VERSION: "131"
 packages:
   TappedDomain:
     path: Packages/TappedDomain
