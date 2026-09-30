@@ -250,8 +250,8 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 ## What's stubbed
 
 - Video call is a "coming soon" screen (Flutter's `VideoCallView` is empty too).
-- StoreKit product IDs `com.intheloopstudio.premium.monthly|yearly` and prices in `StoreKit/Tapped.storekit` are
-  placeholders until App Store Connect products exist (Flutter used RevenueCat offerings).
+- StoreKit uses the existing App Store Connect `Tapped Premium` subscription products: `prod_2499_1m` ($12.99/month)
+  and `prod_11999_1y` ($119.99/year). `StoreKit/Tapped.storekit` mirrors them for local testing.
 - Push: no topic subscriptions (Flutter has none either).
 - Live Firebase / Stream / Storage / APNs paths compile and are unit-tested against mocks only; this repo has no real
   `GoogleService-Info.plist`.

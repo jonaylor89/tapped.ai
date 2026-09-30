@@ -104,8 +104,8 @@ public actor MockPurchasesRepository: PurchasesRepository {
 
     public func products() async throws -> [PremiumProduct] {
         [
-            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[0], displayName: "tapped premium", description: "monthly", displayPrice: "$9.99", period: .month),
-            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[1], displayName: "tapped premium", description: "yearly", displayPrice: "$79.99", period: .year),
+            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[0], displayName: "tapped premium", description: "monthly", displayPrice: "$12.99", period: .month),
+            PremiumProduct(id: TappedConfig.defaultPremiumProductIds[1], displayName: "tapped premium", description: "yearly", displayPrice: "$119.99", period: .year),
         ]
     }
 

@@ -31,7 +31,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "9.99",
+          "displayPrice" : "12.99",
           "familyShareable" : false,
           "groupNumber" : 2,
           "internalID" : "5B8E0D11",
@@ -43,7 +43,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.intheloopstudio.premium.monthly",
+          "productID" : "prod_2499_1m",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "premium monthly",
           "subscriptionGroupID" : "9A1F4C20",
@@ -59,7 +59,7 @@
           "codeOffers" : [
 
           ],
-          "displayPrice" : "79.99",
+          "displayPrice" : "119.99",
           "familyShareable" : false,
           "groupNumber" : 1,
           "internalID" : "5B8E0D12",
@@ -75,7 +75,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.intheloopstudio.premium.yearly",
+          "productID" : "prod_11999_1y",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "premium yearly",
           "subscriptionGroupID" : "9A1F4C20",

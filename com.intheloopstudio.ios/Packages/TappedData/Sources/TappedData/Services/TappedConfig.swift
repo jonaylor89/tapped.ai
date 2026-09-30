@@ -44,11 +44,11 @@ public struct TappedConfig: Sendable, Hashable {
 
     public static let defaultStreamAPIKey = "xyk6dwdsp422"
 
-    /// No `.storekit` configuration exists in the Flutter repo (it used RevenueCat), so these are placeholders
-    /// until App Store Connect products are confirmed. `StoreKit/Tapped.storekit` mirrors them for local testing.
+    /// App Store Connect's existing Tapped Premium subscription products.
+    /// `StoreKit/Tapped.storekit` mirrors them for local testing.
     public static let defaultPremiumProductIds = [
-        "com.intheloopstudio.premium.monthly",
-        "com.intheloopstudio.premium.yearly",
+        "prod_2499_1m",
+        "prod_11999_1y",
     ]
 
     public static func fromBundle(_ bundle: Bundle = .main) -> TappedConfig {
