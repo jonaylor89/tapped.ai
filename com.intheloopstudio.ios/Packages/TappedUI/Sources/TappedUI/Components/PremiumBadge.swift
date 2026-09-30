@@ -5,10 +5,14 @@ public struct PremiumBadge: View {
     public init() {}
 
     public var body: some View {
-        SwiftUI.Label(Self.title, systemImage: "lock.fill")
+        HStack(spacing: TappedSpacing.xs) {
+            Image(systemName: "lock.fill")
+            Text(Self.title)
+        }
             .font(TappedTypography.label)
             .lineLimit(1)
             .fixedSize()
+            .accessibilityElement(children: .ignore)
             .foregroundStyle(TappedColors.accentText)
             .padding(.horizontal, TappedSpacing.sm)
             .padding(.vertical, 3)
