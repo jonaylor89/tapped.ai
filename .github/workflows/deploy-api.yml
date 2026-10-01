@@ -104,8 +104,20 @@ jobs:
           docker compose config --quiet
           docker compose pull api mail-worker
           docker compose up -d --no-deps api mail-worker
-          sleep 5
-          test "$(docker inspect tapped-api-1 --format '{{.State.Running}}')" = true
+
+          echo "Waiting for api to be ready..."
+          for i in $(seq 1 24); do
+            if docker exec tapped-api-1 curl -sf http://localhost:3000/health > /dev/null 2>&1; then
+              echo "API is ready after $((i * 5)) seconds"
+              break
+            fi
+            if [ "$i" -eq 24 ]; then
+              echo "API did not become ready in time" >&2
+              exit 1
+            fi
+            sleep 5
+          done
+
           test "$(docker inspect tapped-mail-worker-1 --format '{{.State.Running}}')" = true
           docker compose restart cloudflared
 
