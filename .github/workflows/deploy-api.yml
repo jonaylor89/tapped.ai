@@ -107,6 +107,7 @@ jobs:
           sleep 5
           test "$(docker inspect tapped-api-1 --format '{{.State.Running}}')" = true
           test "$(docker inspect tapped-mail-worker-1 --format '{{.State.Running}}')" = true
+          docker compose restart cloudflared
 
           trap - ERR
           REMOTE
