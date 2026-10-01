@@ -80,6 +80,8 @@ jobs:
             "docker inspect tapped-api-1 --format '{{.Config.Image}}'")"
           echo "previous_image=$previous_image" >> "$GITHUB_OUTPUT"
 
+          tailscale scp docker-compose.prod.yml root@tapped-prod:/opt/tapped/docker-compose.yml
+
           tailscale ssh root@tapped-prod "bash -s -- '$IMAGE' '$previous_image'" <<'REMOTE'
           set -Eeuo pipefail
           cd /opt/tapped
