@@ -31,6 +31,7 @@ services:
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
       BOOKING_EMAIL_DOMAIN: ${BOOKING_EMAIL_DOMAIN:-booking.tapped.ai}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
+      GOOGLE_PLACES_API_KEY: ${GOOGLE_PLACES_API_KEY}
     volumes:
       - ./credentials.json:/run/secrets/firebase-credentials.json:ro
       - mail-data:/data

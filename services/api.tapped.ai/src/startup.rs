@@ -1,5 +1,5 @@
 use crate::{
-    data::{database::Firestore, search::Typesense},
+    data::{database::Firestore, places::GooglePlaces, search::Typesense},
     docs::docs_routes,
     domain::{
         app_functions::{notify_venue_of_interested_opportunities, stream_user_token},
@@ -9,6 +9,7 @@ use crate::{
             postmark_inbound_email, stream_before_message,
         },
         mail_composer::OpenAiEmailComposer,
+        places::{autocomplete_places, get_place, get_place_photo, reverse_geocode},
     },
     errors::AppError,
     routes::v1_routes,
@@ -35,7 +36,10 @@ use firestore::{FirestoreDb, FirestoreDbOptions};
 use serde_json::{Value, json};
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use tower_http::{
+    cors::{Any, CorsLayer},
+    trace::TraceLayer,
+};
 use tracing::info_span;
 use uuid::Uuid;
 
@@ -99,12 +103,17 @@ impl Application {
                 .collect(),
             slack_webhook_url: std::env::var("SLACK_WEBHOOK_URL").ok(),
         };
+        let google_places_api_key = std::env::var("GOOGLE_PLACES_API_KEY").unwrap_or_default();
+        if google_places_api_key.is_empty() {
+            tracing::warn!("GOOGLE_PLACES_API_KEY is not set; /app/v1/places will return 502");
+        }
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
             search: Arc::new(Typesense::from_env()),
             firebase_project_id: project_id,
             mail,
             response_cache: Default::default(),
+            places: Arc::new(GooglePlaces::new(google_places_api_key)),
         };
 
         let server = run(listener, state).await?;
@@ -169,6 +178,9 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
             Router::new()
                 .route("/venue-email-threads", post(create_email_thread))
                 .route("/stream-token", post(stream_user_token))
+                .route("/places/autocomplete", get(autocomplete_places))
+                .route("/places/photo", get(get_place_photo))
+                .route("/places/reverse-geocode", get(reverse_geocode))
                 .route(
                     "/opportunity-venue-notifications",
                     post(notify_venue_of_interested_opportunities),
@@ -177,6 +189,16 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                     state.clone(),
                     crate::domain::firebase_auth::verify_firebase_token,
                 ))
+                // Public: added after `route_layer` so Firebase auth doesn't apply. Server-rendered
+                // web pages have no user, and details are served from the Firestore cache.
+                .route(
+                    "/places/:place_id",
+                    get(get_place).layer(
+                        CorsLayer::new()
+                            .allow_origin(Any)
+                            .allow_methods([axum::http::Method::GET]),
+                    ),
+                )
                 .into(),
         )
         .nest_api_service("/v1", v1_routes(state.clone()))
@@ -196,7 +218,8 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                     "http_request",
                     method = ?request.method(),
                     matched_path,
-                    some_other_field = tracing::field::Empty,
+                    // Recorded by `verify_firebase_token` on authenticated routes.
+                    user_id = tracing::field::Empty,
                 )
             }),
         )

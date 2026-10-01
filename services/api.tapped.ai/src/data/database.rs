@@ -1,5 +1,9 @@
-use crate::domain::models::{
-    api_key::ApiKey, booking::Booking, opportunity::Opportunity, review::Review, user::UserModel,
+use crate::{
+    data::places::PlaceDetails,
+    domain::models::{
+        api_key::ApiKey, booking::Booking, opportunity::Opportunity, review::Review,
+        user::UserModel,
+    },
 };
 use anyhow::Result;
 use axum::async_trait;
@@ -69,7 +73,18 @@ pub trait Database: Send + Sync {
     async fn get_bookings_by_booker_id(&self, booker_id: &str) -> Result<Vec<Booking>>;
     async fn get_reviews_by_performer_id(&self, performer_id: &str) -> Result<Vec<Review>>;
     async fn get_reviews_by_booker_id(&self, booker_id: &str) -> Result<Vec<Review>>;
+
+    /// Persistent Google Places cache shared by every client (`googlePlacesCache`).
+    async fn get_cached_place(&self, _place_id: &str) -> Result<Option<PlaceDetails>> {
+        Ok(None)
+    }
+
+    async fn set_cached_place(&self, _place: &PlaceDetails) -> Result<()> {
+        Ok(())
+    }
 }
+
+const GOOGLE_PLACES_CACHE: &str = "googlePlacesCache";
 
 #[derive(Debug, Clone)]
 pub struct Firestore {
@@ -294,5 +309,34 @@ impl Database for Firestore {
         tracing::info!("reviews found: {:?}", as_vec.len());
 
         Ok(as_vec)
+    }
+
+    #[instrument]
+    async fn get_cached_place(&self, place_id: &str) -> Result<Option<PlaceDetails>> {
+        let doc: Option<PlaceDetails> = self
+            .db
+            .fluent()
+            .select()
+            .by_id_in(GOOGLE_PLACES_CACHE)
+            .obj()
+            .one(place_id)
+            .await?;
+
+        Ok(doc)
+    }
+
+    #[instrument]
+    async fn set_cached_place(&self, place: &PlaceDetails) -> Result<()> {
+        let _: PlaceDetails = self
+            .db
+            .fluent()
+            .update()
+            .in_col(GOOGLE_PLACES_CACHE)
+            .document_id(&place.place_id)
+            .object(place)
+            .execute()
+            .await?;
+
+        Ok(())
     }
 }

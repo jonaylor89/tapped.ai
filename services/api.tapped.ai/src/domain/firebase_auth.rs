@@ -106,6 +106,8 @@ pub async fn verify_firebase_token(
         StatusCode::UNAUTHORIZED
     })?;
 
+    // Fills the `user_id` field of the `http_request` span from `startup::run`.
+    tracing::Span::current().record("user_id", token_data.claims.sub.as_str());
     req.extensions_mut().insert(FirebaseUser {
         uid: token_data.claims.sub,
         email: token_data.claims.email,
@@ -153,6 +155,7 @@ mod tests {
             firebase_project_id: TEST_PROJECT_ID.to_string(),
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
             response_cache: Default::default(),
+            places: std::sync::Arc::new(crate::data::places::MockPlaces),
         }
     }
 

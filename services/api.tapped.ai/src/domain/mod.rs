@@ -6,3 +6,4 @@ pub mod mail_bridge;
 pub mod mail_composer;
 pub mod mail_worker;
 pub mod models;
+pub mod places;

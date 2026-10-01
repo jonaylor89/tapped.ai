@@ -1,5 +1,5 @@
 use crate::{
-    data::{database::Database, search::Search},
+    data::{database::Database, places::Places, search::Search},
     domain::mail_bridge::MailBridge,
 };
 use serde_json::Value;
@@ -65,4 +65,5 @@ pub struct AppStateDyn {
     pub firebase_project_id: String,
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
+    pub places: Arc<dyn Places>,
 }

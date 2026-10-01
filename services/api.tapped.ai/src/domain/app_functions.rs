@@ -533,6 +533,7 @@ mod tests {
                 search: Arc::new(MockSearch),
                 firebase_project_id: "test".into(),
                 response_cache: Default::default(),
+                places: std::sync::Arc::new(crate::data::places::MockPlaces),
                 mail: MailBridge {
                     store: store.clone(),
                     stream: stream.clone(),

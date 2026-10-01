@@ -4,4 +4,5 @@ pub mod helpers;
 pub mod mail_bridge;
 pub mod mail_worker;
 pub mod performers;
+pub mod places;
 pub mod root;
