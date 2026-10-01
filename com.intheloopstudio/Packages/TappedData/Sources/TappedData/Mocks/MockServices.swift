@@ -191,16 +191,14 @@ public actor MockVenueOutreachRepository: VenueOutreachRepository {
     }
 }
 
-/// Records every callable invocation instead of hitting Cloud Functions.
-public actor MockFunctionsRepository: FunctionsRepository {
+/// Records venue notifications instead of calling the authenticated API.
+public actor MockOpportunityNotificationRepository: OpportunityNotificationRepository {
     public struct VenueNotification: Sendable, Hashable {
         public var opportunityIds: [String]
-        public var userId: String
         public var note: String
 
-        public init(opportunityIds: [String], userId: String, note: String) {
+        public init(opportunityIds: [String], note: String) {
             self.opportunityIds = opportunityIds
-            self.userId = userId
             self.note = note
         }
     }
@@ -209,7 +207,7 @@ public actor MockFunctionsRepository: FunctionsRepository {
 
     public init() {}
 
-    public func notifyVenueOfInterestedOpportunities(opportunityIds: [String], userId: String, note: String) async throws {
-        venueNotifications.append(VenueNotification(opportunityIds: opportunityIds, userId: userId, note: note))
+    public func notifyVenueOfInterestedOpportunities(opportunityIds: [String], note: String) async throws {
+        venueNotifications.append(VenueNotification(opportunityIds: opportunityIds, note: note))
     }
 }

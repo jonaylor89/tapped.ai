@@ -64,10 +64,10 @@ struct MockRepositoryTests {
         #expect(try await database.classifyPerformer("missing") == nil)
     }
 
-    @Test func mockFunctionsRecordsVenueNotifications() async throws {
-        let functions = MockFunctionsRepository()
-        try await functions.notifyVenueOfInterestedOpportunities(opportunityIds: ["a", "b"], userId: "me", note: "hi")
-        #expect(await functions.venueNotifications == [.init(opportunityIds: ["a", "b"], userId: "me", note: "hi")])
+    @Test func mockOpportunityNotificationsRecordVenueNotifications() async throws {
+        let notifications = MockOpportunityNotificationRepository()
+        try await notifications.notifyVenueOfInterestedOpportunities(opportunityIds: ["a", "b"], note: "hi")
+        #expect(await notifications.venueNotifications == [.init(opportunityIds: ["a", "b"], note: "hi")])
     }
 
     @Test func mockSearchFiltersVenuesByBoundsAndGenre() async throws {

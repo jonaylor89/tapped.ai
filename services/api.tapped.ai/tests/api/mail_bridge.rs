@@ -18,7 +18,7 @@ use tapped_api_rs::{
             CreateEmailThread, EmailThread, InMemoryMailStore, MailBridge, MailStore, QueuedEmail,
             SqliteMailStore, StreamDelivery, StreamGateway, create_email_thread,
         },
-        models::{booking::Booking, review::Review, user::UserModel},
+        models::{booking::Booking, opportunity::Opportunity, review::Review, user::UserModel},
     },
     state::AppStateDyn,
 };
@@ -49,6 +49,17 @@ impl Database for ThreadDatabase {
     }
 
     async fn get_user_by_username(&self, _username: &str) -> anyhow::Result<UserModel> {
+        unreachable!()
+    }
+
+    async fn get_opportunity_by_id(&self, _id: &str) -> anyhow::Result<Opportunity> {
+        unreachable!()
+    }
+
+    async fn get_bookings_by_reference_event_id(
+        &self,
+        _reference_event_id: &str,
+    ) -> anyhow::Result<Vec<Booking>> {
         unreachable!()
     }
 
@@ -312,6 +323,28 @@ async fn creating_email_thread_requires_firebase_authentication() {
         .await
         .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+    assert!(store.outbound().is_empty());
+}
+
+#[tokio::test]
+async fn app_function_routes_require_firebase_authentication() {
+    let (app, store, _) = test_app().await;
+    for (path, body) in [
+        ("stream-token", serde_json::json!({})),
+        (
+            "opportunity-venue-notifications",
+            serde_json::json!({ "opportunityIds": ["op-1"], "note": "hello" }),
+        ),
+    ] {
+        let response = app
+            .api_client
+            .post(format!("{}/app/v1/{path}", app.address))
+            .json(&body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+    }
     assert!(store.outbound().is_empty());
 }
 

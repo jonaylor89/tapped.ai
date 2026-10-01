@@ -32,8 +32,8 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 | `TappedPostHogAPIKey` / `TappedPostHogHost` | PostHog project key / `https://us.i.posthog.com` |
 | `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In (same OAuth client as Flutter) |
 | `TappedPremiumProductIds` | optional override for StoreKit product IDs |
-| `TappedAPIURL` | optional; Tapped API base URL used by request-to-perform venue outreach (default `https://api.tapped.ai`) |
-| `TappedStreamAPIKey` | optional; Stream Chat **public** app key (default is the key the Flutter app ships). The user token comes from the `ext-auth-chat-getStreamUserToken` callable, never from the app bundle |
+| `TappedAPIURL` | optional; Tapped API base URL used by authenticated app requests, including venue outreach and Stream tokens (default `https://api.tapped.ai`) |
+| `TappedStreamAPIKey` | optional; Stream Chat **public** app key (default is the key the Flutter app ships). The user token comes from the authenticated Tapped API, never from the app bundle |
 
 Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; create the `ios_*` / waitlist keys in the Firebase console,
 Flutter has no equivalents):

@@ -1,4 +1,6 @@
-use crate::domain::models::{api_key::ApiKey, booking::Booking, review::Review, user::UserModel};
+use crate::domain::models::{
+    api_key::ApiKey, booking::Booking, opportunity::Opportunity, review::Review, user::UserModel,
+};
 use anyhow::Result;
 use axum::async_trait;
 use firestore::{FirestoreDb, FirestoreResult, struct_path::path};
@@ -20,6 +22,20 @@ impl Database for MockDatabase {
 
     async fn get_user_by_username(&self, username: &str) -> Result<UserModel> {
         Ok(UserModel::default_with_username(username.to_string()))
+    }
+
+    async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity> {
+        Ok(Opportunity {
+            id: id.to_string(),
+            ..Default::default()
+        })
+    }
+
+    async fn get_bookings_by_reference_event_id(
+        &self,
+        _reference_event_id: &str,
+    ) -> Result<Vec<Booking>> {
+        Ok(vec![])
     }
 
     async fn get_bookings_by_performer_id(&self, _performer_id: &str) -> Result<Vec<Booking>> {
@@ -44,6 +60,11 @@ pub trait Database: Send + Sync {
     async fn get_user_from_api_key(&self, api_key: &str) -> Result<String>;
     async fn get_user_by_id(&self, id: &str) -> Result<UserModel>;
     async fn get_user_by_username(&self, username: &str) -> Result<UserModel>;
+    async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity>;
+    async fn get_bookings_by_reference_event_id(
+        &self,
+        reference_event_id: &str,
+    ) -> Result<Vec<Booking>>;
     async fn get_bookings_by_performer_id(&self, performer_id: &str) -> Result<Vec<Booking>>;
     async fn get_bookings_by_booker_id(&self, booker_id: &str) -> Result<Vec<Booking>>;
     async fn get_reviews_by_performer_id(&self, performer_id: &str) -> Result<Vec<Review>>;
@@ -123,6 +144,36 @@ impl Database for Firestore {
             None => Err(anyhow::anyhow!("user not found")),
             Some(user) => Ok(user),
         }
+    }
+
+    #[instrument]
+    async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity> {
+        let doc: Option<Opportunity> = self
+            .db
+            .fluent()
+            .select()
+            .by_id_in("opportunities")
+            .obj()
+            .one(id)
+            .await?;
+        doc.ok_or_else(|| anyhow::anyhow!("opportunity not found"))
+    }
+
+    #[instrument]
+    async fn get_bookings_by_reference_event_id(
+        &self,
+        reference_event_id: &str,
+    ) -> Result<Vec<Booking>> {
+        let object_stream: BoxStream<FirestoreResult<Booking>> = self
+            .db
+            .fluent()
+            .select()
+            .from("bookings")
+            .filter(|q| q.field("referenceEventId").eq(reference_event_id))
+            .obj()
+            .stream_query_with_errors()
+            .await?;
+        Ok(object_stream.try_collect().await?)
     }
 
     #[instrument]

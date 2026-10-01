@@ -3,7 +3,7 @@ import Foundation
 import TappedDomain
 
 /// `lib/data/prod/stream_impl.dart` on the Stream Chat Swift SDK state layer.
-/// Tokens come from the `ext-auth-chat-getStreamUserToken` callable (see `FirebaseStreamToken`).
+/// Tokens come from the Firebase-authenticated Tapped API endpoint.
 @MainActor
 public final class StreamChatRepository: ChatRepository {
     public typealias TokenProvider = @Sendable () async throws -> String

@@ -12,14 +12,14 @@ struct OpportunityApplication: Sendable {
 
     let database: any DatabaseRepository
     let analytics: any AnalyticsRepository
-    let functions: any FunctionsRepository
+    let opportunityNotifications: any OpportunityNotificationRepository
     let userId: String
     var isPremium: Bool
 
     init(dependencies: Dependencies, userId: String, isPremium: Bool) {
         database = dependencies.database
         analytics = dependencies.analytics
-        functions = dependencies.functions
+        opportunityNotifications = dependencies.opportunityNotifications
         self.userId = userId
         self.isPremium = isPremium
     }
@@ -41,7 +41,7 @@ struct OpportunityApplication: Sendable {
         for opportunity in opportunities {
             try await database.applyForOpportunity(opportunity: opportunity, userId: userId, userComment: comment)
         }
-        try await functions.notifyVenueOfInterestedOpportunities(opportunityIds: opportunities.map(\.id), userId: userId, note: comment)
+        try await opportunityNotifications.notifyVenueOfInterestedOpportunities(opportunityIds: opportunities.map(\.id), note: comment)
         if !isPremium {
             for _ in opportunities {
                 try? await database.decrementUserOpportunityQuota(userId)

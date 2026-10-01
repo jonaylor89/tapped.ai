@@ -200,6 +200,25 @@ impl UserModel {
             .and_then(|info| info.booking_email.as_deref())
     }
 
+    pub fn is_unclaimed(&self) -> bool {
+        self.unclaimed
+    }
+
+    pub fn display_name(&self) -> &str {
+        if self.artist_name.is_empty() {
+            &self.username
+        } else {
+            &self.artist_name
+        }
+    }
+
+    pub fn performer_genres(&self) -> &[String] {
+        self.performer_info
+            .as_ref()
+            .map(|info| info.genres.as_slice())
+            .unwrap_or_default()
+    }
+
     pub fn total_audience_size(&self) -> u32 {
         let social_following = &self.social_following;
 

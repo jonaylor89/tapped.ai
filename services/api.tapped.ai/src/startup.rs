@@ -1,9 +1,13 @@
 use crate::{
     data::{database::Firestore, search::Typesense},
     docs::docs_routes,
-    domain::mail_bridge::{
-        MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_thread, create_email_thread,
-        enqueue_service_email, inbound_email, postmark_inbound_email, stream_before_message,
+    domain::{
+        app_functions::{notify_venue_of_interested_opportunities, stream_user_token},
+        mail_bridge::{
+            MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_thread,
+            create_email_thread, enqueue_service_email, inbound_email, postmark_inbound_email,
+            stream_before_message,
+        },
     },
     errors::AppError,
     routes::v1_routes,
@@ -144,6 +148,11 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
             "/app/v1",
             Router::new()
                 .route("/venue-email-threads", post(create_email_thread))
+                .route("/stream-token", post(stream_user_token))
+                .route(
+                    "/opportunity-venue-notifications",
+                    post(notify_venue_of_interested_opportunities),
+                )
                 .route_layer(axum::middleware::from_fn_with_state(
                     state.clone(),
                     crate::domain::firebase_auth::verify_firebase_token,

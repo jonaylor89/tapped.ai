@@ -21,7 +21,7 @@ public struct Dependencies: Sendable {
     public var chat: any ChatRepository
     public var storage: any StorageRepository
     public var venueOutreach: any VenueOutreachRepository
-    public var functions: any FunctionsRepository
+    public var opportunityNotifications: any OpportunityNotificationRepository
 
     public init(
         mode: Mode,
@@ -36,7 +36,7 @@ public struct Dependencies: Sendable {
         chat: any ChatRepository = MockChatRepository(),
         storage: any StorageRepository = MockStorageRepository(),
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
-        functions: any FunctionsRepository = MockFunctionsRepository()
+        opportunityNotifications: any OpportunityNotificationRepository = MockOpportunityNotificationRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -50,7 +50,7 @@ public struct Dependencies: Sendable {
         self.chat = chat
         self.storage = storage
         self.venueOutreach = venueOutreach
-        self.functions = functions
+        self.opportunityNotifications = opportunityNotifications
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -66,10 +66,13 @@ public struct Dependencies: Sendable {
             analytics: PostHogAnalytics(),
             remoteConfig: FirebaseRemoteConfigRepository(),
             notifications: FirebaseNotificationRepository(),
-            chat: StreamChatRepository(apiKey: config.streamAPIKey, tokenProvider: FirebaseStreamToken.fetch),
+            chat: StreamChatRepository(
+                apiKey: config.streamAPIKey,
+                tokenProvider: TappedAPIStreamTokenRepository(baseURL: config.tappedAPIURL).fetch
+            ),
             storage: FirebaseStorageRepository(),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
-            functions: FirebaseFunctionsRepository()
+            opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL)
         )
     }
 
@@ -110,7 +113,7 @@ public struct Dependencies: Sendable {
             chat: MockChatRepository(),
             storage: storage,
             venueOutreach: MockVenueOutreachRepository(),
-            functions: MockFunctionsRepository()
+            opportunityNotifications: MockOpportunityNotificationRepository()
         )
     }
 
