@@ -1,0 +1,146 @@
+name: Deploy API
+
+on:
+  workflow_run:
+    workflows: [Rust]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: api-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    environment: Production
+    env:
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      IMAGE_REPOSITORY: ghcr.io/jonaylor89/tapped-api
+
+    steps:
+      - name: Check out deployment revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.DEPLOY_SHA }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push API image
+        env:
+          IMAGE: ${{ env.IMAGE_REPOSITORY }}:${{ env.DEPLOY_SHA }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            --tag "$IMAGE" \
+            --push \
+            ./services/api.tapped.ai
+
+      - name: Connect to the production tailnet
+        uses: tailscale/github-action@6cae46e2d796f265265cfcf628b72a32b4d7cade # v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:github-actions
+          version: 1.102.5
+          hostname: tapped-api-deploy-${{ github.run_id }}
+          targets: tapped-prod
+
+      - name: Authenticate production with GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | tailscale ssh root@tapped-prod \
+            "docker login ghcr.io --username '${{ github.actor }}' --password-stdin"
+
+      - name: Deploy API and mail worker
+        id: deploy
+        env:
+          IMAGE: ${{ env.IMAGE_REPOSITORY }}:${{ env.DEPLOY_SHA }}
+        run: |
+          previous_image="$(tailscale ssh root@tapped-prod \
+            "docker inspect tapped-api-1 --format '{{.Config.Image}}'")"
+          echo "previous_image=$previous_image" >> "$GITHUB_OUTPUT"
+
+          tailscale ssh root@tapped-prod "bash -s -- '$IMAGE' '$previous_image'" <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/tapped
+
+          image="$1"
+          previous_image="$2"
+
+          set_api_image() {
+            grep -q '^API_IMAGE=' .env
+            sed -i "s|^API_IMAGE=.*$|API_IMAGE=$1|" .env
+            chmod 600 .env
+          }
+
+          rollback() {
+            echo "Deployment failed; restoring $previous_image" >&2
+            set_api_image "$previous_image"
+            docker compose up -d --no-deps api mail-worker || true
+          }
+          trap rollback ERR
+
+          set_api_image "$image"
+          docker compose config --quiet
+          docker compose pull api mail-worker
+          docker compose up -d --no-deps api mail-worker
+          sleep 5
+          test "$(docker inspect tapped-api-1 --format '{{.State.Running}}')" = true
+          test "$(docker inspect tapped-mail-worker-1 --format '{{.State.Running}}')" = true
+
+          trap - ERR
+          REMOTE
+
+      - name: Verify production health
+        id: health
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl \
+              --fail \
+              --silent \
+              --show-error \
+              --max-time 10 \
+              --header 'Cache-Control: no-cache' \
+              "https://api.tapped.ai/health?deployment=${DEPLOY_SHA}"; then
+              echo
+              exit 0
+            fi
+            echo "Health check attempt $attempt failed; retrying in 5 seconds"
+            sleep 5
+          done
+          exit 1
+
+      - name: Roll back failed health check
+        if: failure() && steps.health.outcome == 'failure'
+        env:
+          PREVIOUS_IMAGE: ${{ steps.deploy.outputs.previous_image }}
+        run: |
+          tailscale ssh root@tapped-prod "bash -s -- '$PREVIOUS_IMAGE'" <<'REMOTE'
+          set -Eeuo pipefail
+          cd /opt/tapped
+
+          grep -q '^API_IMAGE=' .env
+          sed -i "s|^API_IMAGE=.*$|API_IMAGE=$1|" .env
+          chmod 600 .env
+          docker compose up -d --no-deps api mail-worker
+          REMOTE
