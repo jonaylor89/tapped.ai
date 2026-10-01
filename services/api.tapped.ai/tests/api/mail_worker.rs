@@ -58,6 +58,7 @@ async fn worker_submits_thread_headers_and_body_over_smtp() {
             thread_id: "thread-1".into(),
             from: "artist@booking.tapped.ai".into(),
             to: vec!["venue@example.com".into()],
+            cc: vec!["founder@tapped.ai".into()],
             subject: "Performance Inquiry".into(),
             text_body: "Can we play?".into(),
             html_body: None,
@@ -79,6 +80,7 @@ async fn worker_submits_thread_headers_and_body_over_smtp() {
     let message = captured.lock().unwrap();
     assert!(message.contains("From: artist@booking.tapped.ai\r\n"));
     assert!(message.contains("To: venue@example.com\r\n"));
+    assert!(message.contains("Cc: founder@tapped.ai\r\n"));
     assert!(message.contains("Message-ID: <new@booking.tapped.ai>\r\n"));
     assert!(message.contains("In-Reply-To: <old@example.com>\r\n"));
     assert!(message.contains("References: <old@example.com>\r\n"));
@@ -109,6 +111,7 @@ async fn worker_submits_threaded_email_through_postmark() {
         thread_id: "thread-2".into(),
         from: "artist@booking.tapped.ai".into(),
         to: vec!["venue@example.com".into()],
+        cc: vec!["founder@tapped.ai".into()],
         subject: "Performance Inquiry".into(),
         text_body: "Can we play?".into(),
         html_body: Some("<p>Can we play?</p>".into()),
@@ -139,6 +142,7 @@ async fn worker_submits_threaded_email_through_postmark() {
     let payload: serde_json::Value = serde_json::from_slice(body).unwrap();
     assert_eq!(payload["From"], "artist@booking.tapped.ai");
     assert_eq!(payload["To"], "venue@example.com");
+    assert_eq!(payload["Cc"], "founder@tapped.ai");
     assert_eq!(payload["MessageStream"], "outbound");
     assert_eq!(payload["Attachments"][0]["Content"], "aGVsbG8=");
     assert!(payload["Headers"]

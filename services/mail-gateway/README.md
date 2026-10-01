@@ -63,6 +63,10 @@ TYPESENSE_HOST
 TYPESENSE_PORT
 TYPESENSE_PROTOCOL
 TYPESENSE_SEARCH_API_KEY
+OPENAI_API_KEY
+OPENAI_MODEL              # defaults to gpt-4.1-mini
+VENUE_CONTACT_FOUNDER_CC  # comma-separated; defaults to the legacy founder recipients
+SLACK_WEBHOOK_URL          # optional founder notifications
 BOOKING_EMAIL_DOMAIN      # defaults to booking.tapped.ai
 MAIL_HOSTNAME             # defaults to mail.tapped.ai
 API_PORT                   # defaults to 3000
@@ -85,7 +89,7 @@ No production DNS changes are required for this stack.
 - [ ] Deploy the merged API image with the production variables above; set the worker to `MAIL_TRANSPORT=postmark`.
 - [ ] Confirm `/health`, API logs, worker startup, SQLite WAL creation, and Postmark API connectivity.
 - [ ] Authenticate Application Default Credentials with `gcloud auth application-default login`, then preview the legacy migration with `python3 services/mail-gateway/tools/backfill_mail_threads.py`.
-- [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible and written counts match.
+- [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible thread/message and written counts match. The import is idempotent and records historical messages as sent without redelivery.
 - [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records. Until then, deploy the `inboundEmailWebhook` proxy function against the unchanged Postmark URL.
 - [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`.
 - [ ] Build and release the Flutter app that calls `POST /app/v1/venue-email-threads`.

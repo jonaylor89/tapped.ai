@@ -7,7 +7,8 @@ use uuid::Uuid;
 use crate::{
     domain::{
         firebase_auth::FirebaseUser,
-        mail_bridge::{EmailThread, QueuedEmail},
+        mail_bridge::{EmailThread, QueuedEmail, StreamDelivery, notify_slack},
+        mail_composer::{ComposeVenueEmail, OpportunityContext},
         models::opportunity::Opportunity,
     },
     state::AppStateDyn,
@@ -51,50 +52,6 @@ pub struct NotifyVenueResponse {
 struct VenueOpportunities {
     opportunities: Vec<Opportunity>,
     other_performers: Vec<String>,
-}
-
-fn email_body(
-    performer: &crate::domain::models::user::UserModel,
-    venue: &crate::domain::models::user::UserModel,
-    note: &str,
-    context: &VenueOpportunities,
-) -> String {
-    let titles = context
-        .opportunities
-        .iter()
-        .map(|opportunity| opportunity.title.as_str())
-        .filter(|title| !title.is_empty())
-        .collect::<Vec<_>>();
-    let opportunities = if titles.is_empty() {
-        "upcoming performance opportunities".to_string()
-    } else {
-        titles.join(", ")
-    };
-    let performer_details = if performer.performer_genres().is_empty() {
-        String::new()
-    } else {
-        format!(" I play {}.", performer.performer_genres().join(", "))
-    };
-    let other_performers = if context.other_performers.is_empty() {
-        String::new()
-    } else {
-        format!(
-            " The event also includes {}.",
-            context.other_performers.join(", ")
-        )
-    };
-    let note = (!note.trim().is_empty()).then(|| format!(" {note}"));
-
-    format!(
-        "Hi {},\n\nI'm {}. Tapped recommended I reach out about {}.{}{}{}\n\nBest,\n{}",
-        venue.display_name(),
-        performer.display_name(),
-        opportunities,
-        performer_details,
-        other_performers,
-        note.unwrap_or_default(),
-        performer.display_name(),
-    )
 }
 
 /// Replaces the legacy callable. Firebase identity is deliberately the sole source of performer ID.
@@ -181,16 +138,72 @@ pub async fn notify_venue_of_interested_opportunities(
         let Some(recipient) = venue.booking_email().map(str::to_owned) else {
             continue;
         };
-        let text_body = email_body(&performer, &venue, &command.note, &context);
-        let event_id = format!("opportunity-notification:{}", Uuid::new_v4());
-        let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
         let existing = state
             .mail
             .store
             .thread_for_stream(&user.uid, &venue_id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+        if existing.is_none()
+            && let Some(auto_reply) = venue.auto_reply()
+        {
+            if let Err(error) = state
+                .mail
+                .stream
+                .send_message(&StreamDelivery {
+                    event_id: format!("venue-auto-reply:{}:{}", user.uid, venue_id),
+                    thread_id: String::new(),
+                    sender_id: venue_id.clone(),
+                    receiver_id: user.uid.clone(),
+                    text: auto_reply.to_owned(),
+                    frozen: true,
+                })
+                .await
+            {
+                tracing::warn!(?error, "failed to send venue auto-reply");
+            }
+            continue;
+        }
+        let previous_messages = match existing.as_ref() {
+            Some(thread) => state
+                .mail
+                .store
+                .messages_for_thread(&thread.id)
+                .await
+                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+            None => vec![],
+        };
+        let composed = state
+            .mail
+            .composer
+            .compose(ComposeVenueEmail {
+                performer_display_name: performer.display_name().to_owned(),
+                performer_username: performer.username.clone(),
+                performer_genres: performer.performer_genres().to_vec(),
+                performer_press_kit_url: performer.press_kit_url().map(str::to_owned),
+                performer_social_links: performer.social_links(),
+                venue_name: venue.display_name().to_owned(),
+                note: command.note.clone(),
+                opportunities: context
+                    .opportunities
+                    .iter()
+                    .map(|opportunity| OpportunityContext {
+                        title: opportunity.title.clone(),
+                        date: opportunity.start_time.format("%Y-%m-%d").to_string(),
+                        other_performers: context.other_performers.clone(),
+                    })
+                    .collect(),
+                previous_messages,
+            })
+            .await
+            .map_err(|error| {
+                tracing::error!(?error, "failed to compose venue email");
+                StatusCode::SERVICE_UNAVAILABLE
+            })?;
+        let event_id = format!("opportunity-notification:{}", Uuid::new_v4());
+        let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
+        let generated_body = composed.generated_body.clone();
+        let is_new_thread = existing.is_none();
         let queued = if let Some(thread) = existing {
             state
                 .mail
@@ -200,9 +213,10 @@ pub async fn notify_venue_of_interested_opportunities(
                     thread_id: thread.id,
                     from: format!("{}@{}", performer.username, state.mail.booking_domain),
                     to: thread.recipients,
+                    cc: vec![],
                     subject: thread.subject,
-                    text_body,
-                    html_body: None,
+                    text_body: composed.text_body,
+                    html_body: Some(composed.html_body),
                     message_id,
                     in_reply_to: thread.latest_message_id.clone(),
                     references: thread.latest_message_id,
@@ -211,7 +225,6 @@ pub async fn notify_venue_of_interested_opportunities(
                 })
                 .await
         } else {
-            let subject = format!("Performance Inquiry from {}", performer.display_name());
             let thread_id = Uuid::new_v4().to_string();
             state
                 .mail
@@ -221,9 +234,9 @@ pub async fn notify_venue_of_interested_opportunities(
                         id: thread_id.clone(),
                         performer_id: user.uid.clone(),
                         performer_username: performer.username.clone(),
-                        venue_id,
+                        venue_id: venue_id.clone(),
                         recipients: vec![recipient.clone()],
-                        subject: subject.clone(),
+                        subject: composed.subject.clone(),
                         latest_message_id: message_id.clone(),
                     },
                     QueuedEmail {
@@ -231,9 +244,10 @@ pub async fn notify_venue_of_interested_opportunities(
                         thread_id,
                         from: format!("{}@{}", performer.username, state.mail.booking_domain),
                         to: vec![recipient],
-                        subject,
-                        text_body,
-                        html_body: None,
+                        cc: state.mail.founder_cc.clone(),
+                        subject: composed.subject,
+                        text_body: composed.text_body,
+                        html_body: Some(composed.html_body),
                         message_id,
                         in_reply_to: String::new(),
                         references: String::new(),
@@ -244,7 +258,32 @@ pub async fn notify_venue_of_interested_opportunities(
                 .await
         }
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        venues_notified += usize::from(queued);
+        if queued
+            && is_new_thread
+            && let Err(error) = state
+                .mail
+                .stream
+                .send_message(&StreamDelivery {
+                    event_id: format!("venue-contact:{}:{}", user.uid, venue_id),
+                    thread_id: String::new(),
+                    sender_id: user.uid.clone(),
+                    receiver_id: venue_id.clone(),
+                    text: generated_body,
+                    frozen: true,
+                })
+                .await
+        {
+            tracing::warn!(?error, "failed to mirror venue contact to Stream");
+        }
+        if queued {
+            notify_slack(
+                state.mail.slack_webhook_url.as_deref(),
+                "new venue contact email",
+                &format!("{} => {}", performer.display_name(), venue.display_name()),
+            )
+            .await;
+            venues_notified += 1;
+        }
     }
 
     Ok(Json(NotifyVenueResponse { venues_notified }))
@@ -266,15 +305,19 @@ mod tests {
     };
     use async_trait::async_trait;
     use chrono::Utc;
-    use std::{collections::HashMap, sync::Arc};
+    use std::{
+        collections::HashMap,
+        sync::{Arc, Mutex},
+    };
 
-    struct NoopStream;
+    #[derive(Default)]
+    struct RecordingStream {
+        deliveries: Mutex<Vec<StreamDelivery>>,
+    }
     #[async_trait]
-    impl StreamGateway for NoopStream {
-        async fn send_message(
-            &self,
-            _: &crate::domain::mail_bridge::StreamDelivery,
-        ) -> anyhow::Result<()> {
+    impl StreamGateway for RecordingStream {
+        async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
+            self.deliveries.lock().unwrap().push(delivery.clone());
             Ok(())
         }
     }
@@ -363,8 +406,9 @@ mod tests {
             reference_event_id: Some("event-1".into()),
         }
     }
-    fn state() -> (AppStateDyn, Arc<InMemoryMailStore>) {
+    fn state() -> (AppStateDyn, Arc<InMemoryMailStore>, Arc<RecordingStream>) {
         let store = Arc::new(InMemoryMailStore::default());
+        let stream = Arc::new(RecordingStream::default());
         let database = TestDatabase {
             users: HashMap::from([
                 ("artist".into(), user("artist", "the-band", false, None)),
@@ -383,6 +427,14 @@ mod tests {
                 ),
                 ("other".into(), user("other", "other act", false, None)),
                 (
+                    "venue-auto".into(),
+                    serde_json::json!({
+                        "id": "venue-auto", "email": "auto@example.com", "username": "auto venue",
+                        "deleted": false, "unclaimed": true,
+                        "venueInfo": {"bookingEmail": "auto@example.com", "autoReply": "Thanks, we'll reply soon"}
+                    }),
+                ),
+                (
                     "venue-no-email".into(),
                     user("venue-no-email", "no email", true, None),
                 ),
@@ -395,6 +447,7 @@ mod tests {
                         user_id: "owner".into(),
                         reference_event_id: Some("event-1".into()),
                         title: "Friday showcase".into(),
+                        start_time: Utc::now(),
                     },
                 ),
                 (
@@ -404,6 +457,7 @@ mod tests {
                         user_id: "owner".into(),
                         reference_event_id: Some("event-1".into()),
                         title: "Saturday showcase".into(),
+                        start_time: Utc::now(),
                     },
                 ),
                 (
@@ -413,6 +467,7 @@ mod tests {
                         user_id: "artist".into(),
                         reference_event_id: Some("event-1".into()),
                         title: "Owned".into(),
+                        start_time: Utc::now(),
                     },
                 ),
                 (
@@ -422,6 +477,7 @@ mod tests {
                         user_id: "owner".into(),
                         reference_event_id: Some("event-claimed".into()),
                         title: "Claimed venue".into(),
+                        start_time: Utc::now(),
                     },
                 ),
                 (
@@ -431,6 +487,17 @@ mod tests {
                         user_id: "owner".into(),
                         reference_event_id: Some("event-no-email".into()),
                         title: "No email venue".into(),
+                        start_time: Utc::now(),
+                    },
+                ),
+                (
+                    "auto-reply".into(),
+                    Opportunity {
+                        id: "auto-reply".into(),
+                        user_id: "owner".into(),
+                        reference_event_id: Some("event-auto".into()),
+                        title: "Auto reply venue".into(),
+                        start_time: Utc::now(),
                     },
                 ),
                 (
@@ -440,6 +507,7 @@ mod tests {
                         user_id: "owner".into(),
                         reference_event_id: None,
                         title: "No reference".into(),
+                        start_time: Utc::now(),
                     },
                 ),
             ]),
@@ -453,6 +521,10 @@ mod tests {
                     "event-no-email".into(),
                     vec![("venue-no-email".into(), "other".into())],
                 ),
+                (
+                    "event-auto".into(),
+                    vec![("venue-auto".into(), "other".into())],
+                ),
             ]),
         };
         (
@@ -462,14 +534,18 @@ mod tests {
                 firebase_project_id: "test".into(),
                 mail: MailBridge {
                     store: store.clone(),
-                    stream: Arc::new(NoopStream),
+                    stream: stream.clone(),
                     stream_webhook_secret: "stream-secret".into(),
                     ingress_secret: String::new(),
                     service_secret: String::new(),
                     booking_domain: "booking.tapped.ai".into(),
+                    composer: Arc::new(crate::domain::mail_composer::StaticEmailComposer),
+                    founder_cc: vec!["founder@tapped.ai".into()],
+                    slack_webhook_url: None,
                 },
             },
             store,
+            stream,
         )
     }
     fn artist() -> FirebaseUser {
@@ -481,7 +557,7 @@ mod tests {
 
     #[tokio::test]
     async fn stream_token_uses_authenticated_firebase_uid() {
-        let (state, _) = state();
+        let (state, _, _) = state();
         let Json(response) = stream_user_token(State(state), artist()).await.unwrap();
         let token = jsonwebtoken::decode::<serde_json::Value>(
             &response.token,
@@ -494,7 +570,7 @@ mod tests {
 
     #[tokio::test]
     async fn notification_groups_and_skips_invalid_opportunities() {
-        let (state, store) = state();
+        let (state, store, stream) = state();
         let Json(response) = notify_venue_of_interested_opportunities(
             State(state),
             artist(),
@@ -519,11 +595,15 @@ mod tests {
         assert!(queued[0].text_body.contains("Friday showcase"));
         assert!(queued[0].text_body.contains("Saturday showcase"));
         assert!(queued[0].text_body.contains("other act"));
+        assert_eq!(queued[0].cc, ["founder@tapped.ai"]);
+        let deliveries = stream.deliveries.lock().unwrap();
+        assert_eq!(deliveries.len(), 1);
+        assert!(deliveries[0].frozen);
     }
 
     #[tokio::test]
     async fn notification_appends_to_an_existing_thread() {
-        let (state, store) = state();
+        let (state, store, _) = state();
         let request = NotifyVenueOfInterestedOpportunities {
             opportunity_ids: vec!["valid".into()],
             note: String::new(),
@@ -549,8 +629,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn venue_auto_reply_uses_a_frozen_stream_message_instead_of_email() {
+        let (state, store, stream) = state();
+        let Json(response) = notify_venue_of_interested_opportunities(
+            State(state),
+            artist(),
+            Json(NotifyVenueOfInterestedOpportunities {
+                opportunity_ids: vec!["auto-reply".into()],
+                note: String::new(),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(response.venues_notified, 0);
+        assert!(store.outbound().is_empty());
+        let deliveries = stream.deliveries.lock().unwrap();
+        assert_eq!(deliveries.len(), 1);
+        assert_eq!(deliveries[0].sender_id, "venue-auto");
+        assert!(deliveries[0].frozen);
+    }
+
+    #[tokio::test]
     async fn missing_opportunities_are_rejected() {
-        let (state, store) = state();
+        let (state, store, _) = state();
         assert_eq!(
             notify_venue_of_interested_opportunities(
                 State(state),

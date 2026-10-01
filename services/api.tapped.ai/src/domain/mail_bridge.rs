@@ -19,7 +19,13 @@ use std::{
 };
 use uuid::Uuid;
 
-use crate::{domain::firebase_auth::FirebaseUser, state::AppStateDyn};
+use crate::{
+    domain::{
+        firebase_auth::FirebaseUser,
+        mail_composer::{EmailComposer, StaticEmailComposer},
+    },
+    state::AppStateDyn,
+};
 
 type HmacSha256 = Hmac<Sha256>;
 
@@ -40,6 +46,8 @@ pub struct QueuedEmail {
     pub thread_id: String,
     pub from: String,
     pub to: Vec<String>,
+    #[serde(default)]
+    pub cc: Vec<String>,
     pub subject: String,
     pub text_body: String,
     #[serde(default)]
@@ -60,17 +68,49 @@ pub struct EncodedAttachment {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct EmailMessage {
+    pub thread_id: String,
+    pub message_id: String,
+    pub direction: String,
+    pub from: String,
+    pub to: Vec<String>,
+    pub subject: String,
+    pub text_body: String,
+    pub html_body: Option<String>,
+    pub created_at: i64,
+}
+
+impl EmailMessage {
+    fn outbound(email: &QueuedEmail) -> Self {
+        Self {
+            thread_id: email.thread_id.clone(),
+            message_id: email.message_id.clone(),
+            direction: "outbound".into(),
+            from: email.from.clone(),
+            to: email.to.clone(),
+            subject: email.subject.clone(),
+            text_body: email.text_body.clone(),
+            html_body: email.html_body.clone(),
+            created_at: Utc::now().timestamp(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct StreamDelivery {
     pub event_id: String,
     pub thread_id: String,
     pub sender_id: String,
     pub receiver_id: String,
     pub text: String,
+    #[serde(default)]
+    pub frozen: bool,
 }
 
 #[async_trait]
 pub trait MailStore: Send + Sync {
     async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()>;
+    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()>;
     async fn create_thread_and_enqueue(
         &self,
         thread: EmailThread,
@@ -87,6 +127,7 @@ pub trait MailStore: Send + Sync {
         references: &[String],
     ) -> anyhow::Result<Option<EmailThread>>;
     async fn enqueue_outbound(&self, email: QueuedEmail) -> anyhow::Result<bool>;
+    async fn messages_for_thread(&self, thread_id: &str) -> anyhow::Result<Vec<EmailMessage>>;
     async fn claim_inbound(
         &self,
         message_id: &str,
@@ -116,6 +157,9 @@ pub struct MailBridge {
     pub ingress_secret: String,
     pub service_secret: String,
     pub booking_domain: String,
+    pub composer: Arc<dyn EmailComposer>,
+    pub founder_cc: Vec<String>,
+    pub slack_webhook_url: Option<String>,
 }
 
 impl MailBridge {
@@ -127,6 +171,9 @@ impl MailBridge {
             ingress_secret: "disabled".into(),
             service_secret: "disabled".into(),
             booking_domain: "booking.tapped.ai".into(),
+            composer: Arc::new(StaticEmailComposer),
+            founder_cc: vec![],
+            slack_webhook_url: None,
         }
     }
 }
@@ -136,6 +183,7 @@ struct MemoryState {
     threads: Vec<EmailThread>,
     outbound: Vec<QueuedEmail>,
     inbound: HashMap<String, (String, StreamDelivery)>,
+    messages: Vec<EmailMessage>,
     orphans: Vec<(Vec<u8>, String)>,
 }
 
@@ -170,6 +218,15 @@ impl MailStore for InMemoryMailStore {
         Ok(())
     }
 
+    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()> {
+        let mut state = self.state.lock().unwrap();
+        state
+            .messages
+            .retain(|item| item.message_id != message.message_id);
+        state.messages.push(message);
+        Ok(())
+    }
+
     async fn create_thread_and_enqueue(
         &self,
         thread: EmailThread,
@@ -192,6 +249,7 @@ impl MailStore for InMemoryMailStore {
         }
         state.threads.retain(|item| item.id != thread.id);
         state.threads.push(thread);
+        state.messages.push(EmailMessage::outbound(&email));
         state.outbound.push(email);
         Ok(true)
     }
@@ -252,8 +310,21 @@ impl MailStore for InMemoryMailStore {
         {
             thread.latest_message_id = email.message_id.clone();
         }
+        state.messages.push(EmailMessage::outbound(&email));
         state.outbound.push(email);
         Ok(true)
+    }
+
+    async fn messages_for_thread(&self, thread_id: &str) -> anyhow::Result<Vec<EmailMessage>> {
+        Ok(self
+            .state
+            .lock()
+            .unwrap()
+            .messages
+            .iter()
+            .filter(|message| message.thread_id == thread_id)
+            .cloned()
+            .collect())
     }
 
     async fn claim_inbound(
@@ -274,6 +345,17 @@ impl MailStore for InMemoryMailStore {
                     message_id.to_owned(),
                     ("processing".into(), _delivery.clone()),
                 );
+                state.messages.push(EmailMessage {
+                    thread_id: _delivery.thread_id.clone(),
+                    message_id: message_id.to_owned(),
+                    direction: "inbound".into(),
+                    from: _delivery.sender_id.clone(),
+                    to: vec![_delivery.receiver_id.clone()],
+                    subject: String::new(),
+                    text_body: _delivery.text.clone(),
+                    html_body: None,
+                    created_at: Utc::now().timestamp(),
+                });
                 Ok(true)
             }
         }
@@ -347,6 +429,13 @@ impl SqliteMailStore {
                message_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, raw BLOB NOT NULL,
                delivery TEXT NOT NULL, state TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL
              );
+             CREATE TABLE IF NOT EXISTS email_messages (
+               message_id TEXT PRIMARY KEY, thread_id TEXT NOT NULL, direction TEXT NOT NULL,
+               sender TEXT NOT NULL, recipients TEXT NOT NULL, subject TEXT NOT NULL,
+               text_body TEXT NOT NULL, html_body TEXT, state TEXT NOT NULL, created_at INTEGER NOT NULL
+             );
+             CREATE INDEX IF NOT EXISTS email_messages_thread_created
+               ON email_messages(thread_id, created_at);
              CREATE TABLE IF NOT EXISTS orphan_emails (
                id INTEGER PRIMARY KEY AUTOINCREMENT, raw BLOB NOT NULL, reason TEXT NOT NULL,
                created_at INTEGER NOT NULL
@@ -390,8 +479,15 @@ impl SqliteMailStore {
     }
 
     pub fn mark_outbound_sent(&self, event_id: &str) -> anyhow::Result<()> {
-        self.connection.lock().unwrap().execute(
+        let connection = self.connection.lock().unwrap();
+        connection.execute(
             "UPDATE email_outbox SET state='sent' WHERE event_id=?1",
+            params![event_id],
+        )?;
+        connection.execute(
+            "UPDATE email_messages SET state='sent' WHERE message_id=(
+               SELECT json_extract(payload,'$.message_id') FROM email_outbox WHERE event_id=?1
+             )",
             params![event_id],
         )?;
         Ok(())
@@ -404,6 +500,28 @@ impl SqliteMailStore {
                  created_at=strftime('%s','now') + MIN(3600, 30 * (1 << MIN(attempts, 7)))
              WHERE event_id=?1",
             params![event_id],
+        )?;
+        Ok(())
+    }
+
+    fn insert_outbound_message(
+        transaction: &rusqlite::Transaction<'_>,
+        email: &QueuedEmail,
+    ) -> anyhow::Result<()> {
+        transaction.execute(
+            "INSERT OR IGNORE INTO email_messages
+             (message_id,thread_id,direction,sender,recipients,subject,text_body,html_body,state,created_at)
+             VALUES (?1,?2,'outbound',?3,?4,?5,?6,?7,'pending',?8)",
+            params![
+                email.message_id,
+                email.thread_id,
+                email.from,
+                serde_json::to_string(&email.to)?,
+                email.subject,
+                email.text_body,
+                email.html_body,
+                Utc::now().timestamp(),
+            ],
         )?;
         Ok(())
     }
@@ -443,6 +561,22 @@ impl MailStore for SqliteMailStore {
         Ok(())
     }
 
+    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()> {
+        self.connection.lock().unwrap().execute(
+            "INSERT INTO email_messages
+             (message_id,thread_id,direction,sender,recipients,subject,text_body,html_body,state,created_at)
+             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'sent',?9)
+             ON CONFLICT(message_id) DO UPDATE SET thread_id=excluded.thread_id,
+             direction=excluded.direction,sender=excluded.sender,recipients=excluded.recipients,
+             subject=excluded.subject,text_body=excluded.text_body,html_body=excluded.html_body,
+             state='sent',created_at=excluded.created_at",
+            params![message.message_id, message.thread_id, message.direction, message.from,
+                serde_json::to_string(&message.to)?, message.subject, message.text_body,
+                message.html_body, message.created_at],
+        )?;
+        Ok(())
+    }
+
     async fn create_thread_and_enqueue(
         &self,
         thread: EmailThread,
@@ -472,6 +606,9 @@ impl MailStore for SqliteMailStore {
             "INSERT OR IGNORE INTO email_outbox(event_id,thread_id,payload,created_at) VALUES (?1,?2,?3,?4)",
             params![email.event_id, email.thread_id, serde_json::to_string(&email)?, Utc::now().timestamp()],
         )? == 1;
+        if inserted {
+            Self::insert_outbound_message(&transaction, &email)?;
+        }
         transaction.commit()?;
         Ok(inserted)
     }
@@ -510,6 +647,7 @@ impl MailStore for SqliteMailStore {
                  WHERE lower(t.performer_username)=lower(?1) AND (
                    EXISTS (SELECT 1 FROM inbound_emails i WHERE i.thread_id=t.id AND i.message_id=?2)
                    OR EXISTS (SELECT 1 FROM email_outbox o WHERE o.thread_id=t.id AND json_extract(o.payload,'$.message_id')=?2)
+                   OR EXISTS (SELECT 1 FROM email_messages m WHERE m.thread_id=t.id AND m.message_id=?2)
                  ) LIMIT 1",
                 params![username, reference], Self::decode_thread,
             ).optional()?;
@@ -532,9 +670,33 @@ impl MailStore for SqliteMailStore {
                 "UPDATE email_threads SET latest_message_id=?1 WHERE id=?2",
                 params![email.message_id, email.thread_id],
             )?;
+            Self::insert_outbound_message(&transaction, &email)?;
         }
         transaction.commit()?;
         Ok(inserted)
+    }
+
+    async fn messages_for_thread(&self, thread_id: &str) -> anyhow::Result<Vec<EmailMessage>> {
+        let connection = self.connection.lock().unwrap();
+        let mut statement = connection.prepare(
+            "SELECT thread_id,message_id,direction,sender,recipients,subject,text_body,html_body,created_at
+             FROM email_messages WHERE thread_id=?1 ORDER BY created_at,message_id",
+        )?;
+        let messages = statement.query_map(params![thread_id], |row| {
+            let recipients: String = row.get(4)?;
+            Ok(EmailMessage {
+                thread_id: row.get(0)?,
+                message_id: row.get(1)?,
+                direction: row.get(2)?,
+                from: row.get(3)?,
+                to: serde_json::from_str(&recipients).unwrap_or_default(),
+                subject: row.get(5)?,
+                text_body: row.get(6)?,
+                html_body: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })?;
+        Ok(messages.collect::<Result<_, _>>()?)
     }
 
     async fn claim_inbound(
@@ -554,13 +716,28 @@ impl MailStore for SqliteMailStore {
              WHERE message_id=?2 AND (state IN ('pending','failed') OR (state='processing' AND created_at < ?3))",
             params![Utc::now().timestamp(), message_id, Utc::now().timestamp() - 300],
         )? == 1;
+        if claimed {
+            transaction.execute(
+                "INSERT OR IGNORE INTO email_messages
+                 (message_id,thread_id,direction,sender,recipients,subject,text_body,html_body,state,created_at)
+                 VALUES (?1,?2,'inbound',?3,?4,'',?5,NULL,'processing',?6)",
+                params![message_id, delivery.thread_id, delivery.sender_id,
+                    serde_json::to_string(&vec![delivery.receiver_id.clone()])?, delivery.text,
+                    Utc::now().timestamp()],
+            )?;
+        }
         transaction.commit()?;
         Ok(claimed)
     }
 
     async fn mark_inbound_delivered(&self, message_id: &str) -> anyhow::Result<()> {
-        self.connection.lock().unwrap().execute(
+        let connection = self.connection.lock().unwrap();
+        connection.execute(
             "UPDATE inbound_emails SET state='delivered' WHERE message_id=?1",
+            params![message_id],
+        )?;
+        connection.execute(
+            "UPDATE email_messages SET state='delivered' WHERE message_id=?1",
             params![message_id],
         )?;
         Ok(())
@@ -644,6 +821,17 @@ impl StreamGateway for StreamHttpGateway {
             .header("Authorization", &self.server_token)
             .json(&serde_json::json!({ "message": { "text": delivery.text, "user_id": delivery.sender_id } }))
             .send().await?.error_for_status()?;
+        self.client
+            .patch(format!(
+                "{}/channels/messaging/{}",
+                self.base_url, channel_id
+            ))
+            .query(&[("api_key", &self.api_key)])
+            .header("Authorization", &self.server_token)
+            .json(&serde_json::json!({ "set": { "frozen": delivery.frozen } }))
+            .send()
+            .await?
+            .error_for_status()?;
         Ok(())
     }
 }
@@ -681,6 +869,21 @@ pub struct StreamWebhook {
     pub user: StreamUser,
     pub message: StreamMessage,
     pub members: Vec<StreamMember>,
+}
+
+pub async fn notify_slack(webhook_url: Option<&str>, title: &str, body: &str) {
+    let Some(webhook_url) = webhook_url else {
+        return;
+    };
+    if let Err(error) = reqwest::Client::new()
+        .post(webhook_url)
+        .json(&serde_json::json!({ "text": format!("*{title}* - {body}") }))
+        .send()
+        .await
+        .and_then(reqwest::Response::error_for_status)
+    {
+        tracing::warn!(?error, "failed to send mail Slack notification");
+    }
 }
 
 fn valid_signature(secret: &str, content: &[u8], provided: &str) -> bool {
@@ -739,6 +942,7 @@ pub async fn stream_before_message(
             thread.performer_username, state.mail.booking_domain
         ),
         to: thread.recipients,
+        cc: vec![],
         subject: thread.subject,
         text_body: text,
         html_body: None,
@@ -754,7 +958,17 @@ pub async fn stream_before_message(
         encoded_attachments: vec![],
     };
     match state.mail.store.enqueue_outbound(email).await {
-        Ok(_) => (StatusCode::OK, "ok"),
+        Ok(inserted) => {
+            if inserted {
+                notify_slack(
+                    state.mail.slack_webhook_url.as_deref(),
+                    "new venue contact email",
+                    &format!("{} => {}", payload.user.id, receiver.user.id),
+                )
+                .await;
+            }
+            (StatusCode::OK, "ok")
+        }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
     }
 }
@@ -841,6 +1055,7 @@ async fn deliver_inbound(
         sender_id: thread.venue_id,
         receiver_id: thread.performer_id,
         text: text.trim().to_owned(),
+        frozen: false,
     };
     let is_new = match state
         .mail
@@ -1168,6 +1383,7 @@ pub async fn enqueue_service_email(
         thread_id: format!("service:{message_id}"),
         from: message.from,
         to: recipients,
+        cc: vec![],
         subject: message.subject,
         text_body: message.text_body.unwrap_or_default(),
         html_body: message.html_body,
@@ -1234,6 +1450,47 @@ pub async fn backfill_email_thread(
     }
 }
 
+pub async fn backfill_email_message(
+    State(state): State<AppStateDyn>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> impl IntoResponse {
+    let timestamp = headers
+        .get("x-tapped-timestamp")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let signature = headers
+        .get("x-tapped-signature")
+        .and_then(|value| value.to_str().ok())
+        .unwrap_or_default();
+    let Ok(timestamp_number) = timestamp.parse::<i64>() else {
+        return StatusCode::UNAUTHORIZED;
+    };
+    if (Utc::now().timestamp() - timestamp_number).abs() > 300 {
+        return StatusCode::UNAUTHORIZED;
+    }
+    let signed = [timestamp.as_bytes(), b".", b"", b".", &body].concat();
+    if !valid_signature(&state.mail.service_secret, &signed, signature) {
+        return StatusCode::UNAUTHORIZED;
+    }
+    let message: EmailMessage = match serde_json::from_slice(&body) {
+        Ok(message) => message,
+        Err(_) => return StatusCode::BAD_REQUEST,
+    };
+    if message.thread_id.is_empty()
+        || message.message_id.is_empty()
+        || message.direction.is_empty()
+        || message.from.is_empty()
+        || message.to.is_empty()
+    {
+        return StatusCode::BAD_REQUEST;
+    }
+    match state.mail.store.upsert_message(message).await {
+        Ok(()) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
 #[derive(Debug, Deserialize)]
 pub struct CreateEmailThread {
     pub id: String,
@@ -1276,6 +1533,7 @@ pub async fn create_email_thread(
             thread_id: thread.id,
             from: format!("{}@{}", performer.username, state.mail.booking_domain),
             to: thread.recipients,
+            cc: vec![],
             subject: thread.subject,
             text_body: command.text_body,
             html_body: None,
@@ -1306,6 +1564,7 @@ pub async fn create_email_thread(
         thread_id: command.id,
         from: format!("{}@{}", performer.username, state.mail.booking_domain),
         to: recipients,
+        cc: vec![],
         subject: command.subject,
         text_body: command.text_body,
         html_body: None,

@@ -10,6 +10,7 @@ import sys
 import time
 import urllib.parse
 import urllib.request
+from datetime import datetime
 
 
 def access_token() -> str:
@@ -37,6 +38,8 @@ def decode(value):
         return [decode(item) for item in value["arrayValue"].get("values", [])]
     if "mapValue" in value:
         return {key: decode(item) for key, item in value["mapValue"].get("fields", {}).items()}
+    if "timestampValue" in value:
+        return value["timestampValue"]
     return None
 
 
@@ -66,12 +69,12 @@ def performer_username(project_id: str, token: str, performer_id: str) -> str | 
     return decode(document.get("fields", {}).get("username", {}))
 
 
-def send_thread(api_url: str, secret: str, thread: dict) -> None:
-    body = json.dumps(thread, separators=(",", ":")).encode()
+def send_record(api_url: str, secret: str, endpoint: str, record: dict) -> None:
+    body = json.dumps(record, separators=(",", ":")).encode()
     timestamp = str(int(time.time()))
     signature = hmac.new(secret.encode(), timestamp.encode() + b".." + body, hashlib.sha256).hexdigest()
     request = urllib.request.Request(
-        f"{api_url}/internal/mail/backfill-thread",
+        f"{api_url}/internal/mail/{endpoint}",
         data=body,
         headers={
             "content-type": "application/json",
@@ -83,6 +86,13 @@ def send_thread(api_url: str, secret: str, thread: dict) -> None:
     with urllib.request.urlopen(request, timeout=30) as response:
         if response.status != 204:
             raise RuntimeError(f"unexpected backfill response: {response.status}")
+
+
+def message_id(fields: dict) -> str | None:
+    for header in fields.get("Headers") or []:
+        if (header.get("Name") or "").lower() == "message-id":
+            return header.get("Value")
+    return fields.get("MessageID")
 
 
 def main() -> None:
@@ -99,7 +109,39 @@ def main() -> None:
         token,
         {"structuredQuery": {"from": [{"collectionId": "venuesContacted", "allDescendants": True}]}},
     )
-    stats = {"mode": "apply" if apply else "dry-run", "scanned": 0, "eligible": 0, "skipped": 0, "written": 0}
+    messages = request_json(
+        f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents:runQuery",
+        token,
+        {"structuredQuery": {"from": [{"collectionId": "emailsSent", "allDescendants": True}]}},
+    )
+    messages_by_thread: dict[tuple[str, str], list[dict]] = {}
+    for result in messages:
+        document = result.get("document")
+        if not document:
+            continue
+        path = document["name"].split("/documents/", 1)[1].split("/")
+        if len(path) < 6:
+            continue
+        fields = {key: decode(value) for key, value in document.get("fields", {}).items()}
+        identifier = message_id(fields)
+        recipients = [item.strip() for item in (fields.get("To") or "").split(",") if item.strip()]
+        if not identifier or not fields.get("From") or not recipients:
+            continue
+        created_at = int(datetime.fromisoformat(document["createTime"].replace("Z", "+00:00")).timestamp())
+        performer_id, venue_id = path[-5], path[-3]
+        messages_by_thread.setdefault((performer_id, venue_id), []).append({
+            "thread_id": f"{performer_id}:{venue_id}",
+            "message_id": identifier,
+            "direction": "outbound",
+            "from": fields["From"],
+            "to": recipients,
+            "subject": fields.get("Subject") or "",
+            "text_body": fields.get("TextBody") or "",
+            "html_body": fields.get("HtmlBody"),
+            "created_at": created_at,
+        })
+
+    stats = {"mode": "apply" if apply else "dry-run", "scanned": 0, "eligible": 0, "skipped": 0, "threads_written": 0, "messages_eligible": 0, "messages_written": 0}
 
     for result in results:
         document = result.get("document")
@@ -132,9 +174,14 @@ def main() -> None:
             "latest_message_id": latest_message_id,
         }
         stats["eligible"] += 1
+        thread_messages = messages_by_thread.get((performer_id, venue_id), [])
+        stats["messages_eligible"] += len(thread_messages)
         if apply:
-            send_thread(api_url, secret, thread)
-            stats["written"] += 1
+            send_record(api_url, secret, "backfill-thread", thread)
+            stats["threads_written"] += 1
+            for message in thread_messages:
+                send_record(api_url, secret, "backfill-message", message)
+                stats["messages_written"] += 1
 
     print(json.dumps(stats, sort_keys=True))
 

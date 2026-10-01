@@ -219,6 +219,68 @@ impl UserModel {
             .unwrap_or_default()
     }
 
+    pub fn press_kit_url(&self) -> Option<&str> {
+        self.performer_info
+            .as_ref()
+            .and_then(|info| info.press_kit_url.as_deref())
+    }
+
+    pub fn auto_reply(&self) -> Option<&str> {
+        self.venue_info
+            .as_ref()
+            .and_then(|info| info.auto_reply.as_deref())
+    }
+
+    pub fn social_links(&self) -> Vec<crate::domain::mail_composer::SocialLink> {
+        let social = &self.social_following;
+        [
+            (
+                "Instagram",
+                social
+                    .instagram_handle
+                    .as_ref()
+                    .map(|value| format!("https://instagram.com/{value}")),
+            ),
+            (
+                "Facebook",
+                social
+                    .facebook_handle
+                    .as_ref()
+                    .map(|value| format!("https://facebook.com/{value}")),
+            ),
+            (
+                "Twitter",
+                social
+                    .twitter_handle
+                    .as_ref()
+                    .map(|value| format!("https://twitter.com/{value}")),
+            ),
+            ("Spotify", social.spotify_url.clone()),
+            (
+                "Youtube",
+                social
+                    .youtube_channel_id
+                    .as_ref()
+                    .map(|value| format!("https://youtube.com/channel/{value}")),
+            ),
+            (
+                "Soundcloud",
+                social
+                    .soundcloud_handle
+                    .as_ref()
+                    .map(|value| format!("https://soundcloud.com/{value}")),
+            ),
+        ]
+        .into_iter()
+        .filter_map(|(label, url)| {
+            url.map(|url| crate::domain::mail_composer::SocialLink {
+                label: label.into(),
+                url,
+            })
+        })
+        .collect()
+    }
+
     pub fn total_audience_size(&self) -> u32 {
         let social_following = &self.social_following;
 

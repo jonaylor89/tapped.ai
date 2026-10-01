@@ -18,6 +18,7 @@ use tapped_api_rs::{
             CreateEmailThread, EmailThread, InMemoryMailStore, MailBridge, MailStore, QueuedEmail,
             SqliteMailStore, StreamDelivery, StreamGateway, create_email_thread,
         },
+        mail_composer::StaticEmailComposer,
         models::{booking::Booking, opportunity::Opportunity, review::Review, user::UserModel},
     },
     state::AppStateDyn,
@@ -145,6 +146,9 @@ async fn test_app() -> (
             ingress_secret: "ingress-secret".into(),
             service_secret: "service-secret".into(),
             booking_domain: "booking.tapped.ai".into(),
+            composer: Arc::new(StaticEmailComposer),
+            founder_cc: vec![],
+            slack_webhook_url: None,
         },
     };
     (spawn_app_with_state(state).await, store, stream)
@@ -186,6 +190,7 @@ async fn sqlite_outbox_survives_process_restart_and_claims_once() {
             thread_id: thread.id.clone(),
             from: "artist-name@booking.tapped.ai".into(),
             to: thread.recipients.clone(),
+            cc: vec![],
             subject: thread.subject.clone(),
             text_body: "Hello".into(),
             html_body: None,
@@ -206,6 +211,12 @@ async fn sqlite_outbox_survives_process_restart_and_claims_once() {
     let claimed = reopened.claim_outbound(10).unwrap();
     assert_eq!(claimed.len(), 1);
     assert_eq!(claimed[0].event_id, "durable-event");
+    let messages = reopened
+        .messages_for_thread("durable-thread")
+        .await
+        .unwrap();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].text_body, "Hello");
     reopened.mark_outbound_sent("durable-event").unwrap();
     assert!(reopened.claim_outbound(10).unwrap().is_empty());
 }
@@ -229,6 +240,7 @@ async fn existing_thread_id_cannot_be_reassigned_to_another_performer() {
         thread_id: thread.id.clone(),
         from: format!("{}@booking.tapped.ai", thread.performer_username),
         to: thread.recipients.clone(),
+        cc: vec![],
         subject: thread.subject.clone(),
         text_body: "Hello".into(),
         html_body: None,
@@ -275,6 +287,9 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
             ingress_secret: "ingress-secret".into(),
             service_secret: "service-secret".into(),
             booking_domain: "booking.tapped.ai".into(),
+            composer: Arc::new(StaticEmailComposer),
+            founder_cc: vec![],
+            slack_webhook_url: None,
         },
     };
     let user = FirebaseUser {
@@ -456,6 +471,34 @@ async fn signed_backfill_registers_an_existing_email_thread() {
         .unwrap();
     assert_eq!(thread.id, "legacy-thread");
     assert_eq!(thread.latest_message_id, "<legacy@booking.tapped.ai>");
+
+    let body = serde_json::to_vec(&serde_json::json!({
+        "thread_id": "legacy-thread",
+        "message_id": "<historic@booking.tapped.ai>",
+        "direction": "outbound",
+        "from": "legacy-name@booking.tapped.ai",
+        "to": ["booking@venue.example"],
+        "subject": "Legacy inquiry",
+        "text_body": "A historic conversation",
+        "html_body": "<p>A historic conversation</p>",
+        "created_at": 1
+    }))
+    .unwrap();
+    let timestamp = chrono::Utc::now().timestamp().to_string();
+    let signed = [timestamp.as_bytes(), b".", b"", b".", body.as_slice()].concat();
+    let response = app
+        .api_client
+        .post(format!("{}/internal/mail/backfill-message", app.address))
+        .header("x-tapped-timestamp", &timestamp)
+        .header("x-tapped-signature", sign("service-secret", &signed))
+        .body(body)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
+    let messages = store.messages_for_thread("legacy-thread").await.unwrap();
+    assert_eq!(messages.len(), 1);
+    assert_eq!(messages[0].text_body, "A historic conversation");
 }
 
 #[tokio::test]

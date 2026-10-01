@@ -4,10 +4,11 @@ use crate::{
     domain::{
         app_functions::{notify_venue_of_interested_opportunities, stream_user_token},
         mail_bridge::{
-            MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_thread,
-            create_email_thread, enqueue_service_email, inbound_email, postmark_inbound_email,
-            stream_before_message,
+            MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_message,
+            backfill_email_thread, create_email_thread, enqueue_service_email, inbound_email,
+            postmark_inbound_email, stream_before_message,
         },
+        mail_composer::OpenAiEmailComposer,
     },
     errors::AppError,
     routes::v1_routes,
@@ -83,6 +84,20 @@ impl Application {
                 .wrap_err("MAIL_API_SECRET is required")?,
             booking_domain: std::env::var("BOOKING_EMAIL_DOMAIN")
                 .unwrap_or_else(|_| "booking.tapped.ai".into()),
+            composer: Arc::new(OpenAiEmailComposer::new(
+                std::env::var("OPENAI_API_KEY")
+                    .or_else(|_| std::env::var("OPEN_AI_KEY"))
+                    .wrap_err("OPENAI_API_KEY (or legacy OPEN_AI_KEY) is required")?,
+                std::env::var("OPENAI_MODEL").unwrap_or_else(|_| "gpt-4.1-mini".into()),
+            )),
+            founder_cc: std::env::var("VENUE_CONTACT_FOUNDER_CC")
+                .unwrap_or_else(|_| "johannes@tapped.ai,ilias@tapped.ai".into())
+                .split(',')
+                .map(str::trim)
+                .filter(|address| !address.is_empty())
+                .map(str::to_owned)
+                .collect(),
+            slack_webhook_url: std::env::var("SLACK_WEBHOOK_URL").ok(),
         };
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
@@ -143,6 +158,10 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
         .route(
             "/internal/mail/backfill-thread",
             post(backfill_email_thread),
+        )
+        .route(
+            "/internal/mail/backfill-message",
+            post(backfill_email_message),
         )
         .nest(
             "/app/v1",

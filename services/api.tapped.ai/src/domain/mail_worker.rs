@@ -56,9 +56,10 @@ async fn render_email(email: &QueuedEmail) -> anyhow::Result<Vec<u8>> {
         .map(|html| ("text/html", html.as_str()))
         .unwrap_or(("text/plain", email.text_body.as_str()));
     let mut message = format!(
-        "From: {}\r\nTo: {}\r\nSubject: {}\r\nMessage-ID: {}\r\n",
+        "From: {}\r\nTo: {}\r\nCc: {}\r\nSubject: {}\r\nMessage-ID: {}\r\n",
         safe_header(&email.from),
         safe_header(&email.to.join(", ")),
+        safe_header(&email.cc.join(", ")),
         safe_header(&email.subject),
         safe_header(&email.message_id),
     );
@@ -143,7 +144,7 @@ pub async fn submit_smtp(address: &str, email: &QueuedEmail) -> anyhow::Result<(
         &format!("MAIL FROM:<{}>", safe_header(&email.from)),
     )
     .await?;
-    for recipient in &email.to {
+    for recipient in email.to.iter().chain(&email.cc) {
         command(
             &mut write,
             &mut read,
@@ -190,6 +191,8 @@ struct PostmarkAttachment {
 struct PostmarkEmail {
     from: String,
     to: String,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    cc: String,
     subject: String,
     text_body: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,6 +236,7 @@ pub async fn submit_postmark(
     let payload = PostmarkEmail {
         from: email.from.clone(),
         to: email.to.join(","),
+        cc: email.cc.join(","),
         subject: email.subject.clone(),
         text_body: email.text_body.clone(),
         html_body: email.html_body.clone(),
