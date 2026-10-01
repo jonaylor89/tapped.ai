@@ -104,6 +104,7 @@ impl Application {
             search: Arc::new(Typesense::from_env()),
             firebase_project_id: project_id,
             mail,
+            response_cache: Default::default(),
         };
 
         let server = run(listener, state).await?;

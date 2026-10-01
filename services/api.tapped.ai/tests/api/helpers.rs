@@ -34,6 +34,7 @@ pub async fn spawn_app() -> TestApp {
         search: Arc::new(MockSearch),
         firebase_project_id: "test-project".to_string(),
         mail: tapped_api_rs::domain::mail_bridge::MailBridge::disabled(),
+        response_cache: Default::default(),
     };
 
     spawn_app_with_state(state).await

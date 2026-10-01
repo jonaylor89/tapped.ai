@@ -139,6 +139,7 @@ async fn test_app() -> (
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
         firebase_project_id: "test-project".into(),
+        response_cache: Default::default(),
         mail: MailBridge {
             store: store.clone(),
             stream: stream.clone(),
@@ -280,6 +281,7 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
         database: Arc::new(ThreadDatabase),
         search: Arc::new(MockSearch),
         firebase_project_id: "test-project".into(),
+        response_cache: Default::default(),
         mail: MailBridge {
             store: store.clone(),
             stream: Arc::new(RecordingStream::default()),

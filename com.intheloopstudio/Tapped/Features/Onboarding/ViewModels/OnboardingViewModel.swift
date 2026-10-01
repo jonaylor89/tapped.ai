@@ -73,6 +73,7 @@ final class OnboardingViewModel {
 
     private let auth: any AuthRepository
     private let database: any DatabaseRepository
+    private let placesSessionToken = UUID().uuidString
     private let places: any PlacesRepository
     private let storage: any StorageRepository
     private let analytics: any AnalyticsRepository
@@ -193,7 +194,7 @@ final class OnboardingViewModel {
         let query = placeQuery.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { placePredictions = []; return }
         do {
-            let results = try await places.searchPlace(query)
+            let results = try await places.searchPlace(query, sessionToken: placesSessionToken)
             guard query == placeQuery.trimmingCharacters(in: .whitespaces) else { return }
             placePredictions = results
         } catch {
@@ -203,7 +204,7 @@ final class OnboardingViewModel {
 
     func select(_ prediction: AutocompletePrediction) async {
         do {
-            selectedPlace = try await places.getPlaceById(prediction.placeId)
+            selectedPlace = try await places.getPlaceById(prediction.placeId, sessionToken: placesSessionToken)
             placeQuery = ""
             placePredictions = []
         } catch {

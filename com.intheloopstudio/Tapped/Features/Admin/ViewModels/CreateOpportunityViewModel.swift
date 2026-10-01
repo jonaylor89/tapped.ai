@@ -49,6 +49,7 @@ final class CreateOpportunityViewModel {
 
     private let currentUserId: String
     private let dependencies: Dependencies
+    private let placesSessionToken = UUID().uuidString
     private var duration: TimeInterval
 
     init(dependencies: Dependencies, currentUserId: String, now: Date = .now) {
@@ -101,11 +102,11 @@ final class CreateOpportunityViewModel {
     func searchPlaces() async {
         let query = placeQuery.trimmingCharacters(in: .whitespaces)
         guard !query.isEmpty else { placeResults = []; return }
-        placeResults = (try? await dependencies.places.searchPlace(query)) ?? []
+        placeResults = (try? await dependencies.places.searchPlace(query, sessionToken: placesSessionToken)) ?? []
     }
 
     func selectPlace(_ prediction: AutocompletePrediction) async {
-        place = try? await dependencies.places.getPlaceById(prediction.placeId)
+        place = try? await dependencies.places.getPlaceById(prediction.placeId, sessionToken: placesSessionToken)
         placeQuery = ""
         placeResults = []
     }

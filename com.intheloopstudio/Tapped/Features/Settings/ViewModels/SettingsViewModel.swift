@@ -25,6 +25,7 @@ final class SettingsViewModel {
     private let auth: any AuthRepository
     private let database: any DatabaseRepository
     private let places: any PlacesRepository
+    private let placesSessionToken = UUID().uuidString
     private let storage: any StorageRepository
     private let analytics: any AnalyticsRepository
 
@@ -100,11 +101,11 @@ final class SettingsViewModel {
 
     func searchPlaces(_ query: String) async -> [AutocompletePrediction] {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return [] }
-        return (try? await places.searchPlace(query)) ?? []
+        return (try? await places.searchPlace(query, sessionToken: placesSessionToken)) ?? []
     }
 
     func place(for prediction: AutocompletePrediction) async -> PlaceData? {
-        try? await places.getPlaceById(prediction.placeId)
+        try? await places.getPlaceById(prediction.placeId, sessionToken: placesSessionToken)
     }
 
     func deleteService(_ service: Service) async {

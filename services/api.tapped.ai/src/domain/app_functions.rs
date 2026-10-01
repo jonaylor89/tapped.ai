@@ -532,6 +532,7 @@ mod tests {
                 database: Arc::new(database),
                 search: Arc::new(MockSearch),
                 firebase_project_id: "test".into(),
+                response_cache: Default::default(),
                 mail: MailBridge {
                     store: store.clone(),
                     stream: stream.clone(),

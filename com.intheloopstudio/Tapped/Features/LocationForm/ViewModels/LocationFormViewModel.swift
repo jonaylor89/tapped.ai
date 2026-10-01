@@ -17,6 +17,7 @@ final class LocationFormViewModel {
 
     private let places: any PlacesRepository
     private let debounce: Duration
+    private let placesSessionToken = UUID().uuidString
     private var searchTask: Task<Void, Never>?
 
     init(dependencies: Dependencies, initialPlace: PlaceData?, debounce: Duration = SearchViewModel.debounce) {
@@ -49,7 +50,7 @@ final class LocationFormViewModel {
         resolvingPlaceId = prediction.placeId
         defer { resolvingPlaceId = nil }
         do {
-            return try await places.getPlaceById(prediction.placeId)
+            return try await places.getPlaceById(prediction.placeId, sessionToken: placesSessionToken)
         } catch {
             failed = true
             return nil
@@ -58,7 +59,7 @@ final class LocationFormViewModel {
 
     private func runSearch(_ term: String) async {
         do {
-            let results = try await places.searchPlace(term)
+            let results = try await places.searchPlace(term, sessionToken: placesSessionToken)
             guard !Task.isCancelled else { return }
             predictions = results
             failed = false

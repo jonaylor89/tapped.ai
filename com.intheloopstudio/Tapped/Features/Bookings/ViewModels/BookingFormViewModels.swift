@@ -315,6 +315,7 @@ final class LocationSearchViewModel {
     var errorMessage: String?
 
     private let places: any PlacesRepository
+    private let placesSessionToken = UUID().uuidString
 
     init(dependencies: Dependencies) {
         places = dependencies.places
@@ -330,7 +331,7 @@ final class LocationSearchViewModel {
         defer { isSearching = false }
         do {
             try await Task.sleep(for: .milliseconds(250))
-            results = try await places.searchPlace(query)
+            results = try await places.searchPlace(query, sessionToken: placesSessionToken)
             errorMessage = nil
         } catch is CancellationError {
         } catch {
@@ -342,7 +343,7 @@ final class LocationSearchViewModel {
         isResolving = true
         defer { isResolving = false }
         do {
-            return try await places.getPlaceById(prediction.placeId)
+            return try await places.getPlaceById(prediction.placeId, sessionToken: placesSessionToken)
         } catch {
             errorMessage = "couldn't load that place"
             return nil

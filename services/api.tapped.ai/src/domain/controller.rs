@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use crate::{
     data::search::{UserSearchOptions, UserSearchOptionsBuilder},
@@ -20,6 +20,20 @@ use super::models::user::{GuardedPerformer, GuardedVenue};
 #[derive(Debug, Deserialize, Serialize)]
 pub struct SearchParams {
     query: Option<String>,
+}
+
+fn cached_response<T: Serialize>(
+    state: &AppStateDyn,
+    key: String,
+    value: &T,
+    ttl: Duration,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let value = serde_json::to_value(value).map_err(|error| {
+        tracing::error!("failed to serialize cached response: {error}");
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+    state.response_cache.insert(key, value.clone(), ttl);
+    Ok(Json(value))
 }
 
 async fn transform_performer_id(id: String, state: &AppStateDyn) -> Result<GuardedPerformer> {
@@ -86,9 +100,13 @@ async fn transform_venue(user: UserModel, state: &AppStateDyn) -> Result<Guarded
 pub async fn search_performers(
     State(state): State<AppStateDyn>,
     Query(params): Query<SearchParams>,
-) -> Result<Json<Vec<GuardedPerformer>>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
     tracing::info!("searching users with {:?}", params);
     let query = params.query.unwrap_or_default();
+    let cache_key = format!("performer-search:{}", query.trim().to_lowercase());
+    if let Some(value) = state.response_cache.get(&cache_key) {
+        return Ok(Json(value));
+    }
     let users = state
         .search
         .search_users(query, UserSearchOptions::default())
@@ -106,13 +124,22 @@ pub async fn search_performers(
     .await
     .unwrap();
 
-    Ok(Json(guarded_performers))
+    cached_response(
+        &state,
+        cache_key,
+        &guarded_performers,
+        Duration::from_secs(60),
+    )
 }
 
 pub async fn get_performer_username(
     State(state): State<AppStateDyn>,
     Path(username): Path<String>,
-) -> Result<Json<GuardedPerformer>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let cache_key = format!("performer-username:{}", username.to_lowercase());
+    if let Some(value) = state.response_cache.get(&cache_key) {
+        return Ok(Json(value));
+    }
     let user = state
         .database
         .get_user_by_username(&username)
@@ -127,13 +154,22 @@ pub async fn get_performer_username(
         StatusCode::INTERNAL_SERVER_ERROR
     })?;
 
-    Ok(Json(guarded_performer))
+    cached_response(
+        &state,
+        cache_key,
+        &guarded_performer,
+        Duration::from_secs(300),
+    )
 }
 
 pub async fn get_performer(
     State(state): State<AppStateDyn>,
     Path(id): Path<String>,
-) -> Result<Json<GuardedPerformer>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let cache_key = format!("performer-id:{id}");
+    if let Some(value) = state.response_cache.get(&cache_key) {
+        return Ok(Json(value));
+    }
     let user = state.database.get_user_by_id(&id).await.map_err(|error| {
         tracing::error!("{error}");
         StatusCode::NOT_FOUND
@@ -169,7 +205,7 @@ pub async fn get_performer(
 
     let guarded_user = user.to_guarded_performer(guarded_bookings, guarded_reviews);
 
-    Ok(Json(guarded_user))
+    cached_response(&state, cache_key, &guarded_user, Duration::from_secs(300))
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -182,13 +218,17 @@ pub struct LocationResponse {
 pub async fn get_location(
     State(state): State<AppStateDyn>,
     Path(latlng): Path<String>,
-) -> Result<Json<LocationResponse>, StatusCode> {
+) -> Result<Json<serde_json::Value>, StatusCode> {
     let mut latlng = latlng.split(",");
     let lat = latlng.next().unwrap();
     let lng = latlng.next().unwrap();
 
     let lat: f64 = lat.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
     let lng: f64 = lng.parse().map_err(|_| StatusCode::BAD_REQUEST)?;
+    let cache_key = format!("location:{lat:.4},{lng:.4}");
+    if let Some(value) = state.response_cache.get(&cache_key) {
+        return Ok(Json(value));
+    }
 
     let options = UserSearchOptionsBuilder::default()
         .lat(Some(lat))
@@ -259,5 +299,5 @@ pub async fn get_location(
         genres: normalized_genres,
     };
 
-    Ok(Json(res))
+    cached_response(&state, cache_key, &res, Duration::from_secs(300))
 }

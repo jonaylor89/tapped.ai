@@ -152,6 +152,7 @@ mod tests {
             search: Arc::new(MockSearch),
             firebase_project_id: TEST_PROJECT_ID.to_string(),
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
+            response_cache: Default::default(),
         }
     }
 
