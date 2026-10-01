@@ -29,7 +29,7 @@ async fn main() -> Result<()> {
             server_token: std::env::var("POSTMARK_SERVER_TOKEN")
                 .wrap_err("POSTMARK_SERVER_TOKEN is required for the Postmark transport")?,
         },
-        value => color_eyre::eyre::bail!("unsupported MAIL_TRANSPORT: {value}"),
+        value => return Err(color_eyre::eyre::eyre!("unsupported MAIL_TRANSPORT: {value}")),
     };
     let store =
         SqliteMailStore::open(&path).map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?;
