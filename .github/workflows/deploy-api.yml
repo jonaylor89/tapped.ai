@@ -59,7 +59,7 @@ jobs:
         with:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
-          tags: tag:github-actions
+          tags: tag:tapped-ci
           version: 1.102.4
           hostname: tapped-api-deploy-${{ github.run_id }}
           targets: tapped-prod
