@@ -2,12 +2,7 @@ packages:
   - apps/*
   - services/event-crawler
   - services/ticket-crawler
-  - com.intheloopstudio/functions
   - packages/*
-
-ignoredBuiltDependencies:
-  - jpegtran-bin
-  - nodemailer
 
 onlyBuiltDependencies:
   - '@firebase/util'

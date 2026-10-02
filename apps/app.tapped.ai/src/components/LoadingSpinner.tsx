@@ -1,6 +1,6 @@
 import cn from "classnames";
 
-export interface ISVGProps extends React.SVGProps<SVGSVGElement> {
+interface ISVGProps extends React.SVGProps<SVGSVGElement> {
 	size?: number;
 	className?: string;
 }

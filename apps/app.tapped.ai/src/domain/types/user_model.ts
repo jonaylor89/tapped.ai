@@ -1,9 +1,4 @@
-import {
-	type DocumentData,
-	type QueryDocumentSnapshot,
-	type SnapshotOptions,
-	Timestamp,
-} from "firebase/firestore";
+import type { Timestamp } from "firebase/firestore";
 import type { Option } from "./option";
 
 export type Location = {
@@ -52,18 +47,6 @@ export type PerformerInfo = {
 	category: PerformerCategory;
 };
 
-export function suggestMaxCapacity(category: PerformerCategory): number {
-	const mapping: Record<PerformerCategory, number> = {
-		undiscovered: 300,
-		emerging: 700,
-		hometownHero: 1500,
-		mainstream: 100000,
-		legendary: 1000000,
-	};
-
-	return mapping[category];
-}
-
 export function suggestTicketPriceRange(category: PerformerCategory): [number, number] {
 	const mapping: Record<PerformerCategory, [number, number]> = {
 		undiscovered: [0, 10],
@@ -71,18 +54,6 @@ export function suggestTicketPriceRange(category: PerformerCategory): [number, n
 		hometownHero: [20, 40],
 		mainstream: [40, 75],
 		legendary: [75, 100],
-	};
-
-	return mapping[category];
-}
-
-export function formattedName(category: PerformerCategory): string {
-	const mapping: Record<PerformerCategory, string> = {
-		undiscovered: "Undiscovered",
-		emerging: "Emerging",
-		hometownHero: "Hometown Hero",
-		mainstream: "Mainstream",
-		legendary: "Legendary",
 	};
 
 	return mapping[category];
@@ -141,63 +112,12 @@ export type UserModel = {
 	stripeCustomerId: Option<string>;
 };
 
-export const emptyUserModel: UserModel = {
-	id: "",
-	email: "",
-	unclaimed: false,
-	timestamp: Timestamp.now(),
-	username: "",
-	artistName: "",
-	bio: "",
-	occupations: [],
-	profilePicture: null,
-	location: null,
-	performerInfo: null,
-	venueInfo: null,
-	bookerInfo: null,
-	emailNotifications: {
-		appReleases: true,
-		tappedUpdates: true,
-		bookingRequests: true,
-	},
-	pushNotifications: {
-		appReleases: true,
-		tappedUpdates: true,
-		bookingRequests: true,
-		directMessages: true,
-	},
-	deleted: false,
-	socialFollowing: {
-		tiktokFollowers: 0,
-		instagramFollowers: 0,
-		twitterFollowers: 0,
-		facebookFollowers: 0,
-		soundcloudFollowers: 0,
-		audiusFollowers: 0,
-		twitchFollowers: 0,
-	},
-	stripeConnectedAccountId: null,
-	stripeCustomerId: null,
-};
-
-export const userModelConverter = {
-	toFirestore(user: UserModel): DocumentData {
-		return { ...user };
-	},
-	fromFirestore(snapshot: QueryDocumentSnapshot, options: SnapshotOptions): UserModel {
-		const data = snapshot.data(options) as UserModel;
-		return {
-			...data,
-		};
-	},
-};
-
 export const performerScore = (category: PerformerCategory): number => {
 	const range = performerScoreRange(category);
 	return Math.round((range[0] + range[0]) / 2);
 };
 
-export const performerScoreRange = (category: PerformerCategory): [number, number] => {
+const performerScoreRange = (category: PerformerCategory): [number, number] => {
 	const mapping: {
 		[key in PerformerCategory]: [number, number];
 	} = {
@@ -222,7 +142,7 @@ export const totalSocialFollowing = (socialFollowing: SocialFollowing | null): n
 	(socialFollowing?.instagramFollowers ?? 0) +
 	(socialFollowing?.tiktokFollowers ?? 0);
 
-export const isVenue = (user: UserModel): boolean =>
+const isVenue = (user: UserModel): boolean =>
 	user.venueInfo !== null && user.venueInfo !== undefined;
 
 export const profileImage = (user: UserModel): string =>
