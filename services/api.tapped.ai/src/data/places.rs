@@ -71,9 +71,11 @@ impl PlaceDetails {
 /// Google Places (New) and Geocoding. Every call is billed; callers are expected to cache.
 #[async_trait]
 pub trait Places: Send + Sync {
+    /// `types` restricts results to these primary types (e.g. `locality`, `(cities)`).
     async fn autocomplete(
         &self,
         query: &str,
+        types: &[String],
         session_token: Option<&str>,
     ) -> Result<Vec<AutocompletePrediction>>;
     async fn place_details(
@@ -93,6 +95,7 @@ impl Places for MockPlaces {
     async fn autocomplete(
         &self,
         query: &str,
+        _types: &[String],
         _session_token: Option<&str>,
     ) -> Result<Vec<AutocompletePrediction>> {
         Ok(vec![AutocompletePrediction {
@@ -165,10 +168,14 @@ impl Places for GooglePlaces {
     async fn autocomplete(
         &self,
         query: &str,
+        types: &[String],
         session_token: Option<&str>,
     ) -> Result<Vec<AutocompletePrediction>> {
         self.ensure_configured()?;
         let mut body = serde_json::json!({ "input": query });
+        if !types.is_empty() {
+            body["includedPrimaryTypes"] = types.into();
+        }
         if let Some(session_token) = session_token {
             body["sessionToken"] = session_token.into();
         }

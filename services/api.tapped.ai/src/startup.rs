@@ -178,7 +178,6 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
             Router::new()
                 .route("/venue-email-threads", post(create_email_thread))
                 .route("/stream-token", post(stream_user_token))
-                .route("/places/autocomplete", get(autocomplete_places))
                 .route("/places/photo", get(get_place_photo))
                 .route("/places/reverse-geocode", get(reverse_geocode))
                 .route(
@@ -189,16 +188,13 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                     state.clone(),
                     crate::domain::firebase_auth::verify_firebase_token,
                 ))
-                // Public: added after `route_layer` so Firebase auth doesn't apply. Server-rendered
-                // web pages have no user, and details are served from the Firestore cache.
+                // Public: added after `route_layer` so Firebase auth doesn't apply. The web app has
+                // no signed-in user; Google spend is bounded by the Places quota caps.
                 .route(
-                    "/places/:place_id",
-                    get(get_place).layer(
-                        CorsLayer::new()
-                            .allow_origin(Any)
-                            .allow_methods([axum::http::Method::GET]),
-                    ),
+                    "/places/autocomplete",
+                    get(autocomplete_places).layer(public_get_cors()),
                 )
+                .route("/places/:place_id", get(get_place).layer(public_get_cors()))
                 .into(),
         )
         .nest_api_service("/v1", v1_routes(state.clone()))
@@ -229,6 +225,12 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
     let server = axum::serve(listener, app);
 
     Ok(server)
+}
+
+fn public_get_cors() -> CorsLayer {
+    CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods([axum::http::Method::GET])
 }
 
 async fn root() -> Json<Value> {

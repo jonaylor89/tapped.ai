@@ -2,8 +2,9 @@
 //! the process-local response cache, then the Firestore `googlePlacesCache` collection (place
 //! details only), and only then to Google, which bills per request.
 //!
-//! Place details are public (server-rendered web pages have no user); everything else requires
-//! Firebase auth.
+//! Place details and autocomplete are public (the web app has no signed-in user); photos and
+//! reverse geocoding require Firebase auth. Google spend is bounded by the daily quota caps on
+//! the Places API project.
 
 use std::time::Duration;
 
@@ -28,6 +29,8 @@ const PHOTO_TTL: Duration = Duration::from_secs(30 * 60);
 const REVERSE_GEOCODE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
 
 const MAX_QUERY_LEN: usize = 200;
+// Google allows at most five `includedPrimaryTypes`.
+const MAX_AUTOCOMPLETE_TYPES: usize = 5;
 const DEFAULT_PHOTO_HEIGHT_PX: u32 = 400;
 const MAX_PHOTO_HEIGHT_PX: u32 = 4_800;
 
@@ -71,12 +74,31 @@ fn is_safe_path(value: &str) -> bool {
 #[serde(rename_all = "camelCase")]
 pub struct AutocompleteParams {
     query: String,
+    /// Comma-separated primary types, e.g. `locality` or `(cities)`.
+    types: Option<String>,
     session_token: Option<String>,
+}
+
+fn parse_types(types: Option<&str>) -> Option<Vec<String>> {
+    let mut types: Vec<String> = types
+        .unwrap_or_default()
+        .split(',')
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
+        .collect();
+    let valid = types.len() <= MAX_AUTOCOMPLETE_TYPES
+        && types.iter().all(|t| {
+            t.len() <= 64
+                && t.chars()
+                    .all(|c| c.is_ascii_lowercase() || matches!(c, '_' | '(' | ')'))
+        });
+    types.sort();
+    valid.then_some(types)
 }
 
 pub async fn autocomplete_places(
     State(state): State<AppStateDyn>,
-    _user: FirebaseUser,
     Query(params): Query<AutocompleteParams>,
 ) -> Result<Json<Vec<AutocompletePrediction>>, StatusCode> {
     let query = normalize_query(&params.query);
@@ -86,15 +108,16 @@ pub async fn autocomplete_places(
     if query.len() > MAX_QUERY_LEN {
         return Err(StatusCode::BAD_REQUEST);
     }
+    let types = parse_types(params.types.as_deref()).ok_or(StatusCode::BAD_REQUEST)?;
 
-    let cache_key = format!("places-autocomplete:{query}");
+    let cache_key = format!("places-autocomplete:{}|{query}", types.join(","));
     if let Some(predictions) = cached(&state, &cache_key) {
         return Ok(Json(predictions));
     }
 
     let predictions = state
         .places
-        .autocomplete(&query, params.session_token.as_deref())
+        .autocomplete(&query, &types, params.session_token.as_deref())
         .await
         .map_err(upstream_error)?;
     store(&state, cache_key, &predictions, AUTOCOMPLETE_TTL);
@@ -259,6 +282,17 @@ mod tests {
     #[test]
     fn normalizes_queries_for_cache_keys() {
         assert_eq!(normalize_query("  The   Camel\tRVA "), "the camel rva");
+    }
+
+    #[test]
+    fn parses_autocomplete_types() {
+        assert_eq!(parse_types(None), Some(vec![]));
+        assert_eq!(
+            parse_types(Some("locality, (cities)")),
+            Some(vec!["(cities)".to_owned(), "locality".to_owned()])
+        );
+        assert_eq!(parse_types(Some("locality&key=x")), None);
+        assert_eq!(parse_types(Some("a,b,c,d,e,f")), None);
     }
 
     #[test]
