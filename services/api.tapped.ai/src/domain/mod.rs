@@ -7,3 +7,4 @@ pub mod mail_composer;
 pub mod mail_worker;
 pub mod models;
 pub mod places;
+pub mod public_docs;

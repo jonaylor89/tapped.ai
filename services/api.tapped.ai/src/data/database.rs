@@ -9,6 +9,7 @@ use anyhow::Result;
 use axum::async_trait;
 use firestore::{FirestoreDb, FirestoreResult, struct_path::path};
 use futures::{TryStreamExt, stream::BoxStream};
+use serde_json::{Value, json};
 use tracing::instrument;
 
 #[derive(Debug, Clone, Default)]
@@ -57,6 +58,28 @@ impl Database for MockDatabase {
     async fn get_reviews_by_booker_id(&self, _booker_id: &str) -> Result<Vec<Review>> {
         Ok(vec![])
     }
+
+    async fn get_user_doc_by_username(&self, username: &str) -> Result<Option<Value>> {
+        Ok(Some(json!({
+            "id": "mock-user-id",
+            "username": username,
+            "artistName": "Mock Artist",
+            "email": "private@example.com",
+            "stripeCustomerId": "cus_private",
+            "deleted": false,
+            "venueInfo": { "capacity": 100, "bookingEmail": "private@example.com" },
+            "_firestore_id": "mock-user-id",
+        })))
+    }
+
+    async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
+        Ok(Some(json!({
+            "id": id,
+            "title": "Mock Opportunity",
+            "flierUrl": "https://example.com/flier.png",
+            "deleted": false,
+        })))
+    }
 }
 
 #[async_trait]
@@ -81,6 +104,16 @@ pub trait Database: Send + Sync {
 
     async fn set_cached_place(&self, _place: &PlaceDetails) -> Result<()> {
         Ok(())
+    }
+
+    /// The raw `users` document, for public pages that need the web app's `UserModel` shape.
+    async fn get_user_doc_by_username(&self, _username: &str) -> Result<Option<Value>> {
+        Ok(None)
+    }
+
+    /// The raw `opportunities` document.
+    async fn get_opportunity_doc(&self, _id: &str) -> Result<Option<Value>> {
+        Ok(None)
     }
 }
 
@@ -338,5 +371,35 @@ impl Database for Firestore {
             .await?;
 
         Ok(())
+    }
+
+    #[instrument]
+    async fn get_user_doc_by_username(&self, username: &str) -> Result<Option<Value>> {
+        let docs: Vec<Value> = self
+            .db
+            .fluent()
+            .select()
+            .from("users")
+            .filter(|q| q.field("username").eq(username))
+            .limit(1)
+            .obj()
+            .query()
+            .await?;
+
+        Ok(docs.into_iter().next())
+    }
+
+    #[instrument]
+    async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
+        let doc: Option<Value> = self
+            .db
+            .fluent()
+            .select()
+            .by_id_in("opportunities")
+            .obj()
+            .one(id)
+            .await?;
+
+        Ok(doc)
     }
 }

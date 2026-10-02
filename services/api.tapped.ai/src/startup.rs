@@ -10,6 +10,7 @@ use crate::{
         },
         mail_composer::OpenAiEmailComposer,
         places::{autocomplete_places, get_place, get_place_photo, reverse_geocode},
+        public_docs::{get_public_opportunity, get_public_user_by_username},
     },
     errors::AppError,
     routes::v1_routes,
@@ -189,12 +190,21 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                     crate::domain::firebase_auth::verify_firebase_token,
                 ))
                 // Public: added after `route_layer` so Firebase auth doesn't apply. The web app has
-                // no signed-in user; Google spend is bounded by the Places quota caps.
+                // no signed-in user; Google spend is bounded by the Places quota caps, and the
+                // user/opportunity documents have private fields removed.
                 .route(
                     "/places/autocomplete",
                     get(autocomplete_places).layer(public_get_cors()),
                 )
                 .route("/places/:place_id", get(get_place).layer(public_get_cors()))
+                .route(
+                    "/users/username/:username",
+                    get(get_public_user_by_username).layer(public_get_cors()),
+                )
+                .route(
+                    "/opportunities/:opportunity_id",
+                    get(get_public_opportunity).layer(public_get_cors()),
+                )
                 .into(),
         )
         .nest_api_service("/v1", v1_routes(state.clone()))
