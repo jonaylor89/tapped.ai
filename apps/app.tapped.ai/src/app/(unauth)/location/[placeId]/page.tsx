@@ -12,12 +12,12 @@ type Props = {
 
 function getCityName(place: PlaceData): string {
 	const locality = place.addressComponents.find((c) => c.types.includes("locality"));
-	if (locality) return locality.longName;
+	if (locality?.longText) return locality.longText;
 
 	const adminArea = place.addressComponents.find((c) =>
 		c.types.includes("administrative_area_level_1")
 	);
-	if (adminArea) return adminArea.longName;
+	if (adminArea?.longText) return adminArea.longText;
 
 	return place.shortFormattedAddress.split(",")[0] ?? "Location";
 }

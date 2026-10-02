@@ -1,8 +1,7 @@
-import { googlePlacesApiKey } from "@/data/places";
 import { Card } from "../ui/card";
 
 export default function EmbededMap({ lat, lng }: { lat: number; lng: number }) {
-	const query = `https://www.google.com/maps/embed/v1/place?key=${googlePlacesApiKey}&q=${lat},${lng}`;
+	const query = `https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_EMBED_API_KEY ?? ""}&q=${lat},${lng}`;
 	return (
 		<Card className="flex w-[300px] justify-center">
 			<iframe

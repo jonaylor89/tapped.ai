@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { autocompleteCities, searchPlaces } from "@/data/places";
+import { autocompleteCities } from "@/data/places";
 import type { BoundingBox, UserSearchOptions } from "@/data/typesense";
 import type { UserModel } from "@/domain/types/user_model";
 import { QueryProvider } from "./query-provider";
@@ -82,24 +82,14 @@ export const useSearch = () => {
 
 				return await autocompleteCities(query);
 			},
-		});
-
-	const usePlaceData = (query: string) =>
-		useQuery({
-			queryKey: ["places", query],
-			queryFn: async () => {
-				if (query === "") {
-					return [];
-				}
-
-				return await searchPlaces(query);
-			},
+			// Billed Google Places request; results don't change while the user is searching.
+			staleTime: 5 * 60 * 1000,
+			refetchOnWindowFocus: false,
 		});
 
 	return {
 		useVenueData,
 		useSearchData,
-		usePlaceData,
 		useCityData,
 	};
 };

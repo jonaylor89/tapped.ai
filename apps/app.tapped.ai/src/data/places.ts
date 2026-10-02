@@ -1,164 +1,93 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { httpsCallable } from "@firebase/functions";
-import { collection, doc, getDoc, setDoc } from "firebase/firestore";
 import { LRUCache } from "lru-cache";
-import type { PlaceData, PlacePrediction } from "@/domain/types/place_data";
-import { db, functions } from "@/utils/firebase";
+import type { PlaceData } from "@/domain/types/place_data";
+import { functions } from "@/utils/firebase";
 
-export const googlePlacesApiKey = process.env.NEXT_PUBLIC_GOOGLE_PLACES_API_KEY ?? "";
+type CityPrediction = {
+	place_id: string;
+	description: string;
+};
 
-const placeDetailsCache = new LRUCache({
+// Every Places request is billed, so cache the in-flight promise: duplicate calls made while a
+// request is pending (re-renders, generateMetadata + Page, repeated searches) share one request.
+const placeDetailsCache = new LRUCache<string, Promise<PlaceData>>({
 	max: 500,
+	ttl: 60 * 60 * 1000,
 });
-// const placePhotosCache = new LRUCache({
-//   max: 500,
-// });
-export const googlePlacesCacheRef = collection(db, "googlePlacesCache");
+const autocompleteCitiesCache = new LRUCache<string, Promise<CityPrediction[]>>({
+	max: 500,
+	ttl: 5 * 60 * 1000,
+});
 
-export const getPlaceById = async (placeId: string) => {
-	const placeSnapshot = await getDoc(doc(googlePlacesCacheRef, placeId));
-	if (placeSnapshot.exists()) {
-		return placeSnapshot.data() as PlaceData;
+const cachedRequest = <T extends {}>(
+	cache: LRUCache<string, Promise<T>>,
+	key: string,
+	request: () => Promise<T>
+): Promise<T> => {
+	const cached = cache.get(key);
+	if (cached) {
+		return cached;
 	}
 
-	const place = await _getPlaceDetails(placeId);
-	await setDoc(doc(googlePlacesCacheRef, placeId), place);
+	const promise = request();
+	cache.set(key, promise);
+	// Don't cache failures.
+	promise.catch(() => {
+		if (cache.get(key) === promise) {
+			cache.delete(key);
+		}
+	});
 
-	return place;
+	return promise;
 };
 
-const _getPlaceDetails = async (placeId: string): Promise<PlaceData> => {
-	const fields = ["id", "location", "shortFormattedAddress", "addressComponents", "photos"];
+const normalizeQuery = (q: string) => q.trim().replace(/\s+/g, " ").toLowerCase();
 
-	try {
-		if (placeDetailsCache.has(placeId)) {
-			return placeDetailsCache.get(placeId) as PlaceData;
+const tappedApiUrl = process.env.NEXT_PUBLIC_TAPPED_API_URL ?? "https://api.tapped.ai";
+
+// The Tapped API caches place details in Firestore `googlePlacesCache`, shared with the apps.
+export const getPlaceById = (placeId: string): Promise<PlaceData> =>
+	cachedRequest(placeDetailsCache, placeId, async () => {
+		const res = await fetch(`${tappedApiUrl}/app/v1/places/${encodeURIComponent(placeId)}`);
+		if (!res.ok) {
+			throw new Error(`error getting place details for placeId: ${placeId} (${res.status})`);
 		}
 
-		const res = await fetch(`https://places.googleapis.com/v1/places/${placeId}?languageCode=en`, {
-			method: "GET",
-			headers: {
-				"Content-Type": "application/json",
-				"X-Goog-Api-Key": googlePlacesApiKey,
-				"X-Goog-FieldMask": fields.join(","),
-			},
-		});
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const json = (await res.json()) as {
-			error?: Error;
-			location: { latitude: number; longitude: number };
-			shortFormattedAddress: string;
-			addressComponents: {
-				types: string[];
-				shortName: string;
-				longName: string;
-			}[];
-			photos: {
-				height: number;
-				width: number;
-				htmlAttributions: string[];
-				photoReference: string;
-			}[];
-		};
-
-		if (json.error) {
-			console.error(json.error);
-			throw new Error(json.error.message);
-		}
-
-		const { location, shortFormattedAddress, addressComponents, photos } = json;
-		const { latitude: lat, longitude: lng } = location;
-
-		const photoMetadata = (photos?.length ?? 0) > 0 ? photos[0] : null;
-
-		const value = {
-			placeId,
-			shortFormattedAddress,
-			addressComponents,
-			photoMetadata,
-			lat,
-			lng,
-		};
-		placeDetailsCache.set(placeId, value);
-		return value;
-	} catch (e) {
-		console.error(`error getting place details for placeId: ${placeId}`, e);
-		throw e;
-	}
-};
+		return (await res.json()) as PlaceData;
+	});
 
 export const autocompleteCities = async (
 	q: string,
 	types: string[] = ["locality"]
-): Promise<
-	{
-		place_id: string;
-		description: string;
-	}[]
-> => {
+): Promise<CityPrediction[]> => {
+	const query = normalizeQuery(q);
+	if (query === "") {
+		return [];
+	}
+
+	try {
+		return await cachedRequest(autocompleteCitiesCache, `${types.join(",")}|${query}`, () =>
+			_autocompleteCities(query, types)
+		);
+	} catch (e) {
+		console.error(e);
+		return [];
+	}
+};
+
+const _autocompleteCities = async (q: string, types: string[]): Promise<CityPrediction[]> => {
 	const callable = httpsCallable(functions, "autocompletePlaces");
 	const res = await callable({ query: q, types });
 	const data = res.data as {
-		predictions: {
-			place_id: string;
-			description: string;
-		}[];
+		predictions: CityPrediction[];
 	};
 
 	if ("error_message" in data) {
 		console.error({ data });
-		return [];
+		throw new Error(String(data.error_message));
 	}
 
 	return data.predictions ?? [];
-};
-
-export const searchPlaces = async (q: string): Promise<PlacePrediction[]> => {
-	const res = await fetch("https://places.googleapis.com/v1/places:searchText", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-			"X-Goog-Api-Key": googlePlacesApiKey,
-			"X-Goog-FieldMask": "places.id,places.displayName,places.formattedAddress,places.location",
-		},
-		body: JSON.stringify({
-			textQuery: q,
-		}),
-	});
-
-	const json = (await res.json()) as {
-		places?: {
-			id: string;
-			displayName: { text: string };
-			formattedAddress: string;
-			location: { latitude: number; longitude: number };
-		}[];
-		error?: {
-			code: number;
-			message: string;
-			status: string;
-		};
-	};
-
-	if (json.error !== undefined) {
-		console.log({ error: json.error });
-		return [];
-	}
-
-	const places = json.places?.map((place) => {
-		const { id, displayName, formattedAddress, location } = place;
-
-		const { text: name } = displayName;
-		const { latitude, longitude } = location;
-		return {
-			id,
-			name,
-			formattedAddress,
-			latitude,
-			longitude,
-		};
-	});
-
-	return places ?? [];
 };
