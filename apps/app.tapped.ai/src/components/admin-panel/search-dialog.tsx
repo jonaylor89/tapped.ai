@@ -126,14 +126,14 @@ export default function SearchDialog() {
 			<CommandGroup heading="cities">
 				{placesData?.map((hit) => (
 					<CommandItem
-						key={hit.place_id}
+						key={hit.placeId}
 						onSelect={() => {
 							searchBar?.setIsOpen();
-							router.push(`/location/${hit.place_id}`);
+							router.push(`/location/${hit.placeId}`);
 						}}
 					>
 						{/* <Map className="h-2 w-2 mr-2" /> */}
-						{hit.description}
+						{hit.fullText}
 					</CommandItem>
 				))}
 			</CommandGroup>

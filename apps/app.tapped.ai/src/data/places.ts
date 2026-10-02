@@ -1,14 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { httpsCallable } from "@firebase/functions";
 import { LRUCache } from "lru-cache";
-import type { PlaceData } from "@/domain/types/place_data";
-import { functions } from "@/utils/firebase";
-
-type CityPrediction = {
-	place_id: string;
-	description: string;
-};
+import type { PlaceData, PlacePrediction } from "@/domain/types/place_data";
 
 // Every Places request is billed, so cache the in-flight promise: duplicate calls made while a
 // request is pending (re-renders, generateMetadata + Page, repeated searches) share one request.
@@ -16,7 +7,7 @@ const placeDetailsCache = new LRUCache<string, Promise<PlaceData>>({
 	max: 500,
 	ttl: 60 * 60 * 1000,
 });
-const autocompleteCitiesCache = new LRUCache<string, Promise<CityPrediction[]>>({
+const autocompleteCitiesCache = new LRUCache<string, Promise<PlacePrediction[]>>({
 	max: 500,
 	ttl: 5 * 60 * 1000,
 });
@@ -61,7 +52,7 @@ export const getPlaceById = (placeId: string): Promise<PlaceData> =>
 export const autocompleteCities = async (
 	q: string,
 	types: string[] = ["locality"]
-): Promise<CityPrediction[]> => {
+): Promise<PlacePrediction[]> => {
 	const query = normalizeQuery(q);
 	if (query === "") {
 		return [];
@@ -77,17 +68,12 @@ export const autocompleteCities = async (
 	}
 };
 
-const _autocompleteCities = async (q: string, types: string[]): Promise<CityPrediction[]> => {
-	const callable = httpsCallable(functions, "autocompletePlaces");
-	const res = await callable({ query: q, types });
-	const data = res.data as {
-		predictions: CityPrediction[];
-	};
-
-	if ("error_message" in data) {
-		console.error({ data });
-		throw new Error(String(data.error_message));
+const _autocompleteCities = async (q: string, types: string[]): Promise<PlacePrediction[]> => {
+	const params = new URLSearchParams({ query: q, types: types.join(",") });
+	const res = await fetch(`${tappedApiUrl}/app/v1/places/autocomplete?${params}`);
+	if (!res.ok) {
+		throw new Error(`error autocompleting places for query: ${q} (${res.status})`);
 	}
 
-	return data.predictions ?? [];
+	return (await res.json()) as PlacePrediction[];
 };

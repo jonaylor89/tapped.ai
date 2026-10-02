@@ -1,3 +1,11 @@
+/** `GET https://api.tapped.ai/app/v1/places/autocomplete` */
+export type PlacePrediction = {
+	placeId: string;
+	fullText: string;
+	primaryText: string;
+	secondaryText: string;
+};
+
 /** `GET https://api.tapped.ai/app/v1/places/:placeId` */
 export type PlaceData = {
 	placeId: string;
