@@ -61,7 +61,7 @@ public struct Dependencies: Sendable {
             auth: FirebaseAuthRepository(),
             database: database,
             search: TypesenseSearchRepository(config: config, database: database),
-            places: GooglePlacesRepository(apiKey: config.googlePlacesAPIKey),
+            places: TappedAPIPlacesRepository(baseURL: config.tappedAPIURL),
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
             remoteConfig: FirebaseRemoteConfigRepository(),

@@ -26,3 +26,23 @@ struct GooglePlacesCacheTests {
         #expect(cached! == nil)
     }
 }
+
+@Suite("Tapped API places proxy")
+struct TappedAPIPlacesRepositoryTests {
+    @Test func requestsGoThroughTheTappedApiWithFirebaseToken() async throws {
+        let repository = TappedAPIPlacesRepository(baseURL: URL(string: "https://api.tapped.ai")!, idToken: { "token" })
+        let request = try await repository.makeRequest(
+            "app/v1/places/autocomplete",
+            queryItems: [URLQueryItem(name: "query", value: "the camel")]
+        )
+        #expect(request.url?.absoluteString == "https://api.tapped.ai/app/v1/places/autocomplete?query=the%20camel")
+        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer token")
+    }
+
+    @Test func requiresToken() async {
+        let repository = TappedAPIPlacesRepository(baseURL: URL(string: "https://api.tapped.ai")!, idToken: { nil })
+        await #expect(throws: PlacesAPIError.notSignedIn) {
+            try await repository.searchPlace("richmond")
+        }
+    }
+}

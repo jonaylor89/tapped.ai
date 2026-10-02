@@ -1432,7 +1432,6 @@
 				PRODUCT_NAME = Tapped;
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
-				TAPPED_GOOGLE_PLACES_API_KEY = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -1543,7 +1542,6 @@
 				SDKROOT = iphoneos;
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
-				TAPPED_GOOGLE_PLACES_API_KEY = "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY";
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;

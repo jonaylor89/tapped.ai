@@ -47,8 +47,6 @@ targets:
         DEVELOPMENT_TEAM: "9HNXYM86C6"
         CODE_SIGN_STYLE: Automatic
         OTHER_LDFLAGS: $(inherited) -ObjC
-        # Same iOS-restricted key shipped by the legacy Flutter app.
-        TAPPED_GOOGLE_PLACES_API_KEY: "AIzaSyA5-IXbTej9XA-eV96fqf0gWuvmdnHrOnY"
         DEBUG_INFORMATION_FORMAT: dwarf-with-dsym
       configs:
         Debug:

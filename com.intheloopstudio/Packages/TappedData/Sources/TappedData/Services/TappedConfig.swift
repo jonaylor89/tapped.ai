@@ -6,7 +6,6 @@ public struct TappedConfig: Sendable, Hashable {
     public var typesensePort: Int
     public var typesenseProtocol: String
     public var typesenseSearchAPIKey: String
-    public var googlePlacesAPIKey: String
     public var postHogAPIKey: String
     public var postHogHost: String
     /// StoreKit product IDs that grant the `premium` entitlement.
@@ -21,7 +20,6 @@ public struct TappedConfig: Sendable, Hashable {
         typesensePort: Int = 443,
         typesenseProtocol: String = "https",
         typesenseSearchAPIKey: String = "",
-        googlePlacesAPIKey: String = "",
         postHogAPIKey: String = "",
         postHogHost: String = "https://us.i.posthog.com",
         premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds,
@@ -32,7 +30,6 @@ public struct TappedConfig: Sendable, Hashable {
         self.typesensePort = typesensePort
         self.typesenseProtocol = typesenseProtocol
         self.typesenseSearchAPIKey = typesenseSearchAPIKey
-        self.googlePlacesAPIKey = googlePlacesAPIKey
         self.postHogAPIKey = postHogAPIKey
         self.postHogHost = postHogHost
         self.premiumProductIds = premiumProductIds
@@ -63,7 +60,6 @@ public struct TappedConfig: Sendable, Hashable {
             typesensePort: string("TappedTypesensePort").flatMap(Int.init) ?? defaults.typesensePort,
             typesenseProtocol: string("TappedTypesenseProtocol") ?? defaults.typesenseProtocol,
             typesenseSearchAPIKey: string("TappedTypesenseSearchAPIKey") ?? "",
-            googlePlacesAPIKey: string("TappedGooglePlacesAPIKey") ?? "",
             postHogAPIKey: string("TappedPostHogAPIKey") ?? "",
             postHogHost: string("TappedPostHogHost") ?? defaults.postHogHost,
             premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds,

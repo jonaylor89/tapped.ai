@@ -28,7 +28,6 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 | Key | Value |
 | --- | --- |
 | `TappedTypesenseHost` / `Port` / `Protocol` / `SearchAPIKey` | `search.tapped.ai`, search-only key (same public key the Flutter app ships) |
-| `TappedGooglePlacesAPIKey` | iOS-restricted Google Places key from the legacy Flutter app, supplied through the `TAPPED_GOOGLE_PLACES_API_KEY` build setting |
 | `TappedPostHogAPIKey` / `TappedPostHogHost` | PostHog project key / `https://us.i.posthog.com` |
 | `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In (same OAuth client as Flutter) |
 | `TappedPremiumProductIds` | optional override for StoreKit product IDs |
