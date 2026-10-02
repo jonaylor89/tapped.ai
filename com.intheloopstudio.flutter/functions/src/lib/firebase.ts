@@ -36,9 +36,6 @@ export const mailRef = db.collection("mail");
 export const queuedWritesRef = db.collection("queued_writes");
 export const reviewsRef = db.collection("reviews");
 export const teamsRef = db.collection("teams");
-export const avatarsRef = db.collection("avatars");
-export const aiModelsRef = db.collection("aiModels");
-export const trainingImagesRef = db.collection("trainingImages");
 
 export const creditsRef = db.collection("credits");
 export const opportunitiesRef = db.collection("opportunities");

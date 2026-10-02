@@ -45,7 +45,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 ### Webhooks (`onRequest`)
 | Function | File | What it does |
 |----------|------|-------------|
-| `trainWebhook` | ai_generators.ts | LeapAI training callback |
 | `sendEmailOnSubscriptionPurchase` | webhooks.ts | RevenueCat subscription webhook |
 | `sendEmailOnSubscriptionExpiration` | webhooks.ts | RevenueCat expiration webhook |
 | `streamBeforeMessageWebhook` | webhooks.ts | Stream chat message hook |
