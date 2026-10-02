@@ -53,6 +53,40 @@ services:
     depends_on:
       - api
 
+  # Resizes Firebase Storage images for img.tapped.ai; Cloudflare caches every variant at the edge.
+  # The preset ladder is mirrored in apps/app.tapped.ai/src/lib/image-loader.ts and
+  # com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift — change all three together.
+  imgproxy:
+    image: darthsim/imgproxy:v4.0.17
+    restart: on-failure
+    mem_limit: 768m
+    environment:
+      IMGPROXY_BIND: ":8080"
+      IMGPROXY_WORKERS: "2"
+      IMGPROXY_TTL: "31536000"
+      IMGPROXY_MAX_SRC_RESOLUTION: "40"
+      IMGPROXY_QUALITY: "80"
+      IMGPROXY_ALLOWED_SOURCES: "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/,https://storage.googleapis.com/in-the-loop-306520.appspot.com/"
+      IMGPROXY_ONLY_PRESETS: "true"
+      IMGPROXY_PRESETS: >-
+        w64=resize:fit:64:0/format:webp,
+        w128=resize:fit:128:0/format:webp,
+        w256=resize:fit:256:0/format:webp,
+        w384=resize:fit:384:0/format:webp,
+        w640=resize:fit:640:0/format:webp,
+        w828=resize:fit:828:0/format:webp,
+        w1080=resize:fit:1080:0/format:webp,
+        w1600=resize:fit:1600:0/format:webp,
+        sq64=resize:fill:64:64/format:webp,
+        sq128=resize:fill:128:128/format:webp,
+        sq256=resize:fill:256:256/format:webp,
+        sq384=resize:fill:384:384/format:webp
+    healthcheck:
+      test: ["CMD", "imgproxy", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   cloudflared:
     image: cloudflare/cloudflared:2026.9.3
     restart: unless-stopped
@@ -65,6 +99,7 @@ services:
     depends_on:
       - api
       - typesense
+      - imgproxy
 
 volumes:
   mail-data:
