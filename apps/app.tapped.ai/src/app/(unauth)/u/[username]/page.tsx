@@ -9,14 +9,13 @@ import {
 	getUserById,
 	getUserByUsername,
 } from "@/data/database";
+import { tappedApiUrl } from "@/data/tapped_api";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
 
 type Props = {
 	params: Promise<{ username: string }>;
 	searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
-
-const getUserByIdUrl = `${process.env.NEXT_PUBLIC_API_URL}/getUserByUsername`;
 
 export async function generateMetadata(
 	props: Props,
@@ -27,7 +26,12 @@ export async function generateMetadata(
 	try {
 		const username = params.username;
 
-		const res = await fetch(`${getUserByIdUrl}?username=${username}`);
+		const res = await fetch(
+			`${tappedApiUrl}/app/v1/users/username/${encodeURIComponent(username)}`
+		);
+		if (!res.ok) {
+			throw new Error(`error getting user ${username} (${res.status})`);
+		}
 		const user = (await res.json()) as UserModel;
 
 		const imageSrc = profileImage(user);

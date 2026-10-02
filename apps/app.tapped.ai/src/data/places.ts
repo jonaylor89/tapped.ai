@@ -1,5 +1,6 @@
 import { LRUCache } from "lru-cache";
 import type { PlaceData, PlacePrediction } from "@/domain/types/place_data";
+import { tappedApiUrl } from "./tapped_api";
 
 // Every Places request is billed, so cache the in-flight promise: duplicate calls made while a
 // request is pending (re-renders, generateMetadata + Page, repeated searches) share one request.
@@ -35,8 +36,6 @@ const cachedRequest = <T extends {}>(
 };
 
 const normalizeQuery = (q: string) => q.trim().replace(/\s+/g, " ").toLowerCase();
-
-const tappedApiUrl = process.env.NEXT_PUBLIC_TAPPED_API_URL ?? "https://api.tapped.ai";
 
 // The Tapped API caches place details in Firestore `googlePlacesCache`, shared with the apps.
 export const getPlaceById = (placeId: string): Promise<PlaceData> =>

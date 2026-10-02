@@ -1,14 +1,13 @@
 import type { Metadata, ResolvingMetadata } from "next/types";
 import Footer from "@/components/Footer";
 import OpportunityView from "@/components/opportunity/OpportunityView";
+import { tappedApiUrl } from "@/data/tapped_api";
 import { type Opportunity, opImage } from "@/domain/types/opportunity";
 
 type Props = {
 	params: Promise<{ opportunityId: string }>;
 	searchParams: Promise<{ [key: string]: string }>;
 };
-
-const getOpportunityByIdUrl = `${process.env.NEXT_PUBLIC_API_URL}/getOpportunityById`;
 
 export async function generateMetadata(
 	props: Props,
@@ -19,7 +18,12 @@ export async function generateMetadata(
 	try {
 		const { opportunityId } = params;
 
-		const res = await fetch(`${getOpportunityByIdUrl}?id=${opportunityId}`);
+		const res = await fetch(
+			`${tappedApiUrl}/app/v1/opportunities/${encodeURIComponent(opportunityId)}`
+		);
+		if (!res.ok) {
+			throw new Error(`error getting opportunity ${opportunityId} (${res.status})`);
+		}
 		const opportunity = (await res.json()) as Opportunity;
 
 		const imageSrc = opImage(opportunity);
