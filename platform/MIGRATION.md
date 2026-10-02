@@ -25,8 +25,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | Function | File | What it does |
 |----------|------|-------------|
 | `getUserById` | rest.ts | Get user by ID |
-| `getUserByUsername` | rest.ts | Get user by username |
-| `getOpportunityById` | rest.ts | Get opportunity by ID |
 | `spotifyRedirect` | spotify.ts | Spotify OAuth redirect |
 | `fetchPlaceById` | places.ts | Fetch Google Place by ID |
 | `richmondEventsWebhook` | calendar.ts | Ingest Richmond events |

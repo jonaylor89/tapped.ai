@@ -90,4 +90,4 @@ Services that connect to Typesense and the API use these env vars:
 | `TYPESENSE_PORT` | `443` |
 | `TYPESENSE_PROTOCOL` | `https` |
 | `TYPESENSE_SEARCH_API_KEY` | (stored in GCP Secret Manager: `typesense-api-key`) |
-| `NEXT_PUBLIC_API_URL` | `https://api.tapped.ai` |
+| `NEXT_PUBLIC_TAPPED_API_URL` | `https://api.tapped.ai` (optional, the default) |
