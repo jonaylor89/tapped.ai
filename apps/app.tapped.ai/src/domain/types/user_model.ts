@@ -229,16 +229,16 @@ export const profileImage = (user: UserModel): string =>
 	isVenue(user)
 		? imageOrDefault({
 				url: user.profilePicture,
-				defaultImage: "/images/default_venue.png",
+				defaultImage: "/images/default_venue.jpg",
 			})
 		: imageOrDefault({
 				url: user.profilePicture,
-				defaultImage: "/images/default_avatar.png",
+				defaultImage: "/images/default_avatar.jpg",
 			});
 
 export const imageOrDefault = ({
 	url,
-	defaultImage = "/images/default_avatar.png",
+	defaultImage = "/images/default_avatar.jpg",
 }: {
 	url: string | null | undefined;
 	defaultImage?: string;

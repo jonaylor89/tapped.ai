@@ -12,7 +12,7 @@ export default function OpportunityTile({ opportunity }: { opportunity: Opportun
 			return opportunity.flierUrl;
 		}
 
-		return "/images/performance_placeholder.png";
+		return "/images/performance_placeholder.jpg";
 	})();
 
 	return (

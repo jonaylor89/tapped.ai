@@ -63,11 +63,11 @@ export const bookingImage = (booking: Booking, user: Option<UserModel>): string 
 
 const defaultImage = (id: Option<string> = null): string => {
 	const defaultImages = [
-		"/images/default_images/bob.png",
-		"/images/default_images/daftpunk.png",
-		"/images/default_images/deadmau5.png",
-		"/images/default_images/kanye.png",
-		"/images/default_images/skrillex.png",
+		"/images/default_images/bob.jpg",
+		"/images/default_images/daftpunk.jpg",
+		"/images/default_images/deadmau5.jpg",
+		"/images/default_images/kanye.jpg",
+		"/images/default_images/skrillex.jpg",
 	];
 
 	const length = id?.length ?? 0;

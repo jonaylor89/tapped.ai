@@ -62,5 +62,5 @@ export const opImage = (opportunity: Opportunity) => {
 		return opportunity.flierUrl;
 	}
 
-	return "/images/performance_placeholder.png";
+	return "/images/performance_placeholder.jpg";
 };

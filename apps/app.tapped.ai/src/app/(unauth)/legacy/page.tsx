@@ -245,7 +245,7 @@ export default function Page() {
 								<CardContent className="p-0">
 									<div className="relative h-72 w-60 rounded-t-md">
 										<Image
-											src="/images/landing/anuj.png"
+											src="/images/landing/anuj.jpg"
 											alt="Anuj Gupta"
 											fill
 											style={{ objectFit: "cover" }}
@@ -450,7 +450,7 @@ export default function Page() {
 						<div className="flex aspect-video w-full items-center justify-center">
 							<Link href="https://www.onthesceneny.com/uncategorized/april-fools-prank-turns-into-genius-marketing-by-these-two-entrepreneurs/">
 								<Image
-									src="/images/landing/april-fools.png"
+									src="/images/landing/april-fools.jpg"
 									alt="April Fools Article Cover"
 									width={400}
 									height={225}

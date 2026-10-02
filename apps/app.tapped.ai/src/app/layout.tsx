@@ -22,14 +22,14 @@ export const metadata: Metadata = {
 		title,
 		description,
 		siteName: "Tapped Ai",
-		images: [{ url: `${metadataBase}/map-og.png` }],
+		images: [{ url: `${metadataBase}/map-og.jpg` }],
 	},
 	twitter: {
 		card: "summary_large_image",
 		site: "@tappedx",
 		title,
 		description,
-		images: `${metadataBase}/map-og.png`,
+		images: `${metadataBase}/map-og.jpg`,
 	},
 	appLinks: {
 		ios: {
