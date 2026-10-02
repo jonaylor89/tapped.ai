@@ -14,8 +14,9 @@ export default function BookingCard({ booking, user }: { booking: Booking; user:
 					src={bookerImageSrc}
 					alt={"booking image"}
 					className="aspect-square rounded-lg transition-all duration-150 ease-in-out group-hover:scale-105"
-					objectFit="cover"
+					style={{ objectFit: "cover" }}
 					fill
+					sizes="156px"
 				/>
 			</div>
 			<div className="w-6" />

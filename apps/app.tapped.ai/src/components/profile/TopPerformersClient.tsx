@@ -28,6 +28,7 @@ export default function TopPerformersClient({ users }: { users: UserModel[] }) {
 									className="rounded-xl"
 									style={{ objectFit: "cover", overflow: "hidden" }}
 									fill
+									sizes="24px"
 								/>
 							</span>
 							<span className="p-1 md:p-2">{user.artistName ?? user.username}</span>

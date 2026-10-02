@@ -1,6 +1,6 @@
 # Tapped Infrastructure - Hetzner Cloud
 
-The Tapped API and Typesense search engine are hosted on a Hetzner Cloud VPS behind Cloudflare Tunnel. The VPS has no publicly reachable TCP ports; administration uses Tailscale SSH.
+The Tapped API, Typesense search engine, and imgproxy image resizer are hosted on a Hetzner Cloud VPS behind Cloudflare Tunnel. The VPS has no publicly reachable TCP ports; administration uses Tailscale SSH.
 
 ## Server Details
 
@@ -15,6 +15,7 @@ The Tapped API and Typesense search engine are hosted on a Hetzner Cloud VPS beh
 |---------|--------|---------------|
 | API | `https://api.tapped.ai` | 3000 |
 | Typesense | `https://search.tapped.ai` | 8108 |
+| imgproxy | `https://img.tapped.ai` | 8080 |
 | Cloudflare Tunnel | — | Outbound-only connector |
 
 ## Connect
@@ -70,6 +71,35 @@ cd /opt/tapped
 # Update API_IMAGE in .env to an immutable image tag, then:
 docker compose pull api mail-worker
 docker compose up -d --no-deps api mail-worker
+```
+
+## Image resizing (img.tapped.ai)
+
+`imgproxy` resizes Firebase Storage images on request and Cloudflare caches each variant at the edge, so the VPS only processes an image once per size. Clients rewrite Firebase Storage download URLs to
+
+```
+https://img.tapped.ai/unsafe/<preset>/<base64url(source URL)>
+```
+
+- **Presets only.** `IMGPROXY_ONLY_PRESETS` rejects arbitrary sizes, so nobody can bust the cache with random dimensions. `w<N>` fits the image to N px wide; `sq<N>` crops it to an N×N square. All output is WebP.
+- **One source.** `IMGPROXY_ALLOWED_SOURCES` only allows the `in-the-loop-306520.appspot.com` bucket, so the proxy can't be pointed at other hosts. Source URLs aren't signed because the iOS app can't keep a key secret.
+- **Mirrored ladder.** The preset list in `docker-compose.prod.yml` is mirrored in `apps/app.tapped.ai/src/lib/image-loader.ts` and `com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift`. Add a preset to the server before any client uses it.
+
+### One-time Cloudflare setup
+
+1. **Zero Trust → Networks → Tunnels → (tapped tunnel) → Public hostnames:** add `img.tapped.ai` → `HTTP` → `imgproxy:8080`.
+2. **tapped.ai zone → Caching → Cache Rules:** create a rule for `Hostname equals img.tapped.ai` with *Eligible for cache*, *Edge TTL: use cache-control header if present*, and *Browser TTL: respect origin*. imgproxy sends `Cache-Control: max-age=31536000`. Without this rule Cloudflare won't cache the URLs, because they have no file extension.
+
+### Deploy or update imgproxy
+
+The API deploy workflow syncs `docker-compose.prod.yml` but only restarts `api` and `mail-worker`, so start or update imgproxy by hand:
+
+```bash
+tailscale ssh root@tapped-prod
+cd /opt/tapped
+docker compose pull imgproxy
+docker compose up -d imgproxy cloudflared
+curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' '<firebase download URL>' | base64 | tr '+/' '-_' | tr -d '=\n')"
 ```
 
 ## Backup

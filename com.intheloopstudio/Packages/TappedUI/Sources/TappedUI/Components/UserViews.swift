@@ -20,14 +20,8 @@ public struct UserAvatar: View {
     }
 
     public var body: some View {
-        AsyncImage(url: url) { phase in
-            if let image = phase.image {
-                image.resizable().scaledToFill()
-            } else {
-                initials
-            }
-        }
-        .frame(width: size, height: size)
+        RemoteImage(url: url) { initials }
+            .frame(width: size, height: size)
         .clipShape(Circle())
         .overlay(Circle().strokeBorder(.separator, lineWidth: 0.5))
         .overlay(alignment: .bottomTrailing) {

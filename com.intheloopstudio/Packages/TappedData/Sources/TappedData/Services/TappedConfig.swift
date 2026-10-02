@@ -14,6 +14,8 @@ public struct TappedConfig: Sendable, Hashable {
     public var tappedAPIURL: URL
     /// Stream Chat app key (`lib/main.dart` `StreamChatClient('…')`). Public by design.
     public var streamAPIKey: String
+    /// imgproxy host that serves resized Firebase Storage images (`platform/README.md`).
+    public var imageProxyURL: URL
 
     public init(
         typesenseHost: String = "search.tapped.ai",
@@ -24,7 +26,8 @@ public struct TappedConfig: Sendable, Hashable {
         postHogHost: String = "https://us.i.posthog.com",
         premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds,
         tappedAPIURL: URL = TappedConfig.defaultTappedAPIURL,
-        streamAPIKey: String = TappedConfig.defaultStreamAPIKey
+        streamAPIKey: String = TappedConfig.defaultStreamAPIKey,
+        imageProxyURL: URL = TappedConfig.defaultImageProxyURL
     ) {
         self.typesenseHost = typesenseHost
         self.typesensePort = typesensePort
@@ -35,11 +38,14 @@ public struct TappedConfig: Sendable, Hashable {
         self.premiumProductIds = premiumProductIds
         self.tappedAPIURL = tappedAPIURL
         self.streamAPIKey = streamAPIKey
+        self.imageProxyURL = imageProxyURL
     }
 
     public static let defaultTappedAPIURL = URL(string: "https://api.tapped.ai")!
 
     public static let defaultStreamAPIKey = "xyk6dwdsp422"
+
+    public static let defaultImageProxyURL = URL(string: "https://img.tapped.ai")!
 
     /// App Store Connect's existing Tapped Premium subscription products.
     /// `StoreKit/Tapped.storekit` mirrors them for local testing.
@@ -64,7 +70,8 @@ public struct TappedConfig: Sendable, Hashable {
             postHogHost: string("TappedPostHogHost") ?? defaults.postHogHost,
             premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds,
             tappedAPIURL: string("TappedAPIURL").flatMap(URL.init(string:)) ?? defaults.tappedAPIURL,
-            streamAPIKey: string("TappedStreamAPIKey") ?? defaults.streamAPIKey
+            streamAPIKey: string("TappedStreamAPIKey") ?? defaults.streamAPIKey,
+            imageProxyURL: string("TappedImageProxyURL").flatMap(URL.init(string:)) ?? defaults.imageProxyURL
         )
     }
 }

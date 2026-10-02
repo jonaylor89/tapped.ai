@@ -117,7 +117,6 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 									style={{ objectFit: "cover", overflow: "hidden" }}
 									fill
 									sizes="22px"
-									unoptimized
 								/>
 							</div>
 							{venueCapacity !== 0 && (

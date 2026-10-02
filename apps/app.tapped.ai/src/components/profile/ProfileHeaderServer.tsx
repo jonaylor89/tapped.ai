@@ -55,6 +55,7 @@ export default function ProfileHeaderServer({
 							src={imageSrc}
 							alt={`${user.artistName} profile picture`}
 							fill
+							sizes="(min-width: 768px) 30vw, 100vw"
 							style={{
 								objectFit: "cover",
 								objectPosition: "center",

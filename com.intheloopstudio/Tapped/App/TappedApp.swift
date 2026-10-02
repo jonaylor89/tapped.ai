@@ -26,6 +26,7 @@ struct TappedApp: App {
         WindowGroup {
             ContentView()
                 .environment(\.dependencies, dependencies)
+                .environment(\.imageProxy, dependencies.imageProxy)
                 .environment(session)
                 .environment(router)
                 .environment(inbound)

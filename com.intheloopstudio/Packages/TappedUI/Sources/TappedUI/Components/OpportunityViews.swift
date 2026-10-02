@@ -12,21 +12,7 @@ public struct OpportunityFlier: View {
     }
 
     public var body: some View {
-        Color.clear
-            .overlay {
-                if let url = opportunity.flierUrl.flatMap(URL.init(string:)) {
-                    AsyncImage(url: url) { phase in
-                        if let image = phase.image {
-                            image.resizable().scaledToFill()
-                        } else {
-                            placeholder
-                        }
-                    }
-                } else {
-                    placeholder
-                }
-            }
-            .clipped()
+        RemoteImage(url: opportunity.flierUrl.flatMap(URL.init(string:))) { placeholder }
             .accessibilityHidden(true)
     }
 

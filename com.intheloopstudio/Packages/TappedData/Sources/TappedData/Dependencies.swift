@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import TappedDomain
 
 /// Every repository the app uses, injected through `@Environment(\.dependencies)`.
 /// Views and view models only ever see these protocols — never Firebase types.
@@ -22,6 +23,8 @@ public struct Dependencies: Sendable {
     public var storage: any StorageRepository
     public var venueOutreach: any VenueOutreachRepository
     public var opportunityNotifications: any OpportunityNotificationRepository
+    /// Injected into the view tree as `\.imageProxy` for `RemoteImage`.
+    public var imageProxy: ImageProxy
 
     public init(
         mode: Mode,
@@ -36,7 +39,8 @@ public struct Dependencies: Sendable {
         chat: any ChatRepository = MockChatRepository(),
         storage: any StorageRepository = MockStorageRepository(),
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
-        opportunityNotifications: any OpportunityNotificationRepository = MockOpportunityNotificationRepository()
+        opportunityNotifications: any OpportunityNotificationRepository = MockOpportunityNotificationRepository(),
+        imageProxy: ImageProxy = .disabled
     ) {
         self.mode = mode
         self.auth = auth
@@ -51,6 +55,7 @@ public struct Dependencies: Sendable {
         self.storage = storage
         self.venueOutreach = venueOutreach
         self.opportunityNotifications = opportunityNotifications
+        self.imageProxy = imageProxy
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -72,7 +77,8 @@ public struct Dependencies: Sendable {
             ),
             storage: FirebaseStorageRepository(),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
-            opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL)
+            opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL),
+            imageProxy: ImageProxy(baseURL: config.imageProxyURL)
         )
     }
 

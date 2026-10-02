@@ -52,18 +52,8 @@ struct ProfileHero: View {
         .stretchyHeader()
     }
 
-    @ViewBuilder private var artwork: some View {
-        if let imageURL {
-            AsyncImage(url: imageURL) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    placeholder
-                }
-            }
-        } else {
-            placeholder
-        }
+    private var artwork: some View {
+        RemoteImage(url: imageURL) { placeholder }
     }
 
     private var placeholder: some View {

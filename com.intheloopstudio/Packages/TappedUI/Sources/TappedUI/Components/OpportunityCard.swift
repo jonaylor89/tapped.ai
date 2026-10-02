@@ -42,19 +42,8 @@ public struct OpportunityCard: View {
         .accessibilityElement(children: .combine)
     }
 
-    @ViewBuilder
     private var flier: some View {
-        if let url = opportunity.flierUrl.flatMap(URL.init(string:)) {
-            AsyncImage(url: url) { phase in
-                if let image = phase.image {
-                    image.resizable().scaledToFill()
-                } else {
-                    placeholder
-                }
-            }
-        } else {
-            placeholder
-        }
+        RemoteImage(url: opportunity.flierUrl.flatMap(URL.init(string:))) { placeholder }
     }
 
     private var placeholder: some View {

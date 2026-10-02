@@ -20,6 +20,7 @@ export const columns: ColumnDef<UserModel>[] = [
 						src={profilePictureUrl}
 						alt="profile picture"
 						fill
+						sizes="24px"
 						style={{ objectFit: "cover" }}
 						className="rounded-md"
 					/>

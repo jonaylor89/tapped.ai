@@ -18,6 +18,7 @@ export default function UserTile({ user }: { user: UserModel | null }) {
 						src={imageSrc}
 						alt={`${user.artistName} profile picture`}
 						fill
+						sizes="48px"
 						style={{
 							objectFit: "cover",
 							objectPosition: "center",

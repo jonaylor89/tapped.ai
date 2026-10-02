@@ -91,6 +91,7 @@ export default function OpportunityView({
 				src={imageSrc}
 				alt={`${opportunity.title} flier`}
 				fill
+				sizes="(min-width: 768px) 40vw, 100vw"
 				className="rounded-md"
 				style={{
 					objectFit: "contain",

@@ -30,6 +30,7 @@ export default function VenueCard({ venue }: { venue: UserModel }) {
 						alt={venue.artistName ?? venue.username}
 						style={{ objectFit: "cover" }}
 						fill
+						sizes="128px"
 					/>
 				</div>
 				<p className="line-clamp-2 text-ellipsis font-bold font-semibold text-sm">

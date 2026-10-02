@@ -28,6 +28,7 @@ export default function UserChip({ user, onClick }: { user: UserModel; onClick?:
 						className="rounded-xl"
 						style={{ objectFit: "cover", overflow: "hidden" }}
 						fill
+						sizes="24px"
 					/>
 				</div>
 				<p className="p-1 md:p-2">{user.artistName ?? user.username}</p>

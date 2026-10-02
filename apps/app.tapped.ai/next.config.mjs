@@ -1,9 +1,12 @@
 const nextConfig = {
 	reactStrictMode: true,
 	images: {
-		// formats: ['image/avif', 'image/webp', 'image/png', 'image/jpeg'],
-		loader: "default", // Prevents Vercel's optimization
-		unoptimized: true, // Disables all image optimizations globally
+		// Firebase Storage images are resized by imgproxy (img.tapped.ai), not Vercel; see src/lib/image-loader.ts.
+		loader: "custom",
+		loaderFile: "./src/lib/image-loader.ts",
+		// Together these are the imgproxy `w<N>` preset ladder.
+		imageSizes: [64, 128, 256, 384],
+		deviceSizes: [640, 828, 1080, 1600],
 		dangerouslyAllowSVG: true,
 		remotePatterns: [
 			{
