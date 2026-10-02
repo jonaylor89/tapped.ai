@@ -1,0 +1,20 @@
+# The Vercel projects are linked at the repo root (.vercel/repo.json), so `vercel deploy`
+# uploads from here and each file must be under Vercel's 10MB request limit. Only the pnpm
+# workspace (apps/*, packages/*, the Node services) is needed to build the web apps.
+com.intheloopstudio
+com.intheloopstudio.flutter
+platform
+docs
+ci_scripts
+scripts
+services/api.tapped.ai
+services/mail-gateway
+services/midia-to-threads
+**/node_modules
+**/.next
+**/.turbo
+**/.astro
+**/dist
+**/target
+**/.env*
+!**/.env.example
