@@ -24,10 +24,7 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 ### REST / HTTP (`onRequest`)
 | Function | File | What it does |
 |----------|------|-------------|
-| `getUserById` | rest.ts | Get user by ID |
 | `spotifyRedirect` | spotify.ts | Spotify OAuth redirect |
-| `fetchPlaceById` | places.ts | Fetch Google Place by ID |
-| `richmondEventsWebhook` | calendar.ts | Ingest Richmond events |
 
 ### Callable (`onCall`)
 | Function | File | What it does |
@@ -36,34 +33,19 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | `createPaymentIntent` | payments.ts | Stripe payment intent |
 | `createConnectedAccount` | payments.ts | Stripe connected account |
 | `getAccountById` | payments.ts | Get Stripe account |
-| `checkoutSessionToClientReferenceId` | payments.ts | Checkout session lookup |
 | `getPlaceById` | places.ts | Google Places lookup |
-| `getPlacePhotoUrlFromName` | places.ts | Google Places photo URL |
 | `getPlaceIdByLatLng` | places.ts | Reverse geocode |
-| `autocompletePlaces` | places.ts | Places autocomplete |
 | `transformLocationPayloadForSearch` | search.ts | Transform location for indexing |
 | `createAvatarInferenceJob` | ai_generators.ts | Create AI avatar job |
-| `getAvatarInferenceJob` | ai_generators.ts | Get AI avatar job status |
-| `deleteInferenceJob` | ai_generators.ts | Delete AI inference job |
-| `trainModel` | ai_generators.ts | Train AI model |
-| `createSingleMarketingPlan` | ai_generators.ts | Generate marketing plan |
-| `generateEnhancedBio` | ai_generators.ts | AI-enhanced bio |
-| `getChartmetricIdBySpotifyId` | chartmetric.ts | Chartmetric lookup |
 | `spotifyAuthorizeCodeGrant` | spotify.ts | Spotify auth code exchange |
 | `spotifyRefreshToken` | spotify.ts | Refresh Spotify token |
 | `getArtistBySpotifyId` | spotify.ts | Get Spotify artist |
 | `getTopTracksByArtistId` | spotify.ts | Get Spotify top tracks |
-| `sendEmailOnVenueContacting` | email_triggers.ts | Send venue contact email |
 
 ### Webhooks (`onRequest`)
 | Function | File | What it does |
 |----------|------|-------------|
-| `imageWebhook` | ai_generators.ts | LeapAI image callback |
 | `trainWebhook` | ai_generators.ts | LeapAI training callback |
-| `marketingPlanStripeWebhook` | ai_generators.ts | Marketing plan Stripe webhook |
-| `coverArtStripeWebhook` | ai_generators.ts | Cover art Stripe webhook |
-| `coverArtStripeTestWebhook` | ai_generators.ts | Cover art Stripe test webhook |
-| `emailMarketingPlanStripeWebhook` | email_triggers.ts | Email marketing Stripe webhook |
 | `sendEmailOnSubscriptionPurchase` | webhooks.ts | RevenueCat subscription webhook |
 | `sendEmailOnSubscriptionExpiration` | webhooks.ts | RevenueCat expiration webhook |
 | `streamBeforeMessageWebhook` | webhooks.ts | Stream chat message hook |
@@ -73,7 +55,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | Function | File | What it does |
 |----------|------|-------------|
 | `cancelBookingIfExpired` | bookings.ts | Cancel stale pending bookings (hourly) |
-| `sendSearchAppearances` | search.ts | Notify users of search appearances (every 3h) |
 
 ## Functions that MUST stay as Cloud Functions
 
@@ -99,9 +80,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | `notifyFoundersOnUserFeedbackSubmitted` | user_feedback.ts | feedback onCreate |
 | `createBookingOnEventCrawled` | crawler.ts | `crawler/{link}` onCreate |
 | `onDeleteAvatar` | ai_generators.ts | avatar doc onDelete |
-| `generateMarketingPlan` | ai_generators.ts | marketing form onCreate |
-| `notifyFoundersOnMarketingForm` | ai_generators.ts | marketing form onCreate |
-| `notifyFoundersOnGuestMarketingPlan` | ai_generators.ts | guest marketing onCreate |
 
 ### Auth Triggers
 | Function | File | Trigger |

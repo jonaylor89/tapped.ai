@@ -4,7 +4,7 @@ import { Timestamp } from "firebase-admin/firestore";
 import { debug, error, info } from "firebase-functions/logger";
 // import { getFoundersDeviceTokens } from "./utils";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onCall } from "firebase-functions/v2/https";
+
 import { StreamChat, type User } from "stream-chat";
 import { contactVenueTemplate } from "../../email_templates/contact_venue";
 import type { Opportunity, UserModel, VenueContactRequest } from "../../types/models";
@@ -21,7 +21,7 @@ import {
 } from "../firebase";
 import * as postmark from "../mail_client";
 import { slackNotification } from "../notifications";
-import { authenticatedRequest, imageUrlToBase64 } from "../utils";
+import { imageUrlToBase64 } from "../utils";
 import { composeVenueEmail } from "./compose_email";
 import { dmAutoReply, sendStreamMessage } from "./messaging";
 import { createEmailMessageId } from "./utils";
@@ -604,89 +604,3 @@ export const setLatestContactRequest = onDocumentCreated(
     );
   },
 );
-
-export const genericContactVenues = onCall({ secrets: [MAIL_API_SECRET, OPEN_AI_KEY] }, async (request) => {
-  authenticatedRequest(request);
-  process.env.OPENAI_API_KEY = OPEN_AI_KEY.value();
-
-  const userId = request.data.userId as string | undefined;
-  const venueIds = request.data.venueIds as string[] | undefined;
-  const note = (request.data.note as string | undefined) ?? "";
-  const collaborators = (request.data.collaborators as string[] | undefined) ?? [];
-
-  if (!userId) {
-    throw new Error("no userId found");
-  }
-
-  if (!venueIds) {
-    throw new Error("no venueIds found");
-  }
-
-  const userSnap = await usersRef.doc(userId).get();
-  if (!userSnap.exists) {
-    throw new Error("no user found");
-  }
-
-  const userData = userSnap.data() as UserModel;
-  const emailClient = new postmark.ServerClient(MAIL_API_SECRET.value());
-
-  await Promise.all(
-    venueIds.map(async (venueId) => {
-      const venueSnap = await usersRef.doc(venueId).get();
-      if (!venueSnap.exists) {
-        error(`no venue found for id ${venueId}`);
-        return;
-      }
-      const venueData = venueSnap.data() as UserModel;
-
-      const bookingEmail = venueData.venueInfo?.bookingEmail;
-      if (!bookingEmail) {
-        error(`no bookingEmail found for venue ${venueId}`);
-        return;
-      }
-
-      const contactVenueSnap = await contactVenuesRef.doc(userId).collection("venuesContacted").doc(venueId).get();
-
-      const alreadyContacted = contactVenueSnap.exists;
-
-      if (!alreadyContacted) {
-        await contactVenuesRef
-          .doc(userId)
-          .collection("venuesContacted")
-          .doc(venueId)
-          .set({
-            opportunityIds: [],
-            collaborators,
-            note,
-            bookingEmail,
-            user: userData,
-            venue: venueData,
-            allEmails: [bookingEmail],
-            latestMessageId: null,
-            originalMessageId: null,
-            subject: null,
-          });
-
-        await _sendEmailOnVenueContacting({
-          emailClient,
-          userId,
-        });
-        return;
-      }
-
-      await _appendNewContactRequestToThread({
-        userId,
-        venueId,
-        collaboratorIds: collaborators,
-        note,
-        opportunityIds: [],
-        emailClient,
-      });
-
-      await _sendEmailOnVenueContacting({
-        emailClient,
-        userId,
-      });
-    }),
-  );
-});

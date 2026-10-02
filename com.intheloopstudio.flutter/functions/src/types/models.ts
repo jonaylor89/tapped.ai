@@ -209,16 +209,6 @@ export type PerformerReview = {
   type: "performer";
 };
 
-export type MarketingPlan = {
-  id: string;
-  userId: string;
-  name: string;
-  type: "single";
-  content: string;
-  prompt: string;
-  timestamp: Timestamp;
-};
-
 export type GuestMarketingPlan = {
   prompt?: string;
   content?: string;

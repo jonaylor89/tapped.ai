@@ -1,7 +1,7 @@
 /* eslint-disable import/no-unresolved */
 
-import { debug, error } from "firebase-functions/logger";
-import { HttpsError, onCall, onRequest } from "firebase-functions/v2/https";
+import { debug } from "firebase-functions/logger";
+import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { encodeBase32 } from "geohashing";
 import { LRUCache } from "lru-cache";
 import { GOOGLE_PLACES_API_KEY, googlePlacesCacheRef } from "./firebase";
@@ -28,9 +28,6 @@ type PlaceData = {
 const fields = ["id", "location", "shortFormattedAddress", "addressComponents", "photos"];
 
 const placeDetailsCache = new LRUCache({
-  max: 500,
-});
-const placePhotosCache = new LRUCache({
   max: 500,
 });
 
@@ -110,109 +107,6 @@ export const getPlaceById = onCall(
   },
 );
 
-export const fetchPlaceById = onRequest(
-  {
-    secrets: [GOOGLE_PLACES_API_KEY],
-  },
-  async (req, res) => {
-    const { placeId } = req.query;
-
-    if (placeId === undefined || placeId.length === 0) {
-      res.status(400).send("The query parameter 'placeId' cannot be empty");
-      return;
-    }
-
-    if (typeof placeId !== "string") {
-      res.status(400).send("The query parameter 'placeId' must be a string");
-      return;
-    }
-
-    const placeSnapshot = await googlePlacesCacheRef.doc(placeId).get();
-    if (placeSnapshot.exists) {
-      res.json(placeSnapshot.data());
-      return;
-    }
-
-    const place = await _getPlaceDetails(placeId);
-    await googlePlacesCacheRef.doc(placeId).set(place);
-
-    res.json(place);
-  },
-);
-
-const _getPlacePhotoUrlFromName = async (
-  photoName: string,
-  photoId: string,
-): Promise<{
-  name: string;
-  photoUri: string;
-}> => {
-  if (placePhotosCache.has(photoId)) {
-    return placePhotosCache.get(photoName) as {
-      name: string;
-      photoUri: string;
-    };
-  }
-
-  const res = await fetch(
-    `https://places.googleapis.com/v1/${
-      photoName
-    }/media?maxWidthPx=${400}&skipHttpRedirect=true&key=${GOOGLE_PLACES_API_KEY.value()}`,
-  );
-
-  const json = (await res.json()) as {
-    name: string;
-    photoUri: string;
-    error?: {
-      code: number;
-      message: string;
-      status: string;
-    };
-  };
-
-  if (json.error !== undefined) {
-    error(`error getting place photo for photoName: ${photoName}`, json.error.message);
-    throw new HttpsError("internal", json.error.message);
-  }
-
-  placePhotosCache.set(photoId, json);
-
-  return json;
-};
-
-export const getPlacePhotoUrlFromName = onCall({ secrets: [GOOGLE_PLACES_API_KEY] }, async (request) => {
-  const {
-    placeId,
-    photoName,
-  }: {
-    placeId: string;
-    photoName: string;
-  } = request.data;
-
-  if (photoName.length === 0) {
-    throw new HttpsError("invalid-argument", "The function argument 'photoName' cannot be empty");
-  }
-
-  if (placeId.length === 0) {
-    throw new HttpsError("invalid-argument", "The function argument 'placeId' cannot be empty");
-  }
-
-  const photoId = photoName.split("/").pop();
-  if (photoId === undefined) {
-    throw new HttpsError("invalid-argument", "The function argument 'photoReference' is invalid");
-  }
-
-  const placeSnapshot = await googlePlacesCacheRef.doc(placeId).collection("photos").doc(photoId).get();
-  if (placeSnapshot.exists) {
-    return placeSnapshot.data();
-  }
-
-  const res = await _getPlacePhotoUrlFromName(photoName, photoId);
-  await googlePlacesCacheRef.doc(placeId).collection("photos").doc(photoId).set(res);
-
-  return res;
-});
-
 export const getPlaceIdByLatLng = onCall(
   {
     secrets: [GOOGLE_PLACES_API_KEY],
@@ -266,32 +160,5 @@ export const getPlaceIdByLatLng = onCall(
     // await googlePlacesCacheRef.doc(place.id).set(place);
 
     return placeId;
-  },
-);
-
-export const autocompletePlaces = onCall(
-  {
-    secrets: [GOOGLE_PLACES_API_KEY],
-  },
-  async (request) => {
-    const data = request.data;
-
-    if (data.query.length === 0) {
-      throw new HttpsError("invalid-argument", "The function argument 'query' cannot be empty");
-    }
-
-    const { query, types } = data;
-    const res = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${query}&types=${types ?? ["(cities)"]}&key=${GOOGLE_PLACES_API_KEY.value()}`,
-    );
-
-    const json = (await res.json()) as {
-      predictions: {
-        place_id: string;
-        description: { text: string };
-      }[];
-    };
-
-    return json;
   },
 );

@@ -2,9 +2,9 @@
 
 import * as functions from "firebase-functions";
 import { info } from "firebase-functions/logger";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
+
 import Stripe from "stripe";
-import { remote, stripeKey, stripePublishableKey, stripeTestKey } from "./firebase";
+import { remote, stripeKey, stripePublishableKey } from "./firebase";
 import { authenticated } from "./utils";
 
 export const _createStripeCustomer = async (email?: string): Promise<string> => {
@@ -192,25 +192,3 @@ export const getAccountById = functions
     authenticated(context);
     return _getAccountById(data);
   });
-
-export const checkoutSessionToClientReferenceId = onCall({ secrets: [stripeTestKey] }, async (request) => {
-  const stripe = new Stripe(stripeTestKey.value(), {
-    apiVersion: "2022-11-15",
-  });
-
-  const {
-    checkoutSessionId,
-  }: {
-    checkoutSessionId: string;
-  } = request.data;
-  if (typeof checkoutSessionId !== "string" || checkoutSessionId.length === 0) {
-    throw new HttpsError("invalid-argument", "The function must be called " + 'with argument "checkoutSessionId".');
-  }
-
-  const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
-  info({ session });
-
-  return {
-    clientReferenceId: session.client_reference_id,
-  };
-});

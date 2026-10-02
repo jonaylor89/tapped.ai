@@ -4,10 +4,9 @@ import { Timestamp } from "firebase-admin/firestore";
 import * as functions from "firebase-functions";
 import { debug, error, info } from "firebase-functions/logger";
 import { onDocumentCreated } from "firebase-functions/v2/firestore";
-import { onCall, onRequest } from "firebase-functions/v2/https";
-import { marked } from "marked";
+
 import type { User } from "stream-chat";
-import Stripe from "stripe";
+
 import { labelApplied } from "../email_templates/label_applied";
 import { newDirectMessage } from "../email_templates/new_dm";
 import { premiumWaitlist } from "../email_templates/premium_waitlist";
@@ -15,16 +14,8 @@ import { subscriptionExpiration } from "../email_templates/subscription_expirati
 import { subscriptionPurchase } from "../email_templates/subscription_purchase";
 import { venueContacted } from "../email_templates/venue_contacted";
 import { welcomeTemplate } from "../email_templates/welcome";
-import type { Booking, MarketingPlan, UserModel } from "../types/models";
-import {
-  guestMarketingPlansRef,
-  MAIL_API_SECRET,
-  mailRef,
-  queuedWritesRef,
-  stripeTestEndpointSecret,
-  stripeTestKey,
-  usersRef,
-} from "./firebase";
+import type { Booking, UserModel } from "../types/models";
+import { MAIL_API_SECRET, mailRef, queuedWritesRef, usersRef } from "./firebase";
 import * as postmark from "./mail_client";
 // import { venueContacted } from "../email_templates/venue_contacted";
 
@@ -75,111 +66,6 @@ export const sendEmailOnLabelApplication = onDocumentCreated(
       HtmlBody: `<div style="white-space: pre;">${labelApplied}</div>`,
       MessageStream: "outbound",
     });
-  },
-);
-
-export const emailMarketingPlanStripeWebhook = onRequest(
-  { secrets: [stripeTestKey, stripeTestEndpointSecret, MAIL_API_SECRET] },
-  async (req, res) => {
-    const stripe = new Stripe(stripeTestKey.value(), {
-      apiVersion: "2022-11-15",
-    });
-
-    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
-    const productIds = [
-      "prod_Ojv2uMqEt5n60E", // test AI plan product
-      "prod_OjsPZixnuZ86el", // prod AI plan product
-    ];
-
-    info("marketingPlanStripeWebhook", req.body);
-    const sig = req.headers["stripe-signature"];
-    if (!sig) {
-      res.status(400).send("No signature");
-      return;
-    }
-
-    try {
-      const event = stripe.webhooks.constructEvent(req.rawBody, sig, stripeTestEndpointSecret.value());
-
-      // Handle the event
-      switch (event.type) {
-        case "checkout.session.completed": {
-          // eslint-disable-next-line no-case-declarations
-          const checkoutSessionCompleted = event.data.object as unknown as {
-            id: string;
-            customer_email: string | null;
-            customer_details: {
-              email: string;
-            };
-          };
-
-          // create firestore document for marketing plan set to 'processing' keyed at session_id
-          info({ checkoutSessionCompleted });
-          info({ sessionId: checkoutSessionCompleted.id });
-
-          // get form data from firestore
-          // eslint-disable-next-line no-case-declarations
-          const checkoutSession = await stripe.checkout.sessions.retrieve(checkoutSessionCompleted.id, {
-            expand: ["line_items"],
-          });
-          info({ checkoutSession });
-          info({ lineItems: checkoutSession.line_items });
-          // eslint-disable-next-line no-case-declarations
-          const products = checkoutSession.line_items?.data?.map((item) => item.price?.product);
-          // eslint-disable-next-line no-case-declarations
-          const filteredArray = products?.filter((value) => productIds.includes(value?.toString() ?? "")) ?? [];
-          if (filteredArray.length === 0) {
-            debug(`incorrect product: ${products}`);
-            return;
-          }
-
-          // eslint-disable-next-line no-case-declarations
-          const { client_reference_id: clientReferenceId } = checkoutSession;
-          if (clientReferenceId === null) {
-            debug(`no client reference id: ${clientReferenceId}`);
-            res.sendStatus(200);
-            return;
-          }
-          info({ clientReferenceId });
-
-          // save marketing plan to firestore and update status to 'complete'
-          await guestMarketingPlansRef.doc(clientReferenceId).update({
-            checkoutSessionId: checkoutSessionCompleted.id,
-          });
-
-          // eslint-disable-next-line no-case-declarations
-          const marketingPlanRef = await guestMarketingPlansRef.doc(clientReferenceId).get();
-          // eslint-disable-next-line no-case-declarations
-          const marketingPlan = marketingPlanRef.data() as MarketingPlan;
-
-          // email marketing plan to user
-          // eslint-disable-next-line no-case-declarations
-          const customerEmail =
-            checkoutSessionCompleted.customer_email ?? checkoutSessionCompleted.customer_details.email;
-          if (customerEmail !== null) {
-            await client.sendEmail({
-              From: "no-reply@tapped.ai",
-              To: checkoutSessionCompleted.customer_email ?? checkoutSessionCompleted.customer_details.email,
-              Subject: "Your Marketing Plan | Tapped Ai",
-              HtmlBody: `<div>${marked.parse(marketingPlan.content)}</div>`,
-              MessageStream: "outbound",
-            });
-          }
-
-          break;
-        }
-        // ... handle other event types
-        default:
-          console.log(`Unhandled event type ${event.type}`);
-      }
-
-      // Return a 200 response to acknowledge receipt of the event
-      res.sendStatus(200);
-    } catch (err: any) {
-      error(err);
-      res.status(400).send(`Webhook Error: ${err.message}`);
-      return;
-    }
   },
 );
 
@@ -482,16 +368,6 @@ export const _sendEmailOnVenueContacting = async ({
     MessageStream: "outbound",
   });
 };
-
-export const sendEmailOnVenueContacting = onCall({ secrets: [MAIL_API_SECRET] }, async (req) => {
-  const { userId } = req.data;
-  const emailClient = new postmark.ServerClient(MAIL_API_SECRET.value());
-
-  await _sendEmailOnVenueContacting({
-    userId,
-    emailClient,
-  });
-});
 
 export async function sendEmailSubscriptionPurchase(postmarkServerId: string, userId: string): Promise<void> {
   const client = new postmark.ServerClient(postmarkServerId);
