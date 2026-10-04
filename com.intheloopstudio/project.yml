@@ -12,9 +12,9 @@ settings:
     IPHONEOS_DEPLOYMENT_TARGET: "26.0"
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     DEAD_CODE_STRIPPING: YES
-    # The native TestFlight series follows Flutter 1.2.116 (128).
+    # Native TestFlight builds increment independently of the marketing version.
     MARKETING_VERSION: "1.2.117"
-    CURRENT_PROJECT_VERSION: "131"
+    CURRENT_PROJECT_VERSION: "132"
 packages:
   TappedDomain:
     path: Packages/TappedDomain
