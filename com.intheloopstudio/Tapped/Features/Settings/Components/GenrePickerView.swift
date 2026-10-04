@@ -13,7 +13,7 @@ struct GenrePickerView: View {
                     if selection.contains(genre) { selection.remove(genre) } else { selection.insert(genre) }
                 } label: {
                     HStack {
-                        Text(genre.formattedName.lowercased())
+                        Text(genre.formattedName)
                             .foregroundStyle(.primary)
                         Spacer()
                         if selection.contains(genre) {
@@ -29,7 +29,7 @@ struct GenrePickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("done", systemImage: "checkmark") { dismiss() }
+                    Button("Done", systemImage: "checkmark") { dismiss() }
                 }
             }
         }

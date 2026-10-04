@@ -17,7 +17,7 @@ struct ChannelView: View {
             case .loading:
                 LoadingView()
             case .failed:
-                ErrorView("couldn't load this conversation") { model.retry() }
+                ErrorView(ErrorCopy.load("this conversation")) { model.retry() }
             case .loaded where model.messages.isEmpty:
                 GlassEmptyState("say hi 👋", message: "send the first message", systemImage: "bubble.left")
                     .padding(GlassMetrics.edgeInset)
@@ -64,7 +64,8 @@ struct ChannelView: View {
                         timestamp: message.createdAt,
                         isOutgoing: message.isFromCurrentUser,
                         status: message.status.bubbleStatus,
-                        showsAuthor: model.showsAuthor(at: index)
+                        showsAuthor: model.showsAuthor(at: index),
+                        showsTimestamp: model.showsTimestamp(at: index)
                     )
                     .id(message.id)
                 }

@@ -23,7 +23,7 @@ struct ImageViewerView: View {
                     .onTapGesture(count: 2) { withAnimation(GlassMotion.spring) { scale = scale > 1 ? 1 : 2 } }
                     .accessibilityLabel("image")
             case .failure:
-                ErrorView("couldn't load image")
+                ErrorView(ErrorCopy.load("this image"))
             default:
                 ProgressView().tint(.white)
             }

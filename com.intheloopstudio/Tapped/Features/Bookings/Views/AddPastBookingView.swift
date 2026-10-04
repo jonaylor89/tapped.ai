@@ -57,8 +57,8 @@ struct AddPastBookingView: View {
                 }
             }
         }
-        .alert("add past booking", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
-            Button("ok", role: .cancel) {}
+        .alert("Couldn't Add Booking", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }

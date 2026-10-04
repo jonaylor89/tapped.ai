@@ -50,8 +50,9 @@ struct BookingsView: View {
                 .padding(.vertical, TappedSpacing.sm)
         }
         .background(TappedColors.background.ignoresSafeArea())
+        .offlineBanner(isOffline: NetworkMonitor.shared.isOffline)
         .navigationTitle("bookings")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             if isOwn {
                 ToolbarItemGroup(placement: .topBarTrailing) {

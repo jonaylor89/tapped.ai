@@ -54,12 +54,12 @@ struct UserReviewsView: View {
             if model.isLoading && model.reviews.isEmpty {
                 LoadingView()
             } else if model.failed {
-                ErrorView { Task { await model.load() } }
+                ErrorView(ErrorCopy.load("these reviews")) { Task { await model.load() } }
             } else if model.reviews.isEmpty {
                 GlassEmptyState("no reviews yet", message: "reviews show up here after a booking", systemImage: "star.bubble")
             }
         }
-        .navigationTitle(model.reviewee.map { "\($0.displayName.lowercased())'s reviews" } ?? "reviews")
+        .navigationTitle(model.reviewee.map { "\($0.displayName)'s reviews" } ?? "reviews")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if model.canWriteReview {
@@ -69,7 +69,7 @@ struct UserReviewsView: View {
             }
         }
         .sheet(isPresented: $isWriting) {
-            WriteReviewSheet(revieweeName: model.reviewee?.displayName.lowercased() ?? "them") { rating, text in
+            WriteReviewSheet(revieweeName: model.reviewee?.displayName ?? "them") { rating, text in
                 await model.submit(rating: rating, text: text)
             }
             .presentationDetents([.medium, .large])
@@ -116,7 +116,7 @@ struct WriteReviewSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("cancel", systemImage: "xmark") { dismiss() }
+                    Button("Cancel", systemImage: "xmark") { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     if isSubmitting {
@@ -133,8 +133,8 @@ struct WriteReviewSheet: View {
                     }
                 }
             }
-            .alert("couldn't post your review", isPresented: $failed) {
-                Button("ok", role: .cancel) {}
+            .alert("Couldn't Post Review", isPresented: $failed) {
+                Button("OK", role: .cancel) {}
             }
         }
     }

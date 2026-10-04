@@ -24,7 +24,7 @@ struct ApplySheet: View {
                     } description: {
                         Text("we just received your application, thanks for applying")
                     } actions: {
-                        Button("done") { dismiss() }
+                        Button("Done") { dismiss() }
                             .buttonStyle(.glassProminent)
                         NotificationsPromptCard(context: .application, venueId: opportunity.venueId ?? opportunity.userId)
                     }
@@ -37,7 +37,7 @@ struct ApplySheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("close", systemImage: "xmark") { dismiss() }
+                    Button("Close", systemImage: "xmark") { dismiss() }
                 }
             }
         }
@@ -53,13 +53,7 @@ struct ApplySheet: View {
                 TextField("add a note for the booker (optional)", text: $comment, axis: .vertical)
                     .lineLimit(3...6)
             } footer: {
-                if let remainingQuota {
-                    Text(remainingQuota > 0
-                        ? "\(remainingQuota) free \(remainingQuota == 1 ? "application" : "applications") left. go premium for unlimited."
-                        : "you're out of free applications. go premium for unlimited.")
-                } else {
-                    Text("premium: unlimited applications")
-                }
+                Text(ApplicationQuota.caption(remaining: remainingQuota).map { "\($0). premium makes it unlimited." } ?? ApplicationQuota.premiumCaption)
             }
             Section {
                 Button {
@@ -67,7 +61,13 @@ struct ApplySheet: View {
                 } label: {
                     HStack {
                         Spacer()
-                        if isSending { ProgressView() } else { Text(remainingQuota == 0 ? "upgrade" : "send application").fontWeight(.semibold) }
+                        if isSending {
+                            ProgressView()
+                        } else if remainingQuota == 0 {
+                            SwiftUI.Label(ApplicationQuota.applyWithPremium, systemImage: "sparkles").fontWeight(.semibold)
+                        } else {
+                            Text("send application").fontWeight(.semibold)
+                        }
                         Spacer()
                     }
                 }

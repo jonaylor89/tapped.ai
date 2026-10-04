@@ -19,7 +19,7 @@ struct ChannelListView: View {
             case .loading:
                 LoadingView()
             case .failed:
-                ErrorView("couldn't load messages") { model.retry() }
+                ErrorView(ErrorCopy.load("your messages")) { model.retry() }
             case .loaded where model.conversations.isEmpty:
                 GlassEmptyState(
                     "no conversations yet",

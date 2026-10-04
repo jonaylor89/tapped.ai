@@ -7,7 +7,10 @@ struct RequestToPerformConfirmationView: View {
     let venues: [UserModel]
     @Environment(Router.self) private var router
 
-    private var message: String {
+    private var message: String { Self.message(for: venues) }
+
+    /// Where replies land: Messages in the app and the performer's email.
+    static func message(for venues: [UserModel]) -> String {
         let names = venues.map(\.displayName)
         let who = switch names.count {
         case 0: "the venue"
@@ -15,7 +18,7 @@ struct RequestToPerformConfirmationView: View {
         case 2: "\(names[0]) and \(names[1])"
         default: "\(names[0]) and \(names.count - 1) others"
         }
-        return "we'll let you know when \(who) \(names.count > 1 ? "reply" : "replies")."
+        return "when \(who) \(names.count > 1 ? "reply" : "replies"), you'll see it in Messages and get an email."
     }
 
     var body: some View {
@@ -28,7 +31,7 @@ struct RequestToPerformConfirmationView: View {
     private var confirmation: some View {
         VStack(spacing: TappedSpacing.xl) {
             Spacer()
-            ConfirmationHero("request sent", message: message, systemImage: "paperplane.fill")
+            ConfirmationHero("pitch sent", message: message, systemImage: "paperplane.fill")
             if !venues.isEmpty {
                 VStack(spacing: 0) {
                     ForEach(venues) { venue in
@@ -43,7 +46,7 @@ struct RequestToPerformConfirmationView: View {
             }
             NotificationsPromptCard(context: .requestToPerform, venueName: venues.count == 1 ? venues.first?.displayName : nil)
             Spacer()
-            GlassSubmitButton("done") {
+            GlassSubmitButton("Done") {
                 while let last = router.path.last, last.isRequestToPerformFlowStep { router.pop() }
             }
         }

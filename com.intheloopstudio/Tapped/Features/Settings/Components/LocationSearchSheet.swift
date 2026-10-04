@@ -27,10 +27,10 @@ struct LocationSearchSheet: View {
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(prediction.primaryText.lowercased())
+                        Text(prediction.primaryText)
                             .foregroundStyle(.primary)
                         if !prediction.secondaryText.isEmpty {
-                            Text(prediction.secondaryText.lowercased())
+                            Text(prediction.secondaryText)
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)
                         }
@@ -54,7 +54,7 @@ struct LocationSearchSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("cancel", systemImage: "xmark") { dismiss() }
+                    Button("Cancel", systemImage: "xmark") { dismiss() }
                 }
             }
         }

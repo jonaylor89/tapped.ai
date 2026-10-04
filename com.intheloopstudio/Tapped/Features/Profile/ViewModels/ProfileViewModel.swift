@@ -2,6 +2,8 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
+import UIKit
 
 extension UserModel {
     /// Dart `https://app.tapped.ai/u/${user.username}`.
@@ -52,11 +54,14 @@ final class ProfileViewModel {
     private(set) var latestReviewer: UserModel?
     private(set) var placeName: String?
     private(set) var isBlocked = false
+    private(set) var contactedVenuesCount = 0
+    private(set) var isUploadingPhoto = false
     var toast: String?
 
     private let database: any DatabaseRepository
     private let places: any PlacesRepository
     private let analytics: any AnalyticsRepository
+    private let storage: any StorageRepository
 
     init(dependencies: Dependencies, currentUser: UserModel, userId: String, user: UserModel? = nil) {
         self.currentUser = currentUser
@@ -65,6 +70,7 @@ final class ProfileViewModel {
         database = dependencies.database
         places = dependencies.places
         analytics = dependencies.analytics
+        storage = dependencies.storage
     }
 
     var isCurrentUser: Bool { currentUser.id == userId }
@@ -72,6 +78,49 @@ final class ProfileViewModel {
     var reviewCount: Int { (user?.performerInfo?.reviewCount ?? 0) + (user?.bookerInfo?.reviewCount ?? 0) }
 
     var bookingCount: Int { user?.performerInfo?.bookingCount ?? latestBookings.count }
+
+    /// The "finish setting up" checklist (`TasksViewModel`) for the ring next to edit profile.
+    var setupTasks: [SetupTask] {
+        guard let user, isCurrentUser else { return [] }
+        return TasksViewModel.tasks(for: user, hasBookings: !latestBookings.isEmpty, contactedVenuesCount: contactedVenuesCount)
+    }
+
+    var setupProgress: Double {
+        let tasks = setupTasks
+        return tasks.isEmpty ? 1 : Double(tasks.count(where: \.isCompleted)) / Double(tasks.count)
+    }
+
+    /// Own profile without a photo: show the inline "add a photo" prompt instead of a hero.
+    var needsPhoto: Bool { isCurrentUser && (user?.profilePicture ?? "").isEmpty }
+
+    /// Uploads through `StorageRepository` and saves the new URL on the user.
+    func uploadPhoto(_ data: Data) async {
+        guard var updated = user, isCurrentUser else { return }
+        guard let jpeg = Self.jpeg(from: data) else {
+            toast = "couldn't read that photo — try a different one"
+            return
+        }
+        isUploadingPhoto = true
+        defer { isUploadingPhoto = false }
+        do {
+            let url = try await storage.uploadProfilePicture(userId: updated.id, imageData: jpeg)
+            updated.profilePicture = url.absoluteString
+            try await database.updateUserData(updated)
+            user = updated
+            toast = "photo added"
+            await analytics.track("update_profile_picture")
+        } catch {
+            toast = ErrorCopy.action("upload your photo")
+        }
+    }
+
+    private static func jpeg(from data: Data, maxDimension: CGFloat = 1024) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let scale = min(1, maxDimension / max(image.size.width, image.size.height))
+        let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+        let resized = UIGraphicsImageRenderer(size: size).image { _ in image.draw(in: CGRect(origin: .zero, size: size)) }
+        return resized.jpegData(compressionQuality: 0.7)
+    }
 
     /// Dart `showFollowers`.
     var showAudience: Bool { (user?.socialFollowing.audienceSize ?? 0) > 0 || isCurrentUser }
@@ -89,13 +138,13 @@ final class ProfileViewModel {
             let type = Self.spaced(venue.type.rawValue)
             return venue.capacity.map { "\(type) · \($0.formatted()) cap" } ?? type
         }
-        return user.performerInfo.map { $0.category.formattedName.lowercased() } ?? user.occupations.first?.lowercased()
+        return user.performerInfo.map { $0.category.formattedName.lowercased() } ?? user.occupations.first
     }
 
     var infoRows: [ProfileInfoRow] {
         guard let user else { return [] }
         var rows: [ProfileInfoRow] = []
-        if let placeName { rows.append(.init(title: "location", value: placeName.lowercased(), systemImage: "mappin.and.ellipse")) }
+        if let placeName { rows.append(.init(title: "location", value: placeName, systemImage: "mappin.and.ellipse")) }
         if let venue = user.venueInfo {
             if let capacity = venue.capacity { rows.append(.init(title: "capacity", value: capacity.formatted(), systemImage: "person.3.fill")) }
             if !venue.genres.isEmpty { rows.append(.init(title: "genres", value: Self.genreNames(venue.genres), systemImage: "music.note.list")) }
@@ -105,8 +154,8 @@ final class ProfileViewModel {
             if !performer.genres.isEmpty { rows.append(.init(title: "genres", value: Self.genreNames(performer.genres), systemImage: "music.note.list")) }
             if let price = performer.averageTicketPrice { rows.append(.init(title: "avg. ticket price", value: Self.currency(price), systemImage: "ticket.fill")) }
             if let attendance = performer.averageAttendance { rows.append(.init(title: "avg. attendance", value: attendance.formatted(), systemImage: "person.3.fill")) }
-            rows.append(.init(title: "label", value: performer.label.lowercased(), systemImage: "opticaldisc.fill"))
-            if let agency = performer.bookingAgency, !agency.isEmpty { rows.append(.init(title: "booking agency", value: agency.lowercased(), systemImage: "briefcase.fill")) }
+            rows.append(.init(title: "label", value: performer.label, systemImage: "opticaldisc.fill"))
+            if let agency = performer.bookingAgency, !agency.isEmpty { rows.append(.init(title: "booking agency", value: agency, systemImage: "briefcase.fill")) }
             if let press = performer.pressKitUrl, let url = URL(string: press) { rows.append(.init(title: "press kit", value: "open", systemImage: "doc.richtext.fill", url: url)) }
             if let email = performer.bookingEmail, !email.isEmpty { rows.append(.init(title: "booking email", value: email, systemImage: "envelope.fill", url: URL(string: "mailto:\(email)"))) }
         }
@@ -144,7 +193,7 @@ final class ProfileViewModel {
             user = fetched
         } catch {
             if user == nil {
-                phase = .failed(error.localizedDescription.lowercased())
+                phase = .failed(ErrorCopy.load("this profile"))
                 return
             }
         }
@@ -154,7 +203,8 @@ final class ProfileViewModel {
         async let review: Void = loadLatestReview()
         async let blocked: Void = loadIsBlocked()
         async let place: Void = loadPlace()
-        _ = await (services, bookings, review, blocked, place)
+        async let contacted: Void = loadContactedVenues()
+        _ = await (services, bookings, review, blocked, place, contacted)
     }
 
     func block() async {
@@ -229,6 +279,11 @@ final class ProfileViewModel {
         latestReviewer = try? await database.getUserById(reviewerId)
     }
 
+    private func loadContactedVenues() async {
+        guard isCurrentUser else { return }
+        contactedVenuesCount = (try? await database.getContactedVenues(userId))?.count ?? 0
+    }
+
     private func loadIsBlocked() async {
         guard !isCurrentUser else { return }
         isBlocked = (try? await database.isBlocked(currentUserId: currentUser.id, blockedUserId: userId)) ?? false
@@ -242,7 +297,7 @@ final class ProfileViewModel {
     }
 
     static func genreNames(_ rawValues: [String]) -> String {
-        rawValues.map { (Genre(rawValue: $0)?.formattedName ?? $0).lowercased() }.joined(separator: ", ")
+        rawValues.map { Genre(rawValue: $0)?.formattedName ?? $0 }.joined(separator: ", ")
     }
 
     static func currency(_ cents: Int) -> String {

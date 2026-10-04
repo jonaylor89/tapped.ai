@@ -18,7 +18,7 @@ public struct OpportunityCard: View {
                 .frame(maxWidth: .infinity)
                 .clipped()
             VStack(alignment: .leading, spacing: TappedSpacing.xs) {
-                Text(opportunity.title.lowercased())
+                Text(opportunity.title)
                     .font(TappedTypography.headingXs)
                     .lineLimit(1)
                 Text(opportunity.startTime, format: .dateTime.weekday(.abbreviated).month(.abbreviated).day().hour().minute())
@@ -26,7 +26,7 @@ public struct OpportunityCard: View {
                     .foregroundStyle(.secondary)
                 HStack(spacing: TappedSpacing.xs) {
                     if let venueName {
-                        Text(venueName.lowercased()).lineLimit(1)
+                        Text(venueName).lineLimit(1)
                     }
                     Spacer(minLength: 0)
                     Text(opportunity.isPaid ? "paid" : "unpaid")

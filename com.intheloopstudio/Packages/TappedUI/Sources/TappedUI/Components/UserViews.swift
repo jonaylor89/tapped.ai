@@ -27,7 +27,9 @@ public struct UserAvatar: View {
         .overlay(alignment: .bottomTrailing) {
             if isVerified {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: size * 0.3))
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * 0.3, height: size * 0.3)
                     .foregroundStyle(.white, TappedColors.accent)
                     .accessibilityLabel("verified")
             }
@@ -36,13 +38,24 @@ public struct UserAvatar: View {
     }
 
     private var initials: some View {
-        let letters = name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined().lowercased()
+        let letters = Self.initials(for: name)
         return ZStack {
             Circle().fill(TappedColors.accent.opacity(0.15))
+            // Sized to the fixed circle, not Dynamic Type: the avatar itself doesn't grow.
             Text(letters.isEmpty ? "?" : letters)
-                .font(.system(size: size * 0.38, weight: .semibold, design: .rounded))
-                .foregroundStyle(TappedColors.accent)
+                .font(.largeTitle.weight(.semibold))
+                .fontDesign(.rounded)
+                .minimumScaleFactor(0.05)
+                .lineLimit(1)
+                .dynamicTypeSize(.large)
+                .padding(size * 0.22)
+                .foregroundStyle(TappedColors.accentText)
         }
+    }
+
+    /// First letters of up to two words, as typed (no case change).
+    public static func initials(for name: String) -> String {
+        name.split(separator: " ").prefix(2).compactMap(\.first).map(String.init).joined()
     }
 }
 
@@ -98,7 +111,7 @@ public struct UserCard: View {
                     .font(TappedTypography.label)
                     .lineLimit(1)
                 if let category = user.performerInfo?.category, !isLocked {
-                    Text(category.formattedName.lowercased())
+                    Text(category.formattedName)
                         .font(TappedTypography.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)

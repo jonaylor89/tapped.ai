@@ -55,10 +55,10 @@ struct BookingsFeatureTests {
         #expect(model.canCancel)
     }
 
-    @Test func denyAndCancelSetCanceled() async throws {
+    @Test func declineAndCancelSetCanceled() async throws {
         let database = MockDatabaseRepository()
         let pending = BookingDetailViewModel(dependencies: dependencies(database: database), booking: Samples.bookings[1], currentUser: me, now: { now })
-        await pending.deny()
+        await pending.decline()
         #expect(try await database.getBookingById("booking-2")?.status == .canceled)
 
         let requested = BookingDetailViewModel(dependencies: dependencies(database: database), booking: Samples.bookings[2], currentUser: me, now: { now })
@@ -189,7 +189,7 @@ struct BookingsFeatureTests {
         let model = RequestToPerformViewModel(dependencies: dependencies(outreach: MockVenueOutreachRepository(failure: .requestFailed(statusCode: 500))), currentUser: me, venues: [Samples.venues[0]], collaborators: [])
         model.note = "hello"
         #expect(await model.submit() == nil)
-        #expect(model.errorMessage == "couldn't send your request")
+        #expect(model.errorMessage == "couldn't send your pitch — check your connection and try again")
         model.venues = []
         #expect(model.validationMessage == "add at least one venue")
     }
@@ -273,5 +273,19 @@ struct BookingsFeatureTests {
         #expect(!Route.bookings(userId: "u").isBookingFlowStep)
         #expect(Route.requestToPerform(venues: [], collaborators: []).isRequestToPerformFlowStep)
         #expect(!Route.settings.isRequestToPerformFlowStep)
+    }
+
+    @Test func declineWordingReplacesDeny() {
+        #expect(BookingDetailViewModel.declineTitle == "Decline")
+        #expect(BookingDetailViewModel.declineConfirmationTitle == "Decline this request?")
+        #expect(!BookingDetailViewModel.declineConfirmationTitle.lowercased().contains("deny"))
+    }
+
+    @Test func pitchConfirmationPointsToMessagesAndEmail() {
+        let venue = Samples.venues[0]
+        let message = RequestToPerformConfirmationView.message(for: [venue])
+        #expect(message.contains(venue.displayName))
+        #expect(message.contains("Messages"))
+        #expect(message.contains("email"))
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 
 /// Port of `opportunity_view.dart`'s state: load opportunity, venue + booker, applied state and quota.
 @Observable
@@ -46,6 +47,12 @@ final class OpportunityViewModel {
             if newValue { remainingQuota = nil }
         }
     }
+    /// Free applications left today; `nil` for premium (unlimited) or before loading.
+    var remainingFreeApplications: Int? { remainingQuota }
+    /// Out of free applications: the primary action becomes "apply with premium" and opens the paywall.
+    var needsPremiumToApply: Bool { remainingQuota == 0 && !isApplied }
+    var quotaCaption: String? { isApplied ? nil : ApplicationQuota.caption(remaining: remainingQuota) }
+
     var canSeeApplicants: Bool { opportunity?.userId == currentUser.id || claims.contains(.admin) }
     var canApply: Bool { opportunity.map { $0.userId != currentUser.id } ?? false }
     var isPastDeadline: Bool { opportunity?.deadline.map { $0 < .now } ?? false }
@@ -83,7 +90,7 @@ final class OpportunityViewModel {
             }
             return outcome
         } catch {
-            errorMessage = "error applying to opportunity"
+            errorMessage = ErrorCopy.action("send your application")
             return nil
         }
     }
@@ -94,11 +101,29 @@ final class OpportunityViewModel {
             try await application.dislike(opportunity)
             isDisliked = true
         } catch {
-            errorMessage = "couldn't update this gig"
+            errorMessage = ErrorCopy.action("hide this gig")
         }
     }
 
     func dismissError() {
         errorMessage = nil
     }
+}
+
+/// Copy for the free-application quota. Always "n of 3 … today", never a bare "3 left".
+enum ApplicationQuota {
+    /// Free applications granted per day (`credits/{uid}.opportunityQuota` reset).
+    static let dailyFree = 3
+
+    /// "2 of 3 free applications left today"; `nil` for premium (unlimited).
+    static func caption(remaining: Int?) -> String? {
+        guard let remaining else { return nil }
+        let left = max(remaining, 0)
+        let total = max(dailyFree, left)
+        if left == 0 { return "you've used all \(total) free applications today" }
+        return "\(left) of \(total) free \(total == 1 ? "application" : "applications") left today"
+    }
+
+    static let premiumCaption = "premium · unlimited applications"
+    static let applyWithPremium = "apply with premium"
 }
