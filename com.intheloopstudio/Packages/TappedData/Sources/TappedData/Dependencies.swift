@@ -25,6 +25,7 @@ public struct Dependencies: Sendable {
     public var opportunityNotifications: any OpportunityNotificationRepository
     /// Injected into the view tree as `\.imageProxy` for `RemoteImage`.
     public var imageProxy: ImageProxy
+    public var location: any LocationRepository
 
     public init(
         mode: Mode,
@@ -40,7 +41,8 @@ public struct Dependencies: Sendable {
         storage: any StorageRepository = MockStorageRepository(),
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
         opportunityNotifications: any OpportunityNotificationRepository = MockOpportunityNotificationRepository(),
-        imageProxy: ImageProxy = .disabled
+        imageProxy: ImageProxy = .disabled,
+        location: any LocationRepository = MockLocationRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -56,6 +58,7 @@ public struct Dependencies: Sendable {
         self.venueOutreach = venueOutreach
         self.opportunityNotifications = opportunityNotifications
         self.imageProxy = imageProxy
+        self.location = location
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -78,7 +81,8 @@ public struct Dependencies: Sendable {
             storage: FirebaseStorageRepository(),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
             opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL),
-            imageProxy: ImageProxy(baseURL: config.imageProxyURL)
+            imageProxy: ImageProxy(baseURL: config.imageProxyURL),
+            location: CoreLocationRepository()
         )
     }
 
