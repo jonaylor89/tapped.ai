@@ -9,7 +9,7 @@ import Testing
 struct OnboardingViewModelTests {
     private func makeModel(
         database: MockDatabaseRepository = MockDatabaseRepository(),
-        storage: MockStorageRepository = MockStorageRepository(),
+        location: MockLocationRepository = MockLocationRepository(),
         now: Date = Date(timeIntervalSince1970: 1_700_000_123.456)
     ) -> OnboardingViewModel {
         let dependencies = Dependencies(
@@ -21,7 +21,8 @@ struct OnboardingViewModelTests {
             purchases: MockPurchasesRepository(),
             analytics: MockAnalytics(),
             remoteConfig: MockRemoteConfigRepository(),
-            storage: storage
+            storage: MockStorageRepository(),
+            location: location
         )
         return OnboardingViewModel(dependencies: dependencies, now: { now })
     }
@@ -37,9 +38,27 @@ struct OnboardingViewModelTests {
         #expect(OnboardingViewModel.sanitizeUsername(input) == expected)
     }
 
-    @Test func requiredStepsBlockContinueAndOptionalStepsSkip() {
+    @Test func threeStepsInOrder() {
+        #expect(OnboardingViewModel.Step.allCases == [.name, .genres, .location])
+        #expect(OnboardingViewModel.stepCount == 3)
+        #expect(OnboardingViewModel.Step.location.isLast)
+        #expect(OnboardingViewModel.Step.allCases.allSatisfy { !$0.subtitle.isEmpty })
+        #expect(OnboardingViewModel.Step.genres.subtitle == "we use these to match you with gigs and venues.")
+    }
+
+    @Test func defaults() {
         let model = makeModel()
         #expect(model.step == .name)
+        #expect(model.stepNumber == 1)
+        #expect(model.progress == 1.0 / 3.0)
+        #expect(model.genres.isEmpty)
+        #expect(model.selectedPlace == nil)
+        #expect(!model.isUsernameCustom)
+        #expect(!model.canGoBack)
+    }
+
+    @Test func requiredStepsBlockContinueAndOptionalStepsSkip() {
+        let model = makeModel()
         #expect(!model.canContinue)
         #expect(!model.step.isSkippable)
         model.skip()
@@ -50,73 +69,31 @@ struct OnboardingViewModelTests {
         model.artistName = "Nova Waves"
         #expect(model.canContinue)
         model.next()
-        #expect(model.step == .occupation)
-        #expect(!model.canContinue)
-        model.toggle(occupation: "DJ")
-        model.next()
         #expect(model.step == .genres)
+        #expect(!model.canContinue)
 
         model.toggle(genre: .electronic)
-        model.skip()
+        #expect(model.skip() == false)
         #expect(model.genres.isEmpty)
         #expect(model.step == .location)
+        #expect(model.stepNumber == 3)
+        #expect(model.skip() == true, "skipping the last step finishes")
         model.back()
         #expect(model.step == .genres)
-        #expect(model.progress == 3.0 / 7.0)
+        #expect(model.progress == 2.0 / 3.0)
     }
 
-    @Test func socialsValidation() {
-        let model = makeModel()
-        model.tiktokHandle = "@nova waves"
-        #expect(model.socialsError == "handles can't contain spaces")
-        model.tiktokHandle = "@novawaves"
-        model.instagramFollowers = "12k"
-        #expect(model.socialsError == "follower counts must be whole numbers")
-        model.instagramFollowers = "12000"
-        #expect(model.socialsError == nil)
-        #expect(OnboardingViewModel.sanitizeHandle("@@novawaves ") == "novawaves")
-    }
-
-    @Test func finishRequiresEula() async {
+    @Test func usernameFollowsNameUntilTyped() async {
         let model = makeModel()
         model.artistName = "Nova Waves"
-        #expect(await model.finish() == nil)
-        #expect(model.errorMessage == "you must accept the eula to continue")
-    }
-
-    @Test func finishWritesUserModel() async throws {
-        let database = MockDatabaseRepository()
-        let storage = MockStorageRepository()
-        let model = makeModel(database: database, storage: storage)
-        model.artistName = "  Nova Waves "
-        model.toggle(occupation: "Music Producer")
-        model.toggle(occupation: "DJ")
-        model.toggle(genre: .pop)
-        model.toggle(genre: .electronic)
-        model.placeQuery = "rich"
-        await model.searchPlaces()
-        await model.select(try #require(model.placePredictions.first))
-        model.tiktokHandle = "@novawaves"
-        model.tiktokFollowers = "12400"
-        model.instagramHandle = "nova.waves"
-        model.setAvatar(Data([0xFF, 0xD8]))
-        model.eulaAccepted = true
-
-        let user = try #require(await model.finish())
-        let saved = try #require(try await database.getUserById(MockAuthRepository.newUser.uid))
-        #expect(saved == user)
-        #expect(user.username.username == "nova_waves")
-        #expect(user.artistName == "Nova Waves")
-        #expect(user.email == MockAuthRepository.newUser.email)
-        #expect(user.occupations == ["DJ", "Music Producer"])
-        #expect(user.performerInfo?.genres == ["pop", "electronic"])
-        #expect(user.location == Location.rva)
-        #expect(user.socialFollowing.tiktokHandle == "novawaves")
-        #expect(user.socialFollowing.tiktokFollowers == 12400)
-        #expect(user.socialFollowing.instagramHandle == "nova.waves")
-        #expect(user.socialFollowing.instagramFollowers == 0)
-        #expect(user.profilePicture?.contains("images/users/\(MockAuthRepository.newUser.uid)/userProfile_") == true)
-        #expect(await storage.uploads.count == 1)
+        #expect(model.username == "nova_waves")
+        model.customUsername = "Nova.Waves "
+        #expect(model.customUsername == "novawaves_")
+        #expect(model.isUsernameCustom)
+        model.artistName = "Someone Else"
+        #expect(model.username == "novawaves_")
+        await model.checkUsername()
+        #expect(model.usernameStatus == .available("novawaves_"))
     }
 
     @Test func takenUsernameGetsEpochSuffix() async throws {
@@ -124,7 +101,75 @@ struct OnboardingViewModelTests {
         model.artistName = "DJNova"
         await model.checkUsername()
         #expect(model.usernameStatus == .taken("djnova"))
+        #expect(model.usernameError == nil, "a derived username is suffixed, not blocked")
         // 1_700_000_123_456 ms → last four digits "3456".
         #expect(await model.resolveUsername() == "djnova3456")
+    }
+
+    @Test func takenCustomUsernameBlocksContinue() async {
+        let model = makeModel()
+        model.artistName = "Nova"
+        model.customUsername = "djnova"
+        await model.checkUsername()
+        #expect(model.usernameError == "@djnova is taken")
+        #expect(!model.canContinue)
+        #expect(await model.resolveUsername() == nil)
+    }
+
+    @Test func currentCityReverseGeocodesToPlace() async {
+        let model = makeModel()
+        await model.useCurrentCity()
+        #expect(model.selectedPlace?.placeId == Location.rva.placeId)
+        #expect(model.selectedPlace?.name == "Richmond")
+        #expect(model.errorMessage == nil)
+        #expect(!model.isLocating)
+    }
+
+    @Test func currentCityDeniedFallsBackToSearch() async {
+        let model = makeModel(location: MockLocationRepository(result: .failure(.denied)))
+        await model.useCurrentCity()
+        #expect(model.selectedPlace == nil)
+        #expect(model.errorMessage == "location access is off. search for your city instead")
+    }
+
+    @Test func finishWritesUserModel() async throws {
+        let database = MockDatabaseRepository()
+        let model = makeModel(database: database)
+        model.artistName = "  Nova Waves "
+        model.toggle(genre: .pop)
+        model.toggle(genre: .electronic)
+        model.placeQuery = "rich"
+        await model.searchPlaces()
+        await model.select(try #require(model.placePredictions.first))
+
+        let user = try #require(await model.finish())
+        let saved = try #require(try await database.getUserById(MockAuthRepository.newUser.uid))
+        #expect(saved == user)
+        #expect(user.id == MockAuthRepository.newUser.uid)
+        #expect(user.username.username == "nova_waves")
+        #expect(user.artistName == "Nova Waves")
+        #expect(user.email == MockAuthRepository.newUser.email)
+        #expect(user.timestamp == Date(timeIntervalSince1970: 1_700_000_123.456))
+        #expect(user.occupations == ["Performer"])
+        #expect(user.performerInfo?.genres == ["pop", "electronic"])
+        #expect(user.location == Location.rva)
+        // Photo and socials moved to the "finish setting up" checklist: Flutter's defaults.
+        #expect(user.profilePicture == nil)
+        #expect(user.socialFollowing == .empty)
+        #expect(user.socialFollowing.tiktokHandle == nil)
+        #expect(user.socialFollowing.tiktokFollowers == 0)
+        #expect(user.socialFollowing.instagramHandle == nil)
+        #expect(user.socialFollowing.instagramFollowers == 0)
+    }
+
+    @Test func skippedStepsWriteDefaults() async throws {
+        let model = makeModel()
+        model.artistName = "Nova"
+        model.next()
+        model.skip()
+        #expect(model.skip())
+        let user = try #require(await model.finish())
+        #expect(user.location == nil)
+        #expect(user.performerInfo?.genres == [])
     }
 }

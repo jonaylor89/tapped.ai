@@ -2,6 +2,7 @@ import Foundation
 import Observation
 import TappedData
 import TappedDomain
+import TappedUI
 
 /// `lib/ui/booking/booking_view.dart`: status, parties, when/where, respond/cancel, review prompt.
 /// The deprecated Stripe payment section is intentionally not ported.
@@ -39,9 +40,9 @@ final class BookingDetailViewModel {
     var isRequester: Bool { booking.requesterId == currentUser.id }
     var isExpired: Bool { booking.isExpired(now: now()) }
 
-    /// Pending requests aimed at the current user can be accepted or denied.
+    /// Pending requests aimed at the current user can be accepted or declined.
     var canRespond: Bool { isRequestee && booking.isPending && !isExpired && booking.requesterId != nil }
-    /// Either party can cancel a live booking; the requestee denies instead while it's pending.
+    /// Either party can cancel a live booking; the requestee declines instead while it's pending.
     var canCancel: Bool { booking.involves(currentUser.id) && !booking.isCanceled && !isExpired && !canRespond }
     var canReview: Bool { booking.isConfirmed && isExpired && booking.requesterId != nil && booking.involves(currentUser.id) && !hasReviewed }
 
@@ -76,7 +77,11 @@ final class BookingDetailViewModel {
     }
 
     func confirm() async { await update(to: .confirmed, event: "booking_confirmed") }
-    func deny() async { await update(to: .canceled, event: "booking_denied") }
+    /// Declining a pending request cancels it. The analytics event keeps its Flutter name.
+    func decline() async { await update(to: .canceled, event: "booking_denied") }
+
+    static let declineTitle = "Decline"
+    static let declineConfirmationTitle = "Decline this request?"
     func cancel() async { await update(to: .canceled, event: "booking_canceled") }
 
     func submitReview() async -> Bool {
@@ -103,7 +108,7 @@ final class BookingDetailViewModel {
             await analytics.track("review_created", properties: ["type": .string(fields.type.rawValue), "rating": .int(reviewRating)])
             return true
         } catch {
-            errorMessage = "couldn't post your review"
+            errorMessage = ErrorCopy.action("post your review")
             return false
         }
     }
@@ -127,7 +132,7 @@ final class BookingDetailViewModel {
             booking = updated
             await analytics.track(event, properties: ["booking_id": .string(booking.id)])
         } catch {
-            errorMessage = "couldn't update the booking"
+            errorMessage = ErrorCopy.action("update this booking")
         }
     }
 }

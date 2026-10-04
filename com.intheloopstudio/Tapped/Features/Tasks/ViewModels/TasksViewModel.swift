@@ -74,7 +74,7 @@ final class TasksViewModel {
                 title: "add social following",
                 description: "let promoters know how big your online presence is",
                 systemImage: "person.3",
-                isCompleted: user.socialFollowing.audienceSize > 0,
+                isCompleted: user.socialFollowing.audienceSize > 0 || hasSocialHandle(user.socialFollowing),
                 route: .settings
             ),
             SetupTask(
@@ -92,5 +92,11 @@ final class TasksViewModel {
                 route: .gigSearch
             ),
         ]
+    }
+
+    /// Onboarding and the checklist only ask for handles, so a handle alone completes "add social following".
+    private static func hasSocialHandle(_ social: SocialFollowing) -> Bool {
+        [social.instagramHandle, social.tiktokHandle, social.twitterHandle, social.facebookHandle, social.soundcloudHandle]
+            .contains { !($0 ?? "").isEmpty }
     }
 }

@@ -58,7 +58,7 @@ struct ProfileViewModelTests {
 
     @Test func formatting() {
         #expect(ProfileViewModel.spaced("concertHall") == "concert hall")
-        #expect(ProfileViewModel.genreNames([Genre.dance.rawValue, "custom"]) == "dance, custom")
+        #expect(ProfileViewModel.genreNames([Genre.dance.rawValue, "custom"]) == "Dance, custom")
         #expect(ProfileViewModel.compact(22_500) == "22.5k")
     }
 }
@@ -167,6 +167,14 @@ struct TasksViewModelTests {
         let tasks = TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 2)
         #expect(tasks.allSatisfy { $0.isCompleted })
     }
+
+    @Test func socialHandleWithoutFollowerCountCompletesSocials() {
+        var user = Samples.performer
+        user.socialFollowing = .empty
+        #expect(TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 0)[2].isCompleted == false)
+        user.socialFollowing.instagramHandle = "nova.waves"
+        #expect(TasksViewModel.tasks(for: user, hasBookings: true, contactedVenuesCount: 0)[2].isCompleted)
+    }
 }
 
 @MainActor
@@ -247,5 +255,53 @@ struct Session2RouteTests {
     @Test func launchOptionsReadRoute() {
         #expect(LaunchOptions.from(["TAPPED_MOCK": "1", "TAPPED_MOCK_ROUTE": "settings"]).route == "settings")
         #expect(LaunchOptions.from(["TAPPED_MOCK_ROUTE": "settings"]).route == nil)
+    }
+
+    // MARK: accessibility + edit state
+
+    @Test func statsArrangementFollowsDynamicType() {
+        #expect(ProfileStats.arrangement(for: .large) == .row)
+        #expect(ProfileStats.arrangement(for: .xxLarge) == .grid)
+        #expect(ProfileStats.arrangement(for: .accessibility1) == .list)
+        #expect(ProfileStats.arrangement(for: .accessibility5) == .list)
+    }
+
+    @MainActor @Test func discardChangesRestoresTheOriginal() async {
+        let model = SettingsViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
+        await model.load()
+        #expect(!model.hasChanges)
+        model.draft.bio = "brand new bio"
+        model.username = "someone-else"
+        #expect(model.hasChanges)
+        #expect(model.leavingNeedsConfirmation)
+        model.discardChanges()
+        #expect(!model.hasChanges)
+        #expect(!model.leavingNeedsConfirmation)
+        #expect(model.username == Samples.performer.username.username)
+    }
+
+    @MainActor @Test func ownProfileWithoutPhotoPromptsAndUploads() async {
+        var user = Samples.performer
+        user.profilePicture = nil
+        let storage = MockStorageRepository()
+        let model = ProfileViewModel(
+            dependencies: .mock(signedIn: true, storage: storage), currentUser: user, userId: user.id, user: user
+        )
+        #expect(model.needsPhoto)
+        #expect(model.setupProgress < 1)
+        let png = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).pngData { context in
+            UIColor.red.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4, height: 4))
+        }
+        await model.uploadPhoto(png)
+        #expect(!model.needsPhoto)
+        #expect(model.toast == "photo added")
+    }
+
+    @MainActor @Test func profileKeepsUserCasing() async {
+        let model = ProfileViewModel(
+            dependencies: .mock(signedIn: true), currentUser: Samples.performer, userId: Samples.performer.id
+        )
+        #expect(model.user?.displayName == Samples.performer.displayName)
     }
 }

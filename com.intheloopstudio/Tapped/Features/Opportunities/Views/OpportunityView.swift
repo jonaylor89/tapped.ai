@@ -33,7 +33,7 @@ struct OpportunityView: View {
             case .loading:
                 LoadingView()
             case .notFound:
-                GlassEmptyState("opportunity not found", message: "it may have been removed", systemImage: "questionmark.folder")
+                GlassEmptyState("gig not found", message: "the venue may have filled or removed it", systemImage: "questionmark.folder")
             case .loaded:
                 if let opportunity = model.opportunity {
                     content(opportunity)
@@ -45,7 +45,19 @@ struct OpportunityView: View {
         .toolbar {
             if let url = model.shareURL {
                 ToolbarItem(placement: .topBarTrailing) {
-                    ShareLink(item: url) { SwiftUI.Label("share opportunity", systemImage: "square.and.arrow.up") }
+                    ShareLink(item: url) { SwiftUI.Label("share gig", systemImage: "square.and.arrow.up") }
+                }
+            }
+            if model.canApply, !model.isApplied {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu("more", systemImage: "ellipsis") {
+                        Button("not interested", systemImage: "hand.thumbsdown") {
+                            Task {
+                                await model.dislike()
+                                if model.isDisliked { dismiss() }
+                            }
+                        }
+                    }
                 }
             }
             if model.canSeeApplicants, let opportunity = model.opportunity {
@@ -54,8 +66,8 @@ struct OpportunityView: View {
                 }
             }
         }
-        .alert("something went wrong", isPresented: Binding { model.errorMessage != nil } set: { if !$0 { model.dismissError() } }) {
-            Button("ok", role: .cancel) {}
+        .alert("Something Went Wrong", isPresented: Binding { model.errorMessage != nil } set: { if !$0 { model.dismissError() } }) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
@@ -65,7 +77,7 @@ struct OpportunityView: View {
     private func content(_ opportunity: Opportunity) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                OpportunityFlier(opportunity: opportunity, symbolSize: 72)
+                OpportunityHero(opportunity: opportunity, venue: model.venue)
                     .frame(height: 340)
                     .frame(maxWidth: .infinity)
                     .overlay(alignment: .bottom) {
@@ -81,6 +93,7 @@ struct OpportunityView: View {
         }
         .ignoresSafeArea(edges: .top)
         .background(TappedColors.background)
+        .offlineBanner(isOffline: NetworkMonitor.shared.isOffline)
         .safeAreaBar(edge: .bottom) {
             if model.canApply, !showsApplySheet {
                 applyBar
@@ -97,38 +110,46 @@ struct OpportunityView: View {
     }
 
     private var applyBar: some View {
-        GlassEffectContainer(spacing: TappedSpacing.md) {
-            HStack(spacing: TappedSpacing.md) {
-                if !model.isApplied {
-                    Button {
-                        Task {
-                            await model.dislike()
-                            if model.isDisliked { dismiss() }
-                        }
-                    } label: {
-                        Image(systemName: "hand.thumbsdown.fill")
-                            .font(.title3)
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.glass)
-                    .buttonBorderShape(.circle)
-                    .accessibilityLabel("not interested")
-                }
-                Button {
-                    showsApplySheet = true
-                } label: {
-                    SwiftUI.Label(model.isApplied ? "applied" : (model.isPastDeadline ? "deadline passed" : "apply"),
-                                  systemImage: model.isApplied ? "checkmark" : "paperplane.fill")
-                        .font(TappedTypography.headingXs)
-                        .frame(maxWidth: .infinity, minHeight: 44)
-                }
-                .buttonStyle(.glassProminent)
-                .disabled(model.isApplied || model.isPastDeadline)
+        VStack(spacing: TappedSpacing.xs) {
+            if let caption = model.quotaCaption, !model.isPastDeadline {
+                Text(caption)
+                    .font(TappedTypography.bodySm)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, TappedSpacing.md)
+                    .padding(.vertical, TappedSpacing.xs)
+                    .tappedGlass(.regular, in: Capsule())
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                    .accessibilityIdentifier("quota-caption")
             }
+            Button {
+                if model.needsPremiumToApply {
+                    router.push(.paywall)
+                } else {
+                    showsApplySheet = true
+                }
+            } label: {
+                SwiftUI.Label(applyTitle, systemImage: applySymbol)
+                    .font(TappedTypography.headingXs)
+                    .frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .buttonStyle(.glassProminent)
+            .disabled(model.isApplied || model.isPastDeadline)
         }
         .tappedFloatingInset()
         .padding(.bottom, TappedSpacing.sm)
         .animation(GlassMotion.spring, value: model.isApplied)
+    }
+
+    private var applyTitle: String {
+        if model.isApplied { return "applied" }
+        if model.isPastDeadline { return "deadline passed" }
+        return model.needsPremiumToApply ? ApplicationQuota.applyWithPremium : "apply"
+    }
+
+    private var applySymbol: String {
+        if model.isApplied { return "checkmark" }
+        return model.needsPremiumToApply ? "sparkles" : "paperplane.fill"
     }
 }
 

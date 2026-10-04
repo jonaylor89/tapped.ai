@@ -1,0 +1,11 @@
+{
+  "images" : [
+    { "filename" : "tapped_logo.png", "idiom" : "universal" },
+    {
+      "appearances" : [ { "appearance" : "luminosity", "value" : "dark" } ],
+      "filename" : "tapped_logo_reversed.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

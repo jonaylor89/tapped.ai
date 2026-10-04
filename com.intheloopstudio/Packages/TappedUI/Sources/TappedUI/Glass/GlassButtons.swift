@@ -12,6 +12,7 @@ public struct GlassCapsuleButton: View {
     let systemImage: String?
     let style: Style
     let action: () -> Void
+    @Environment(\.glassCapsuleFillsWidth) private var fillsWidth
 
     public init(_ title: String, systemImage: String? = nil, style: Style = .regular, action: @escaping () -> Void) {
         self.title = title
@@ -29,11 +30,12 @@ public struct GlassCapsuleButton: View {
                 }
                 Text(title)
                     .font(TappedTypography.label)
-                    .lineLimit(1)
+                    .lineLimit(fillsWidth ? nil : 1)
             }
-            .foregroundStyle(style == .accent ? TappedColors.accent : .primary)
+            .foregroundStyle(style == .accent ? TappedColors.accentText : .primary)
             .padding(.horizontal, TappedSpacing.lg)
-            .frame(minHeight: GlassMetrics.iconControl)
+            .padding(.vertical, fillsWidth ? TappedSpacing.sm : 0)
+            .frame(maxWidth: fillsWidth ? .infinity : nil, minHeight: GlassMetrics.iconControl)
             .contentShape(Capsule())
         }
         .buttonStyle(GlassPressStyle())
@@ -63,7 +65,7 @@ public struct GlassIconButton: View {
     public var body: some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.headline)
                 .foregroundStyle(isActive ? TappedColors.accent : .primary)
                 .frame(width: GlassMetrics.iconControl, height: GlassMetrics.iconControl)
                 .contentShape(Circle())
@@ -139,4 +141,15 @@ public struct GlassChip: View {
     }
     .padding()
     .background(PreviewBackdrop())
+}
+
+public extension EnvironmentValues {
+    /// Stretches `GlassCapsuleButton`s to the full width and lets titles wrap (stacked AX layouts).
+    @Entry var glassCapsuleFillsWidth = false
+}
+
+public extension View {
+    func glassCapsuleFillsWidth(_ fills: Bool = true) -> some View {
+        environment(\.glassCapsuleFillsWidth, fills)
+    }
 }

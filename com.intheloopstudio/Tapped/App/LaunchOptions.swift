@@ -6,10 +6,11 @@ import TappedUI
 ///
 /// - `TAPPED_MOCK_SIGNED_IN=1`   start signed in (handled by `Dependencies.resolve`)
 /// - `TAPPED_MOCK_SCREEN=splash|login|signup|forgot`  hold the auth gate on a screen
-/// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial Discover sheet detent
-/// - `TAPPED_MOCK_ROUTE=<name>`  push a route on launch (see `Route.mockLaunchPath`)
+/// - `TAPPED_MOCK_TAB=gigs|bookings|messages|profile|search`  initial shell tab
+/// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial map sheet detent (applied after the tab/route)
+/// - `TAPPED_MOCK_ROUTE=<name>`  open a route on launch via `ShellNavigator.open` (see `Route.mockLaunchPath`)
 /// - `TAPPED_MOCK_ROUTE_DETAIL=<value>`  screen-specific extra state (search query, open sheet/results)
-/// - `TAPPED_MOCK_ONBOARDING_STEP=name|occupation|genres|location|socials|avatar|complete`  open onboarding on a
+/// - `TAPPED_MOCK_ONBOARDING_STEP=name|genres|location`  open onboarding on a
 ///   step with sample answers filled in (combine with `TAPPED_MOCK_ONBOARDING=1`)
 /// - `TAPPED_MOCK_SHEET=reauth`  present the re-authentication sheet over the shell
 /// - `TAPPED_MOCK_LINK=<url>`  deliver a deep link on launch (cold start)
@@ -23,6 +24,7 @@ struct LaunchOptions: Equatable {
     }
 
     var screen: Screen?
+    var tab: ShellTab?
     var detent: MapsSheetDetent?
     var route: String?
     var routeDetail: String?
@@ -53,6 +55,7 @@ struct LaunchOptions: Equatable {
         }
         return LaunchOptions(
             screen: environment["TAPPED_MOCK_SCREEN"].flatMap(Screen.init(rawValue:)),
+            tab: environment["TAPPED_MOCK_TAB"].flatMap(ShellTab.init(rawValue:)),
             detent: detent,
             route: environment["TAPPED_MOCK_ROUTE"],
             routeDetail: environment["TAPPED_MOCK_ROUTE_DETAIL"],

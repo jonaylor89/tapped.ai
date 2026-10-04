@@ -75,6 +75,14 @@ struct DeepLinkResolver {
                 user.stripeConnectedAccountId = accountId
                 try await database.updateUserData(user)
                 return Resolution(route: .settings, updatedUser: user)
+            case .gigs(nil):
+                return Resolution(route: .opportunityFeed)
+            case let .gigs(filter?):
+                let feed = try await database.getOpportunityFeedByUserId(currentUser.id, limit: 100, lastOpportunityId: nil)
+                return Resolution(route: .opportunities(filter.apply(feed, now: .now)))
+            case let .shareProfile(showsQR):
+                await MainActor.run { ShareProfileQRRequest.isPending = showsQR }
+                return Resolution(route: .shareProfile(userId: currentUser.id, user: currentUser))
             }
         } catch {
             FirebaseBootstrap.record(error: error)

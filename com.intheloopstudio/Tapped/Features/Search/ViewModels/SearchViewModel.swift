@@ -106,7 +106,7 @@ final class SearchViewModel {
 
     func subtitle(for user: UserModel) -> String {
         if user.isVenue { return VenueRow.subtitle(user) }
-        let occupation = user.occupations.first?.lowercased()
+        let occupation = user.occupations.first
         return [occupation, "@\(user.username.username)"].compactMap(\.self).joined(separator: " · ")
     }
 

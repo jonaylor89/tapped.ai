@@ -10,12 +10,61 @@ struct DiscoverViewModelTests {
     static let rvaBounds = GeoBounds(swLatitude: 37.48, swLongitude: -77.50, neLatitude: 37.60, neLongitude: -77.37)
     static let elsewhere = GeoBounds(swLatitude: 40.0, swLongitude: -74.1, neLatitude: 40.1, neLongitude: -74.0)
 
-    func makeModel(isPremium: Bool = false, claims: [CustomClaim] = []) -> DiscoverViewModel {
-        DiscoverViewModel(dependencies: .mock(signedIn: true, isPremium: isPremium), currentUser: Samples.performer, isPremium: isPremium, claims: claims)
+    func makeModel(
+        isPremium: Bool = false,
+        claims: [CustomClaim] = [],
+        dependencies: Dependencies? = nil
+    ) -> DiscoverViewModel {
+        DiscoverViewModel(
+            dependencies: dependencies ?? .mock(signedIn: true, isPremium: isPremium),
+            currentUser: Samples.performer,
+            isPremium: isPremium,
+            claims: claims,
+            now: { Samples.referenceDate }
+        )
+    }
+
+    @Test func performersDefaultToGigsAndBookersToVenues() {
+        let performer = makeModel()
+        #expect(performer.overlay == .gigs)
+        #expect(performer.isPerformerFirst)
+        let booker = makeModel(claims: [.booker])
+        #expect(booker.overlay == .venues)
+        #expect(!booker.isPerformerFirst)
+        #expect(DiscoverViewModel.defaultOverlay(for: Samples.venues[0], claims: []) == .venues)
+    }
+
+    @Test func performerHeaderAnswersIsThereWork() async {
+        let model = makeModel()
+        await model.mapRegionChanged(to: Self.rvaBounds)
+        let gigs = model.opportunityHits.count
+        #expect(gigs > 0)
+        #expect(model.gigsHeadline == "\(gigs) open \(gigs == 1 ? "gig" : "gigs") near you")
+        #expect(model.venuesHeadline.contains("booking"))
+        #expect(model.venueHits.count == Samples.venues.count)
+        #expect(model.annotations.allSatisfy { $0.kind == .gig })
+        let week = Samples.referenceDate.addingTimeInterval(7 * 24 * 60 * 60)
+        #expect(model.paidGigsThisWeek.allSatisfy { $0.isPaid && $0.startTime >= Samples.referenceDate && $0.startTime < week })
+        #expect(Set(model.goodFitVenues.map(\.id)) == ["venue-canal", "venue-balliceaux"])
+    }
+
+    @Test func quotaLineOnlyWhenFreeApplicationsAreUsedUp() async throws {
+        let database = MockDatabaseRepository(defaultOpportunityQuota: 0)
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.database = database
+        let model = makeModel(dependencies: dependencies)
+        await model.mapRegionChanged(to: Self.rvaBounds)
+        #expect(model.quotaMessage == nil)
+        let observer = Task { await model.observeQuota() }
+        defer { observer.cancel() }
+        for _ in 0..<200 where model.quotaMessage == nil { try await Task.sleep(for: .milliseconds(10)) }
+        let paid = model.opportunityHits.count(where: \.isPaid)
+        #expect(model.quotaMessage == "you've used today's 3 free applications — \(paid) more paid \(paid == 1 ? "gig" : "gigs") nearby")
+        #expect(makeModel(isPremium: true).quotaMessage == nil)
     }
 
     @Test func firstRegionChangeSearchesVenues() async {
-        let model = makeModel()
+        let model = makeModel(claims: [.booker])
         await model.mapRegionChanged(to: Self.rvaBounds)
         #expect(model.venueHits.count == Samples.venues.count)
         #expect(model.headerTitle == "\(Samples.venues.count) venues nearby")
@@ -24,7 +73,7 @@ struct DiscoverViewModelTests {
     }
 
     @Test func movingTheMapExpiresResultsUntilSearchThisArea() async {
-        let model = makeModel()
+        let model = makeModel(claims: [.booker])
         await model.mapRegionChanged(to: Self.rvaBounds)
         await model.mapRegionChanged(to: Self.elsewhere)
         #expect(model.resultsExpired)
@@ -37,7 +86,7 @@ struct DiscoverViewModelTests {
     }
 
     @Test func switchingToGigsSearchesOpportunities() async {
-        let model = makeModel()
+        let model = makeModel(claims: [.booker])
         await model.mapRegionChanged(to: Self.rvaBounds)
         await model.select(.gigs)
         #expect(model.overlay == .gigs)
@@ -90,17 +139,16 @@ struct DiscoverViewModelTests {
     }
 
     @Test func addGigQuickActionRequiresBookerOrAdmin() {
-        #expect(makeModel().quickActions.map(\.title) == ["search a city", "my bookings", "settings"])
-        #expect(makeModel(claims: [.booker]).quickActions.last?.route == .admin)
+        #expect(makeModel().quickActions.isEmpty)
+        #expect(makeModel(claims: [.booker]).quickActions.map(\.route) == [.admin])
     }
 
-    @Test func locateAndZoomIssueCameraRequests() {
+    @Test func locateIssuesFreshCameraRequests() {
         let model = makeModel()
         model.locate()
         let first = model.cameraRequest
         #expect(first?.kind == .center(Samples.performer.location ?? .rva, spanDegrees: DiscoverViewModel.defaultSpanDegrees))
-        model.zoom(by: 0.5)
-        #expect(model.cameraRequest?.kind == .zoom(factor: 0.5))
+        model.locate()
         #expect(model.cameraRequest?.id != first?.id)
     }
 

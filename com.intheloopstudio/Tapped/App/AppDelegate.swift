@@ -9,11 +9,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) -> Bool {
         // Set before launch finishes so a notification tap that cold-starts the app is delivered to `didReceive`.
         UNUserNotificationCenter.current().delegate = self
+        NotificationCategories.register()
+        GigNightCoordinator.shared.start()
         guard AppEnvironment.dependencies.mode == .live else { return true }
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
-        // Permission is requested after sign in / onboarding (`AppSession`); registering first is harmless.
+        // Provisional permission at sign in (`AppSession`), full prompt from `NotificationsPromptCard`.
         application.registerForRemoteNotifications()
         return true
     }
@@ -38,6 +40,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
+        let action = NotificationActionResponse(response)
+        if action.isAction { return await NotificationActionRouter.perform(action) }
         let payload = NotificationPayload(userInfo: response.notification.request.content.userInfo)
         await MainActor.run { AppEnvironment.inbound.receive(payload) }
     }

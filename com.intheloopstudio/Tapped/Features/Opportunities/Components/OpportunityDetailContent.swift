@@ -28,7 +28,7 @@ struct OpportunityDetailContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: TappedSpacing.lg) {
             VStack(alignment: .leading, spacing: TappedSpacing.xs) {
-                Text(opportunity.title.lowercased())
+                Text(opportunity.title)
                     .font(TappedTypography.headingLg)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(Self.dateLine(opportunity))
@@ -36,25 +36,22 @@ struct OpportunityDetailContent: View {
                     .foregroundStyle(.secondary)
             }
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                GlassEffectContainer {
-                    HStack(spacing: TappedSpacing.sm) {
-                        FactPill(
-                            text: opportunity.isPaid ? "paid gig" : "unpaid",
-                            systemImage: opportunity.isPaid ? "dollarsign.circle.fill" : "hand.raised.fill",
-                            tint: opportunity.isPaid ? TappedColors.success : .secondary
-                        )
-                        if let deadline = opportunity.deadline {
-                            FactPill(text: "apply by \(deadline.formatted(.dateTime.month(.abbreviated).day()).lowercased())", systemImage: "hourglass")
-                        }
-                        ForEach(opportunity.genres, id: \.self) { genre in
-                            FactPill(text: (Genre(rawValue: genre)?.formattedName ?? genre).lowercased(), systemImage: "music.note")
-                        }
+            GlassEffectContainer {
+                FlowLayout(spacing: TappedSpacing.sm) {
+                    FactPill(
+                        text: opportunity.isPaid ? "paid gig" : "unpaid",
+                        systemImage: opportunity.isPaid ? "dollarsign.circle.fill" : "hand.raised.fill",
+                        tint: opportunity.isPaid ? TappedColors.success : .secondary
+                    )
+                    if let deadline = opportunity.deadline {
+                        FactPill(text: "apply by \(deadline.formatted(.dateTime.month(.abbreviated).day()).lowercased())", systemImage: "hourglass")
                     }
-                    .padding(.vertical, TappedSpacing.xs)
+                    ForEach(opportunity.genres, id: \.self) { genre in
+                        FactPill(text: Genre(rawValue: genre)?.formattedName ?? genre, systemImage: "music.note")
+                    }
                 }
+                .padding(.vertical, TappedSpacing.xs)
             }
-            .scrollClipDisabled()
 
             if !opportunity.description.isEmpty {
                 Text(opportunity.description)
@@ -104,5 +101,42 @@ struct OpportunityDetailContent: View {
     ScrollView {
         OpportunityDetailContent(opportunity: Samples.opportunities[0], venue: Samples.venues[0], booker: nil)
             .padding()
+    }
+}
+
+/// Gig detail hero: flier, else the venue's photo, else a map snapshot of the venue, else the category symbol.
+struct OpportunityHero: View {
+    let opportunity: Opportunity
+    let venue: UserModel?
+
+    enum Source: Equatable {
+        case flier(URL)
+        case venuePhoto(URL)
+        case map(Location)
+        case symbol
+    }
+
+    static func source(for opportunity: Opportunity, venue: UserModel?) -> Source {
+        if let url = opportunity.flierUrl.flatMap(URL.init(string:)) { return .flier(url) }
+        if let url = venue?.profilePicture.flatMap(URL.init(string:)) { return .venuePhoto(url) }
+        let location = venue?.location ?? opportunity.location
+        if location.lat != 0 || location.lng != 0 { return .map(location) }
+        return .symbol
+    }
+
+    var body: some View {
+        switch Self.source(for: opportunity, venue: venue) {
+        case .flier, .symbol:
+            OpportunityFlier(opportunity: opportunity, symbolSize: 72)
+        case let .venuePhoto(url):
+            RemoteImage(url: url) {
+                OpportunityFlier(opportunity: opportunity, symbolSize: 72)
+            }
+            .clipped()
+            .accessibilityHidden(true)
+        case let .map(location):
+            MapSnapshotView(location: location, spanMeters: 900)
+                .accessibilityHidden(true)
+        }
     }
 }

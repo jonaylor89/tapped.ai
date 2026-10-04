@@ -32,6 +32,7 @@ targets:
       - package: TappedDomain
       - package: TappedData
       - package: TappedUI
+      - target: TappedWidgets
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio
@@ -66,6 +67,35 @@ targets:
           - ${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist
           - $(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist
           - $(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)
+  TappedWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: TappedWidgets
+      - path: Tapped/Features/LiveActivity/Shared
+    dependencies:
+      - package: TappedDomain
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+      - sdk: ActivityKit.framework
+      - sdk: AppIntents.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio.TappedWidgets
+        PRODUCT_NAME: TappedWidgets
+        INFOPLIST_FILE: TappedWidgets/Info.plist
+        CODE_SIGN_ENTITLEMENTS: TappedWidgets/TappedWidgets.entitlements
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        # Matches the app: embedded extensions must support every device family the app does.
+        TARGETED_DEVICE_FAMILY: "1,2"
+        DEVELOPMENT_TEAM: "9HNXYM86C6"
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES
+      configs:
+        Debug:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: DEBUG TAPPED_WIDGET_EXTENSION
+        Release:
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: TAPPED_WIDGET_EXTENSION
   TappedTests:
     type: bundle.unit-test
     platform: iOS

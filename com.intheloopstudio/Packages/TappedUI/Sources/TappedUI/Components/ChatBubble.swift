@@ -1,6 +1,7 @@
 import SwiftUI
 
 /// One chat message. Outgoing bubbles use the accent colour; incoming use the adaptive surface.
+/// `showsTimestamp` puts a centred time above the bubble; pass it only where a new cluster starts.
 public struct ChatBubble: View {
     public enum Status: Sendable {
         case sent, sending, failed
@@ -12,8 +13,13 @@ public struct ChatBubble: View {
     let isOutgoing: Bool
     let status: Status
     let showsAuthor: Bool
+    let showsTimestamp: Bool
 
-    public init(text: String, authorName: String, timestamp: Date, isOutgoing: Bool, status: Status = .sent, showsAuthor: Bool = false) {
+    public init(
+        text: String, authorName: String, timestamp: Date, isOutgoing: Bool, status: Status = .sent,
+        showsAuthor: Bool = false, showsTimestamp: Bool = true
+    ) {
+        self.showsTimestamp = showsTimestamp
         self.text = text
         self.authorName = authorName
         self.timestamp = timestamp
@@ -23,6 +29,31 @@ public struct ChatBubble: View {
     }
 
     public var body: some View {
+        VStack(spacing: TappedSpacing.xs) {
+            if showsTimestamp {
+                Text(Self.clusterLabel(for: timestamp))
+                    .font(TappedTypography.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, TappedSpacing.sm)
+            }
+            bubble
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    /// "9:41 AM" today, "Yesterday 9:41 AM", otherwise "Tue, Oct 6 9:41 AM".
+    static func clusterLabel(for date: Date, now: Date = .now, calendar: Calendar = .current) -> String {
+        let time = date.formatted(date: .omitted, time: .shortened)
+        if calendar.isDate(date, inSameDayAs: now) { return time }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
+            return "Yesterday \(time)"
+        }
+        return "\(date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())) \(time)"
+    }
+
+    private var bubble: some View {
         HStack {
             if isOutgoing { Spacer(minLength: TappedSpacing.xxxl) }
             VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 2) {
@@ -40,20 +71,17 @@ public struct ChatBubble: View {
                     )
                     .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
                     .opacity(status == .sending ? 0.6 : 1)
-                HStack(spacing: 4) {
-                    if status == .failed {
+                if status == .failed {
+                    HStack(spacing: 4) {
                         Image(systemName: "exclamationmark.circle.fill").foregroundStyle(TappedColors.error)
                         Text("not sent")
                     }
-                    Text(timestamp, style: .time)
+                    .font(TappedTypography.caption)
+                    .foregroundStyle(.secondary)
                 }
-                .font(TappedTypography.caption)
-                .foregroundStyle(.secondary)
             }
             if !isOutgoing { Spacer(minLength: TappedSpacing.xxxl) }
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityText)
     }
 
     private var accessibilityText: String {
@@ -67,8 +95,8 @@ public struct ChatBubble: View {
     VStack(spacing: TappedSpacing.sm) {
         ChatBubble(text: "hey! saw your application", authorName: "the camel", timestamp: .now, isOutgoing: false, showsAuthor: true)
         ChatBubble(text: "hi! yes — we'd love to play", authorName: "you", timestamp: .now, isOutgoing: true)
-        ChatBubble(text: "sending…", authorName: "you", timestamp: .now, isOutgoing: true, status: .sending)
-        ChatBubble(text: "offline", authorName: "you", timestamp: .now, isOutgoing: true, status: .failed)
+        ChatBubble(text: "sending…", authorName: "you", timestamp: .now, isOutgoing: true, status: .sending, showsTimestamp: false)
+        ChatBubble(text: "offline", authorName: "you", timestamp: .now, isOutgoing: true, status: .failed, showsTimestamp: false)
     }
     .padding()
     .background(TappedColors.background)

@@ -45,7 +45,8 @@ struct PaywallMessagingAdminTests {
         #expect(route.requiringPremium(false) == .paywall)
         let router = Router()
         router.push(.admin, requiresPremium: false)
-        #expect(router.path == [.paywall])
+        #expect(router.path.isEmpty)
+        #expect(router.sheet == .paywall)
     }
 
     // MARK: messaging
@@ -162,5 +163,33 @@ struct PaywallMessagingAdminTests {
             try await Task.sleep(for: .milliseconds(10))
         }
         Issue.record("condition not met")
+    }
+
+    // MARK: timestamp grouping
+
+    @Test func timestampsOnlyStartClusters() {
+        let start = Date(timeIntervalSince1970: 1_000_000)
+        func message(_ id: String, _ author: String, _ minutes: Double) -> ConversationMessage {
+            ConversationMessage(
+                id: id, text: id, authorId: author, authorName: author,
+                createdAt: start.addingTimeInterval(minutes * 60), isFromCurrentUser: author == "me"
+            )
+        }
+        let messages = [
+            message("a", "me", 0),
+            message("b", "me", 1),
+            message("c", "me", 5.9),
+            message("d", "them", 6),
+            message("e", "them", 12),
+            message("f", "them", 17),
+        ]
+        let shown = messages.indices.map { ChannelViewModel.startsCluster(messages, at: $0) }
+        #expect(shown == [true, false, false, true, true, false])
+        #expect(!ChannelViewModel.startsCluster(messages, at: 99))
+    }
+
+    @Test func paywallFallsBackToBundledProductIds() {
+        let model = PaywallViewModel(dependencies: .mock(signedIn: true))
+        #expect(model.productIds == TappedConfig.defaultPremiumProductIds)
     }
 }

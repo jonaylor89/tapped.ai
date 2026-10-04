@@ -46,14 +46,14 @@ struct RequestToPerformView: View {
         .scrollDismissesKeyboard(.interactively)
         .disabled(model.isSubmitting)
         .safeAreaInset(edge: .bottom) {
-            GlassSubmitButton("send request", isSubmitting: model.isSubmitting, isEnabled: model.canSubmit) {
+            GlassSubmitButton("send pitch", isSubmitting: model.isSubmitting, isEnabled: model.canSubmit) {
                 Task {
                     if let venues = await model.submit() { router.push(.requestToPerformConfirmation(venues: venues)) }
                 }
             }
         }
-        .alert("request to perform", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
-            Button("ok", role: .cancel) {}
+        .alert("Couldn't Send Pitch", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
+            Button("OK", role: .cancel) {}
         } message: {
             Text(model.errorMessage ?? "")
         }
@@ -62,7 +62,7 @@ struct RequestToPerformView: View {
                 AddCollaboratorsView(dependencies: dependencies, currentUserId: model.currentUser.id, collaborators: $model.collaborators)
             }
         }
-        .navigationTitle("request to perform")
+        .navigationTitle("pitch venues")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

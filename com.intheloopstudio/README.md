@@ -81,16 +81,19 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
+| `TAPPED_MOCK_TAB` | `gigs` \| `bookings` \| `messages` \| `profile` \| `search` | initial tab in the map sheet (non-Gigs tabs open at `large`) |
 | `TAPPED_MOCK_ROUTE` | see below | push a screen (or path) on top of Discover once signed in (`Route.mockLaunchPath`) |
 | `TAPPED_MOCK_ROUTE_DETAIL` | screen-specific (e.g. a search query) | extra state for the launched search/opportunity screen |
 | `TAPPED_MOCK_ONBOARDING` | `1` | start as a new account with no `users/{uid}` doc (→ onboarding) |
 | `TAPPED_MOCK_UNVERIFIED` | `1` | new unverified email/password account (→ confirm email) |
-| `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `occupation` \| `genres` \| `location` \| `socials` \| `avatar` \| `complete` | open onboarding on a step with sample answers |
+| `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `genres` \| `location` | open onboarding on a step with sample answers |
 | `TAPPED_MOCK_MAINTENANCE` | `1` | Remote Config `down_for_maintenance` |
 | `TAPPED_MOCK_MIN_VERSION` / `TAPPED_MOCK_LATEST_VERSION` | e.g. `99.0.0` | force the update-required gate / update-available alert |
 | `TAPPED_MOCK_WAITLIST` | `1` | Remote Config `premium_waitlist_enabled` (`Route.paywall` → waitlist) |
 | `TAPPED_MOCK_SHEET` | `reauth` | present the re-authentication sheet |
 | `TAPPED_MOCK_LINK` | a URL | deliver a deep link at launch (cold start) |
+| `TAPPED_MOCK_GIG_NIGHT` | `upcoming` \| `onstage` \| `review` | add a confirmed booking tonight and start the Gig Night Live Activity in that phase |
+| `TAPPED_MOCK_PUSH_AUTH` | `1` | request notification permission at launch so action buttons can be tried with `simctl push` |
 | `TAPPED_MOCK_ADMIN` | `1` | grant the `admin` custom claim (admin form) |
 | `TAPPED_MOCK_STOREKIT` | `1` | real StoreKit 2 purchases against `StoreKit/Tapped.storekit` (set in the `Tapped Mock` scheme) |
 

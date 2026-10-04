@@ -20,6 +20,21 @@ public struct FirebaseNotificationRepository: NotificationRepository {
         return granted
     }
 
+    public func requestProvisionalAuthorization() async throws -> Bool {
+        let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound, .provisional])
+        await MainActor.run { UIApplication.shared.registerForRemoteNotifications() }
+        return granted
+    }
+
+    public func authorizationStatus() async -> NotificationAuthorizationStatus {
+        switch await UNUserNotificationCenter.current().notificationSettings().authorizationStatus {
+        case .authorized, .ephemeral: .authorized
+        case .provisional: .provisional
+        case .denied: .denied
+        default: .notDetermined
+        }
+    }
+
     public func saveDeviceToken(userId: String) async throws {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }

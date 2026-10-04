@@ -341,4 +341,39 @@ struct SearchOpportunitiesRouteTests {
         #expect(Route.opportunities([]).owner == 4)
         #expect(Route.opportunityFeed.owner == 4)
     }
+
+    // MARK: premium before the wall
+
+    @Test func quotaCaptionsNeverShowBareCounts() {
+        #expect(ApplicationQuota.caption(remaining: 2) == "2 of 3 free applications left today")
+        #expect(ApplicationQuota.caption(remaining: 3) == "3 of 3 free applications left today")
+        #expect(ApplicationQuota.caption(remaining: 0) == "you've used all 3 free applications today")
+        #expect(ApplicationQuota.caption(remaining: -1) == "you've used all 3 free applications today")
+        #expect(ApplicationQuota.caption(remaining: nil) == nil)
+    }
+
+    @MainActor @Test func zeroQuotaSwitchesToApplyWithPremium() async {
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.database = MockDatabaseRepository(defaultOpportunityQuota: 0)
+        let model = OpportunityViewModel(
+            dependencies: dependencies, currentUser: Samples.performer, isPremium: false, claims: [],
+            opportunityId: Samples.opportunities[0].id, opportunity: Samples.opportunities[0]
+        )
+        await model.load()
+        #expect(model.remainingFreeApplications == 0)
+        #expect(model.needsPremiumToApply)
+        #expect(model.quotaCaption == "you've used all 3 free applications today")
+        #expect(ApplicationQuota.applyWithPremium == "apply with premium")
+    }
+
+    @MainActor @Test func freeQuotaShowsRemainingCaption() async {
+        let model = OpportunityViewModel(
+            dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [],
+            opportunityId: Samples.opportunities[0].id, opportunity: Samples.opportunities[0]
+        )
+        await model.load()
+        #expect(model.remainingFreeApplications == 3)
+        #expect(!model.needsPremiumToApply)
+        #expect(model.quotaCaption == "3 of 3 free applications left today")
+    }
 }

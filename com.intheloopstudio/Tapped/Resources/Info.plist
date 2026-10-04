@@ -60,6 +60,8 @@
 	<string>To allow users to search for bookings and venues in their area</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>To give users the ability to upload pictures and send them in direct messages</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>TappedPostHogAPIKey</key>
 	<string>phc_MuGz46pQGEIxmaphCeSESEJZaqp1f4qAO9MSUW4D6b2</string>
 	<key>TappedPostHogHost</key>

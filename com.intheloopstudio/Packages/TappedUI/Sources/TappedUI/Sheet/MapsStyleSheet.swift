@@ -1,17 +1,22 @@
 import MapKit
 import SwiftUI
 
-/// The three Discover detents (`DraggableSheet.collapsed / mid / expanded` in Flutter).
-public enum MapsSheetDetent: CaseIterable, Sendable, Hashable {
+/// The three map-sheet detents (`DraggableSheet.collapsed / mid / expanded` in Flutter).
+public enum MapsSheetDetent: CaseIterable, Sendable, Hashable, Comparable {
     case collapsed
     case medium
     case large
 
-    public static let collapsedFraction: CGFloat = 0.12
+    /// Used until the collapsed content has been measured.
+    public static let defaultCollapsedHeight: CGFloat = 160
 
     public var presentationDetent: PresentationDetent {
+        presentationDetent(collapsedHeight: Self.defaultCollapsedHeight)
+    }
+
+    public func presentationDetent(collapsedHeight: CGFloat) -> PresentationDetent {
         switch self {
-        case .collapsed: .fraction(Self.collapsedFraction)
+        case .collapsed: .height(collapsedHeight)
         case .medium: .medium
         case .large: .large
         }
@@ -26,19 +31,18 @@ public enum MapsSheetDetent: CaseIterable, Sendable, Hashable {
     }
 }
 
-/// Apple Maps style persistent sheet.
+/// Apple Maps style persistent, non-dismissable sheet over a full-bleed map.
 ///
-/// - At `.collapsed` and `.medium` iOS 26 renders the sheet as an inset, rounded, floating Liquid Glass card
-///   and the map behind stays interactive.
-/// - Between `.medium` and `.large` the content gains an opaque surface (`morph`), matching the Flutter
-///   `LiquidGlass(solidity: m)` so it reads as edge-attached and solid at `.large`.
-/// - `progress` is 0 at `.collapsed` and 1 at `.large`; use it to fade floating map chrome.
+/// - The sheet has a solid `TappedColors.surface` background; the map behind stays interactive up to `.medium`.
+/// - `collapsedHeight` is supplied by the caller (measured header + tab bar), not a screen fraction.
+/// - `progress` is 0 at `.collapsed`, 0.5 at `.medium` and 1 at `.large`; use it to fade floating map chrome.
 /// - `sheetTop` is the sheet's top edge in global (window) coordinates; use it to float controls above the sheet.
 public struct MapsStyleSheet<SheetContent: View>: ViewModifier {
     @Binding var isPresented: Bool
     @Binding var detent: MapsSheetDetent
     @Binding var progress: CGFloat
     @Binding var sheetTop: CGFloat
+    let collapsedHeight: CGFloat
     let sheetContent: () -> SheetContent
 
     @State private var containerHeight: CGFloat = 0
@@ -46,6 +50,7 @@ public struct MapsStyleSheet<SheetContent: View>: ViewModifier {
     public init(
         isPresented: Binding<Bool>,
         detent: Binding<MapsSheetDetent>,
+        collapsedHeight: CGFloat = MapsSheetDetent.defaultCollapsedHeight,
         progress: Binding<CGFloat>,
         sheetTop: Binding<CGFloat> = .constant(0),
         @ViewBuilder content: @escaping () -> SheetContent
@@ -54,6 +59,7 @@ public struct MapsStyleSheet<SheetContent: View>: ViewModifier {
         _detent = detent
         _progress = progress
         _sheetTop = sheetTop
+        self.collapsedHeight = collapsedHeight
         sheetContent = content
     }
 
@@ -63,12 +69,15 @@ public struct MapsStyleSheet<SheetContent: View>: ViewModifier {
             .sheet(isPresented: $isPresented) {
                 sheetContent()
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    .background(TappedColors.surface.opacity(Self.morph(progress)))
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height in
-                        progress = Self.progress(sheetHeight: height, containerHeight: containerHeight)
+                        progress = Self.progress(sheetHeight: height, containerHeight: containerHeight, collapsedHeight: collapsedHeight)
                     }
                     .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { sheetTop = $0 }
-                    .presentationDetents([.fraction(0.12), .medium, .large], selection: selection)
+                    .presentationDetents(
+                        Set(MapsSheetDetent.allCases.map { $0.presentationDetent(collapsedHeight: collapsedHeight) }),
+                        selection: selection
+                    )
+                    .presentationBackground(TappedColors.surface)
                     .presentationBackgroundInteraction(.enabled(upThrough: .medium))
                     .presentationContentInteraction(.resizes)
                     .presentationDragIndicator(.visible)
@@ -78,28 +87,27 @@ public struct MapsStyleSheet<SheetContent: View>: ViewModifier {
 
     private var selection: Binding<PresentationDetent> {
         Binding(
-            get: { detent.presentationDetent },
+            get: { detent.presentationDetent(collapsedHeight: collapsedHeight) },
             set: { detent = MapsSheetDetent($0) }
         )
     }
 
-    /// 0 at the collapsed detent, 1 fully expanded.
-    public static func progress(sheetHeight: CGFloat, containerHeight: CGFloat) -> CGFloat {
-        guard containerHeight > 0 else { return 0 }
-        let collapsed = containerHeight * MapsSheetDetent.collapsedFraction
-        let expanded = containerHeight
-        return min(max((sheetHeight - collapsed) / (expanded - collapsed), 0), 1)
-    }
-
     /// Where `.medium` sits on the `progress` scale.
-    public static var mediumProgress: CGFloat {
-        (0.5 - MapsSheetDetent.collapsedFraction) / (1 - MapsSheetDetent.collapsedFraction)
-    }
+    public static var mediumProgress: CGFloat { 0.5 }
 
-    /// Surface solidity: 0 while floating (≤ medium), easing to 1 at `.large`.
-    public static func morph(_ progress: CGFloat) -> CGFloat {
-        let t = min(max((progress - mediumProgress) / (1 - mediumProgress), 0), 1)
-        return t * t * (3 - 2 * t)
+    /// 0 at the collapsed height, 0.5 at `.medium` (half the container), 1 fully expanded.
+    public static func progress(
+        sheetHeight: CGFloat,
+        containerHeight: CGFloat,
+        collapsedHeight: CGFloat = MapsSheetDetent.defaultCollapsedHeight
+    ) -> CGFloat {
+        guard containerHeight > 0 else { return 0 }
+        let medium = containerHeight / 2
+        func clamp(_ value: CGFloat) -> CGFloat { min(max(value, 0), 1) }
+        if sheetHeight <= medium {
+            return mediumProgress * clamp((sheetHeight - collapsedHeight) / max(medium - collapsedHeight, 1))
+        }
+        return mediumProgress + (1 - mediumProgress) * clamp((sheetHeight - medium) / max(containerHeight - medium, 1))
     }
 
     /// Fraction (0…1) of the way from `.medium` to `.large`.
@@ -119,11 +127,19 @@ public extension View {
     func mapsStyleSheet<Content: View>(
         isPresented: Binding<Bool>,
         detent: Binding<MapsSheetDetent>,
+        collapsedHeight: CGFloat = MapsSheetDetent.defaultCollapsedHeight,
         progress: Binding<CGFloat> = .constant(0),
         sheetTop: Binding<CGFloat> = .constant(0),
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
-        modifier(MapsStyleSheet(isPresented: isPresented, detent: detent, progress: progress, sheetTop: sheetTop, content: content))
+        modifier(MapsStyleSheet(
+            isPresented: isPresented,
+            detent: detent,
+            collapsedHeight: collapsedHeight,
+            progress: progress,
+            sheetTop: sheetTop,
+            content: content
+        ))
     }
 }
 
