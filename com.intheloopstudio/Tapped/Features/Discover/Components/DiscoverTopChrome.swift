@@ -3,47 +3,37 @@ import TappedData
 import TappedDomain
 import TappedUI
 
-/// `_TopChrome`: avatar · search capsule · messages, then venues/gigs, banner, "search this area".
+/// `_TopChrome`: gigs/venues switch + filters, setup banner, "search this area". Profile, search and messages
+/// are shell tabs. At accessibility sizes the switch becomes a menu and the banner moves into the sheet.
 struct DiscoverTopChrome: View {
     @Bindable var model: DiscoverViewModel
-    let unreadMessages: Int
-    var unreadActivities = 0
+    let isAccessibilitySize: Bool
     let push: (Route) -> Void
+
+    private var overlay: Binding<MapOverlay> {
+        Binding(get: { model.overlay }, set: { overlay in Task { await model.select(overlay) } })
+    }
 
     var body: some View {
         VStack(spacing: TappedSpacing.md) {
             HStack(spacing: TappedSpacing.sm) {
-                Button {
-                    push(.profile(userId: model.currentUser.id, user: model.currentUser))
-                } label: {
-                    UserAvatar(user: model.currentUser, size: GlassMetrics.control - 6)
-                        .padding(3)
-                        .tappedGlass(in: Circle(), interactive: true)
+                if isAccessibilitySize {
+                    overlayMenu
+                } else {
+                    GlassSegmentedPicker(selection: overlay, options: MapOverlay.allCases, title: \.rawValue)
+                        .frame(width: 220)
                 }
-                .buttonStyle(GlassPressStyle())
-                .overlay(alignment: .topTrailing) {
-                    UnreadBadge(count: unreadActivities).offset(x: 4, y: -4)
-                }
-                .accessibilityLabel("profile")
-
-                GlassSearchField(action: { push(.search) })
-
-                GlassIconButton("bubble.left.and.bubble.right.fill", accessibilityLabel: "messages") {
-                    push(.messagingChannelList)
-                }
-                .overlay(alignment: .topTrailing) {
-                    UnreadBadge(count: unreadMessages).offset(x: 4, y: -4)
+                if model.overlay == .venues {
+                    GlassIconButton(
+                        "slider.horizontal.3",
+                        accessibilityLabel: "filters",
+                        isActive: !model.genreFilters.isEmpty
+                    ) { model.modal = .filters }
+                    .transition(.scale.combined(with: .opacity))
                 }
             }
 
-            GlassSegmentedPicker(
-                selection: Binding(get: { model.overlay }, set: { overlay in Task { await model.select(overlay) } }),
-                options: MapOverlay.allCases,
-                title: \.rawValue
-            )
-            .frame(width: 220)
-
-            if let message = model.tasksBannerMessage {
+            if !isAccessibilitySize, let message = model.tasksBannerMessage {
                 GlassBanner(
                     "finish setting up",
                     message: message,
@@ -64,5 +54,25 @@ struct DiscoverTopChrome: View {
         .padding(.horizontal, GlassMetrics.edgeInset)
         .padding(.top, TappedSpacing.sm)
         .animation(GlassMotion.ease, value: model.resultsExpired)
+        .animation(GlassMotion.ease, value: model.overlay)
+    }
+
+    private var overlayMenu: some View {
+        Menu {
+            Picker("show on map", selection: overlay) {
+                ForEach(MapOverlay.allCases, id: \.self) { overlay in
+                    Label(overlay.rawValue, systemImage: overlay.systemImage).tag(overlay)
+                }
+            }
+        } label: {
+            Label(model.overlay.rawValue, systemImage: model.overlay.systemImage)
+                .font(TappedTypography.headingXs)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, TappedSpacing.lg)
+                .frame(minHeight: GlassMetrics.control)
+                .tappedGlass(in: Capsule(), interactive: true)
+        }
+        .accessibilityLabel("show on map")
+        .accessibilityValue(model.overlay.rawValue)
     }
 }

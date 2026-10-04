@@ -53,6 +53,26 @@ struct AppShellTests {
         let options = LaunchOptions.from(["TAPPED_MOCK": "1", "TAPPED_MOCK_SCREEN": "signup", "TAPPED_MOCK_DETENT": "large"])
         #expect(options.screen == .signup)
         #expect(options.detent == .large)
+        #expect(options.tab == nil)
+        #expect(LaunchOptions.from(["TAPPED_MOCK": "1", "TAPPED_MOCK_TAB": "bookings"]).tab == .bookings)
+        #expect(LaunchOptions.from(["TAPPED_MOCK": "1", "TAPPED_MOCK_TAB": "nope"]).tab == nil)
+        #expect(LaunchOptions.from(["TAPPED_MOCK_TAB": "search"]).tab == nil)
+    }
+
+    @Test func routerPresentsTakeoversAndDefersDiscoveryToShell() {
+        let router = Router()
+        router.push(.settings)
+        router.push(.paywall)
+        #expect(router.sheet == .paywall)
+        router.push(.videoCall)
+        #expect(router.fullScreenCover == .videoCall)
+        #expect(router.path == [.settings])
+        router.pop()
+        #expect(router.fullScreenCover == nil)
+        router.pop()
+        #expect(router.sheet == nil)
+        router.push(.discovery)
+        #expect(router.isAtRoot)
     }
 
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {

@@ -79,7 +79,7 @@ enum Route: Hashable {
         case .paywall: "tapped premium"
         case .admin: "add gig"
         case .search: "search"
-        case .gigSearch: "search a city"
+        case .gigSearch: "find venues"
         case .requestToPerform: "request to perform"
         case .requestToPerformConfirmation: "request sent"
         case .addPastBooking: "add past booking"
@@ -106,4 +106,8 @@ enum Route: Hashable {
         case .paywall, .streamChannel, .messagingChannelList, .videoCall, .admin: 6
         }
     }
+}
+
+extension Route: Identifiable {
+    var id: Self { self }
 }

@@ -3,7 +3,7 @@ import Observation
 import TappedData
 import TappedDomain
 
-/// Signed-in shell state shared by the top chrome (profile avatar, messages + activity badges).
+/// Signed-in shell state behind the tab badges (bookings, messages, profile activity).
 @Observable
 @MainActor
 final class ShellViewModel {
@@ -12,13 +12,17 @@ final class ShellViewModel {
     private(set) var unreadMessages = 0
     /// Unread `activities` for the current user; driven by `observeActivities(database:)`.
     private(set) var unreadActivities = 0
+    /// Pending, unexpired booking requests waiting on the current user (they are the requestee).
+    private(set) var pendingRequests = 0
     private(set) var isChatConnected = false
 
     private let chat: (any ChatRepository)?
+    private let now: () -> Date
 
-    init(currentUser: UserModel, chat: (any ChatRepository)? = nil) {
+    init(currentUser: UserModel, chat: (any ChatRepository)? = nil, now: @escaping () -> Date = { .now }) {
         self.currentUser = currentUser
         self.chat = chat
+        self.now = now
     }
 
     /// Connects chat for the signed-in user and keeps `unreadMessages` current. Runs for the shell's lifetime.
@@ -44,6 +48,18 @@ final class ShellViewModel {
             }
         } catch {
             unreadActivities = 0
+        }
+    }
+
+    /// Keeps `pendingRequests` in sync with the requestee bookings listener until the calling task is cancelled.
+    func observePendingRequests(database: any DatabaseRepository) async {
+        do {
+            for try await bookings in database.getBookingsByRequesteeObserver(currentUser.id, limit: 100, status: .pending) {
+                let now = now()
+                pendingRequests = bookings.count { $0.isPending && !$0.isExpired(now: now) }
+            }
+        } catch {
+            pendingRequests = 0
         }
     }
 
