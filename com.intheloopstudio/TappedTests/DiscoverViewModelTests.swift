@@ -24,14 +24,20 @@ struct DiscoverViewModelTests {
         )
     }
 
-    @Test func performersDefaultToGigsAndBookersToVenues() {
+    @Test func everyoneDefaultsToVenuesAndPerformersKeepTheirSheet() {
         let performer = makeModel()
-        #expect(performer.overlay == .gigs)
+        #expect(performer.overlay == .venues)
         #expect(performer.isPerformerFirst)
         let booker = makeModel(claims: [.booker])
         #expect(booker.overlay == .venues)
         #expect(!booker.isPerformerFirst)
-        #expect(DiscoverViewModel.defaultOverlay(for: Samples.venues[0], claims: []) == .venues)
+        let venue = DiscoverViewModel(
+            dependencies: .mock(signedIn: true),
+            currentUser: Samples.venues[0],
+            isPremium: false
+        )
+        #expect(venue.overlay == .venues)
+        #expect(!venue.isPerformerFirst)
     }
 
     @Test func performerHeaderAnswersIsThereWork() async {
@@ -42,7 +48,7 @@ struct DiscoverViewModelTests {
         #expect(model.gigsHeadline == "\(gigs) open \(gigs == 1 ? "gig" : "gigs") near you")
         #expect(model.venuesHeadline.contains("booking"))
         #expect(model.venueHits.count == Samples.venues.count)
-        #expect(model.annotations.allSatisfy { $0.kind == .gig })
+        #expect(model.annotations.allSatisfy { $0.kind == .venue })
         let week = Samples.referenceDate.addingTimeInterval(7 * 24 * 60 * 60)
         #expect(model.paidGigsThisWeek.allSatisfy { $0.isPaid && $0.startTime >= Samples.referenceDate && $0.startTime < week })
         #expect(Set(model.goodFitVenues.map(\.id)) == ["venue-canal", "venue-balliceaux"])
