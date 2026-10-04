@@ -3,8 +3,9 @@ import TappedData
 import TappedDomain
 import TappedUI
 
-/// Root of the Gigs tab inside the map sheet. The header answers "is there work for me?" at the collapsed
-/// detent; `.medium` adds paid gigs this week → venues that fit → finish setting up, then the wider results.
+/// Root of the Gigs tab inside the map sheet. For performers the collapsed header leads with whatever the map shows
+/// (venues by default, or gigs) and links to the other; `.medium` adds paid gigs this week → venues that fit →
+/// finish setting up, then the wider results.
 struct DiscoverSheetContent: View {
     @Bindable var model: DiscoverViewModel
     let pendingRequests: Int
@@ -23,14 +24,7 @@ struct DiscoverSheetContent: View {
     var body: some View {
         List {
             if model.isPerformerFirst, isAccessibilitySize {
-                Section {
-                    Button(action: expand) {
-                        Text("\(model.venuesHeadline) ›")
-                            .font(TappedTypography.bodySm)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+                Section { secondaryLine }
             }
             if let quota = model.quotaMessage {
                 Section {
@@ -100,10 +94,8 @@ struct DiscoverSheetContent: View {
             }
             HStack(alignment: .firstTextBaseline) {
                 if model.isPerformerFirst {
-                    Button {
-                        if model.opportunityHits.isEmpty { expand() } else { router.push(.opportunities(model.opportunityHits)) }
-                    } label: {
-                        Text(gigsLine).multilineTextAlignment(.leading)
+                    Button(action: leadsWithGigs ? openGigs : expand) {
+                        Text(leadsWithGigs ? gigsLine : venuesLine).multilineTextAlignment(.leading)
                     }
                     .buttonStyle(.plain)
                 } else {
@@ -119,15 +111,7 @@ struct DiscoverSheetContent: View {
                         .foregroundStyle(TappedColors.accent)
                 }
             }
-            if model.isPerformerFirst, !isAccessibilitySize {
-                Button(action: expand) {
-                    Text("\(model.venuesHeadline) ›")
-                        .font(TappedTypography.bodySm)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-                .buttonStyle(.plain)
-            }
+            if model.isPerformerFirst, !isAccessibilitySize { secondaryLine }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, GlassMetrics.edgeInset + TappedSpacing.xs)
@@ -135,15 +119,41 @@ struct DiscoverSheetContent: View {
         .padding(.bottom, TappedSpacing.md)
     }
 
-    /// "**4 open gigs near you** · 2 this weekend ›"
-    private var gigsLine: AttributedString {
-        var line = AttributedString(model.gigsHeadline)
-        line.font = TappedTypography.headingSm.bold()
+    private var leadsWithGigs: Bool { model.overlay == .gigs }
+
+    private func openGigs() {
+        if model.opportunityHits.isEmpty { expand() } else { router.push(.opportunities(model.opportunityHits)) }
+    }
+
+    private var weekendSuffix: String {
         let weekend = isAccessibilitySize ? 0 : model.gigsThisWeekendCount
-        var rest = AttributedString(weekend > 0 ? " · \(weekend) this weekend ›" : " ›")
-        rest.font = TappedTypography.bodySm
-        rest.foregroundColor = .secondary
-        return line + rest
+        return weekend > 0 ? " · \(weekend) this weekend ›" : " ›"
+    }
+
+    /// "**4 open gigs near you** · 2 this weekend ›"
+    private var gigsLine: AttributedString { headline(model.gigsHeadline, rest: weekendSuffix) }
+
+    /// "**10 venues booking indie pop** ›"
+    private var venuesLine: AttributedString { headline(model.venuesHeadline, rest: " ›") }
+
+    private func headline(_ title: String, rest: String) -> AttributedString {
+        var line = AttributedString(title)
+        line.font = TappedTypography.headingSm.bold()
+        var tail = AttributedString(rest)
+        tail.font = TappedTypography.bodySm
+        tail.foregroundColor = .secondary
+        return line + tail
+    }
+
+    /// The other overlay's count under the headline: venues under gigs, gigs under venues.
+    private var secondaryLine: some View {
+        Button(action: leadsWithGigs ? expand : openGigs) {
+            Text(leadsWithGigs ? "\(model.venuesHeadline) ›" : model.gigsHeadline + weekendSuffix)
+                .font(TappedTypography.bodySm)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.leading)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: Medium sections

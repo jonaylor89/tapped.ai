@@ -94,19 +94,17 @@ final class DiscoverViewModel {
         self.isPremium = isPremium
         self.claims = claims
         self.now = now
-        overlay = Self.defaultOverlay(for: currentUser, claims: claims)
+        overlay = Self.defaultOverlay
         database = dependencies.database
         search = dependencies.search
         analytics = dependencies.analytics
     }
 
-    /// Performers look for work first; venue and booker accounts look for venues.
-    static func defaultOverlay(for user: UserModel, claims: [CustomClaim]) -> MapOverlay {
-        user.isVenue || claims.contains(.booker) ? .venues : .gigs
-    }
+    /// Venues lead for everyone while inbound gig supply is thin; Gigs is one tap away in the top chrome.
+    static let defaultOverlay: MapOverlay = .venues
 
     /// Performer-first sheet (gigs this week, venues that fit, quota) vs. the venue/booker sheet.
-    var isPerformerFirst: Bool { Self.defaultOverlay(for: currentUser, claims: claims) == .gigs }
+    var isPerformerFirst: Bool { !currentUser.isVenue && !claims.contains(.booker) }
 
     /// Profile location, falling back to Flutter's `DiscoverState` default (Richmond, VA).
     var home: Location { currentUser.location ?? .rva }
