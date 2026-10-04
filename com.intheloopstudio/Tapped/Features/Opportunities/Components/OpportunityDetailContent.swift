@@ -129,14 +129,8 @@ struct OpportunityHero: View {
         case .flier, .symbol:
             OpportunityFlier(opportunity: opportunity, symbolSize: 72)
         case let .venuePhoto(url):
-            Color.clear.overlay {
-                AsyncImage(url: url) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        OpportunityFlier(opportunity: opportunity, symbolSize: 72)
-                    }
-                }
+            RemoteImage(url: url) {
+                OpportunityFlier(opportunity: opportunity, symbolSize: 72)
             }
             .clipped()
             .accessibilityHidden(true)
