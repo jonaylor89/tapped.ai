@@ -1,4 +1,5 @@
 import Foundation
+import TappedDomain
 
 /// Native replacement for `app_links` + `lib/data/prod/uni_link_impl.dart`.
 ///
@@ -18,6 +19,10 @@ enum DeepLink: Hashable, Sendable {
     case settings
     /// `/connect_payment?account_id={id}` (Stripe Connect onboarding return URL)
     case connectPayment(accountId: String)
+    /// `com.intheloopstudio://gigs?paid=1&when=weekend` (custom scheme only)
+    case gigs(GigFilter?)
+    /// `com.intheloopstudio://share_profile?qr=1` (custom scheme only)
+    case shareProfile(showsQR: Bool)
 
     static let hosts: Set<String> = [
         "app.tapped.ai", "tapped.ai", "www.tapped.ai", "tappednetwork.page.link", "intheloopstudio.page.link",
@@ -45,6 +50,11 @@ enum DeepLink: Hashable, Sendable {
         guard let first = segments.first?.lowercased(), !Self.webOnlyPaths.contains(first) else { return nil }
         let second = segments.dropFirst().first.flatMap { $0.isEmpty ? nil : $0 }
 
+        if scheme == Self.scheme, let link = Self.appOnly(first, query: query) {
+            self = link
+            return
+        }
+
         switch first {
         case "u":
             guard let second else { return nil }
@@ -65,6 +75,18 @@ enum DeepLink: Hashable, Sendable {
             self = .connectPayment(accountId: accountId)
         default:
             self = .profile(username: segments[0].lowercased())
+        }
+    }
+
+    private static func appOnly(_ first: String, query: [String: String]) -> DeepLink? {
+        switch first {
+        case "gigs":
+            let filter = GigFilter(paidOnly: query["paid"] == "1", weekendOnly: query["when"] == "weekend")
+            return .gigs(filter == GigFilter() ? nil : filter)
+        case "share_profile":
+            return .shareProfile(showsQR: query["qr"] == "1")
+        default:
+            return nil
         }
     }
 }
