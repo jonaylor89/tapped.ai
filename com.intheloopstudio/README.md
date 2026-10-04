@@ -86,7 +86,7 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_ROUTE_DETAIL` | screen-specific (e.g. a search query) | extra state for the launched search/opportunity screen |
 | `TAPPED_MOCK_ONBOARDING` | `1` | start as a new account with no `users/{uid}` doc (→ onboarding) |
 | `TAPPED_MOCK_UNVERIFIED` | `1` | new unverified email/password account (→ confirm email) |
-| `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `occupation` \| `genres` \| `location` | open onboarding on a step with sample answers |
+| `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `genres` \| `location` | open onboarding on a step with sample answers |
 | `TAPPED_MOCK_MAINTENANCE` | `1` | Remote Config `down_for_maintenance` |
 | `TAPPED_MOCK_MIN_VERSION` / `TAPPED_MOCK_LATEST_VERSION` | e.g. `99.0.0` | force the update-required gate / update-available alert |
 | `TAPPED_MOCK_WAITLIST` | `1` | Remote Config `premium_waitlist_enabled` (`Route.paywall` → waitlist) |

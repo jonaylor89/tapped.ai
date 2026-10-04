@@ -38,9 +38,9 @@ struct OnboardingViewModelTests {
         #expect(OnboardingViewModel.sanitizeUsername(input) == expected)
     }
 
-    @Test func fourStepsInOrder() {
-        #expect(OnboardingViewModel.Step.allCases == [.name, .occupation, .genres, .location])
-        #expect(OnboardingViewModel.stepCount == 4)
+    @Test func threeStepsInOrder() {
+        #expect(OnboardingViewModel.Step.allCases == [.name, .genres, .location])
+        #expect(OnboardingViewModel.stepCount == 3)
         #expect(OnboardingViewModel.Step.location.isLast)
         #expect(OnboardingViewModel.Step.allCases.allSatisfy { !$0.subtitle.isEmpty })
         #expect(OnboardingViewModel.Step.genres.subtitle == "we use these to match you with gigs and venues.")
@@ -50,8 +50,7 @@ struct OnboardingViewModelTests {
         let model = makeModel()
         #expect(model.step == .name)
         #expect(model.stepNumber == 1)
-        #expect(model.progress == 0.25)
-        #expect(model.role == .performer)
+        #expect(model.progress == 1.0 / 3.0)
         #expect(model.genres.isEmpty)
         #expect(model.selectedPlace == nil)
         #expect(!model.isUsernameCustom)
@@ -70,9 +69,6 @@ struct OnboardingViewModelTests {
         model.artistName = "Nova Waves"
         #expect(model.canContinue)
         model.next()
-        #expect(model.step == .occupation)
-        #expect(model.canContinue, "performer is pre-selected")
-        model.next()
         #expect(model.step == .genres)
         #expect(!model.canContinue)
 
@@ -80,11 +76,11 @@ struct OnboardingViewModelTests {
         #expect(model.skip() == false)
         #expect(model.genres.isEmpty)
         #expect(model.step == .location)
-        #expect(model.stepNumber == 4)
+        #expect(model.stepNumber == 3)
         #expect(model.skip() == true, "skipping the last step finishes")
         model.back()
         #expect(model.step == .genres)
-        #expect(model.progress == 3.0 / 4.0)
+        #expect(model.progress == 2.0 / 3.0)
     }
 
     @Test func usernameFollowsNameUntilTyped() async {
@@ -166,23 +162,9 @@ struct OnboardingViewModelTests {
         #expect(user.socialFollowing.instagramFollowers == 0)
     }
 
-    @Test(arguments: [
-        (OnboardingViewModel.Role.performer, "Performer"),
-        (.venue, "Venue"),
-        (.promoter, "Concert Promoter"),
-    ])
-    func roleWritesOccupation(role: OnboardingViewModel.Role, occupation: String) async throws {
-        let model = makeModel()
-        model.artistName = "Nova"
-        model.role = role
-        let user = try #require(await model.finish())
-        #expect(user.occupations == [occupation])
-    }
-
     @Test func skippedStepsWriteDefaults() async throws {
         let model = makeModel()
         model.artistName = "Nova"
-        model.next()
         model.next()
         model.skip()
         #expect(model.skip())

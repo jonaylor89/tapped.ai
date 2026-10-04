@@ -13,7 +13,6 @@ struct OnboardingStepContent: View {
             OnboardingHeader(title: model.step.title, subtitle: model.step.subtitle)
             switch model.step {
             case .name: NameStep(model: model)
-            case .occupation: OccupationStep(model: model)
             case .genres: GenresStep(model: model)
             case .location: LocationStep(model: model)
             }
@@ -107,64 +106,6 @@ private struct NameStep: View {
         } else {
             Text("we'll make one from your name. you can type your own.")
         }
-    }
-}
-
-private struct OccupationStep: View {
-    @Bindable var model: OnboardingViewModel
-
-    var body: some View {
-        Section {
-            RoleRow(role: .performer, isSelected: model.role == .performer, prominent: true) { model.role = .performer }
-        }
-        Section("or are you a…") {
-            ForEach([OnboardingViewModel.Role.venue, .promoter]) { role in
-                RoleRow(role: role, isSelected: model.role == role, prominent: false) { model.role = role }
-            }
-        }
-    }
-}
-
-private struct RoleRow: View {
-    let role: OnboardingViewModel.Role
-    let isSelected: Bool
-    let prominent: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: TappedSpacing.md) {
-                Image(systemName: role.systemImage)
-                    .font(prominent ? .largeTitle : .title3)
-                    .foregroundStyle(TappedColors.accent)
-                    .frame(minWidth: prominent ? 48 : 32)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: TappedSpacing.xs) {
-                    Text(role.title)
-                        .font(prominent ? .title2.bold() : .headline)
-                        .foregroundStyle(.primary)
-                    Text(role.subtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(isSelected ? AnyShapeStyle(TappedColors.accent) : AnyShapeStyle(.tertiary))
-                    .accessibilityHidden(true)
-            }
-            .padding(.vertical, prominent ? TappedSpacing.lg : TappedSpacing.xs)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .listRowBackground(prominent ? prominentBackground : nil)
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    private var prominentBackground: some View {
-        RoundedRectangle(cornerRadius: TappedRadius.xl)
-            .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            .strokeBorder(isSelected ? TappedColors.accent : .clear, lineWidth: 2)
     }
 }
 
@@ -305,11 +246,6 @@ private struct SelectableRow: View {
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
-}
-
-#Preview("occupation") {
-    let model = OnboardingViewModel(dependencies: .mock(onboarding: true), initialStep: .occupation)
-    return NavigationStack { OnboardingStepContent(model: model) }
 }
 
 #Preview("location dark") {

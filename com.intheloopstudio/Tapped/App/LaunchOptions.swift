@@ -10,7 +10,7 @@ import TappedUI
 /// - `TAPPED_MOCK_DETENT=collapsed|medium|large`  initial map sheet detent (applied after the tab/route)
 /// - `TAPPED_MOCK_ROUTE=<name>`  open a route on launch via `ShellNavigator.open` (see `Route.mockLaunchPath`)
 /// - `TAPPED_MOCK_ROUTE_DETAIL=<value>`  screen-specific extra state (search query, open sheet/results)
-/// - `TAPPED_MOCK_ONBOARDING_STEP=name|occupation|genres|location`  open onboarding on a
+/// - `TAPPED_MOCK_ONBOARDING_STEP=name|genres|location`  open onboarding on a
 ///   step with sample answers filled in (combine with `TAPPED_MOCK_ONBOARDING=1`)
 /// - `TAPPED_MOCK_SHEET=reauth`  present the re-authentication sheet over the shell
 /// - `TAPPED_MOCK_LINK=<url>`  deliver a deep link on launch (cold start)

@@ -2,8 +2,7 @@ import SwiftUI
 import TappedData
 import TappedUI
 
-/// Four-step onboarding after sign up (`lib/ui/onboarding/onboarding_view.dart`): name → what you do → genres →
-/// location. Forms per step; floating glass chrome for progress and the back / skip / continue controls.
+/// Three-step onboarding after sign up (`lib/ui/onboarding/onboarding_view.dart`): name → genres → location. Forms per step; floating glass chrome for progress and the back / skip / continue controls.
 struct OnboardingView: View {
     @Environment(AppSession.self) private var session: AppSession?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -122,7 +121,7 @@ struct OnboardingView: View {
     }
 }
 
-/// Four segments, filled up to the current step.
+/// One segment per step, filled up to the current step.
 private struct OnboardingProgress: View {
     let step: Int
     let count: Int

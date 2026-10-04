@@ -3,18 +3,17 @@ import Observation
 import TappedData
 import TappedDomain
 
-/// `onboarding_flow_cubit.dart` + `onboarding_bloc`: four steps (name → what you do → genres → location), then
-/// writes `users/{uid}` and lands in the app. Photo and socials live in the "finish setting up" checklist.
+/// `onboarding_flow_cubit.dart` + `onboarding_bloc`: three steps (name → genres → location), then
+/// writes `users/{uid}` and lands in the app. Everyone onboarding is a performer. Photo and socials live in the "finish setting up" checklist.
 @Observable
 @MainActor
 final class OnboardingViewModel {
     enum Step: String, CaseIterable, Hashable, Sendable {
-        case name, occupation, genres, location
+        case name, genres, location
 
         var title: String {
             switch self {
             case .name: "what should we call you?"
-            case .occupation: "what do you do?"
             case .genres: "what do you play?"
             case .location: "where are you based?"
             }
@@ -23,7 +22,6 @@ final class OnboardingViewModel {
         var subtitle: String {
             switch self {
             case .name: "this is how venues and fans see you. your username is your tapped link."
-            case .occupation: "we tailor your map, search and gigs to how you work."
             case .genres: "we use these to match you with gigs and venues."
             case .location: "we use your city to show you gigs and venues nearby."
             }
@@ -31,45 +29,12 @@ final class OnboardingViewModel {
 
         var isSkippable: Bool {
             switch self {
-            case .name, .occupation: false
+            case .name: false
             case .genres, .location: true
             }
         }
 
         var isLast: Bool { self == Step.allCases.last }
-    }
-
-    /// Step 2. Each role writes one `occupations` entry.
-    enum Role: String, CaseIterable, Identifiable, Sendable {
-        case performer, venue, promoter
-
-        var id: String { rawValue }
-
-        var occupation: Occupation {
-            switch self {
-            case .performer: "Performer"
-            case .venue: .venue
-            case .promoter: "Concert Promoter"
-            }
-        }
-
-        var title: String { rawValue }
-
-        var subtitle: String {
-            switch self {
-            case .performer: "dj, band or solo act. find gigs and get booked."
-            case .venue: "book acts for your stage."
-            case .promoter: "put on shows and find talent."
-            }
-        }
-
-        var systemImage: String {
-            switch self {
-            case .performer: "music.mic"
-            case .venue: "building.2"
-            case .promoter: "megaphone"
-            }
-        }
     }
 
     enum UsernameStatus: Equatable {
@@ -83,6 +48,8 @@ final class OnboardingViewModel {
     static let privacyURL = URL(string: "https://tapped.ai/privacy")!
     static let artistNameLimit = 50
     static let usernameLimit = 30
+    /// Written to `users.occupations` for every new account; venues and promoters are set up outside onboarding.
+    static let occupation: Occupation = "Performer"
 
     private(set) var step: Step
     var artistName = ""
@@ -94,7 +61,6 @@ final class OnboardingViewModel {
         }
     }
     private(set) var usernameStatus: UsernameStatus = .idle
-    var role: Role = .performer
     private(set) var genres: Set<Genre> = []
     var genreQuery = ""
     var placeQuery = ""
@@ -134,7 +100,6 @@ final class OnboardingViewModel {
         guard !isSubmitting else { return false }
         return switch step {
         case .name: nameError == nil && usernameError == nil && !trimmedArtistName.isEmpty && !username.isEmpty
-        case .occupation: true
         case .genres: !genres.isEmpty
         case .location: selectedPlace != nil
         }
@@ -159,7 +124,7 @@ final class OnboardingViewModel {
         switch step {
         case .genres: genres = []
         case .location: selectedPlace = nil; placeQuery = ""; placePredictions = []
-        case .name, .occupation: break
+        case .name: break
         }
         guard let next = Step.allCases[safe: stepIndex + 1] else { return true }
         step = next
@@ -300,7 +265,7 @@ final class OnboardingViewModel {
                 username: Username(username),
                 email: authUser.email ?? "",
                 artistName: trimmedArtistName,
-                occupations: [role.occupation.rawValue],
+                occupations: [Self.occupation.rawValue],
                 location: selectedPlace.map { Location(placeId: $0.placeId, lat: $0.lat, lng: $0.lng) },
                 performerInfo: PerformerInfo(genres: Genre.allCases.filter(genres.contains).map(\.rawValue)),
                 socialFollowing: .empty
@@ -309,7 +274,7 @@ final class OnboardingViewModel {
             await analytics.track("onboarding_complete", properties: [
                 "username": .string(username),
                 "occupations": .string(user.occupations.joined(separator: ",")),
-                "role": .string(role.rawValue),
+                "role": .string("performer"),
                 "eula_accepted": .bool(true),
             ])
             return user
@@ -326,7 +291,6 @@ final class OnboardingViewModel {
     func fillSampleAnswers() {
         artistName = "Nova Waves"
         usernameStatus = .available(username)
-        role = .performer
         genres = [.electronic, .dance, .pop]
         if step == .location {
             placeQuery = "Rich"
