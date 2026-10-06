@@ -46,7 +46,7 @@ public struct SpotifyArtist: Sendable, Hashable, Identifiable, Decodable {
         } else if let url = URL(string: trimmed.contains("://") ? trimmed : "https://\(trimmed)"),
                   let host = url.host(), host == "open.spotify.com" {
             let segments = url.pathComponents.filter { $0 != "/" }
-            candidate = segments.firstIndex(of: "artist").flatMap { segments[safe: $0 + 1] }.map(Substring.init)
+            candidate = segments.firstIndex(of: "artist").flatMap { segments[safe: $0 + 1] }.map { Substring($0) }
         } else {
             candidate = Substring(trimmed)
         }
