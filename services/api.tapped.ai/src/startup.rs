@@ -4,8 +4,8 @@ use crate::{
     docs::{docs_routes, serve_docs},
     domain::{
         app_functions::{
-            NotifyVenueResponse, StreamUserTokenResponse, notify_venue_of_interested_opportunities,
-            stream_user_token,
+            NotifyVenueResponse, StreamUserTokenResponse, get_venue_notification,
+            notify_venue_of_interested_opportunities, stream_user_token,
         },
         firebase_auth::verify_firebase_token,
         health::{Health, Readiness, Version, health, ready, version},
@@ -21,6 +21,7 @@ use crate::{
         },
         public_docs::{get_public_opportunity, get_public_user_by_username},
         spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
+        venue_notifications,
     },
     errors::{AppError, json_error_bodies, panic_response},
     rate_limit::RateLimits,
@@ -61,8 +62,9 @@ use tower_http::{
 };
 use tracing::info_span;
 
-/// Upper bound for any request, including slow upstreams (LLM email composition, Places).
-pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
+/// Upper bound for any request. Kept below `URLSession`'s 60 s default so the server gives up
+/// first; slow work such as LLM email composition runs in background jobs, not in a request.
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub struct Application {
     port: u16,
@@ -143,6 +145,7 @@ impl Application {
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
         };
 
+        tokio::spawn(venue_notifications::run_worker(state.clone()));
         let server = run(listener, state).await?;
         Ok(Self { port, server })
     }
@@ -282,7 +285,22 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
                     op,
                     "Email venues about opportunities the user is interested in",
                 )
-                .response::<200, Json<NotifyVenueResponse>>()
+                .description(
+                    "Validates the request and queues a job that emails each unclaimed venue \
+                     behind the opportunities. Retrying the same request (same `Idempotency-Key` \
+                     header, or the same opportunities and note) within 24 hours returns the \
+                     original job instead of emailing again.",
+                )
+                .response_with::<202, Json<NotifyVenueResponse>, _>(|res| {
+                    res.description("The job was queued, or already exists for this request.")
+                })
+            }),
+        )
+        .api_route(
+            "/opportunity-venue-notifications/:job_id",
+            get_with(get_venue_notification, |op| {
+                app_op(op, "Status of a venue notification job")
+                    .response::<200, Json<NotifyVenueResponse>>()
             }),
         )
         .route_layer(middleware::from_fn_with_state(

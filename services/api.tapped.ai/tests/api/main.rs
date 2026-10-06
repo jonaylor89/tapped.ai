@@ -9,3 +9,4 @@ pub mod performers;
 pub mod places;
 pub mod public_docs;
 pub mod root;
+pub mod venue_notifications;
