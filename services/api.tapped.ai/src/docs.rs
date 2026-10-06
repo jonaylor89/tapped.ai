@@ -51,6 +51,6 @@ pub fn docs_routes(state: AppStateDyn) -> ApiRouter {
     router
 }
 
-async fn serve_docs(Extension(api): Extension<Arc<OpenApi>>) -> impl IntoApiResponse {
+pub async fn serve_docs(Extension(api): Extension<Arc<OpenApi>>) -> impl IntoApiResponse {
     Json(api).into_response()
 }

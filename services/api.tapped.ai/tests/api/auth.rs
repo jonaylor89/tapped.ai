@@ -7,7 +7,7 @@ async fn v1_routes_reject_missing_api_key() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/test-id", &app.address))
+        .get(format!("{}/v1/performer/test-id", app.address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -21,7 +21,7 @@ async fn v1_routes_accept_valid_api_key() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/test-id", &app.address))
+        .get(format!("{}/v1/performer/test-id", app.address))
         .header("tapped-api-key", "any-key-works-with-mock")
         .send()
         .await
@@ -36,7 +36,7 @@ async fn search_performers_requires_api_key() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/search", &app.address))
+        .get(format!("{}/v1/performer/search", app.address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -50,7 +50,7 @@ async fn search_performers_works_with_api_key() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/search", &app.address))
+        .get(format!("{}/v1/performer/search", app.address))
         .header("tapped-api-key", "test-key")
         .send()
         .await

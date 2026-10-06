@@ -55,7 +55,11 @@ async fn autocomplete_is_public() {
         .expect("Failed to execute request");
 
     assert!(response.status().is_success());
-    assert!(response.headers().contains_key("access-control-allow-origin"));
+    assert!(
+        response
+            .headers()
+            .contains_key("access-control-allow-origin")
+    );
     let body: serde_json::Value = response.json().await.unwrap();
     assert_eq!(body[0]["placeId"], "mock-place");
     assert_eq!(body[0]["fullText"], "richmond");
@@ -93,6 +97,10 @@ async fn other_places_endpoints_require_firebase_auth() {
             .await
             .expect("Failed to execute request");
 
-        assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED, "{path}");
+        assert_eq!(
+            response.status(),
+            reqwest::StatusCode::UNAUTHORIZED,
+            "{path}"
+        );
     }
 }

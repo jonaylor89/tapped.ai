@@ -25,19 +25,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: dtolnay/rust-toolchain@stable
+      # Keep in sync with rust-toolchain.toml and the Dockerfile builder image.
+      - uses: dtolnay/rust-toolchain@master
         with:
-          components: clippy
+          toolchain: 1.97.1
+          components: clippy, rustfmt
           
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: ${{ matrix.project }}
           
+      - name: Format
+        run: cargo fmt --check
+
       - name: Build
-        run: cargo build --verbose
-        
+        run: cargo build --verbose --locked
+
       - name: Clippy
-        run: cargo clippy -- -D warnings
-        
+        run: cargo clippy --all-targets --locked -- -D warnings
+
       - name: Run tests
-        run: cargo test --verbose
+        run: cargo test --verbose --locked
+
+      # Also covered by `cargo test`; separate so a stale spec is obvious in the checks list.
+      - name: OpenAPI spec is up to date
+        run: cargo test --locked --test api openapi
+
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-audit
+
+      - name: Audit dependencies
+        run: cargo audit

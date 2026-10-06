@@ -56,6 +56,11 @@ pub trait Search: Send + Sync {
         query: String,
         option: UserSearchOptions,
     ) -> Result<Vec<UserModel>>;
+
+    /// Cheap round trip used by `/health/ready`.
+    async fn ping(&self) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -72,6 +77,7 @@ impl Typesense {
                 prefix: None,
                 key: api_key,
             }),
+            client: crate::http::client(),
             ..Default::default()
         };
 
@@ -94,6 +100,14 @@ impl Typesense {
 
 #[async_trait]
 impl Search for Typesense {
+    async fn ping(&self) -> Result<()> {
+        let status = typesense_codegen::apis::health_api::health(&self.config)
+            .await
+            .map_err(|error| anyhow::anyhow!("typesense health check failed: {error}"))?;
+        anyhow::ensure!(status.ok, "typesense reports it is not ready");
+        Ok(())
+    }
+
     #[instrument(skip(self))]
     async fn search_users(
         &self,

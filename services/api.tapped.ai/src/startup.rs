@@ -1,32 +1,47 @@
 use crate::{
+    data::places::{AutocompletePrediction, PlaceDetails},
     data::{database::Firestore, places::GooglePlaces, search::Typesense},
-    docs::docs_routes,
+    docs::{docs_routes, serve_docs},
     domain::{
-        app_functions::{notify_venue_of_interested_opportunities, stream_user_token},
+        app_functions::{
+            NotifyVenueResponse, StreamUserTokenResponse, notify_venue_of_interested_opportunities,
+            stream_user_token,
+        },
+        firebase_auth::verify_firebase_token,
+        health::{Health, Readiness, Version, health, ready, version},
         mail_bridge::{
             MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_message,
             backfill_email_thread, create_email_thread, enqueue_service_email, inbound_email,
             postmark_inbound_email, stream_before_message,
         },
         mail_composer::OpenAiEmailComposer,
-        places::{autocomplete_places, get_place, get_place_photo, reverse_geocode},
+        places::{
+            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_place, get_place_photo,
+            reverse_geocode,
+        },
         public_docs::{get_public_opportunity, get_public_user_by_username},
     },
-    errors::AppError,
+    errors::{AppError, json_error_bodies, panic_response},
+    rate_limit::RateLimits,
     routes::v1_routes,
     state::AppStateDyn,
 };
 use aide::{
-    axum::ApiRouter,
-    openapi::{OpenApi, Tag},
-    transform::TransformOpenApi,
+    axum::{
+        ApiRouter,
+        routing::{get_with, post_with},
+    },
+    openapi::{OpenApi, SecurityScheme, Server, Tag},
+    transform::{TransformOpenApi, TransformOperation},
 };
 use axum::Router;
 use axum::serve::Serve;
 use axum::{
-    Extension, Json,
+    BoxError, Extension, Json,
+    error_handling::HandleErrorLayer,
     extract::MatchedPath,
     http::{Request, StatusCode},
+    middleware,
     response::Html,
     routing::{get, post},
 };
@@ -35,14 +50,18 @@ use color_eyre::eyre::Result;
 use color_eyre::eyre::WrapErr;
 use firestore::{FirestoreDb, FirestoreDbOptions};
 use serde_json::{Value, json};
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
+use tower::ServiceBuilder;
 use tower_http::{
+    catch_panic::CatchPanicLayer,
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
 use tracing::info_span;
-use uuid::Uuid;
+
+/// Upper bound for any request, including slow upstreams (LLM email composition, Places).
+pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
 
 pub struct Application {
     port: u16,
@@ -135,33 +154,187 @@ impl Application {
         self.port
     }
 
+    /// Serves until SIGTERM/SIGINT, then stops accepting connections and lets in-flight
+    /// requests finish.
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
-        self.server.await
+        self.server.with_graceful_shutdown(shutdown_signal()).await
     }
 }
 
 async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, Router>> {
+    let rate_limits = RateLimits::default();
+    rate_limits.spawn_cleanup();
+    let (app, _) = api_router(state, &rate_limits);
+
+    tracing::debug!("listening on {}", listener.local_addr()?);
+    Ok(axum::serve(listener, app))
+}
+
+pub async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            tracing::error!("failed to listen for ctrl-c: {error}");
+            std::future::pending::<()>().await;
+        }
+    };
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut signal) => {
+                signal.recv().await;
+            }
+            Err(error) => {
+                tracing::error!("failed to listen for SIGTERM: {error}");
+                std::future::pending::<()>().await;
+            }
+        }
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        () = ctrl_c => {},
+        () = terminate => {},
+    }
+    tracing::info!("shutdown signal received, draining in-flight requests");
+}
+
+fn app_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
+    op.tag("app")
+        .summary(summary)
+        .security_requirement("FirebaseAuth")
+}
+
+fn public_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
+    op.tag("public").summary(summary)
+}
+
+fn meta_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
+    op.tag("meta").summary(summary)
+}
+
+async fn handle_timeout(error: BoxError) -> AppError {
+    if error.is::<tower::timeout::error::Elapsed>() {
+        AppError::new("request timed out").with_status(StatusCode::GATEWAY_TIMEOUT)
+    } else {
+        AppError::internal("request failed", anyhow::anyhow!(error))
+    }
+}
+
+/// The full app and its OpenAPI document, generated from the routes registered here.
+pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<OpenApi>) {
     aide::r#gen::on_error(|error| {
         tracing::error!("{error}");
     });
-
     aide::r#gen::extract_schemas(true);
     let mut api = OpenApi::default();
+
+    let app_v1_authenticated = ApiRouter::new()
+        .route("/venue-email-threads", post(create_email_thread))
+        .api_route(
+            "/stream-token",
+            post_with(stream_user_token, |op| {
+                app_op(op, "Mint a Stream chat token for the signed-in user")
+                    .response::<200, Json<StreamUserTokenResponse>>()
+            }),
+        )
+        .api_route(
+            "/places/photo",
+            get_with(get_place_photo, |op| {
+                app_op(op, "Resolve a Google place photo to a short-lived URL")
+                    .response::<200, Json<PhotoResponse>>()
+            }),
+        )
+        .api_route(
+            "/places/reverse-geocode",
+            get_with(reverse_geocode, |op| {
+                app_op(op, "Locality place for a coordinate")
+                    .response::<200, Json<ReverseGeocodeResponse>>()
+            }),
+        )
+        .api_route(
+            "/opportunity-venue-notifications",
+            post_with(notify_venue_of_interested_opportunities, |op| {
+                app_op(
+                    op,
+                    "Email venues about opportunities the user is interested in",
+                )
+                .response::<200, Json<NotifyVenueResponse>>()
+            }),
+        )
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            verify_firebase_token,
+        ));
+
+    // Public: the web app has no signed-in user. Google spend is bounded by the Places quota caps
+    // and the per-IP limit, and the user/opportunity documents have private fields removed.
+    let app_v1_public = ApiRouter::new()
+        .api_route(
+            "/places/autocomplete",
+            get_with(autocomplete_places, |op| {
+                public_op(op, "Autocomplete place names")
+                    .response::<200, Json<Vec<AutocompletePrediction>>>()
+            }),
+        )
+        .api_route(
+            "/places/:place_id",
+            get_with(get_place, |op| {
+                public_op(op, "Place details").response::<200, Json<PlaceDetails>>()
+            }),
+        )
+        .api_route(
+            "/users/username/:username",
+            get_with(get_public_user_by_username, |op| {
+                public_op(op, "Public profile by username")
+                    .description("The user document with private fields removed.")
+                    .response::<200, Json<serde_json::Value>>()
+            }),
+        )
+        .api_route(
+            "/opportunities/:opportunity_id",
+            get_with(get_public_opportunity, |op| {
+                public_op(op, "Public opportunity")
+                    .description("The opportunity document with private fields removed.")
+                    .response::<200, Json<serde_json::Value>>()
+            }),
+        )
+        .layer(rate_limits.per_ip_layer())
+        .layer(public_get_cors());
+
     let app = ApiRouter::new()
         .route(
             "/swagger",
             get(|| async { Html(swagger_ui("/swagger/json")) }),
         )
-        .route(
-            "/swagger/json",
-            get(|| async { include_str!("openapi.json") }),
-        )
+        .route("/swagger/json", get(serve_docs))
         .route("/", get(root))
-        .route("/version", get(version))
-        .route("/health", get(health))
+        .api_route(
+            "/version",
+            get_with(version, |op| {
+                meta_op(op, "API version").response::<200, Json<Version>>()
+            }),
+        )
+        .api_route(
+            "/health",
+            get_with(health, |op| {
+                meta_op(op, "Liveness")
+                    .description("The process is serving requests. Doesn't check dependencies.")
+                    .response::<200, Json<Health>>()
+            }),
+        )
+        .api_route(
+            "/health/ready",
+            get_with(ready, |op| {
+                meta_op(op, "Readiness")
+                    .description("Firestore, Typesense and the mail store all respond within 3s.")
+                    .response::<200, Json<Readiness>>()
+                    .response::<503, Json<Readiness>>()
+            }),
+        )
         .route(
             "/webhooks/stream/before-message",
-            axum::routing::post(stream_before_message),
+            post(stream_before_message),
         )
         .route("/internal/mail/inbound", post(inbound_email))
         .route("/webhooks/postmark/inbound", post(postmark_inbound_email))
@@ -174,43 +347,22 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
             "/internal/mail/backfill-message",
             post(backfill_email_message),
         )
-        .nest(
-            "/app/v1",
-            Router::new()
-                .route("/venue-email-threads", post(create_email_thread))
-                .route("/stream-token", post(stream_user_token))
-                .route("/places/photo", get(get_place_photo))
-                .route("/places/reverse-geocode", get(reverse_geocode))
-                .route(
-                    "/opportunity-venue-notifications",
-                    post(notify_venue_of_interested_opportunities),
-                )
-                .route_layer(axum::middleware::from_fn_with_state(
-                    state.clone(),
-                    crate::domain::firebase_auth::verify_firebase_token,
-                ))
-                // Public: added after `route_layer` so Firebase auth doesn't apply. The web app has
-                // no signed-in user; Google spend is bounded by the Places quota caps, and the
-                // user/opportunity documents have private fields removed.
-                .route(
-                    "/places/autocomplete",
-                    get(autocomplete_places).layer(public_get_cors()),
-                )
-                .route("/places/:place_id", get(get_place).layer(public_get_cors()))
-                .route(
-                    "/users/username/:username",
-                    get(get_public_user_by_username).layer(public_get_cors()),
-                )
-                .route(
-                    "/opportunities/:opportunity_id",
-                    get(get_public_opportunity).layer(public_get_cors()),
-                )
-                .into(),
-        )
-        .nest_api_service("/v1", v1_routes(state.clone()))
+        .nest("/app/v1", app_v1_authenticated.merge(app_v1_public))
+        .nest_api_service("/v1", v1_routes(state.clone(), rate_limits))
         .nest_api_service("/docs", docs_routes(state.clone()))
-        .finish_api_with(&mut api, api_docs)
-        .layer(Extension(Arc::new(api))) // Arc is very important here or you will face massive memory and performance issues
+        .finish_api_with(&mut api, api_docs);
+
+    let api = Arc::new(api);
+    // Layers run outermost-last: trace -> catch panics -> JSON error bodies -> timeout -> app.
+    let router = app
+        .layer(Extension(api.clone())) // Arc is very important here or you will face massive memory and performance issues
+        .layer(
+            ServiceBuilder::new()
+                .layer(HandleErrorLayer::new(handle_timeout))
+                .timeout(REQUEST_TIMEOUT),
+        )
+        .layer(middleware::map_response(json_error_bodies))
+        .layer(CatchPanicLayer::custom(panic_response))
         .layer(
             TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
                 // Log the matched route's path (with placeholders not filled in).
@@ -224,17 +376,14 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                     "http_request",
                     method = ?request.method(),
                     matched_path,
-                    // Recorded by `verify_firebase_token` on authenticated routes.
+                    // Recorded by the Firebase and API-key auth middleware.
                     user_id = tracing::field::Empty,
                 )
             }),
         )
         .with_state(state);
 
-    tracing::debug!("listening on {}", listener.local_addr().unwrap());
-    let server = axum::serve(listener, app);
-
-    Ok(server)
+    (router, api)
 }
 
 fn public_get_cors() -> CorsLayer {
@@ -247,38 +396,58 @@ async fn root() -> Json<Value> {
     json!({ "status": "ok" }).into()
 }
 
-async fn version() -> Json<Value> {
-    json!({ "version": "0.1.0" }).into()
-}
-
-async fn health() -> Json<Value> {
-    json!({ "status": "ok" }).into()
-}
-
-fn api_docs(api: TransformOpenApi) -> TransformOpenApi {
+fn api_docs(mut api: TransformOpenApi) -> TransformOpenApi {
+    let inner = api.inner_mut();
+    inner.info.version = env!("CARGO_PKG_VERSION").into();
+    inner.servers = vec![Server {
+        url: "https://api.tapped.ai".into(),
+        ..Default::default()
+    }];
     api.title("Tapped API Docs")
         .summary("the leading API for live music data including performers, venues, and events. High quality live music data and aggregates")
+        .description("Errors share one shape: `{ \"error\", \"error_id\", \"error_details\"? }`. Quote `error_id` when reporting a problem; it is logged server-side.")
         .tag(Tag {
-            name: "tapped api".into(),
-            description: Some("Tapped Ai | Live Music Data Analytics".into()),
+            name: "v1".into(),
+            description: Some("Partner API, authenticated with a `tapped-api-key`.".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "app".into(),
+            description: Some("Used by the Tapped apps, authenticated with a Firebase ID token.".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "public".into(),
+            description: Some("Unauthenticated, rate limited per IP.".into()),
+            ..Default::default()
+        })
+        .tag(Tag {
+            name: "meta".into(),
+            description: Some("Version, liveness and readiness.".into()),
             ..Default::default()
         })
         .security_scheme(
             "ApiKey",
-            aide::openapi::SecurityScheme::ApiKey {
+            SecurityScheme::ApiKey {
                 location: aide::openapi::ApiKeyLocation::Header,
                 name: "tapped-api-key".into(),
                 description: Some("your API Key".into()),
                 extensions: Default::default(),
             },
         )
+        .security_scheme(
+            "FirebaseAuth",
+            SecurityScheme::Http {
+                scheme: "bearer".into(),
+                bearer_format: Some("JWT".into()),
+                description: Some("A Firebase Auth ID token for the tapped project.".into()),
+                extensions: Default::default(),
+            },
+        )
         .default_response_with::<Json<AppError>, _>(|res| {
-            res.example(AppError {
-                error: "some error happened".to_string(),
-                error_details: None,
-                error_id: Uuid::nil(),
-                // This is not visible.
-                status: StatusCode::IM_A_TEAPOT,
-            })
+            let mut example = AppError::new("some error happened");
+            // Fixed so the generated spec is reproducible.
+            example.error_id = uuid::Uuid::nil();
+            res.example(example)
         })
 }

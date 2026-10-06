@@ -73,6 +73,9 @@ pub trait EmailComposer: Send + Sync {
     async fn compose(&self, request: ComposeVenueEmail) -> anyhow::Result<ComposedEmail>;
 }
 
+/// LLM completions are slow; the client still gives up well before the 90s request timeout.
+const COMPLETION_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(45);
+
 pub struct OpenAiEmailComposer {
     client: Client,
     api_key: String,
@@ -83,7 +86,7 @@ pub struct OpenAiEmailComposer {
 impl OpenAiEmailComposer {
     pub fn new(api_key: String, model: String) -> Self {
         Self {
-            client: Client::new(),
+            client: crate::http::client_with_timeout(COMPLETION_TIMEOUT),
             api_key,
             model,
             endpoint: "https://api.openai.com/v1/chat/completions".into(),
@@ -93,7 +96,7 @@ impl OpenAiEmailComposer {
     #[cfg(test)]
     pub fn with_endpoint(api_key: String, model: String, endpoint: String) -> Self {
         Self {
-            client: Client::new(),
+            client: crate::http::client_with_timeout(COMPLETION_TIMEOUT),
             api_key,
             model,
             endpoint,

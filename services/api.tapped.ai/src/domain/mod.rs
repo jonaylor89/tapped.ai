@@ -2,6 +2,7 @@ pub mod app_functions;
 pub mod auth;
 pub mod controller;
 pub mod firebase_auth;
+pub mod health;
 pub mod mail_bridge;
 pub mod mail_composer;
 pub mod mail_worker;

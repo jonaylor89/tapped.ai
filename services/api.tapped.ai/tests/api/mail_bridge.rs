@@ -32,8 +32,8 @@ struct ThreadDatabase;
 
 #[async_trait]
 impl Database for ThreadDatabase {
-    async fn get_user_from_api_key(&self, _api_key: &str) -> anyhow::Result<String> {
-        unreachable!()
+    async fn get_user_from_api_key(&self, _api_key: &str) -> anyhow::Result<Option<String>> {
+        Ok(None)
     }
 
     async fn get_user_by_id(&self, id: &str) -> anyhow::Result<UserModel> {

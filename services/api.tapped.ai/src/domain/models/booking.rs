@@ -1,5 +1,6 @@
 use super::user::Location;
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize, Default)]
@@ -47,7 +48,7 @@ impl Booking {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GuardedBooking {
     pub id: String,

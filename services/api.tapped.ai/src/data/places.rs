@@ -149,7 +149,7 @@ impl std::fmt::Debug for GooglePlaces {
 impl GooglePlaces {
     pub fn new(api_key: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: crate::http::client(),
             api_key,
         }
     }

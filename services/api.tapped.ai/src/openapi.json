@@ -1,224 +1,79 @@
 {
-  "openapi": "3.0.0",
+  "openapi": "3.1.0",
   "info": {
-    "title": "Tapped API swagger docs",
-    "description": "Tapped API swagger docs",
+    "title": "Tapped API Docs",
+    "summary": "the leading API for live music data including performers, venues, and events. High quality live music data and aggregates",
+    "description": "Errors share one shape: `{ \"error\", \"error_id\", \"error_details\"? }`. Quote `error_id` when reporting a problem; it is logged server-side.",
     "version": "0.1.0"
   },
-  "components": {
-    "securitySchemes": {
-      "apiKey": { "type": "apiKey", "name": "apiKey", "in": "header" }
-    },
-    "schemas": {
-      "def-0": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "title": { "type": "string" },
-          "description": { "type": "string" },
-          "bookerId": { "type": "string" },
-          "performerId": { "type": "string" },
-          "rate": { "type": "number" },
-          "location": {
-            "type": "object",
-            "properties": {
-              "lat": { "type": "number" },
-              "lng": { "type": "number" }
-            }
-          },
-          "startTime": { "type": "string", "format": "date-time" },
-          "endTime": { "type": "string", "format": "date-time" },
-          "flierUrl": { "type": "string" },
-          "eventUrl": { "type": "string" },
-          "venueId": { "type": "string" },
-          "referenceEventId": { "type": "string" }
-        },
-        "title": "bookingSchema"
-      },
-      "def-1": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "bookerId": { "type": "string" },
-          "performerId": { "type": "string" },
-          "bookingId": { "type": "string" },
-          "timestamp": { "type": "string", "format": "date-time" },
-          "overallRating": { "type": "number" },
-          "overallReview": { "type": "string" },
-          "type": { "type": "string", "enum": ["performer", "booker"] }
-        },
-        "title": "reviewSchema"
-      },
-      "def-2": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "bio": { "type": "string" },
-          "profilePictureUrl": { "type": "string" },
-          "location": {
-            "type": "object",
-            "properties": {
-              "lat": { "type": "number" },
-              "lng": { "type": "number" }
-            }
-          },
-          "socialFollowing": {
-            "type": "object",
-            "properties": {
-              "youtubeChannelId": { "type": "string" },
-              "tiktokHandle": { "type": "string" },
-              "tiktokFollowers": { "type": "number" },
-              "instagramHandle": { "type": "string" },
-              "instagramFollowers": { "type": "number" },
-              "twitterHandle": { "type": "string" },
-              "twitterFollowers": { "type": "number" },
-              "facebookHandle": { "type": "string" },
-              "facebookFollowers": { "type": "number" },
-              "spotifyUrl": { "type": "string" },
-              "soundcloudHandle": { "type": "string" },
-              "soundcloudFollowers": { "type": "number" },
-              "audiusHandle": { "type": "string" },
-              "audiusFollowers": { "type": "number" },
-              "twitchHandle": { "type": "string" },
-              "twitchFollowers": { "type": "number" }
-            }
-          },
-          "averageTicketRange": {
-            "type": "object",
-            "properties": {
-              "min": { "type": "number" },
-              "max": { "type": "number" }
-            }
-          },
-          "averageAttendance": { "type": "number" },
-          "category": {
-            "type": "string",
-            "enum": [
-              "undiscovered",
-              "emerging",
-              "hometownHero",
-              "mainstream",
-              "legendary"
-            ]
-          },
-          "pressKitUrl": { "type": "string" },
-          "genres": { "type": "array", "items": { "type": "string" } },
-          "spotifyId": { "type": "string" },
-          "bookings": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "number" },
-              "items": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/def-0" }
-              }
-            }
-          },
-          "reviews": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "number" },
-              "rating": { "type": "number" },
-              "items": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/def-1" }
-              }
-            }
-          }
-        },
-        "title": "performerSchema"
-      },
-      "def-3": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "string" },
-          "username": { "type": "string" },
-          "displayName": { "type": "string" },
-          "bio": { "type": "string" },
-          "profilePictureUrl": { "type": "string" },
-          "location": {
-            "type": "object",
-            "properties": {
-              "lat": { "type": "number" },
-              "lng": { "type": "number" }
-            }
-          },
-          "genres": { "type": "array", "items": { "type": "string" } },
-          "bookingEmail": { "type": "string" },
-          "capacity": { "type": "number" },
-          "idealPerformerProfile": { "type": "string" },
-          "productionInfo": { "type": "string" },
-          "frontOfHouse": { "type": "string" },
-          "monitors": { "type": "string" },
-          "microphones": { "type": "string" },
-          "lights": { "type": "string" },
-          "topPerformerIds": { "type": "array", "items": { "type": "string" } },
-          "bookings": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "number" },
-              "items": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/def-0" }
-              }
-            }
-          },
-          "reviews": {
-            "type": "object",
-            "properties": {
-              "count": { "type": "number" },
-              "rating": { "type": "number" },
-              "items": {
-                "type": "array",
-                "items": { "$ref": "#/components/schemas/def-1" }
-              }
-            }
-          }
-        },
-        "title": "venueSchema"
-      }
+  "servers": [
+    {
+      "url": "https://api.tapped.ai"
     }
-  },
+  ],
   "paths": {
-    "/": {
-      "get": { "responses": { "200": { "description": "Default Response" } } }
+    "/version": {
+      "get": {
+        "tags": [
+          "meta"
+        ],
+        "summary": "API version",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          }
+        }
+      }
     },
     "/health": {
-      "get": { "responses": { "200": { "description": "Default Response" } } }
-    },
-    "/version": {
-      "get": { "responses": { "200": { "description": "Default Response" } } }
-    },
-    "/v1/performer/search": {
-      "get": { "responses": { "200": { "description": "Default Response" } } }
-    },
-    "/v1/performer/{performerId}": {
       "get": {
-        "parameters": [
-          {
-            "schema": { "type": "string" },
-            "in": "header",
-            "name": "tapped-api-key",
-            "required": true
-          },
-          {
-            "schema": { "type": "string" },
-            "in": "path",
-            "name": "performerId",
-            "required": true
-          }
+        "tags": [
+          "meta"
         ],
+        "summary": "Liveness",
+        "description": "The process is serving requests. Doesn't check dependencies.",
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "default": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Successful response",
-                  "$ref": "#/components/schemas/def-2"
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
                 }
               }
             }
@@ -226,31 +81,44 @@
         }
       }
     },
-    "/v1/performer/username/{username}": {
+    "/health/ready": {
       "get": {
-        "parameters": [
-          {
-            "schema": { "type": "string" },
-            "in": "header",
-            "name": "tapped-api-key",
-            "required": true
-          },
-          {
-            "schema": { "type": "string" },
-            "in": "path",
-            "name": "username",
-            "required": true
-          }
+        "tags": [
+          "meta"
         ],
+        "summary": "Readiness",
+        "description": "Firestore, Typesense and the mail store all respond within 3s.",
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "default": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Successful response",
-                  "$ref": "#/components/schemas/def-2"
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
                 }
               }
             }
@@ -258,52 +126,282 @@
         }
       }
     },
-    "/v1/location/{lat},{lng}": {
+    "/app/v1/stream-token": {
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Mint a Stream chat token for the signed-in user",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUserTokenResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/places/photo": {
       "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Resolve a Google place photo to a short-lived URL",
         "parameters": [
           {
-            "schema": { "type": "string" },
-            "in": "header",
-            "name": "tapped-api-key",
-            "required": true
+            "in": "query",
+            "name": "maxHeightPx",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "uint32",
+              "minimum": 0.0
+            },
+            "style": "form"
           },
           {
-            "schema": { "type": "string" },
-            "in": "path",
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/places/reverse-geocode": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Locality place for a coordinate",
+        "parameters": [
+          {
+            "in": "query",
             "name": "lat",
-            "required": true
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
           },
           {
-            "schema": { "type": "string" },
-            "in": "path",
+            "in": "query",
             "name": "lng",
-            "required": true
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
           }
         ],
         "responses": {
-          "200": {
-            "description": "Successful response",
+          "default": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "description": "Successful response",
-                  "properties": {
-                    "venues": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "$ref": "#/components/schemas/def-3"
-                      }
-                    },
-                    "topPerformers": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "$ref": "#/components/schemas/def-2"
-                      }
-                    },
-                    "genres": { "type": "object" }
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReverseGeocodeResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/opportunity-venue-notifications": {
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Email venues about opportunities the user is interested in",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyVenueOfInterestedOpportunities"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyVenueResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/places/autocomplete": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Autocomplete place names",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "sessionToken",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "types",
+            "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
+            "schema": {
+              "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutocompletePrediction"
                   }
                 }
               }
@@ -311,13 +409,1422 @@
           }
         }
       }
+    },
+    "/app/v1/places/{place_id}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Place details",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "place_id",
+            "description": "A Google place ID.",
+            "required": true,
+            "schema": {
+              "description": "A Google place ID.",
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "sessionToken",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/app/v1/users/username/{username}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Public profile by username",
+        "description": "The user document with private fields removed.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "description": "The user's username, without `@`.",
+            "required": true,
+            "schema": {
+              "description": "The user's username, without `@`.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/app/v1/opportunities/{opportunity_id}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Public opportunity",
+        "description": "The opportunity document with private fields removed.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "opportunity_id",
+            "description": "The opportunity document ID.",
+            "required": true,
+            "schema": {
+              "description": "The opportunity document ID.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/performer/search": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Search performers",
+        "description": "Full-text search over performer profiles. Cached for 60s.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "query",
+            "description": "Free-text query matched against performer names, usernames and bios.",
+            "schema": {
+              "description": "Free-text query matched against performer names, usernames and bios.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuardedPerformer"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/performer/{id}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Get a performer by ID",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "description": "The performer's user ID.",
+            "required": true,
+            "schema": {
+              "description": "The performer's user ID.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardedPerformer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/performer/username/{username}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Get a performer by username",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "username",
+            "description": "The performer's username, without `@`.",
+            "required": true,
+            "schema": {
+              "description": "The performer's username, without `@`.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardedPerformer"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/v1/location/{latlng}": {
+      "get": {
+        "tags": [
+          "v1"
+        ],
+        "summary": "Venues, top performers and genre mix near a coordinate",
+        "description": "Searches a 100km radius. `genres` maps genre to its share of venues.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "latlng",
+            "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
+            "required": true,
+            "schema": {
+              "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocationResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/docs/": {
+      "get": {
+        "description": "This documentation page.",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "HTML content",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
+    },
+    "/docs/redoc": {
+      "get": {
+        "description": "This documentation page.",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "HTML content",
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "ApiKey": []
+          }
+        ]
+      }
     }
   },
-  "servers": [
-    { "url": "https://api.tapped.ai", "description": "Production server" }
-  ],
-  "externalDocs": {
-    "url": "https://api.tapped.ai/docs",
-    "description": "Find more info here"
-  }
+  "components": {
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "tapped-api-key",
+        "description": "your API Key"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "A Firebase Auth ID token for the tapped project."
+      }
+    },
+    "schemas": {
+      "AddressComponent": {
+        "type": "object",
+        "properties": {
+          "longText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "shortText": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "types": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AppError": {
+        "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+        "type": "object",
+        "required": [
+          "error",
+          "error_id"
+        ],
+        "properties": {
+          "error": {
+            "description": "An error message.",
+            "type": "string"
+          },
+          "error_details": {
+            "description": "Optional Additional error details."
+          },
+          "error_id": {
+            "description": "A unique error ID, also written to the server logs.",
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "AutocompleteParams": {
+        "type": "object",
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "sessionToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "types": {
+            "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "AutocompletePrediction": {
+        "type": "object",
+        "required": [
+          "fullText",
+          "placeId",
+          "primaryText",
+          "secondaryText"
+        ],
+        "properties": {
+          "fullText": {
+            "type": "string"
+          },
+          "placeId": {
+            "type": "string"
+          },
+          "primaryText": {
+            "type": "string"
+          },
+          "secondaryText": {
+            "type": "string"
+          }
+        }
+      },
+      "Bookings_for_GuardedBooking": {
+        "type": "object",
+        "required": [
+          "count",
+          "items"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0.0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardedBooking"
+            }
+          }
+        }
+      },
+      "GuardedBooking": {
+        "type": "object",
+        "required": [
+          "description",
+          "endTime",
+          "id",
+          "performerId",
+          "rate",
+          "startTime",
+          "title"
+        ],
+        "properties": {
+          "bookerId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "endTime": {
+            "type": "string"
+          },
+          "eventUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "flierUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "performerId": {
+            "type": "string"
+          },
+          "rate": {
+            "type": "number",
+            "format": "double"
+          },
+          "referenceEventId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "startTime": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "venueId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GuardedPerformer": {
+        "type": "object",
+        "required": [
+          "averageAttendance",
+          "averageTicketRange",
+          "bio",
+          "bookings",
+          "displayName",
+          "genres",
+          "id",
+          "reviews",
+          "socialFollowing",
+          "username"
+        ],
+        "properties": {
+          "averageAttendance": {
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "averageTicketRange": {
+            "$ref": "#/components/schemas/TicketRange"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "bookings": {
+            "$ref": "#/components/schemas/Bookings_for_GuardedBooking"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pressKitUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profilePictureUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviews": {
+            "$ref": "#/components/schemas/Reviews_for_GuardedReview"
+          },
+          "socialFollowing": {
+            "$ref": "#/components/schemas/SocialFollowing"
+          },
+          "spotifyId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "GuardedReview": {
+        "type": "object",
+        "required": [
+          "bookerId",
+          "bookingId",
+          "id",
+          "performerId",
+          "rating",
+          "text"
+        ],
+        "properties": {
+          "bookerId": {
+            "type": "string"
+          },
+          "bookingId": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "performerId": {
+            "type": "string"
+          },
+          "rating": {
+            "type": "number",
+            "format": "double"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "GuardedVenue": {
+        "type": "object",
+        "required": [
+          "bio",
+          "bookings",
+          "displayName",
+          "genres",
+          "id",
+          "reviews",
+          "topPerformerIds",
+          "username"
+        ],
+        "properties": {
+          "bio": {
+            "type": "string"
+          },
+          "bookingEmail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "bookings": {
+            "$ref": "#/components/schemas/Bookings_for_GuardedBooking"
+          },
+          "capacity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "frontOfHouse": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "id": {
+            "type": "string"
+          },
+          "idealPerformerProfile": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lights": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "microphones": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "monitors": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "productionInfo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "profilePictureUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviews": {
+            "$ref": "#/components/schemas/Reviews_for_GuardedReview"
+          },
+          "topPerformerIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "Health": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "LatLngPath": {
+        "type": "object",
+        "required": [
+          "latlng"
+        ],
+        "properties": {
+          "latlng": {
+            "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
+            "type": "string"
+          }
+        }
+      },
+      "Location": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng",
+          "placeId"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lng": {
+            "type": "number",
+            "format": "double"
+          },
+          "placeId": {
+            "type": "string"
+          }
+        }
+      },
+      "LocationResponse": {
+        "type": "object",
+        "required": [
+          "genres",
+          "top_performers",
+          "venues"
+        ],
+        "properties": {
+          "genres": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          "top_performers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardedPerformer"
+            }
+          },
+          "venues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardedVenue"
+            }
+          }
+        }
+      },
+      "NotifyVenueOfInterestedOpportunities": {
+        "type": "object",
+        "required": [
+          "opportunityIds"
+        ],
+        "properties": {
+          "note": {
+            "default": "",
+            "type": "string"
+          },
+          "opportunityIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "NotifyVenueResponse": {
+        "type": "object",
+        "required": [
+          "venues_notified"
+        ],
+        "properties": {
+          "venues_notified": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0.0
+          }
+        }
+      },
+      "OpportunityIdPath": {
+        "type": "object",
+        "required": [
+          "opportunity_id"
+        ],
+        "properties": {
+          "opportunity_id": {
+            "description": "The opportunity document ID.",
+            "type": "string"
+          }
+        }
+      },
+      "PerformerIdPath": {
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "properties": {
+          "id": {
+            "description": "The performer's user ID.",
+            "type": "string"
+          }
+        }
+      },
+      "PhotoMetadata": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "heightPx": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "widthPx": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "PhotoParams": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "maxHeightPx": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "PhotoResponse": {
+        "type": "object",
+        "properties": {
+          "photoUri": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PlaceDetails": {
+        "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\nDocuments written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`; those are refreshed from Google once and rewritten in this shape. `addressComponents`, `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
+        "type": "object",
+        "required": [
+          "lat",
+          "lng",
+          "placeId"
+        ],
+        "properties": {
+          "addressComponents": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AddressComponent"
+            }
+          },
+          "geohash": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lng": {
+            "type": "number",
+            "format": "double"
+          },
+          "locality": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "photoMetadata": {
+            "default": null,
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PhotoMetadata"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "photoNames": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "placeId": {
+            "type": "string"
+          },
+          "shortFormattedAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "PlaceIdPath": {
+        "type": "object",
+        "required": [
+          "place_id"
+        ],
+        "properties": {
+          "place_id": {
+            "description": "A Google place ID.",
+            "type": "string"
+          }
+        }
+      },
+      "PlaceParams": {
+        "type": "object",
+        "properties": {
+          "sessionToken": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Readiness": {
+        "type": "object",
+        "required": [
+          "checks",
+          "status"
+        ],
+        "properties": {
+          "checks": {
+            "description": "Per-dependency result: `ok`, `error` or `timeout`.",
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "description": "`ok` when every dependency responded, otherwise `unavailable`.",
+            "type": "string"
+          }
+        }
+      },
+      "ReverseGeocodeParams": {
+        "type": "object",
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "properties": {
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lng": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "ReverseGeocodeResponse": {
+        "type": "object",
+        "properties": {
+          "placeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Reviews_for_GuardedReview": {
+        "type": "object",
+        "required": [
+          "count",
+          "items",
+          "rating"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "uint",
+            "minimum": 0.0
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardedReview"
+            }
+          },
+          "rating": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "SearchParams": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "description": "Free-text query matched against performer names, usernames and bios.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SocialFollowing": {
+        "type": "object",
+        "properties": {
+          "audiusFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "audiusHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "facebookFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "facebookHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "instagramFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "instagramHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "soundcloudFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "soundcloudHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "spotifyUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tiktokFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "tiktokHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "twitchFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "twitchHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "twitterFollowers": {
+            "default": 0,
+            "type": "integer",
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "twitterHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "youtubeChannelId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "StreamUserTokenResponse": {
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
+      "TicketRange": {
+        "type": "object",
+        "required": [
+          "max",
+          "min"
+        ],
+        "properties": {
+          "max": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "min": {
+            "type": "integer",
+            "format": "uint64",
+            "minimum": 0.0
+          }
+        }
+      },
+      "UsernamePath": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "description": "The user's username, without `@`.",
+            "type": "string"
+          }
+        }
+      },
+      "UsernamePath2": {
+        "type": "object",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "description": "The performer's username, without `@`.",
+            "type": "string"
+          }
+        }
+      },
+      "Version": {
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "version": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "v1",
+      "description": "Partner API, authenticated with a `tapped-api-key`."
+    },
+    {
+      "name": "app",
+      "description": "Used by the Tapped apps, authenticated with a Firebase ID token."
+    },
+    {
+      "name": "public",
+      "description": "Unauthenticated, rate limited per IP."
+    },
+    {
+      "name": "meta",
+      "description": "Version, liveness and readiness."
+    }
+  ]
 }
