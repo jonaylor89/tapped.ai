@@ -4,7 +4,8 @@ import TappedData
 import TappedDomain
 
 /// `onboarding_flow_cubit.dart` + `onboarding_bloc`: three steps (name → genres → location), then
-/// writes `users/{uid}` and lands in the app. Everyone onboarding is a performer. Photo and socials live in the "finish setting up" checklist.
+/// writes `users/{uid}` and lands in the app. Everyone onboarding is a performer. Photo and socials live in the "finish setting up" checklist,
+/// unless the name step imports them from a Spotify artist link (`onboard_with_spotify_view.dart`).
 @Observable
 @MainActor
 final class OnboardingViewModel {
@@ -61,6 +62,10 @@ final class OnboardingViewModel {
         }
     }
     private(set) var usernameStatus: UsernameStatus = .idle
+    var spotifyLink = ""
+    private(set) var spotifyArtist: SpotifyArtist?
+    private(set) var isImportingSpotify = false
+    private(set) var spotifyError: String?
     private(set) var genres: Set<Genre> = []
     var genreQuery = ""
     var placeQuery = ""
@@ -76,14 +81,25 @@ final class OnboardingViewModel {
     private let places: any PlacesRepository
     private let location: any LocationRepository
     private let analytics: any AnalyticsRepository
+    private let spotify: any SpotifyRepository
+    private let storage: any StorageRepository
+    private let downloadImage: @Sendable (URL) async throws -> Data
     private let now: @Sendable () -> Date
 
-    init(dependencies: Dependencies, initialStep: Step = .name, now: @escaping @Sendable () -> Date = { .now }) {
+    init(
+        dependencies: Dependencies,
+        initialStep: Step = .name,
+        now: @escaping @Sendable () -> Date = { .now },
+        downloadImage: @escaping @Sendable (URL) async throws -> Data = { try await URLSession.shared.data(from: $0).0 }
+    ) {
         auth = dependencies.auth
         database = dependencies.database
         places = dependencies.places
         location = dependencies.location
         analytics = dependencies.analytics
+        spotify = dependencies.spotify
+        storage = dependencies.storage
+        self.downloadImage = downloadImage
         step = initialStep
         self.now = now
     }
@@ -183,6 +199,58 @@ final class OnboardingViewModel {
         return candidate + millis.suffix(4)
     }
 
+    // MARK: - spotify
+
+    /// Looks up the pasted artist link and fills in the display name and any matching genres. The artist's photo
+    /// and id are saved by `finish()`.
+    func importFromSpotify() async {
+        guard !isImportingSpotify else { return }
+        spotifyError = nil
+        guard let id = SpotifyArtist.artistId(from: spotifyLink) else {
+            spotifyError = "paste the link to your artist page on spotify"
+            return
+        }
+        isImportingSpotify = true
+        defer { isImportingSpotify = false }
+        do {
+            guard let artist = try await spotify.artist(id: id) else {
+                spotifyError = "couldn't find that artist on spotify"
+                return
+            }
+            spotifyArtist = artist
+            spotifyLink = ""
+            if !artist.name.isEmpty { artistName = String(artist.name.prefix(Self.artistNameLimit)) }
+            genres.formUnion(Self.genres(fromSpotify: artist.genres))
+            await analytics.track("onboarding_spotify_imported", properties: ["spotify_id": .string(artist.id)])
+        } catch {
+            spotifyError = "couldn't reach spotify. try again"
+        }
+    }
+
+    /// Keeps the name and genres it filled in; only the Spotify link and photo are dropped.
+    func clearSpotify() {
+        spotifyArtist = nil
+        spotifyError = nil
+    }
+
+    /// Spotify genres that name a Tapped genre, ignoring case, spacing and punctuation ("hip hop" → `.hipHop`).
+    nonisolated static func genres(fromSpotify spotifyGenres: [String]) -> Set<Genre> {
+        func key(_ name: String) -> String { name.lowercased().filter { $0.isLetter || $0.isNumber } }
+        let byKey = Dictionary(Genre.allCases.map { (key($0.formattedName), $0) }, uniquingKeysWith: { first, _ in first })
+        return Set(spotifyGenres.compactMap { byKey[key($0)] })
+    }
+
+    /// The Spotify photo, re-hosted in Storage like a picked photo so `RemoteImage` can resize it. Best effort.
+    private func uploadSpotifyPhoto(userId: String) async -> String? {
+        guard let url = spotifyArtist?.imageURL else { return nil }
+        do {
+            let data = try await downloadImage(url)
+            return try await storage.uploadProfilePicture(userId: userId, imageData: data).absoluteString
+        } catch {
+            return nil
+        }
+    }
+
     // MARK: - genres
 
     func toggle(genre: Genre) {
@@ -245,8 +313,8 @@ final class OnboardingViewModel {
     // MARK: - finish
 
     /// `finishOnboarding`: tapping "let's go" accepts the EULA, then writes `users/{uid}`. Returns the saved user.
-    /// Fields Flutter collected in steps that moved to the checklist keep `UserModel.empty` defaults: no
-    /// `profilePicture`, no social handles, follower counts `0`.
+    /// Fields Flutter collected in steps that moved to the checklist keep `UserModel.empty` defaults (no social
+    /// handles, follower counts `0`), except the Spotify id and photo when an artist was imported.
     func finish() async -> UserModel? {
         guard !isSubmitting else { return nil }
         isSubmitting = true
@@ -259,16 +327,20 @@ final class OnboardingViewModel {
                 errorMessage = "@\(self.username) was just taken. pick another username"
                 return nil
             }
+            let profilePicture = await uploadSpotifyPhoto(userId: authUser.uid)
+            var socialFollowing = SocialFollowing.empty
+            socialFollowing.spotifyId = spotifyArtist?.id
             let user = UserModel(
                 id: authUser.uid,
                 timestamp: now(),
                 username: Username(username),
                 email: authUser.email ?? "",
                 artistName: trimmedArtistName,
+                profilePicture: profilePicture,
                 occupations: [Self.occupation.rawValue],
                 location: selectedPlace.map { Location(placeId: $0.placeId, lat: $0.lat, lng: $0.lng) },
                 performerInfo: PerformerInfo(genres: Genre.allCases.filter(genres.contains).map(\.rawValue)),
-                socialFollowing: .empty
+                socialFollowing: socialFollowing
             )
             try await database.createUser(user)
             await analytics.track("onboarding_complete", properties: [
@@ -276,6 +348,7 @@ final class OnboardingViewModel {
                 "occupations": .string(user.occupations.joined(separator: ",")),
                 "role": .string("performer"),
                 "eula_accepted": .bool(true),
+                "spotify_imported": .bool(spotifyArtist != nil),
             ])
             return user
         } catch {
@@ -290,6 +363,7 @@ final class OnboardingViewModel {
     /// step shows the current-city button above a typed search instead of a picked city.
     func fillSampleAnswers() {
         artistName = "Nova Waves"
+        spotifyArtist = MockSpotifyRepository.artists.first
         usernameStatus = .available(username)
         genres = [.electronic, .dance, .pop]
         if step == .location {

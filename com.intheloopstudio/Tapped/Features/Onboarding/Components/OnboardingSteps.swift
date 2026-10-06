@@ -50,6 +50,7 @@ private struct NameStep: View {
     @FocusState private var focus: Field?
 
     var body: some View {
+        SpotifyImportSection(model: model)
         Section {
             TextField("display name", text: $model.artistName)
                 .textContentType(.nickname)
@@ -106,6 +107,69 @@ private struct NameStep: View {
         } else {
             Text("we'll make one from your name. you can type your own.")
         }
+    }
+}
+
+/// `onboard_with_spotify_view.dart`: paste an artist link to prefill the name, photo and genres.
+private struct SpotifyImportSection: View {
+    @Bindable var model: OnboardingViewModel
+
+    private var canImport: Bool {
+        !model.isImportingSpotify && !model.spotifyLink.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        Section {
+            if let artist = model.spotifyArtist {
+                HStack(spacing: TappedSpacing.md) {
+                    RemoteImage(url: artist.imageURL) {
+                        Image(systemName: "person.crop.circle.fill").resizable().foregroundStyle(.secondary)
+                    }
+                    .frame(width: 44, height: 44)
+                    .clipShape(Circle())
+                    .accessibilityHidden(true)
+                    VStack(alignment: .leading) {
+                        Text(verbatim: artist.name)
+                        Text("imported from spotify").font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("remove spotify", systemImage: "xmark.circle.fill") { model.clearSpotify() }
+                        .labelStyle(.iconOnly)
+                        .foregroundStyle(.secondary)
+                        .buttonStyle(.plain)
+                }
+            } else {
+                HStack {
+                    TextField("open.spotify.com/artist/…", text: $model.spotifyLink)
+                        .textContentType(.URL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.go)
+                        .onSubmit(importArtist)
+                    if model.isImportingSpotify {
+                        ProgressView()
+                    } else {
+                        Button("import", action: importArtist)
+                            .fontWeight(.semibold)
+                            .disabled(!canImport)
+                    }
+                }
+            }
+        } header: {
+            Label("on spotify?", systemImage: "waveform")
+        } footer: {
+            if let error = model.spotifyError {
+                Text(error).foregroundStyle(TappedColors.error)
+            } else if model.spotifyArtist == nil {
+                Text("paste your artist link to fill in your name, photo and genres.")
+            }
+        }
+    }
+
+    private func importArtist() {
+        guard canImport else { return }
+        Task { await model.importFromSpotify() }
     }
 }
 

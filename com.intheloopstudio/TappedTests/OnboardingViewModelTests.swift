@@ -10,7 +10,9 @@ struct OnboardingViewModelTests {
     private func makeModel(
         database: MockDatabaseRepository = MockDatabaseRepository(),
         location: MockLocationRepository = MockLocationRepository(),
-        now: Date = Date(timeIntervalSince1970: 1_700_000_123.456)
+        storage: MockStorageRepository = MockStorageRepository(),
+        now: Date = Date(timeIntervalSince1970: 1_700_000_123.456),
+        downloadImage: @escaping @Sendable (URL) async throws -> Data = { _ in Data([0xFF, 0xD8]) }
     ) -> OnboardingViewModel {
         let dependencies = Dependencies(
             mode: .mock,
@@ -21,10 +23,11 @@ struct OnboardingViewModelTests {
             purchases: MockPurchasesRepository(),
             analytics: MockAnalytics(),
             remoteConfig: MockRemoteConfigRepository(),
-            storage: MockStorageRepository(),
-            location: location
+            storage: storage,
+            location: location,
+            spotify: MockSpotifyRepository()
         )
-        return OnboardingViewModel(dependencies: dependencies, now: { now })
+        return OnboardingViewModel(dependencies: dependencies, now: { now }, downloadImage: downloadImage)
     }
 
     @Test(arguments: [
@@ -171,5 +174,68 @@ struct OnboardingViewModelTests {
         let user = try #require(await model.finish())
         #expect(user.location == nil)
         #expect(user.performerInfo?.genres == [])
+    }
+
+    // MARK: - spotify
+
+    private static let artistLink = "https://open.spotify.com/intl-de/artist/4Z8W4fKeB5YxbusRsdQVPb?si=abc123"
+
+    @Test func spotifyImportFillsNameAndMatchingGenres() async {
+        let model = makeModel()
+        model.toggle(genre: .rock)
+        model.spotifyLink = Self.artistLink
+        await model.importFromSpotify()
+        #expect(model.spotifyArtist?.id == "4Z8W4fKeB5YxbusRsdQVPb")
+        #expect(model.artistName == "Nova Waves")
+        #expect(model.username == "nova_waves")
+        #expect(model.genres == [.rock, .electronic], "keeps picked genres and adds the ones Tapped has")
+        #expect(model.spotifyLink.isEmpty)
+        #expect(model.spotifyError == nil)
+        #expect(!model.isImportingSpotify)
+
+        model.clearSpotify()
+        #expect(model.spotifyArtist == nil)
+        #expect(model.artistName == "Nova Waves")
+    }
+
+    @Test(arguments: [
+        ("not a link", "paste the link to your artist page on spotify"),
+        ("https://open.spotify.com/track/4Z8W4fKeB5YxbusRsdQVPb", "paste the link to your artist page on spotify"),
+        ("https://open.spotify.com/artist/0000000000000000000000", "couldn't find that artist on spotify"),
+    ])
+    func spotifyImportErrors(link: String, error: String) async {
+        let model = makeModel()
+        model.spotifyLink = link
+        await model.importFromSpotify()
+        #expect(model.spotifyArtist == nil)
+        #expect(model.spotifyError == error)
+        #expect(model.artistName.isEmpty)
+    }
+
+    @Test func spotifyGenreMatchingIgnoresCaseAndSpacing() {
+        #expect(OnboardingViewModel.genres(fromSpotify: ["Hip Hop", "r&b", "ELECTRONIC", "indietronica"]) == [.hipHop, .rnb, .electronic])
+        #expect(OnboardingViewModel.genres(fromSpotify: []).isEmpty)
+    }
+
+    @Test func finishSavesSpotifyIdAndPhoto() async throws {
+        let storage = MockStorageRepository()
+        let model = makeModel(storage: storage)
+        model.spotifyLink = Self.artistLink
+        await model.importFromSpotify()
+
+        let user = try #require(await model.finish())
+        #expect(user.socialFollowing.spotifyId == "4Z8W4fKeB5YxbusRsdQVPb")
+        #expect(user.socialFollowing.spotifyMonthlyListeners == 0)
+        let picture = try #require(user.profilePicture.flatMap(URL.init(string:)))
+        #expect(await storage.uploads[picture.path] == Data([0xFF, 0xD8]))
+    }
+
+    @Test func spotifyPhotoFailureStillFinishes() async throws {
+        let model = makeModel(downloadImage: { _ in throw URLError(.notConnectedToInternet) })
+        model.spotifyLink = Self.artistLink
+        await model.importFromSpotify()
+        let user = try #require(await model.finish())
+        #expect(user.profilePicture == nil)
+        #expect(user.socialFollowing.spotifyId == "4Z8W4fKeB5YxbusRsdQVPb")
     }
 }
