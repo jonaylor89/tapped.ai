@@ -182,4 +182,35 @@ struct PerformerDelightsTests {
         #expect(snapshot.upcomingGigs.first?.venueName == Samples.venues.first { $0.id == "venue-camel" }?.displayName)
         #expect(snapshot.nearbyGigCount != nil)
     }
+
+    @Test func foregroundRefreshIsThrottledUnlessForced() async throws {
+        let suite = "PerformerDelightsTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        var reloads = 0
+        var date = Samples.referenceDate
+        let coordinator = GigNightCoordinator(
+            dependencies: .mock(signedIn: true),
+            liveActivities: MockLiveActivityRepository(),
+            store: WidgetSnapshotStore(defaults: defaults),
+            reloadWidgets: { reloads += 1 },
+            now: { date }
+        )
+        async let first: Void = coordinator.refresh()
+        async let overlapping: Void = coordinator.refresh()
+        _ = await (first, overlapping)
+        #expect(reloads == 1)
+
+        date.addTimeInterval(5 * 60)
+        await coordinator.refresh()
+        #expect(reloads == 1)
+
+        let booking = try #require(Samples.bookings.first { $0.isConfirmed })
+        await coordinator.bookingConfirmed(booking)
+        #expect(reloads == 2)
+
+        date.addTimeInterval(GigNightCoordinator.refreshInterval)
+        await coordinator.refresh()
+        #expect(reloads == 3)
+    }
 }

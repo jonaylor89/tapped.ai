@@ -34,6 +34,12 @@ final class AppSession {
     private let dependencies: Dependencies
     private let defaults: UserDefaults
     private var started = false
+    /// Remote Config put the app behind maintenance / update required; auth no longer drives `phase`.
+    private var isBlocked = false
+    /// Cached Remote Config gate; auth results wait on it before choosing a phase.
+    private var launchGate: Task<Void, Never>?
+    /// Background Remote Config fetch started once the cached gate passes; exposed for tests.
+    private(set) var remoteConfigRefresh: Task<Void, Never>?
     /// Post-sign-in side effects (push token, `latestAppVersion`); exposed for tests.
     private(set) var deviceRegistration: Task<Void, Never>?
 
@@ -54,32 +60,47 @@ final class AppSession {
     }
 
     /// Runs for the lifetime of the scene (`ContentView.task`).
+    ///
+    /// The cached Remote Config decides the maintenance / minimum-version gates, while auth, custom claims and the
+    /// user doc load concurrently. The network fetch runs in the background and can still close a gate.
     func run() async {
         guard !started else { return }
         started = true
         if launchOptions.screen != nil { return }
 
-        let remoteConfig = dependencies.remoteConfig
-        _ = try? await remoteConfig.fetchAndActivate()
-        if await remoteConfig.getDownForMaintenanceStatus() {
-            phase = .maintenance
+        LaunchSignposts.begin(.auth)
+        let gate = Task { await applyCachedRemoteConfig() }
+        launchGate = gate
+        let auth = Task {
+            for await authUser in dependencies.auth.authStateChanges() {
+                await resolve(authUser)
+            }
+        }
+        await gate.value
+        guard !isBlocked else {
+            auth.cancel()
             return
         }
-        if let minimum = AppVersion(await remoteConfig.getMinimumAppVersion()), appVersion < minimum {
-            phase = .updateRequired(minimum: minimum.description)
-            return
-        }
-        if let latest = AppVersion(await remoteConfig.getLatestAppVersion()), appVersion < latest,
-           defaults.string(forKey: Self.skippedUpdateKey) != latest.description {
-            availableUpdate = latest.description
-        }
-        premiumWaitlistEnabled = await remoteConfig.getPremiumWaitlistEnabled()
 
-        async let premium: Void = observePremium()
-        for await authUser in dependencies.auth.authStateChanges() {
-            await resolve(authUser)
+        let premium = Task { await observePremium() }
+        let remoteConfig = dependencies.remoteConfig
+        remoteConfigRefresh = Task {
+            _ = try? await remoteConfig.fetchAndActivate()
+            LaunchSignposts.mark(.remoteConfigFetched)
+            await applyRemoteConfig()
+            if isBlocked {
+                auth.cancel()
+                premium.cancel()
+            }
         }
-        await premium
+        await withTaskCancellationHandler {
+            await auth.value
+            await premium.value
+        } onCancel: { [remoteConfigRefresh] in
+            auth.cancel()
+            premium.cancel()
+            remoteConfigRefresh?.cancel()
+        }
     }
 
     func refreshCurrentUser() async {
@@ -129,20 +150,76 @@ final class AppSession {
         }
     }
 
-    private func resolve(_ authUser: AuthUser?) async {
-        guard let authUser else {
-            claims = []
-            phase = .signedOut
+    /// Activates the cached config and applies its gates. A cached block is confirmed against the server
+    /// (bounded by the fetch timeout) so a stale maintenance flag can't hold the app indefinitely.
+    private func applyCachedRemoteConfig() async {
+        LaunchSignposts.begin(.remoteConfig)
+        defer { LaunchSignposts.end(.remoteConfig) }
+        let remoteConfig = dependencies.remoteConfig
+        _ = await remoteConfig.activateCached()
+        if await blockingPhase() != nil {
+            _ = try? await remoteConfig.fetchAndActivate()
+        }
+        await applyRemoteConfig()
+    }
+
+    private func applyRemoteConfig() async {
+        if let blocked = await blockingPhase() {
+            isBlocked = true
+            phase = blocked
             return
         }
-        claims = (try? await dependencies.auth.getCustomClaims()) ?? []
+        let remoteConfig = dependencies.remoteConfig
+        // Only before the shell is up: the prompt swaps the shell for the splash.
+        if currentUser == nil, let latest = AppVersion(await remoteConfig.getLatestAppVersion()), appVersion < latest,
+           defaults.string(forKey: Self.skippedUpdateKey) != latest.description {
+            availableUpdate = latest.description
+        }
+        premiumWaitlistEnabled = await remoteConfig.getPremiumWaitlistEnabled()
+    }
+
+    private func blockingPhase() async -> Phase? {
+        let remoteConfig = dependencies.remoteConfig
+        if await remoteConfig.getDownForMaintenanceStatus() { return .maintenance }
+        if let minimum = AppVersion(await remoteConfig.getMinimumAppVersion()), appVersion < minimum {
+            return .updateRequired(minimum: minimum.description)
+        }
+        return nil
+    }
+
+    /// Waits for the launch gate; `false` once Remote Config has blocked the app.
+    private func mayChangePhase() async -> Bool {
+        await launchGate?.value
+        return !isBlocked
+    }
+
+    private func resolve(_ authUser: AuthUser?) async {
+        guard let authUser else {
+            guard await mayChangePhase() else { return }
+            claims = []
+            phase = .signedOut
+            LaunchSignposts.end(.auth)
+            return
+        }
+        let auth = dependencies.auth
+        let database = dependencies.database
+        LaunchSignposts.begin(.userDoc)
+        async let customClaims = try? auth.getCustomClaims()
+        async let userDoc = database.getUserById(authUser.uid)
+        let resolvedClaims = await customClaims ?? []
+        var user: UserModel?
         do {
-            if let user = try await dependencies.database.getUserById(authUser.uid) {
-                await enter(user)
-                return
-            }
+            user = try await userDoc
         } catch {
             FirebaseBootstrap.record(error: error)
+        }
+        LaunchSignposts.end(.userDoc)
+        guard await mayChangePhase() else { return }
+        claims = resolvedClaims
+        defer { LaunchSignposts.end(.auth) }
+        if let user {
+            await enter(user)
+            return
         }
         phase = authUser.requiresEmailVerification ? .confirmEmail(authUser) : .onboarding(uid: authUser.uid)
     }

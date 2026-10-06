@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import TappedDomain
 
 /// Filters `Samples` locally; used in mock mode, previews and tests.
@@ -159,32 +160,95 @@ public actor MockAnalytics: AnalyticsRepository {
 }
 
 public struct MockRemoteConfigRepository: RemoteConfigRepository {
+    public struct Values: Sendable, Equatable {
+        public var downForMaintenance = false
+        public var bookingFee = 0.1
+        public var minimumAppVersion = ""
+        public var latestAppVersion = ""
+        public var premiumWaitlistEnabled = false
+
+        public init(
+            downForMaintenance: Bool = false,
+            bookingFee: Double = 0.1,
+            minimumAppVersion: String = "",
+            latestAppVersion: String = "",
+            premiumWaitlistEnabled: Bool = false
+        ) {
+            self.downForMaintenance = downForMaintenance
+            self.bookingFee = bookingFee
+            self.minimumAppVersion = minimumAppVersion
+            self.latestAppVersion = latestAppVersion
+            self.premiumWaitlistEnabled = premiumWaitlistEnabled
+        }
+    }
+
+    /// The config cached on device, active from `activateCached()`.
     public var downForMaintenance: Bool
     public var bookingFee: Double
     public var minimumAppVersion: String
     public var latestAppVersion: String
     public var premiumWaitlistEnabled: Bool
+    /// What the server returns once `fetchAndActivate()` finishes; `nil` means it matches the cache.
+    public var fetched: Values?
+    public var fetchDelay: Duration
+    private let state = FetchState()
 
     public init(
         downForMaintenance: Bool = false,
         bookingFee: Double = 0.1,
         minimumAppVersion: String = "",
         latestAppVersion: String = "",
-        premiumWaitlistEnabled: Bool = false
+        premiumWaitlistEnabled: Bool = false,
+        fetched: Values? = nil,
+        fetchDelay: Duration = .zero
     ) {
         self.downForMaintenance = downForMaintenance
         self.bookingFee = bookingFee
         self.minimumAppVersion = minimumAppVersion
         self.latestAppVersion = latestAppVersion
         self.premiumWaitlistEnabled = premiumWaitlistEnabled
+        self.fetched = fetched
+        self.fetchDelay = fetchDelay
     }
 
-    public func fetchAndActivate() async throws -> Bool { true }
-    public func getDownForMaintenanceStatus() async -> Bool { downForMaintenance }
-    public func getBookingFee() async -> Double { bookingFee }
-    public func getMinimumAppVersion() async -> String { minimumAppVersion }
-    public func getLatestAppVersion() async -> String { latestAppVersion }
-    public func getPremiumWaitlistEnabled() async -> Bool { premiumWaitlistEnabled }
+    public var fetchCount: Int { state.fetches }
+
+    private var current: Values {
+        let cached = Values(
+            downForMaintenance: downForMaintenance,
+            bookingFee: bookingFee,
+            minimumAppVersion: minimumAppVersion,
+            latestAppVersion: latestAppVersion,
+            premiumWaitlistEnabled: premiumWaitlistEnabled
+        )
+        return state.isFetched ? fetched ?? cached : cached
+    }
+
+    public func activateCached() async -> Bool { true }
+
+    public func fetchAndActivate() async throws -> Bool {
+        state.recordFetch()
+        try await Task.sleep(for: fetchDelay)
+        state.activate()
+        return true
+    }
+
+    public func getDownForMaintenanceStatus() async -> Bool { current.downForMaintenance }
+    public func getBookingFee() async -> Double { current.bookingFee }
+    public func getMinimumAppVersion() async -> String { current.minimumAppVersion }
+    public func getLatestAppVersion() async -> String { current.latestAppVersion }
+    public func getPremiumWaitlistEnabled() async -> Bool { current.premiumWaitlistEnabled }
+
+    private final class FetchState: Sendable {
+        private let fetched = Mutex(false)
+        private let count = Mutex(0)
+
+        var isFetched: Bool { fetched.withLock { $0 } }
+        var fetches: Int { count.withLock { $0 } }
+
+        func recordFetch() { count.withLock { $0 += 1 } }
+        func activate() { fetched.withLock { $0 = true } }
+    }
 }
 
 /// Serves `MockSpotifyRepository.artists` by id.
