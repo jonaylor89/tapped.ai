@@ -131,6 +131,7 @@ final class AppSession {
 
     private func resolve(_ authUser: AuthUser?) async {
         guard let authUser else {
+            if currentUser != nil { await dependencies.chat.disconnect() }
             claims = []
             phase = .signedOut
             return

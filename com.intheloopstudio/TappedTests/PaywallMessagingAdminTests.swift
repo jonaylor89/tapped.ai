@@ -81,6 +81,80 @@ struct PaywallMessagingAdminTests {
         #expect(model.messages.last?.text == "load-in at 7?")
     }
 
+    @Test func channelMarksUnreadChannelReadOnceWhileActive() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        let chat = try #require(dependencies.chat as? MockChatRepository)
+        try await chat.connectUser(Samples.performer)
+        let id = try #require(Samples.conversations.first { $0.unreadCount > 0 }).id
+        let model = ChannelViewModel(dependencies: dependencies, conversationId: id)
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+        await model.setActive(true)
+        try await waitUntil { model.phase == .loaded }
+        try await waitUntilMarkReadCalls(chat, 1)
+
+        let before = model.messages.count
+        try await chat.sendMessage("see you at 7", conversationId: id)
+        try await waitUntil { model.messages.count == before + 1 }
+        await model.loadOlder()
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await chat.markReadCalls == 1)
+        #expect(try await chat.conversation(id: id)?.unreadCount == 0)
+    }
+
+    @Test func channelSkipsMarkReadWhenNothingUnread() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        let chat = try #require(dependencies.chat as? MockChatRepository)
+        try await chat.connectUser(Samples.performer)
+        let id = try #require(Samples.conversations.first { $0.unreadCount == 0 }).id
+        let model = ChannelViewModel(dependencies: dependencies, conversationId: id)
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+        await model.setActive(true)
+        try await waitUntil { model.phase == .loaded }
+        try await chat.sendMessage("sure", conversationId: id)
+        try await waitUntil { model.messages.last?.text == "sure" }
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await chat.markReadCalls == 0)
+
+        await chat.receive(Self.incoming("m-new", from: Samples.performers[2]), in: id)
+        try await waitUntilMarkReadCalls(chat, 1)
+        #expect(try await chat.conversation(id: id)?.unreadCount == 0)
+    }
+
+    @Test func channelDefersMarkReadUntilActive() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        let chat = try #require(dependencies.chat as? MockChatRepository)
+        try await chat.connectUser(Samples.performer)
+        let id = try #require(Samples.conversations.first { $0.unreadCount > 0 }).id
+        let model = ChannelViewModel(dependencies: dependencies, conversationId: id)
+        let task = Task { await model.observe() }
+        defer { task.cancel() }
+        try await waitUntil { model.phase == .loaded }
+        await chat.receive(Self.incoming("m-bg", from: Samples.venues[0]), in: id)
+        try await waitUntil { model.messages.last?.id == "m-bg" }
+        try await Task.sleep(for: .milliseconds(100))
+        #expect(await chat.markReadCalls == 0)
+
+        await model.setActive(true)
+        #expect(await chat.markReadCalls == 1)
+        await model.setActive(false)
+        await model.setActive(true)
+        #expect(await chat.markReadCalls == 1)
+    }
+
+    private static func incoming(_ id: String, from user: UserModel) -> ConversationMessage {
+        ConversationMessage(id: id, text: "you up?", authorId: user.id, authorName: user.displayName, createdAt: .now, isFromCurrentUser: false)
+    }
+
+    private func waitUntilMarkReadCalls(_ chat: MockChatRepository, _ expected: Int) async throws {
+        for _ in 0..<200 {
+            if await chat.markReadCalls == expected { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        Issue.record("markReadCalls never reached \(expected) (is \(await chat.markReadCalls))")
+    }
+
     @Test func shellPublishesUnreadCount() async throws {
         let chat = MockChatRepository()
         let shell = ShellViewModel(currentUser: Samples.performer, chat: chat)

@@ -4,6 +4,8 @@ import TappedDomain
 /// In-memory chat seeded from `Samples.conversations`.
 public actor MockChatRepository: ChatRepository {
     public private(set) var connectedUserId: String?
+    /// Every `markRead` call, including ones that found nothing unread.
+    public private(set) var markReadCalls = 0
     private var conversations: [String: Conversation]
     private var messages: [String: [ConversationMessage]]
     private let users: [UserModel]
@@ -95,8 +97,18 @@ public actor MockChatRepository: ChatRepository {
     }
 
     public func markRead(conversationId: String) async throws {
+        markReadCalls += 1
         guard conversations[conversationId]?.unreadCount != 0 else { return }
         conversations[conversationId]?.unreadCount = 0
+        broadcast()
+    }
+
+    /// Simulates a message arriving from another member.
+    public func receive(_ message: ConversationMessage, in conversationId: String) {
+        messages[conversationId, default: []].append(message)
+        conversations[conversationId]?.unreadCount += 1
+        conversations[conversationId]?.lastMessageText = message.text
+        conversations[conversationId]?.lastMessageAt = message.createdAt
         broadcast()
     }
 

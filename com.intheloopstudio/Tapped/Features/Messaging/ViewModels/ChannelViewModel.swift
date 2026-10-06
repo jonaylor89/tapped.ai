@@ -24,6 +24,11 @@ final class ChannelViewModel {
     private(set) var attempt = 0
 
     private let chat: any ChatRepository
+    private var isActive = false
+    private var isMarkingRead = false
+    private var unreadOnOpen = false
+    /// Newest incoming message already covered by a read receipt (or known read when the channel opened).
+    private var readThroughId: String?
 
     init(dependencies: Dependencies, conversationId: String) {
         chat = dependencies.chat
@@ -57,16 +62,46 @@ final class ChannelViewModel {
 
     func observe() async {
         conversation = try? await chat.conversation(id: conversationId)
+        unreadOnOpen = conversation.map { $0.unreadCount > 0 } ?? true
+        var isFirst = true
         do {
             for try await messages in chat.messagesObserver(conversationId: conversationId) {
                 self.messages = messages
                 phase = .loaded
-                try? await chat.markRead(conversationId: conversationId)
+                if isFirst, !unreadOnOpen { readThroughId = latestIncomingId }
+                isFirst = false
+                await markReadIfNeeded()
             }
         } catch is CancellationError {
         } catch {
             FirebaseBootstrap.record(error: error)
             phase = .failed
+        }
+    }
+
+    /// Read receipts only go out while the channel is on screen and the app is in the foreground.
+    func setActive(_ active: Bool) async {
+        isActive = active
+        await markReadIfNeeded()
+    }
+
+    private var latestIncomingId: String? { messages.last { !$0.isFromCurrentUser }?.id }
+
+    private var hasUnread: Bool { unreadOnOpen || latestIncomingId != readThroughId }
+
+    private func markReadIfNeeded() async {
+        guard phase == .loaded, !isMarkingRead else { return }
+        isMarkingRead = true
+        defer { isMarkingRead = false }
+        while isActive, hasUnread {
+            let target = latestIncomingId
+            do {
+                try await chat.markRead(conversationId: conversationId)
+            } catch {
+                return
+            }
+            unreadOnOpen = false
+            readThroughId = target
         }
     }
 

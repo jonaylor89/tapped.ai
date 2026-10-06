@@ -6,6 +6,7 @@ import TappedUI
 /// `StreamChannelPage`: message history + floating glass composer.
 struct ChannelView: View {
     @State private var model: ChannelViewModel
+    @Environment(\.scenePhase) private var scenePhase
 
     init(dependencies: Dependencies, conversationId: String) {
         _model = State(initialValue: ChannelViewModel(dependencies: dependencies, conversationId: conversationId))
@@ -50,6 +51,8 @@ struct ChannelView: View {
         }
         .sensoryFeedback(.impact(weight: .light), trigger: model.sentCount)
         .task(id: model.attempt) { await model.observe() }
+        .task(id: scenePhase) { await model.setActive(scenePhase == .active) }
+        .onDisappear { Task { await model.setActive(false) } }
     }
 
     private var messageList: some View {

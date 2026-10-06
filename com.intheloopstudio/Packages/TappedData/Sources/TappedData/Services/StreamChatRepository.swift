@@ -15,15 +15,23 @@ public final class StreamChatRepository: ChatRepository {
     private var unreadCount = 0
     private var unreadContinuations: [UUID: AsyncStream<Int>.Continuation] = [:]
     private var chats: [String: Chat] = [:]
+    private var watches: [String: Task<Void, any Error>] = [:]
 
     public nonisolated init(apiKey: String, tokenProvider: @escaping TokenProvider) {
-        client = ChatClient(config: ChatClientConfig(apiKeyString: apiKey))
+        var config = ChatClientConfig(apiKeyString: apiKey)
+        // Channels and messages persist on disk so lists render from cache on cold open; `logout()` wipes them.
+        config.isLocalStorageEnabled = true
+        config.shouldFlushLocalStorageOnStart = false
+        client = ChatClient(config: config)
         self.tokenProvider = tokenProvider
     }
 
     public func connectUser(_ user: UserModel) async throws {
         if client.currentUserId == user.id, connectedUser != nil { return }
-        if client.currentUserId != nil { await client.disconnect() }
+        if let previous = client.currentUserId {
+            await client.disconnect()
+            if previous != user.id { forgetChats() }
+        }
         let fetchToken = tokenProvider
         let connected = try await client.connectUser(
             userInfo: UserInfo(id: user.id, name: user.displayName, imageURL: user.profilePicture.flatMap(URL.init(string:))),
@@ -50,7 +58,7 @@ public final class StreamChatRepository: ChatRepository {
         unreadTask?.cancel()
         unreadTask = nil
         connectedUser = nil
-        chats = [:]
+        forgetChats()
         publishUnread(0)
         await client.logout()
     }
@@ -74,9 +82,18 @@ public final class StreamChatRepository: ChatRepository {
                         pageSize: 20
                     )
                     let list = self.client.makeChannelList(with: query)
-                    try await list.get()
+                    let conversations = { (channels: [ChatChannel]) in
+                        channels.map { Self.conversation(from: $0, currentUserId: userId) }
+                    }
+                    let cached = list.state.channels
+                    if !cached.isEmpty { continuation.yield(conversations(cached)) }
+                    do {
+                        try await list.get()
+                    } catch {
+                        if cached.isEmpty { throw error }
+                    }
                     for await channels in list.state.$channels.values {
-                        continuation.yield(channels.map { Self.conversation(from: $0, currentUserId: userId) })
+                        continuation.yield(conversations(channels))
                     }
                     continuation.finish()
                 } catch {
@@ -91,9 +108,16 @@ public final class StreamChatRepository: ChatRepository {
         AsyncThrowingStream { continuation in
             let task = Task { @MainActor in
                 do {
-                    let chat = try await self.watchedChat(conversationId)
+                    let chat = try self.chat(conversationId)
+                    let cached = Self.visibleMessages(chat.state.messages)
+                    if !cached.isEmpty { continuation.yield(cached) }
+                    do {
+                        try await self.watch(conversationId, chat)
+                    } catch {
+                        if cached.isEmpty { throw error }
+                    }
                     for await messages in chat.state.$messages.values {
-                        continuation.yield(messages.filter { $0.deletedAt == nil }.map(Self.message(from:)))
+                        continuation.yield(Self.visibleMessages(messages))
                     }
                     continuation.finish()
                 } catch {
@@ -112,7 +136,8 @@ public final class StreamChatRepository: ChatRepository {
 
     public func conversation(id: String) async throws -> Conversation? {
         guard let userId = client.currentUserId else { throw ChatError.notConnected }
-        let chat = try await watchedChat(id)
+        let chat = try chat(id)
+        if chat.state.channel == nil { try await watch(id, chat) }
         return chat.state.channel.map { Self.conversation(from: $0, currentUserId: userId) }
     }
 
@@ -122,6 +147,7 @@ public final class StreamChatRepository: ChatRepository {
         try await chat.get(watch: true)
         guard let id = chat.state.cid?.rawValue else { throw ChatError.invalidConversationId }
         chats[id] = chat
+        watches[id] = Task {}
         return id
     }
 
@@ -145,14 +171,41 @@ public final class StreamChatRepository: ChatRepository {
         for continuation in unreadContinuations.values { continuation.yield(count) }
     }
 
-    private func watchedChat(_ conversationId: String) async throws -> Chat {
+    /// The chat for `conversationId`, backed by the local store; its state starts out with cached data.
+    private func chat(_ conversationId: String) throws -> Chat {
         if let chat = chats[conversationId] { return chat }
         guard client.currentUserId != nil else { throw ChatError.notConnected }
         guard let cid = try? ChannelId(cid: conversationId) else { throw ChatError.invalidConversationId }
         let chat = client.makeChat(for: cid)
-        try await chat.get(watch: true)
         chats[conversationId] = chat
         return chat
+    }
+
+    /// Fetches and watches the channel once; concurrent callers share the request and failures are retried.
+    private func watch(_ conversationId: String, _ chat: Chat) async throws {
+        let task = watches[conversationId] ?? Task { try await chat.get(watch: true) }
+        watches[conversationId] = task
+        do {
+            try await task.value
+        } catch {
+            if watches[conversationId] == task { watches[conversationId] = nil }
+            throw error
+        }
+    }
+
+    private func watchedChat(_ conversationId: String) async throws -> Chat {
+        let chat = try chat(conversationId)
+        try await watch(conversationId, chat)
+        return chat
+    }
+
+    private func forgetChats() {
+        chats = [:]
+        watches = [:]
+    }
+
+    private static func visibleMessages(_ messages: [ChatMessage]) -> [ConversationMessage] {
+        messages.filter { $0.deletedAt == nil }.map(message(from:))
     }
 
     private static func conversation(from channel: ChatChannel, currentUserId: String) -> Conversation {
