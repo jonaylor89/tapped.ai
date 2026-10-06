@@ -92,6 +92,7 @@ public struct MockPlacesRepository: PlacesRepository {
     public func getPlaceById(_ placeId: String) async throws -> PlaceData? { Self.places.first { $0.placeId == placeId } }
     public func getPhotoUrl(photoName: String, maxHeightPx: Int) async throws -> URL? { nil }
     public func getPlaceIdByLatLng(lat: Double, lng: Double) async throws -> String? { Location.rva.placeId }
+    public func getPlaceByLatLng(lat: Double, lng: Double) async throws -> PlaceData? { Self.places.first { $0.placeId == Location.rva.placeId } }
 }
 
 /// Always reports Richmond, VA (`Location.rva`) unless given another result.

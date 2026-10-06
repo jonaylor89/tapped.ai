@@ -68,15 +68,7 @@ public struct TappedAPIPlacesRepository: PlacesRepository {
             await cache.storePlace(nil, for: placeId)
             return nil
         }
-        let result = PlaceData(
-            placeId: place.placeId,
-            name: place.name ?? place.shortFormattedAddress ?? "",
-            shortFormattedAddress: place.shortFormattedAddress,
-            lat: place.lat,
-            lng: place.lng,
-            locality: place.locality,
-            photoNames: place.photoNames ?? []
-        )
+        let result = place.placeData
         await cache.storePlace(result, for: placeId)
         return result
     }
@@ -94,14 +86,42 @@ public struct TappedAPIPlacesRepository: PlacesRepository {
     }
 
     public func getPlaceIdByLatLng(lat: Double, lng: Double) async throws -> String? {
-        let cacheKey = String(format: "%.4f,%.4f", lat, lng)
+        let cacheKey = reverseGeocodeCacheKey(lat: lat, lng: lng)
         if let cached = await cache.reverseGeocode(for: cacheKey) { return cached }
-        let response: ReverseGeocodeResponse = try await get("app/v1/places/reverse-geocode", queryItems: [
-            URLQueryItem(name: "lat", value: String(lat)),
-            URLQueryItem(name: "lng", value: String(lng)),
-        ])
+        let response: ReverseGeocodeResponse = try await get(
+            "app/v1/places/reverse-geocode",
+            queryItems: coordinateQueryItems(lat: lat, lng: lng)
+        )
         await cache.storeReverseGeocode(response.placeId, for: cacheKey)
         return response.placeId
+    }
+
+    /// One round trip to `/places/locality` instead of `reverse-geocode` then `places/{placeId}`.
+    public func getPlaceByLatLng(lat: Double, lng: Double) async throws -> PlaceData? {
+        let cacheKey = reverseGeocodeCacheKey(lat: lat, lng: lng)
+        if let cached = await cache.reverseGeocode(for: cacheKey) {
+            guard let placeId = cached else { return nil }
+            return try await getPlaceById(placeId)
+        }
+        let place: PlaceResponse
+        do {
+            place = try await get("app/v1/places/locality", queryItems: coordinateQueryItems(lat: lat, lng: lng))
+        } catch PlacesAPIError.requestFailed(statusCode: 404) {
+            await cache.storeReverseGeocode(nil, for: cacheKey)
+            return nil
+        }
+        let result = place.placeData
+        await cache.storeReverseGeocode(result.placeId, for: cacheKey)
+        await cache.storePlace(result, for: result.placeId)
+        return result
+    }
+
+    private func reverseGeocodeCacheKey(lat: Double, lng: Double) -> String {
+        String(format: "%.4f,%.4f", lat, lng)
+    }
+
+    private func coordinateQueryItems(lat: Double, lng: Double) -> [URLQueryItem] {
+        [URLQueryItem(name: "lat", value: String(lat)), URLQueryItem(name: "lng", value: String(lng))]
     }
 
     func makeRequest(_ path: String, queryItems: [URLQueryItem]) async throws -> URLRequest {
@@ -158,6 +178,18 @@ private struct PlaceResponse: Decodable {
     let lng: Double
     let locality: String?
     let photoNames: [String]?
+
+    var placeData: PlaceData {
+        PlaceData(
+            placeId: placeId,
+            name: name ?? shortFormattedAddress ?? "",
+            shortFormattedAddress: shortFormattedAddress,
+            lat: lat,
+            lng: lng,
+            locality: locality,
+            photoNames: photoNames ?? []
+        )
+    }
 }
 
 private struct PhotoResponse: Decodable { let photoUri: String? }
