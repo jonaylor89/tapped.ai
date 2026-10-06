@@ -1,5 +1,6 @@
 # Step 1: Build Stage
-FROM rust:1-bookworm AS builder
+# Keep in sync with rust-toolchain.toml.
+FROM rust:1.97.1-bookworm AS builder
 
 # Create a new empty shell project
 RUN USER=root cargo new --bin tapped-api-rs
