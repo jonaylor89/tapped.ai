@@ -20,6 +20,7 @@ use crate::{
             reverse_geocode,
         },
         public_docs::{get_public_opportunity, get_public_user_by_username},
+        search_index::{SyncUserResponse, spawn_new_user_reconciler, sync_current_user},
         spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
     },
     errors::{AppError, json_error_bodies, panic_response},
@@ -47,6 +48,7 @@ use axum::{
     routing::{get, post},
 };
 use axum_swagger_ui::swagger_ui;
+use chrono::TimeDelta;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::WrapErr;
 use firestore::{FirestoreDb, FirestoreDbOptions};
@@ -70,6 +72,26 @@ pub struct Application {
 }
 
 const DEFAULT_CREDENTIALS_PATH: &str = "./credentials.json";
+const NEW_USER_SYNC_INTERVAL: Duration = Duration::from_secs(5 * 60);
+/// On boot, re-checks a day of sign-ups so a deploy or restart can't drop any.
+const NEW_USER_SYNC_LOOKBACK: TimeDelta = TimeDelta::hours(24);
+
+/// Firestore with `GOOGLE_APPLICATION_CREDENTIALS` (default `./credentials.json`), falling back
+/// to application default credentials.
+pub async fn firestore_db(project_id: String) -> Result<FirestoreDb> {
+    let credentials_path = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
+        .unwrap_or_else(|_| DEFAULT_CREDENTIALS_PATH.into());
+    let db = if std::path::Path::new(&credentials_path).exists() {
+        FirestoreDb::with_options_service_account_key_file(
+            FirestoreDbOptions::new(project_id),
+            credentials_path.into(),
+        )
+        .await?
+    } else {
+        FirestoreDb::new(project_id).await?
+    };
+    Ok(db)
+}
 
 impl Application {
     pub async fn build(port: u16, project_id: String) -> Result<Self> {
@@ -77,17 +99,7 @@ impl Application {
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
         )?;
 
-        let credentials_path = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
-            .unwrap_or_else(|_| DEFAULT_CREDENTIALS_PATH.into());
-        let firestore_instance = if std::path::Path::new(&credentials_path).exists() {
-            FirestoreDb::with_options_service_account_key_file(
-                FirestoreDbOptions::new(project_id.clone()),
-                credentials_path.into(),
-            )
-            .await?
-        } else {
-            FirestoreDb::new(project_id.clone()).await?
-        };
+        let firestore_instance = firestore_db(project_id.clone()).await?;
 
         let mail_store_path =
             std::env::var("MAIL_STORE_PATH").unwrap_or_else(|_| "tapped-mail.sqlite3".into());
@@ -133,15 +145,26 @@ impl Application {
         if spotify_client_id.is_empty() || spotify_client_secret.is_empty() {
             tracing::warn!("SPOTIFY_CLIENT_ID/SECRET are not set; /app/v1/spotify will return 502");
         }
+        let typesense = Typesense::from_env();
+        let search_indexing = typesense.can_write();
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
-            search: Arc::new(Typesense::from_env()),
+            search: Arc::new(typesense),
             firebase_project_id: project_id,
             mail,
             response_cache: Default::default(),
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
         };
+
+        if search_indexing {
+            spawn_new_user_reconciler(
+                state.database.clone(),
+                state.search.clone(),
+                NEW_USER_SYNC_INTERVAL,
+                NEW_USER_SYNC_LOOKBACK,
+            );
+        }
 
         let server = run(listener, state).await?;
         Ok(Self { port, server })
@@ -283,6 +306,18 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
                     "Email venues about opportunities the user is interested in",
                 )
                 .response::<200, Json<NotifyVenueResponse>>()
+            }),
+        )
+        .api_route(
+            "/search/users/sync",
+            post_with(sync_current_user, |op| {
+                app_op(op, "Re-index the signed-in user in search")
+                    .description(
+                        "Re-reads `users/{uid}` for the token's user and upserts it into the \
+                         Typesense `users` collection, or removes it if the user is missing, \
+                         deleted, or shadow-banned. Call after creating or updating the user.",
+                    )
+                    .response::<200, Json<SyncUserResponse>>()
             }),
         )
         .route_layer(middleware::from_fn_with_state(

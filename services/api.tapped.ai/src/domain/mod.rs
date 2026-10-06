@@ -9,4 +9,5 @@ pub mod mail_worker;
 pub mod models;
 pub mod places;
 pub mod public_docs;
+pub mod search_index;
 pub mod spotify;

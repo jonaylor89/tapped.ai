@@ -10,8 +10,9 @@ use crate::{
 };
 use anyhow::Result;
 use axum::async_trait;
-use firestore::{FirestoreDb, FirestoreResult, struct_path::path};
-use futures::{TryStreamExt, stream::BoxStream};
+use chrono::{DateTime, Utc};
+use firestore::{FirestoreDb, FirestoreResult, FirestoreTimestamp, struct_path::path};
+use futures::{StreamExt, TryStreamExt, stream::BoxStream};
 use serde_json::{Value, json};
 use tracing::instrument;
 
@@ -75,6 +76,25 @@ impl Database for MockDatabase {
         })))
     }
 
+    async fn get_user_doc(&self, id: &str) -> Result<Option<Value>> {
+        if id == "missing-user" {
+            return Ok(None);
+        }
+        Ok(Some(json!({
+            "_firestore_id": id,
+            "id": id,
+            "username": "dj_nova",
+            "artistName": "Mock Artist",
+            "email": "private@example.com",
+            "stripeCustomerId": "cus_private",
+            "deleted": id == "deleted-user",
+            "timestamp": "2026-10-06T16:33:00+00:00",
+            "occupations": ["DJ"],
+            "location": { "placeId": "mock-place", "lat": 40.7128, "lng": -74.006 },
+            "performerInfo": { "label": "Independent", "genres": ["house"] },
+        })))
+    }
+
     async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
         Ok(Some(json!({
             "id": id,
@@ -122,6 +142,21 @@ pub trait Database: Send + Sync {
     /// The raw `opportunities` document.
     async fn get_opportunity_doc(&self, _id: &str) -> Result<Option<Value>> {
         Ok(None)
+    }
+
+    /// The raw `users/{id}` document, for search indexing.
+    async fn get_user_doc(&self, _id: &str) -> Result<Option<Value>> {
+        Ok(None)
+    }
+
+    /// Raw `users` documents whose `timestamp` (sign-up time) is at or after `since`.
+    async fn get_user_docs_created_since(&self, _since: DateTime<Utc>) -> Result<Vec<Value>> {
+        Ok(vec![])
+    }
+
+    /// Every raw `users` document, paged from Firestore.
+    async fn stream_user_docs(&self) -> Result<BoxStream<'static, Result<Value>>> {
+        Ok(futures::stream::empty().boxed())
     }
 }
 
@@ -459,5 +494,51 @@ impl Database for Firestore {
             .await?;
 
         Ok(doc)
+    }
+
+    #[instrument]
+    async fn get_user_doc(&self, id: &str) -> Result<Option<Value>> {
+        let doc: Option<Value> = self
+            .db
+            .fluent()
+            .select()
+            .by_id_in("users")
+            .obj()
+            .one(id)
+            .await?;
+
+        Ok(doc)
+    }
+
+    #[instrument]
+    async fn get_user_docs_created_since(&self, since: DateTime<Utc>) -> Result<Vec<Value>> {
+        let docs: Vec<Value> = self
+            .db
+            .fluent()
+            .select()
+            .from("users")
+            .filter(|q| {
+                q.field("timestamp")
+                    .greater_than_or_equal(FirestoreTimestamp(since))
+            })
+            .obj()
+            .query()
+            .await?;
+
+        Ok(docs)
+    }
+
+    async fn stream_user_docs(&self) -> Result<BoxStream<'static, Result<Value>>> {
+        let docs = self
+            .db
+            .fluent()
+            .list()
+            .from("users")
+            .page_size(300)
+            .obj::<Value>()
+            .stream_all_with_errors()
+            .await?;
+
+        Ok(docs.map_err(anyhow::Error::from).boxed())
     }
 }

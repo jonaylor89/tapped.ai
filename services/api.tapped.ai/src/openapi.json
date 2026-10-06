@@ -453,6 +453,46 @@
         ]
       }
     },
+    "/app/v1/search/users/sync": {
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Re-index the signed-in user in search",
+        "description": "Re-reads `users/{uid}` for the token's user and upserts it into the Typesense `users` collection, or removes it if the user is missing, deleted, or shadow-banned. Call after creating or updating the user.",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncUserResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
     "/app/v1/places/autocomplete": {
       "get": {
         "tags": [
@@ -1880,6 +1920,17 @@
           }
         }
       },
+      "SyncUserResponse": {
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/UserIndexStatus"
+          }
+        }
+      },
       "TicketRange": {
         "type": "object",
         "required": [
@@ -1910,6 +1961,24 @@
             ]
           }
         }
+      },
+      "UserIndexStatus": {
+        "oneOf": [
+          {
+            "description": "The user's search document was upserted.",
+            "type": "string",
+            "enum": [
+              "indexed"
+            ]
+          },
+          {
+            "description": "The user is missing, deleted, or shadow-banned, so any search document was removed.",
+            "type": "string",
+            "enum": [
+              "removed"
+            ]
+          }
+        ]
       },
       "UsernamePath": {
         "type": "object",

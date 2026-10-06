@@ -32,7 +32,7 @@ pub struct OpportunityIdPath {
 const PUBLIC_DOC_TTL: Duration = Duration::from_secs(5 * 60);
 
 /// Top-level `users` fields that must never leave the backend.
-const PRIVATE_USER_FIELDS: &[&str] = &[
+pub(crate) const PRIVATE_USER_FIELDS: &[&str] = &[
     "email",
     "phoneNumber",
     "stripeConnectedAccountId",
@@ -46,7 +46,8 @@ const PRIVATE_USER_FIELDS: &[&str] = &[
     "source",
 ];
 /// Legacy flattened notification settings (`emailNotificationsAppReleases`, ...).
-const PRIVATE_USER_FIELD_PREFIXES: &[&str] = &["emailNotifications", "pushNotifications"];
+pub(crate) const PRIVATE_USER_FIELD_PREFIXES: &[&str] =
+    &["emailNotifications", "pushNotifications"];
 const PRIVATE_VENUE_INFO_FIELDS: &[&str] = &["bookingEmail", "phoneNumber"];
 
 fn is_safe_id(value: &str) -> bool {

@@ -8,7 +8,11 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
     static let tccUserId = "yfjw9oCMwPVzAxgENxGxecPcNym1"
     static let verifiedBadgeId = "0aa46576-1fbe-4312-8b69-e2fef3269083"
 
-    public init() {}
+    private let searchIndex: (any SearchIndexRepository)?
+
+    public init(searchIndex: (any SearchIndexRepository)? = nil) {
+        self.searchIndex = searchIndex
+    }
 
     private var db: Firestore { Firestore.firestore() }
     private var users: CollectionReference { db.collection("users") }
@@ -29,6 +33,16 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
         services.document(userId).collection("userServices")
     }
 
+    /// Re-indexes the signed-in user once the write reaches the server. Best effort: the API's
+    /// new-user reconciler and backfill cover a failed call, and the save itself already succeeded.
+    private func syncSearchIndex() {
+        guard let searchIndex else { return }
+        Task {
+            try? await Firestore.firestore().waitForPendingWrites()
+            try? await searchIndex.syncCurrentUser()
+        }
+    }
+
     // MARK: - implemented
 
     public func userEmailExists(_ email: String) async throws -> Bool {
@@ -37,6 +51,7 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
 
     public func createUser(_ user: UserModel) async throws {
         try users.document(user.id).setData(from: user, merge: true)
+        syncSearchIndex()
     }
 
     public func getUserByUsername(_ username: String?) async throws -> UserModel? {
@@ -53,6 +68,7 @@ public struct FirestoreDatabaseRepository: DatabaseRepository {
 
     public func updateUserData(_ user: UserModel) async throws {
         try users.document(user.id).setData(from: user, merge: true)
+        syncSearchIndex()
     }
 
     public func checkUsernameAvailability(_ username: String, userId: String) async throws -> Bool {

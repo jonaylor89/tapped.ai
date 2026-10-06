@@ -36,6 +36,7 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates && \
 # Copy the build artifact from the build stage
 COPY --from=builder /tapped-api-rs/target/release/tapped-api-rs /usr/local/bin/tapped-api-rs
 COPY --from=builder /tapped-api-rs/target/release/mail_worker /usr/local/bin/mail_worker
+COPY --from=builder /tapped-api-rs/target/release/search_sync /usr/local/bin/search_sync
 
 # Set environment variables
 ENV RUST_LOG=info

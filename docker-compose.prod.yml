@@ -26,6 +26,8 @@ services:
       TYPESENSE_PORT: "8108"
       TYPESENSE_PROTOCOL: http
       TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_API_KEY}
+      # Server-only: user indexing (/app/v1/search/users/sync, the new-user reconciler, search_sync).
+      TYPESENSE_ADMIN_API_KEY: ${TYPESENSE_API_KEY}
       STREAM_KEY: ${STREAM_KEY}
       STREAM_SECRET: ${STREAM_SECRET}
       MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}

@@ -1,11 +1,17 @@
 use crate::domain::models::user::UserModel;
 use anyhow::Result;
 use axum::async_trait;
+use serde_json::Value;
 use std::collections::HashSet;
 use tracing::instrument;
 use typesense_codegen::apis::configuration::{ApiKey, Configuration};
-use typesense_codegen::apis::documents_api;
-use typesense_codegen::models::SearchParameters;
+use typesense_codegen::apis::{Error as TypesenseError, documents_api};
+use typesense_codegen::models::{
+    ExportDocumentsExportDocumentsParametersParameter,
+    ImportDocumentsImportDocumentsParametersParameter, SearchParameters,
+};
+
+pub const USERS_COLLECTION: &str = "users";
 
 #[derive(Debug, Clone, Default)]
 pub struct MockSearch;
@@ -17,6 +23,18 @@ impl Search for MockSearch {
         _query: String,
         _option: UserSearchOptions,
     ) -> Result<Vec<UserModel>> {
+        Ok(vec![])
+    }
+
+    async fn upsert_users(&self, _documents: Vec<Value>) -> Result<usize> {
+        Ok(0)
+    }
+
+    async fn delete_user(&self, _id: &str) -> Result<()> {
+        Ok(())
+    }
+
+    async fn list_user_ids(&self) -> Result<Vec<String>> {
         Ok(vec![])
     }
 }
@@ -61,27 +79,59 @@ pub trait Search: Send + Sync {
     async fn ping(&self) -> Result<()> {
         Ok(())
     }
+
+    /// Inserts or replaces user documents (built by `domain::search_index`). Returns how many
+    /// documents Typesense rejected.
+    async fn upsert_users(&self, documents: Vec<Value>) -> Result<usize>;
+
+    /// Removes a user document. Missing documents are not an error.
+    async fn delete_user(&self, id: &str) -> Result<()>;
+
+    /// Every indexed user ID.
+    async fn list_user_ids(&self) -> Result<Vec<String>>;
 }
 
 #[derive(Debug, Clone)]
 pub struct Typesense {
     config: Configuration,
+    /// Writes use the admin key, which never leaves the server; the app only has a search key.
+    admin: Option<Configuration>,
+}
+
+fn configuration(base_path: String, api_key: String) -> Configuration {
+    Configuration {
+        base_path,
+        api_key: Some(ApiKey {
+            prefix: None,
+            key: api_key,
+        }),
+        client: crate::http::client(),
+        ..Default::default()
+    }
 }
 
 impl Typesense {
     pub fn new(host: String, port: u16, protocol: String, api_key: String) -> Self {
         let base_path = format!("{}://{}:{}", protocol, host, port);
-        let config = Configuration {
-            base_path,
-            api_key: Some(ApiKey {
-                prefix: None,
-                key: api_key,
-            }),
-            client: crate::http::client(),
-            ..Default::default()
-        };
+        Self {
+            config: configuration(base_path, api_key),
+            admin: None,
+        }
+    }
 
-        Self { config }
+    pub fn with_admin_key(mut self, admin_api_key: String) -> Self {
+        self.admin = Some(configuration(self.config.base_path.clone(), admin_api_key));
+        self
+    }
+
+    pub fn can_write(&self) -> bool {
+        self.admin.is_some()
+    }
+
+    fn admin(&self) -> Result<&Configuration> {
+        self.admin
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("TYPESENSE_ADMIN_API_KEY is not set"))
     }
 
     pub fn from_env() -> Self {
@@ -94,7 +144,16 @@ impl Typesense {
         let api_key = std::env::var("TYPESENSE_SEARCH_API_KEY")
             .expect("TYPESENSE_SEARCH_API_KEY must be set");
 
-        Self::new(host, port, protocol, api_key)
+        let typesense = Self::new(host, port, protocol, api_key);
+        match std::env::var("TYPESENSE_ADMIN_API_KEY") {
+            Ok(admin_api_key) if !admin_api_key.is_empty() => {
+                typesense.with_admin_key(admin_api_key)
+            }
+            _ => {
+                tracing::warn!("TYPESENSE_ADMIN_API_KEY is not set; user search indexing is off");
+                typesense
+            }
+        }
     }
 }
 
@@ -106,6 +165,69 @@ impl Search for Typesense {
             .map_err(|error| anyhow::anyhow!("typesense health check failed: {error}"))?;
         anyhow::ensure!(status.ok, "typesense reports it is not ready");
         Ok(())
+    }
+
+    async fn upsert_users(&self, documents: Vec<Value>) -> Result<usize> {
+        if documents.is_empty() {
+            return Ok(0);
+        }
+        let body = documents
+            .iter()
+            .map(Value::to_string)
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut params = ImportDocumentsImportDocumentsParametersParameter::new();
+        params.action = Some("upsert".into());
+        let response =
+            documents_api::import_documents(self.admin()?, USERS_COLLECTION, body, Some(params))
+                .await
+                .map_err(|error| anyhow::anyhow!("typesense import failed: {error}"))?;
+
+        // One JSON result per line, in document order.
+        let mut rejected = 0;
+        for (document, line) in documents.iter().zip(response.lines()) {
+            let result: Value = serde_json::from_str(line).unwrap_or(Value::Null);
+            if result.get("success").and_then(Value::as_bool) != Some(true) {
+                rejected += 1;
+                let user_id = document.get("id").and_then(Value::as_str);
+                let error = result.get("error").and_then(Value::as_str);
+                tracing::error!(user_id, error, "typesense rejected user document");
+            }
+        }
+        Ok(rejected)
+    }
+
+    async fn delete_user(&self, id: &str) -> Result<()> {
+        match documents_api::delete_document(self.admin()?, USERS_COLLECTION, id).await {
+            Ok(_) => Ok(()),
+            Err(TypesenseError::ResponseError(response)) if response.status.as_u16() == 404 => {
+                Ok(())
+            }
+            Err(error) => Err(anyhow::anyhow!("typesense delete failed: {error}")),
+        }
+    }
+
+    async fn list_user_ids(&self) -> Result<Vec<String>> {
+        let params = ExportDocumentsExportDocumentsParametersParameter {
+            filter_by: None,
+            include_fields: "id".into(),
+            exclude_fields: String::new(),
+        };
+        let export = documents_api::export_documents(self.admin()?, USERS_COLLECTION, Some(params))
+            .await
+            .map_err(|error| anyhow::anyhow!("typesense export failed: {error}"))?;
+        export
+            .lines()
+            .filter(|line| !line.is_empty())
+            .map(|line| {
+                let document: Value = serde_json::from_str(line)?;
+                document
+                    .get("id")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+                    .ok_or_else(|| anyhow::anyhow!("exported document without an id"))
+            })
+            .collect()
     }
 
     #[instrument(skip(self))]

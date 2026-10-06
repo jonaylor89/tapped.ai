@@ -102,6 +102,32 @@ docker compose up -d imgproxy cloudflared
 curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' '<firebase download URL>' | base64 | tr '+/' '-_' | tr -d '=\n')"
 ```
 
+## User search indexing
+
+Firestore `users/{uid}` is the source of truth for the Typesense `users` collection (search and the Discover map). The API owns indexing, using `TYPESENSE_ADMIN_API_KEY` (server-only; the app ships a search-only key):
+
+- `POST /app/v1/search/users/sync` re-indexes the caller's own user (UID from the Firebase ID token). The iOS app calls it after `createUser` / `updateUserData`.
+- The API polls Firestore every 5 minutes for users whose `timestamp` (sign-up time) is new and indexes them, so sign-ups from older app builds still appear. On boot it re-checks the last 24 hours.
+- Missing, `deleted`, and `shadowBanned` users are removed from the index.
+
+### Backfill
+
+Run the `search_sync` binary from the API image, with the API's environment:
+
+```bash
+tailscale ssh root@tapped-prod
+cd /opt/tapped
+# Every user (upserts all, removes deleted/shadow-banned):
+docker compose run --rm --no-deps api search_sync --all
+# Also remove search docs whose Firestore user no longer exists:
+docker compose run --rm --no-deps api search_sync --all --prune
+# Or just sign-ups since a date, or one user:
+docker compose run --rm --no-deps api search_sync --since 2025-01-01T00:00:00Z
+docker compose run --rm --no-deps api search_sync --user <uid>
+```
+
+`--all` reads every `users` document once (one Firestore read per user). It logs progress every 250 users and the final `indexed` / `removed` / `rejected` counts; any rejected documents are logged with the user ID and Typesense's error.
+
 ## Backup
 
 ### Export Typesense data
