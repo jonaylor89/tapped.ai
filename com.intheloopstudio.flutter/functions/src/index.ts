@@ -7,7 +7,6 @@ import { createUnclaimedUser, transferUser } from "./lib/users";
 import type { UserModel } from "./types/models";
 
 export * from "./lib/activities";
-export * from "./lib/ai_generators";
 export * from "./lib/bookings";
 export * from "./lib/crawler";
 export * from "./lib/dm_email_sync";
@@ -15,14 +14,10 @@ export * from "./lib/email_triggers";
 export * from "./lib/mailchimp";
 export * from "./lib/notifications";
 export * from "./lib/opportunities";
-export * from "./lib/payments";
-export * from "./lib/places";
-export * from "./lib/search";
 export * from "./lib/services";
 export * from "./lib/signups";
 export * from "./lib/spotify";
 export * from "./lib/stream";
-export * from "./lib/user_feedback";
 export * from "./lib/users";
 export * from "./lib/webhooks";
 

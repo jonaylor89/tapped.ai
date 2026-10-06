@@ -7,18 +7,13 @@ import { onDocumentCreated } from "firebase-functions/v2/firestore";
 
 import type { User } from "stream-chat";
 
-import { labelApplied } from "../email_templates/label_applied";
 import { newDirectMessage } from "../email_templates/new_dm";
 import { premiumWaitlist } from "../email_templates/premium_waitlist";
-import { subscriptionExpiration } from "../email_templates/subscription_expiration";
-import { subscriptionPurchase } from "../email_templates/subscription_purchase";
-import { venueContacted } from "../email_templates/venue_contacted";
 import { welcomeTemplate } from "../email_templates/welcome";
 import type { Booking, UserModel } from "../types/models";
 import { MAIL_API_SECRET, mailRef, queuedWritesRef, usersRef } from "./firebase";
 import * as postmark from "./mail_client";
-// import { venueContacted } from "../email_templates/venue_contacted";
-
+//
 export const sendWelcomeEmailOnUserCreated = functions
   .runWith({ secrets: [MAIL_API_SECRET] })
   .auth.user()
@@ -44,30 +39,6 @@ export const sendWelcomeEmailOnUserCreated = functions
       MessageStream: "outbound",
     });
   });
-
-export const sendEmailOnLabelApplication = onDocumentCreated(
-  {
-    document: "label_applications/{applicationId}",
-    secrets: [MAIL_API_SECRET],
-  },
-  async (event) => {
-    const snapshot = event.data;
-    const application = snapshot?.data();
-    const email = application?.email;
-    if (email === undefined || email === null || email === "") {
-      throw new Error(`application ${application?.id} does not have an email`);
-    }
-
-    const client = new postmark.ServerClient(MAIL_API_SECRET.value());
-    await client.sendEmail({
-      From: "no-reply@tapped.ai",
-      To: email,
-      Subject: "thank you for applying to Tapped Ai!",
-      HtmlBody: `<div style="white-space: pre;">${labelApplied}</div>`,
-      MessageStream: "outbound",
-    });
-  },
-);
 
 export const sendBookingRequestSentEmailOnBooking = functions.firestore
   .document("bookings/{bookingId}")
@@ -339,83 +310,6 @@ export const sendEmailOnPremiumWaitlist = onDocumentCreated(
     });
   },
 );
-
-export const _sendEmailOnVenueContacting = async ({
-  userId,
-  emailClient,
-}: {
-  userId: string;
-  emailClient: postmark.ServerClient;
-}): Promise<void> => {
-  const userSnap = await usersRef.doc(userId).get();
-  if (!userSnap.exists) {
-    error(`user does not exist ${userId}`);
-    return;
-  }
-
-  const user = userSnap.data() as UserModel;
-  const email = user.email;
-
-  if (email === undefined || email === null || email === "") {
-    throw new Error(`${userId} does not have an email`);
-  }
-
-  await emailClient.sendEmail({
-    From: "no-reply@tapped.ai",
-    To: email,
-    Subject: "performance request sent!",
-    HtmlBody: `<div style="white-space: pre;">${venueContacted}</div>`,
-    MessageStream: "outbound",
-  });
-};
-
-export async function sendEmailSubscriptionPurchase(postmarkServerId: string, userId: string): Promise<void> {
-  const client = new postmark.ServerClient(postmarkServerId);
-
-  const userSnap = await usersRef.doc(userId).get();
-  if (!userSnap.exists) {
-    error(`user does not exist ${userId}`);
-    throw new Error(`user does not exist ${userId}`);
-  }
-
-  const user = userSnap.data() as UserModel;
-  const email = user.email;
-
-  if (email === undefined || email === null || email === "") {
-    throw new Error(`email is undefined, null or empty: ${email}`);
-  }
-
-  await client.sendEmail({
-    From: "no-reply@tapped.ai",
-    To: email,
-    Subject: "thank you for subscribing!",
-    HtmlBody: `<div style="white-space: pre;">${subscriptionPurchase}</div>`,
-    MessageStream: "outbound",
-  });
-}
-
-export async function sendEmailSubscriptionExpiration(postmarkServerId: string, userId: string): Promise<void> {
-  const client = new postmark.ServerClient(postmarkServerId);
-  const userSnap = await usersRef.doc(userId).get();
-  if (!userSnap.exists) {
-    throw new Error(`user does not exist ${userId}`);
-  }
-
-  const user = userSnap.data() as UserModel;
-  const email = user.email;
-
-  if (email === undefined || email === null || email === "") {
-    throw new Error(`email is undefined, null or empty: ${email}`);
-  }
-
-  await client.sendEmail({
-    From: "no-reply@tapped.ai",
-    To: email,
-    Subject: "your subscription has expired!",
-    HtmlBody: `<div style="white-space: pre;">${subscriptionExpiration}</div>`,
-    MessageStream: "outbound",
-  });
-}
 
 export async function sendEmailToPerformerFromStreamMessage({
   msg,

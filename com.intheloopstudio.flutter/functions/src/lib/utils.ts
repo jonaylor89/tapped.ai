@@ -1,8 +1,5 @@
 /* eslint-disable import/no-unresolved */
 
-import type { CallableContext } from "firebase-functions/v1/https";
-
-import { HttpsError } from "firebase-functions/v2/https";
 import { tokensRef } from "./firebase";
 
 const founderIds = [
@@ -37,14 +34,6 @@ export const getFoundersDeviceTokens = async (): Promise<string[]> => {
   ).flat();
 
   return deviceTokens;
-};
-
-export const authenticated = (context: CallableContext): void => {
-  // Checking that the user is authenticated.
-  if (!context.auth) {
-    // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError("failed-precondition", "The function must be called while authenticated.");
-  }
 };
 
 export const sanitizeUsername = (artistName: string): string => {

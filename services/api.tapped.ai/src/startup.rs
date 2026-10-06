@@ -1,5 +1,5 @@
 use crate::{
-    data::{database::Firestore, places::GooglePlaces, search::Typesense},
+    data::{database::Firestore, places::GooglePlaces, search::Typesense, spotify::SpotifyHttp},
     docs::docs_routes,
     domain::{
         app_functions::{notify_venue_of_interested_opportunities, stream_user_token},
@@ -11,6 +11,7 @@ use crate::{
         mail_composer::OpenAiEmailComposer,
         places::{autocomplete_places, get_place, get_place_photo, reverse_geocode},
         public_docs::{get_public_opportunity, get_public_user_by_username},
+        spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
     },
     errors::AppError,
     routes::v1_routes,
@@ -108,6 +109,11 @@ impl Application {
         if google_places_api_key.is_empty() {
             tracing::warn!("GOOGLE_PLACES_API_KEY is not set; /app/v1/places will return 502");
         }
+        let spotify_client_id = std::env::var("SPOTIFY_CLIENT_ID").unwrap_or_default();
+        let spotify_client_secret = std::env::var("SPOTIFY_CLIENT_SECRET").unwrap_or_default();
+        if spotify_client_id.is_empty() || spotify_client_secret.is_empty() {
+            tracing::warn!("SPOTIFY_CLIENT_ID/SECRET are not set; /app/v1/spotify will return 502");
+        }
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
             search: Arc::new(Typesense::from_env()),
@@ -115,6 +121,7 @@ impl Application {
             mail,
             response_cache: Default::default(),
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
+            spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
         };
 
         let server = run(listener, state).await?;
@@ -181,6 +188,11 @@ async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, 
                 .route("/stream-token", post(stream_user_token))
                 .route("/places/photo", get(get_place_photo))
                 .route("/places/reverse-geocode", get(reverse_geocode))
+                .route("/spotify/artists/:artist_id", get(get_spotify_artist))
+                .route(
+                    "/spotify/artists/:artist_id/top-tracks",
+                    get(get_spotify_artist_top_tracks),
+                )
                 .route(
                     "/opportunity-venue-notifications",
                     post(notify_venue_of_interested_opportunities),

@@ -3,6 +3,20 @@
 ## Overview
 Move HTTP/callable Cloud Functions from `com.intheloopstudio/functions/` to the Rust API at `https://api.tapped.ai` (deployed on the Hetzner VPS).
 
+## Status
+
+Removed from `functions/src` (run `firebase functions:delete` for any still deployed):
+- Stripe: `createPaymentIntent`, `createConnectedAccount`, `getAccountById`
+- RevenueCat webhooks: `sendEmailOnSubscriptionPurchase`, `sendEmailOnSubscriptionExpiration`
+- Replaced by the API: `getPlaceById`, `getPlaceIdByLatLng` (`/app/v1/places/*`), `notifyVenueOfInterestedOpportunities` (`POST /app/v1/opportunity-venue-notifications`)
+- Unused: `addActivity`, `transformLocationPayloadForSearch`, `giveUserCoverArtCreditsOnCreate`, `notifyFoundersOnUserFeedbackSubmitted`, `sendEmailOnLabelApplication`
+
+Ported, Cloud Function still deployed until clients switch:
+- `getArtistBySpotifyId` → `GET /app/v1/spotify/artists/:artistId`
+- `getTopTracksByArtistId` → `GET /app/v1/spotify/artists/:artistId/top-tracks?market=US`
+- `streamBeforeMessageWebhook` → `POST /webhooks/stream/before-message`
+- `inboundEmailWebhook` proxies to `POST /webhooks/postmark/inbound`
+
 ## Firebase Auth in Rust
 Use [`firebase-verifyid`](https://crates.io/crates/firebase-verifyid) for Axum middleware:
 ```toml
@@ -29,24 +43,12 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 ### Callable (`onCall`)
 | Function | File | What it does |
 |----------|------|-------------|
-| `addActivity` | activities.ts | Create an activity |
-| `createPaymentIntent` | payments.ts | Stripe payment intent |
-| `createConnectedAccount` | payments.ts | Stripe connected account |
-| `getAccountById` | payments.ts | Get Stripe account |
-| `getPlaceById` | places.ts | Google Places lookup |
-| `getPlaceIdByLatLng` | places.ts | Reverse geocode |
-| `transformLocationPayloadForSearch` | search.ts | Transform location for indexing |
-| `createAvatarInferenceJob` | ai_generators.ts | Create AI avatar job |
 | `spotifyAuthorizeCodeGrant` | spotify.ts | Spotify auth code exchange |
 | `spotifyRefreshToken` | spotify.ts | Refresh Spotify token |
-| `getArtistBySpotifyId` | spotify.ts | Get Spotify artist |
-| `getTopTracksByArtistId` | spotify.ts | Get Spotify top tracks |
 
 ### Webhooks (`onRequest`)
 | Function | File | What it does |
 |----------|------|-------------|
-| `sendEmailOnSubscriptionPurchase` | webhooks.ts | RevenueCat subscription webhook |
-| `sendEmailOnSubscriptionExpiration` | webhooks.ts | RevenueCat expiration webhook |
 | `streamBeforeMessageWebhook` | webhooks.ts | Stream chat message hook |
 | `inboundEmailWebhook` | webhooks.ts | Postmark inbound email |
 
@@ -68,7 +70,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | `sendBookingRequestSentEmailOnBooking` | email_triggers.ts | `bookings/{id}` onCreate |
 | `sendBookingRequestReceivedEmailOnBooking` | email_triggers.ts | `bookings/{id}` onCreate |
 | `sendBookingNotificationsOnBookingConfirmed` | email_triggers.ts | `bookings/{id}` onUpdate |
-| `sendEmailOnLabelApplication` | email_triggers.ts | label applications onCreate |
 | `sendEmailOnPremiumWaitlist` | email_triggers.ts | premium waitlist onCreate |
 | `copyOpportunityToFeedsOnCreate` | opportunities.ts | `opportunities/{id}` onWrite |
 | `addInterestedUserOnApplyToOpportunity` | opportunities.ts | opportunity onUpdate |
@@ -76,9 +77,7 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | `incrementServiceCountOnBooking` | services.ts | `bookings/{id}` onCreate |
 | `createDefaultServicesOnUserCreated` | services.ts | `users/{id}` onCreate |
 | `notifyFoundersOnUserOnboarded` | signups.ts | `users/{id}` onCreate |
-| `notifyFoundersOnUserFeedbackSubmitted` | user_feedback.ts | feedback onCreate |
 | `createBookingOnEventCrawled` | crawler.ts | `crawler/{link}` onCreate |
-| `onDeleteAvatar` | ai_generators.ts | avatar doc onDelete |
 
 ### Auth Triggers
 | Function | File | Trigger |
@@ -87,7 +86,6 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 | `createStreamUserOnUserCreated` | stream.ts | auth.user.onCreate |
 | `updateStreamUserOnUserUpdate` | stream.ts | user doc onUpdate |
 | `deleteStreamUser` | stream.ts | auth.user.onDelete |
-| `giveUserCoverArtCreditsOnCreate` | ai_generators.ts | auth.user.onCreate |
 | `createOpportunityFeedOnUserCreated` | opportunities.ts | auth.user.onCreate |
 | `notifyFoundersOnSignUp` | signups.ts | auth.user.onCreate |
 | `notifyFoundersOnUserDelete` | signups.ts | auth.user.onDelete |

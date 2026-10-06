@@ -1,5 +1,5 @@
 use crate::{
-    data::{database::Database, places::Places, search::Search},
+    data::{database::Database, places::Places, search::Search, spotify::Spotify},
     domain::mail_bridge::MailBridge,
 };
 use serde_json::Value;
@@ -66,4 +66,5 @@ pub struct AppStateDyn {
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
     pub places: Arc<dyn Places>,
+    pub spotify: Arc<dyn Spotify>,
 }

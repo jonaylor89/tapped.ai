@@ -1,0 +1,187 @@
+//! Spotify lookups for signed-in users (replaces the `getArtistBySpotifyId` and
+//! `getTopTracksByArtistId` callables). The Spotify app credentials stay server-side.
+
+use std::time::Duration;
+
+use axum::{
+    Json,
+    extract::{Path, Query, State},
+    http::StatusCode,
+};
+use serde::Deserialize;
+use serde_json::Value;
+
+use crate::{domain::firebase_auth::FirebaseUser, state::AppStateDyn};
+
+const SPOTIFY_TTL: Duration = Duration::from_secs(60 * 60);
+
+/// Spotify IDs are base62; they are interpolated into Spotify URL paths.
+fn is_valid_spotify_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 64 && id.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
+/// ISO 3166-1 alpha-2 country code, or `from_token`.
+fn is_valid_market(market: &str) -> bool {
+    market == "from_token" || (market.len() == 2 && market.chars().all(|c| c.is_ascii_uppercase()))
+}
+
+fn upstream_error(error: anyhow::Error) -> StatusCode {
+    tracing::error!("spotify request failed: {error:#}");
+    StatusCode::BAD_GATEWAY
+}
+
+fn cached_or_none(state: &AppStateDyn, key: &str) -> Option<Value> {
+    state.response_cache.get(key)
+}
+
+pub async fn get_spotify_artist(
+    State(state): State<AppStateDyn>,
+    _user: FirebaseUser,
+    Path(artist_id): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    if !is_valid_spotify_id(&artist_id) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let cache_key = format!("spotify-artist:{artist_id}");
+    if let Some(artist) = cached_or_none(&state, &cache_key) {
+        return Ok(Json(artist));
+    }
+
+    let artist = state
+        .spotify
+        .artist(&artist_id)
+        .await
+        .map_err(upstream_error)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    state
+        .response_cache
+        .insert(cache_key, artist.clone(), SPOTIFY_TTL);
+    Ok(Json(artist))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct TopTracksParams {
+    market: Option<String>,
+}
+
+pub async fn get_spotify_artist_top_tracks(
+    State(state): State<AppStateDyn>,
+    _user: FirebaseUser,
+    Path(artist_id): Path<String>,
+    Query(params): Query<TopTracksParams>,
+) -> Result<Json<Value>, StatusCode> {
+    let market = params.market.as_deref();
+    if !is_valid_spotify_id(&artist_id) || market.is_some_and(|m| !is_valid_market(m)) {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+    let cache_key = format!(
+        "spotify-top-tracks:{artist_id}:{}",
+        market.unwrap_or_default()
+    );
+    if let Some(tracks) = cached_or_none(&state, &cache_key) {
+        return Ok(Json(tracks));
+    }
+
+    let tracks = state
+        .spotify
+        .top_tracks(&artist_id, market)
+        .await
+        .map_err(upstream_error)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+    state
+        .response_cache
+        .insert(cache_key, tracks.clone(), SPOTIFY_TTL);
+    Ok(Json(tracks))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::{
+        database::MockDatabase,
+        places::MockPlaces,
+        search::MockSearch,
+        spotify::{MOCK_MISSING_ARTIST_ID, MockSpotify},
+    };
+    use std::sync::Arc;
+
+    fn state() -> AppStateDyn {
+        AppStateDyn {
+            database: Arc::new(MockDatabase),
+            search: Arc::new(MockSearch),
+            firebase_project_id: "test-project".into(),
+            mail: crate::domain::mail_bridge::MailBridge::disabled(),
+            response_cache: Default::default(),
+            places: Arc::new(MockPlaces),
+            spotify: Arc::new(MockSpotify),
+        }
+    }
+
+    fn user() -> FirebaseUser {
+        FirebaseUser {
+            uid: "user-1".into(),
+            email: None,
+        }
+    }
+
+    #[test]
+    fn validates_ids_and_markets() {
+        assert!(is_valid_spotify_id("4Z8W4fKeB5YxbusRsdQVPb"));
+        assert!(!is_valid_spotify_id(""));
+        assert!(!is_valid_spotify_id("4Z8W/../me"));
+        assert!(!is_valid_spotify_id("abc?market=US"));
+        assert!(is_valid_market("US"));
+        assert!(is_valid_market("from_token"));
+        assert!(!is_valid_market("us"));
+        assert!(!is_valid_market("USA"));
+    }
+
+    #[tokio::test]
+    async fn returns_spotify_artist_json() {
+        let Json(artist) = get_spotify_artist(
+            State(state()),
+            user(),
+            Path("4Z8W4fKeB5YxbusRsdQVPb".into()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(artist["id"], "4Z8W4fKeB5YxbusRsdQVPb");
+        assert_eq!(artist["name"], "Mock Artist");
+    }
+
+    #[tokio::test]
+    async fn unknown_artist_is_not_found() {
+        let result =
+            get_spotify_artist(State(state()), user(), Path(MOCK_MISSING_ARTIST_ID.into())).await;
+        assert_eq!(result.unwrap_err(), StatusCode::NOT_FOUND);
+    }
+
+    #[tokio::test]
+    async fn returns_top_tracks() {
+        let Json(tracks) = get_spotify_artist_top_tracks(
+            State(state()),
+            user(),
+            Path("4Z8W4fKeB5YxbusRsdQVPb".into()),
+            Query(TopTracksParams {
+                market: Some("US".into()),
+            }),
+        )
+        .await
+        .unwrap();
+        assert_eq!(tracks["tracks"][0]["name"], "Mock Track");
+    }
+
+    #[tokio::test]
+    async fn rejects_invalid_market() {
+        let result = get_spotify_artist_top_tracks(
+            State(state()),
+            user(),
+            Path("4Z8W4fKeB5YxbusRsdQVPb".into()),
+            Query(TopTracksParams {
+                market: Some("us&x=1".into()),
+            }),
+        )
+        .await;
+        assert_eq!(result.unwrap_err(), StatusCode::BAD_REQUEST);
+    }
+}
