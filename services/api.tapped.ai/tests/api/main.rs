@@ -8,4 +8,5 @@ pub mod openapi;
 pub mod performers;
 pub mod places;
 pub mod public_docs;
+pub mod request_id;
 pub mod root;

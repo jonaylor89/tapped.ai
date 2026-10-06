@@ -208,6 +208,7 @@ struct PostmarkEmail {
     message_stream: &'static str,
 }
 
+#[tracing::instrument(skip_all, fields(dependency = "postmark"))]
 pub async fn submit_postmark(
     client: &Client,
     endpoint: &str,

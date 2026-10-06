@@ -35,6 +35,7 @@ public struct TappedAPISpotifyRepository: SpotifyRepository {
         guard let token = try await idToken(), !token.isEmpty else { throw TappedAPIError.notSignedIn }
         var request = URLRequest(url: baseURL.appending(path: "app/v1/spotify/artists").appending(path: id))
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         return request
     }
 }
