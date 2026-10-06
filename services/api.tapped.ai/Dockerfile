@@ -21,8 +21,8 @@ RUN touch src/main.rs && cargo build --release
 # Step 2: Runtime Stage
 FROM debian:bookworm-slim
 
-# Run as "app" user
-RUN useradd -ms /bin/bash app
+# Run as "app" user. The uid is fixed so the deploy can chown the mail volume and credentials.
+RUN useradd -u 10001 -ms /bin/bash app && mkdir /data && chown app:app /data
 
 # Install openssl
 RUN apt-get -y update
@@ -41,6 +41,8 @@ ENV RUST_LOG=info
 
 # Expose the port the app runs on
 EXPOSE 3000
+
+USER app
 
 # Run the binary
 CMD ["tapped-api-rs"]
