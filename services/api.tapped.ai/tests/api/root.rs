@@ -6,7 +6,7 @@ async fn root_returns_ok() {
 
     let response = app
         .api_client
-        .get(&format!("{}/", &app.address))
+        .get(format!("{}/", app.address))
         .send()
         .await
         .expect("Failed to execute request");
@@ -20,7 +20,7 @@ async fn version_returns_ok() {
 
     let response = app
         .api_client
-        .get(&format!("{}/version", &app.address))
+        .get(format!("{}/version", app.address))
         .send()
         .await
         .expect("Failed to execute request");

@@ -1,8 +1,10 @@
 pub mod auth;
+pub mod hardening;
 pub mod health_check;
 pub mod helpers;
 pub mod mail_bridge;
 pub mod mail_worker;
+pub mod openapi;
 pub mod performers;
 pub mod places;
 pub mod public_docs;

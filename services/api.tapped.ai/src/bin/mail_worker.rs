@@ -1,5 +1,4 @@
 use color_eyre::eyre::{Result, WrapErr};
-use reqwest::Client;
 use std::sync::Arc;
 use tapped_api_rs::{
     domain::{
@@ -25,11 +24,15 @@ async fn main() -> Result<()> {
             address: std::env::var("SMTP_ADDRESS").unwrap_or_else(|_| "127.0.0.1:2525".into()),
         },
         "postmark" => MailTransport::Postmark {
-            client: Client::new(),
+            client: tapped_api_rs::http::client_with_timeout(std::time::Duration::from_secs(30)),
             server_token: std::env::var("POSTMARK_SERVER_TOKEN")
                 .wrap_err("POSTMARK_SERVER_TOKEN is required for the Postmark transport")?,
         },
-        value => return Err(color_eyre::eyre::eyre!("unsupported MAIL_TRANSPORT: {value}")),
+        value => {
+            return Err(color_eyre::eyre::eyre!(
+                "unsupported MAIL_TRANSPORT: {value}"
+            ));
+        }
     };
     let store =
         SqliteMailStore::open(&path).map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?;

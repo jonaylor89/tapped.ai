@@ -10,11 +10,24 @@ use std::time::Duration;
 use axum::{
     Json,
     extract::{Path, State},
-    http::StatusCode,
 };
 use serde_json::{Map, Value};
 
-use crate::state::AppStateDyn;
+use crate::{errors::AppError, state::AppStateDyn};
+use schemars::JsonSchema;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct UsernamePath {
+    /// The user's username, without `@`.
+    username: String,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct OpportunityIdPath {
+    /// The opportunity document ID.
+    opportunity_id: String,
+}
 
 const PUBLIC_DOC_TTL: Duration = Duration::from_secs(5 * 60);
 
@@ -89,7 +102,7 @@ async fn cached_doc<F, Fut>(
     state: &AppStateDyn,
     cache_key: String,
     load: F,
-) -> Result<Json<Value>, StatusCode>
+) -> Result<Json<Value>, AppError>
 where
     F: FnOnce() -> Fut,
     Fut: Future<Output = anyhow::Result<Option<Value>>>,
@@ -97,32 +110,31 @@ where
     // `null` caches a miss.
     if let Some(value) = state.response_cache.get(&cache_key) {
         return match value {
-            Value::Null => Err(StatusCode::NOT_FOUND),
+            Value::Null => Err(AppError::not_found("not found")),
             value => Ok(Json(value)),
         };
     }
 
-    let doc = load().await.map_err(|error| {
-        tracing::error!("failed to load {cache_key}: {error:#}");
-        StatusCode::INTERNAL_SERVER_ERROR
-    })?;
+    let doc = load()
+        .await
+        .map_err(|error| AppError::internal(&format!("failed to load {cache_key}"), error))?;
     let value = doc.unwrap_or(Value::Null);
     state
         .response_cache
         .insert(cache_key, value.clone(), PUBLIC_DOC_TTL);
 
     match value {
-        Value::Null => Err(StatusCode::NOT_FOUND),
+        Value::Null => Err(AppError::not_found("not found")),
         value => Ok(Json(value)),
     }
 }
 
 pub async fn get_public_user_by_username(
     State(state): State<AppStateDyn>,
-    Path(username): Path<String>,
-) -> Result<Json<Value>, StatusCode> {
+    Path(UsernamePath { username }): Path<UsernamePath>,
+) -> Result<Json<Value>, AppError> {
     if !is_safe_id(&username) {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request("invalid ID"));
     }
     let database = state.database.clone();
     cached_doc(&state, format!("public-user:{username}"), || async move {
@@ -136,10 +148,10 @@ pub async fn get_public_user_by_username(
 
 pub async fn get_public_opportunity(
     State(state): State<AppStateDyn>,
-    Path(opportunity_id): Path<String>,
-) -> Result<Json<Value>, StatusCode> {
+    Path(OpportunityIdPath { opportunity_id }): Path<OpportunityIdPath>,
+) -> Result<Json<Value>, AppError> {
     if !is_safe_id(&opportunity_id) {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request("invalid ID"));
     }
     let database = state.database.clone();
     cached_doc(

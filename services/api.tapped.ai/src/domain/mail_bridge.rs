@@ -142,6 +142,10 @@ pub trait MailStore: Send + Sync {
         thread_id: &str,
         message_id: &str,
     ) -> anyhow::Result<()>;
+    /// Cheap round trip used by `/health/ready`.
+    async fn ping(&self) -> anyhow::Result<()> {
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -542,6 +546,15 @@ impl SqliteMailStore {
 
 #[async_trait]
 impl MailStore for SqliteMailStore {
+    async fn ping(&self) -> anyhow::Result<()> {
+        let connection = self
+            .connection
+            .lock()
+            .map_err(|_| anyhow::anyhow!("mail store mutex poisoned"))?;
+        connection.query_row("SELECT 1", [], |_| Ok(()))?;
+        Ok(())
+    }
+
     async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()> {
         self.connection.lock().unwrap().execute(
             "INSERT INTO email_threads VALUES (?1,?2,?3,?4,?5,?6,?7)
@@ -787,7 +800,7 @@ impl StreamHttpGateway {
             &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
         )?;
         Ok(Self {
-            client: reqwest::Client::new(),
+            client: crate::http::client(),
             api_key,
             server_token,
             base_url: "https://chat.stream-io-api.com".into(),
@@ -875,7 +888,7 @@ pub async fn notify_slack(webhook_url: Option<&str>, title: &str, body: &str) {
     let Some(webhook_url) = webhook_url else {
         return;
     };
-    if let Err(error) = reqwest::Client::new()
+    if let Err(error) = crate::http::client()
         .post(webhook_url)
         .json(&serde_json::json!({ "text": format!("*{title}* - {body}") }))
         .send()
