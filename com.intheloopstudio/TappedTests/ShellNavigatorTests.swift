@@ -140,6 +140,45 @@ struct ShellNavigatorTests {
         #expect(makeNavigator(detent: .medium).detent == .medium)
     }
 
+    @Test func searchIsSeparateFromTheFourBarTabs() {
+        #expect(ShellTab.barTabs == [.gigs, .bookings, .messages, .profile])
+        #expect(!ShellTab.barTabs.contains(.search))
+        #expect(ShellTab.gigs.title == "gigs")
+    }
+
+    @Test func searchSelectionPreservesStacksAndGigsDetent() {
+        let navigator = makeNavigator(detent: .medium)
+        navigator.gigs.push(.opportunity(opportunityId: opportunity.id, opportunity: opportunity))
+        navigator.search.push(.gigSearch)
+
+        navigator.select(.search)
+        #expect(navigator.tab == .search)
+        #expect(navigator.detent == .large)
+        #expect(navigator.router(for: .search) === navigator.search)
+        #expect(navigator.search.path == [.gigSearch])
+        #expect(!ShellTab.barTabs.contains(navigator.tab))
+
+        navigator.select(.search)
+        #expect(navigator.search.path == [.gigSearch])
+        navigator.select(.gigs)
+        #expect(navigator.detent == .medium)
+        #expect(navigator.gigs.path == [.opportunity(opportunityId: opportunity.id, opportunity: opportunity)])
+    }
+
+    @Test func openingSearchResetsOnlySearchAndDoesNotDuplicateItsRoot() {
+        let navigator = makeNavigator(tab: .bookings)
+        navigator.bookings.push(.addPastBooking)
+        navigator.search.push(.advancedSearch)
+        navigator.open(.search)
+        #expect(navigator.tab == .search)
+        #expect(navigator.detent == .large)
+        #expect(navigator.search.isAtRoot)
+        #expect(navigator.bookings.path == [.addPastBooking])
+
+        navigator.open(path: [.search, .gigSearch])
+        #expect(navigator.search.path == [.gigSearch])
+    }
+
     @Test(arguments: ["bookings", "messages", "channel", "settings", "search", "gig-search", "opportunity", "profile:venue-canal"])
     func mockLaunchRoutesLandOnTheirTab(name: String) throws {
         let path = try #require(Route.mockLaunchPath(name, currentUser: me))

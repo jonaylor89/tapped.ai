@@ -17,7 +17,7 @@ struct ShellView: View {
     @State private var headerHeight: CGFloat = 0
     @State private var containerHeight: CGFloat = 0
     /// Room for the sheet's tab bar below the Gigs header.
-    @ScaledMetric(relativeTo: .caption2) private var tabBarHeight: CGFloat = 58
+    @State private var tabBarHeight: CGFloat = 74
 
     init(
         currentUser: UserModel,
@@ -45,7 +45,7 @@ struct ShellView: View {
     /// Measured Gigs header + tab bar, so the collapsed sheet shows exactly the "is there work for me?" lines.
     private var collapsedHeight: CGFloat {
         guard headerHeight > 0 else { return MapsSheetDetent.defaultCollapsedHeight }
-        let height = headerHeight + min(tabBarHeight, 72)
+        let height = headerHeight + tabBarHeight
         // Stay below `.medium` so the three detents keep their order at accessibility sizes.
         let cap = containerHeight > 0 ? containerHeight * 0.42 : height
         return min(height, cap).rounded()
@@ -61,7 +61,12 @@ struct ShellView: View {
                 progress: $discover.sheetProgress,
                 sheetTop: $discover.sheetTop
             ) {
-                ShellTabsView(navigator: navigator, discover: discover, onHeaderHeight: { headerHeight = $0 })
+                ShellTabsView(
+                    navigator: navigator,
+                    discover: discover,
+                    onHeaderHeight: { headerHeight = $0 },
+                    onTabBarHeight: { tabBarHeight = $0 }
+                )
                     .environment(shell)
                     .reauthenticationSheet(isPresented: $showsReauthentication, reason: "enter your password to continue") {}
             }
