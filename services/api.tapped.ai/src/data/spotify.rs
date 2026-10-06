@@ -81,7 +81,7 @@ struct TokenResponse {
 impl SpotifyHttp {
     pub fn new(client_id: String, client_secret: String) -> Self {
         Self {
-            client: reqwest::Client::new(),
+            client: crate::http::client(),
             client_id,
             client_secret,
             token: Mutex::new(None),

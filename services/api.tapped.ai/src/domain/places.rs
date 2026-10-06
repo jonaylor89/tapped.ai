@@ -11,13 +11,14 @@ use std::time::Duration;
 use axum::{
     Json,
     extract::{Path, Query, State},
-    http::StatusCode,
 };
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
     data::places::{AutocompletePrediction, PlaceDetails},
     domain::firebase_auth::FirebaseUser,
+    errors::AppError,
     state::AppStateDyn,
 };
 
@@ -47,9 +48,8 @@ fn store<T: Serialize>(state: &AppStateDyn, key: String, value: &T, ttl: Duratio
     }
 }
 
-fn upstream_error(error: anyhow::Error) -> StatusCode {
-    tracing::error!("google places request failed: {error:#}");
-    StatusCode::BAD_GATEWAY
+fn upstream_error(error: anyhow::Error) -> AppError {
+    AppError::upstream("Google Places", error)
 }
 
 fn normalize_query(query: &str) -> String {
@@ -70,7 +70,7 @@ fn is_safe_path(value: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '/'))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AutocompleteParams {
     query: String,
@@ -100,15 +100,21 @@ fn parse_types(types: Option<&str>) -> Option<Vec<String>> {
 pub async fn autocomplete_places(
     State(state): State<AppStateDyn>,
     Query(params): Query<AutocompleteParams>,
-) -> Result<Json<Vec<AutocompletePrediction>>, StatusCode> {
+) -> Result<Json<Vec<AutocompletePrediction>>, AppError> {
     let query = normalize_query(&params.query);
     if query.is_empty() {
         return Ok(Json(vec![]));
     }
     if query.len() > MAX_QUERY_LEN {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request(format!(
+            "query must be at most {MAX_QUERY_LEN} characters"
+        )));
     }
-    let types = parse_types(params.types.as_deref()).ok_or(StatusCode::BAD_REQUEST)?;
+    let types = parse_types(params.types.as_deref()).ok_or_else(|| {
+        AppError::bad_request(format!(
+            "types must be at most {MAX_AUTOCOMPLETE_TYPES} comma-separated Google place types"
+        ))
+    })?;
 
     let cache_key = format!("places-autocomplete:{}|{query}", types.join(","));
     if let Some(predictions) = cached(&state, &cache_key) {
@@ -125,7 +131,17 @@ pub async fn autocomplete_places(
     Ok(Json(predictions))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PlaceIdPath {
+    /// A Google place ID.
+    place_id: String,
+}
+
+fn place_not_found() -> AppError {
+    AppError::not_found("place not found")
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaceParams {
     session_token: Option<String>,
@@ -133,16 +149,16 @@ pub struct PlaceParams {
 
 pub async fn get_place(
     State(state): State<AppStateDyn>,
-    Path(place_id): Path<String>,
+    Path(PlaceIdPath { place_id }): Path<PlaceIdPath>,
     Query(params): Query<PlaceParams>,
-) -> Result<Json<PlaceDetails>, StatusCode> {
+) -> Result<Json<PlaceDetails>, AppError> {
     if !is_safe_path(&place_id) || place_id.contains('/') {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request("invalid place ID"));
     }
 
     let cache_key = format!("place:{place_id}");
     if let Some(place) = cached::<Option<PlaceDetails>>(&state, &cache_key) {
-        return place.map(Json).ok_or(StatusCode::NOT_FOUND);
+        return place.map(Json).ok_or_else(place_not_found);
     }
 
     let stored = match state.database.get_cached_place(&place_id).await {
@@ -175,7 +191,7 @@ pub async fn get_place(
 
     let Some(mut place) = fetched else {
         store(&state, cache_key, &None::<PlaceDetails>, MISSING_PLACE_TTL);
-        return Err(StatusCode::NOT_FOUND);
+        return Err(place_not_found());
     };
     // Google may return a refreshed ID; keep the document keyed by the ID clients store.
     place.place_id = place_id.clone();
@@ -188,14 +204,14 @@ pub async fn get_place(
     Ok(Json(place))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoParams {
     name: String,
     max_height_px: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoResponse {
     photo_uri: Option<String>,
@@ -205,12 +221,14 @@ pub async fn get_place_photo(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,
     Query(params): Query<PhotoParams>,
-) -> Result<Json<PhotoResponse>, StatusCode> {
+) -> Result<Json<PhotoResponse>, AppError> {
     if !is_safe_path(&params.name)
         || !params.name.starts_with("places/")
         || !params.name.contains("/photos/")
     {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request(
+            "name must be a Google photo resource name: places/<id>/photos/<id>",
+        ));
     }
     let max_height_px = params
         .max_height_px
@@ -234,13 +252,13 @@ pub async fn get_place_photo(
     Ok(Json(photo))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReverseGeocodeParams {
     lat: f64,
     lng: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReverseGeocodeResponse {
     place_id: Option<String>,
@@ -251,9 +269,11 @@ pub async fn reverse_geocode(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,
     Query(params): Query<ReverseGeocodeParams>,
-) -> Result<Json<ReverseGeocodeResponse>, StatusCode> {
+) -> Result<Json<ReverseGeocodeResponse>, AppError> {
     if !(-90.0..=90.0).contains(&params.lat) || !(-180.0..=180.0).contains(&params.lng) {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request(
+            "lat must be in [-90, 90] and lng in [-180, 180]",
+        ));
     }
     let lat = (params.lat * 1_000.0).round() / 1_000.0;
     let lng = (params.lng * 1_000.0).round() / 1_000.0;

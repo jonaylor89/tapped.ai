@@ -6,6 +6,8 @@ pub mod docs;
 pub mod domain;
 pub mod errors;
 pub mod extractors;
+pub mod http;
+pub mod rate_limit;
 pub mod routes;
 pub mod startup;
 pub mod state;

@@ -28,8 +28,8 @@ pub struct TestApp {
 
 impl TestApp {}
 
-pub async fn spawn_app() -> TestApp {
-    let state = AppStateDyn {
+pub fn mock_state() -> AppStateDyn {
+    AppStateDyn {
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
         firebase_project_id: "test-project".to_string(),
@@ -37,9 +37,11 @@ pub async fn spawn_app() -> TestApp {
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
         spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
-    };
+    }
+}
 
-    spawn_app_with_state(state).await
+pub async fn spawn_app() -> TestApp {
+    spawn_app_with_state(mock_state()).await
 }
 
 pub async fn spawn_app_with_state(state: AppStateDyn) -> TestApp {
@@ -52,7 +54,7 @@ pub async fn spawn_app_with_state(state: AppStateDyn) -> TestApp {
     let application_port = application.port();
     let address = format!("http://localhost:{}", application_port);
 
-    let _ = tokio::spawn(application.run_until_stopped());
+    tokio::spawn(application.run_until_stopped());
 
     let client = reqwest::Client::builder()
         .redirect(reqwest::redirect::Policy::none())

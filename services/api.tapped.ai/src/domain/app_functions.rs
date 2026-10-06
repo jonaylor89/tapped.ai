@@ -1,5 +1,6 @@
 use axum::{Json, extract::State, http::StatusCode};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -11,10 +12,11 @@ use crate::{
         mail_composer::{ComposeVenueEmail, OpportunityContext},
         models::opportunity::Opportunity,
     },
+    errors::AppError,
     state::AppStateDyn,
 };
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct StreamUserTokenResponse {
     pub token: String,
 }
@@ -23,7 +25,7 @@ pub struct StreamUserTokenResponse {
 pub async fn stream_user_token(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-) -> Result<Json<StreamUserTokenResponse>, StatusCode> {
+) -> Result<Json<StreamUserTokenResponse>, AppError> {
     let token = jsonwebtoken::encode(
         &Header::new(Algorithm::HS256),
         &serde_json::json!({
@@ -32,11 +34,11 @@ pub async fn stream_user_token(
         }),
         &EncodingKey::from_secret(state.mail.stream_webhook_secret.as_bytes()),
     )
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .map_err(|error| AppError::internal("failed to sign Stream token", error))?;
     Ok(Json(StreamUserTokenResponse { token }))
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NotifyVenueOfInterestedOpportunities {
     pub opportunity_ids: Vec<String>,
@@ -44,7 +46,7 @@ pub struct NotifyVenueOfInterestedOpportunities {
     pub note: String,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, JsonSchema)]
 pub struct NotifyVenueResponse {
     pub venues_notified: usize,
 }
@@ -59,9 +61,9 @@ pub async fn notify_venue_of_interested_opportunities(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
     Json(command): Json<NotifyVenueOfInterestedOpportunities>,
-) -> Result<Json<NotifyVenueResponse>, StatusCode> {
+) -> Result<Json<NotifyVenueResponse>, AppError> {
     if command.opportunity_ids.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request("opportunityIds must not be empty"));
     }
 
     let mut opportunities = Vec::new();
@@ -71,7 +73,7 @@ pub async fn notify_venue_of_interested_opportunities(
         }
     }
     if opportunities.is_empty() {
-        return Err(StatusCode::UNPROCESSABLE_ENTITY);
+        return Err(AppError::unprocessable("none of the opportunities exist"));
     }
 
     let mut by_venue: HashMap<String, VenueOpportunities> = HashMap::new();
@@ -121,9 +123,11 @@ pub async fn notify_venue_of_interested_opportunities(
         .database
         .get_user_by_id(&user.uid)
         .await
-        .map_err(|_| StatusCode::NOT_FOUND)?;
+        .map_err(|_| AppError::not_found("performer profile not found"))?;
     if performer.username.is_empty() {
-        return Err(StatusCode::BAD_REQUEST);
+        return Err(AppError::bad_request(
+            "set a username before contacting venues",
+        ));
     }
 
     let mut venues_notified = 0;
@@ -143,7 +147,7 @@ pub async fn notify_venue_of_interested_opportunities(
             .store
             .thread_for_stream(&user.uid, &venue_id)
             .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+            .map_err(|error| AppError::internal("mail store", error))?;
         if existing.is_none()
             && let Some(auto_reply) = venue.auto_reply()
         {
@@ -170,7 +174,7 @@ pub async fn notify_venue_of_interested_opportunities(
                 .store
                 .messages_for_thread(&thread.id)
                 .await
-                .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+                .map_err(|error| AppError::internal("mail store", error))?,
             None => vec![],
         };
         let composed = state
@@ -197,8 +201,8 @@ pub async fn notify_venue_of_interested_opportunities(
             })
             .await
             .map_err(|error| {
-                tracing::error!(?error, "failed to compose venue email");
-                StatusCode::SERVICE_UNAVAILABLE
+                AppError::upstream("email composer", error)
+                    .with_status(StatusCode::SERVICE_UNAVAILABLE)
             })?;
         let event_id = format!("opportunity-notification:{}", Uuid::new_v4());
         let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
@@ -257,7 +261,7 @@ pub async fn notify_venue_of_interested_opportunities(
                 )
                 .await
         }
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|error| AppError::internal("mail store", error))?;
         if queued
             && is_new_thread
             && let Err(error) = state
@@ -329,8 +333,8 @@ mod tests {
     }
     #[async_trait]
     impl Database for TestDatabase {
-        async fn get_user_from_api_key(&self, _: &str) -> anyhow::Result<String> {
-            unreachable!()
+        async fn get_user_from_api_key(&self, _: &str) -> anyhow::Result<Option<String>> {
+            Ok(None)
         }
         async fn get_user_by_id(&self, id: &str) -> anyhow::Result<UserModel> {
             self.users
@@ -665,7 +669,8 @@ mod tests {
                 })
             )
             .await
-            .unwrap_err(),
+            .unwrap_err()
+            .status,
             StatusCode::UNPROCESSABLE_ENTITY
         );
         assert!(store.outbound().is_empty());

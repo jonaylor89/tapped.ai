@@ -1,7 +1,10 @@
 use crate::{
     data::places::PlaceDetails,
     domain::models::{
-        api_key::ApiKey, booking::Booking, opportunity::Opportunity, review::Review,
+        api_key::{ApiKey, hash_api_key},
+        booking::Booking,
+        opportunity::Opportunity,
+        review::Review,
         user::UserModel,
     },
 };
@@ -17,8 +20,8 @@ pub struct MockDatabase;
 
 #[async_trait]
 impl Database for MockDatabase {
-    async fn get_user_from_api_key(&self, _api_key: &str) -> Result<String> {
-        Ok("mock-user-id".to_string())
+    async fn get_user_from_api_key(&self, api_key: &str) -> Result<Option<String>> {
+        Ok((!api_key.starts_with("invalid")).then(|| "mock-user-id".to_string()))
     }
 
     async fn get_user_by_id(&self, id: &str) -> Result<UserModel> {
@@ -84,7 +87,12 @@ impl Database for MockDatabase {
 
 #[async_trait]
 pub trait Database: Send + Sync {
-    async fn get_user_from_api_key(&self, api_key: &str) -> Result<String>;
+    /// The user ID owning `api_key`, or `None` if the key doesn't exist.
+    async fn get_user_from_api_key(&self, api_key: &str) -> Result<Option<String>>;
+    /// Cheap round trip used by `/health/ready`.
+    async fn ping(&self) -> Result<()> {
+        Ok(())
+    }
     async fn get_user_by_id(&self, id: &str) -> Result<UserModel>;
     async fn get_user_by_username(&self, username: &str) -> Result<UserModel>;
     async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity>;
@@ -118,6 +126,8 @@ pub trait Database: Send + Sync {
 }
 
 const GOOGLE_PLACES_CACHE: &str = "googlePlacesCache";
+const API_KEYS: &str = "apiKeys";
+const READINESS_DOC_ID: &str = "__readiness_probe__";
 
 #[derive(Debug, Clone)]
 pub struct Firestore {
@@ -128,27 +138,75 @@ impl Firestore {
     pub fn new(db: FirestoreDb) -> Self {
         Self { db }
     }
+
+    async fn api_key_doc(&self, id: &str) -> Result<Option<ApiKey>> {
+        Ok(self
+            .db
+            .fluent()
+            .select()
+            .by_id_in(API_KEYS)
+            .obj()
+            .one(id)
+            .await?)
+    }
+
+    async fn migrate_legacy_api_key(&self, raw: &str, hashed: &str, legacy: ApiKey) -> Result<()> {
+        let _: ApiKey = self
+            .db
+            .fluent()
+            .update()
+            .in_col(API_KEYS)
+            .document_id(hashed)
+            .object(&ApiKey {
+                key: hashed.to_owned(),
+                ..legacy
+            })
+            .execute()
+            .await?;
+        self.db
+            .fluent()
+            .delete()
+            .from(API_KEYS)
+            .document_id(raw)
+            .execute()
+            .await?;
+        tracing::info!("migrated a legacy API key to its hashed document ID");
+        Ok(())
+    }
 }
 
 #[async_trait]
 impl Database for Firestore {
-    #[instrument]
-    async fn get_user_from_api_key(&self, api_key: &str) -> Result<String> {
-        tracing::info!("getting user from Firestore by API key: '{}'", api_key);
+    // The key is a credential: never record it in spans or logs.
+    #[instrument(skip_all)]
+    async fn get_user_from_api_key(&self, api_key: &str) -> Result<Option<String>> {
+        let hashed = hash_api_key(api_key);
+        if let Some(doc) = self.api_key_doc(&hashed).await? {
+            return Ok(Some(doc.user_id));
+        }
 
-        let doc: Option<ApiKey> = self
+        // Legacy keys are stored under the raw key; move them to the hashed ID on first use.
+        let Some(legacy) = self.api_key_doc(api_key).await? else {
+            return Ok(None);
+        };
+        let user_id = legacy.user_id.clone();
+        if let Err(error) = self.migrate_legacy_api_key(api_key, &hashed, legacy).await {
+            tracing::warn!(user_id, "failed to migrate legacy API key: {error:#}");
+        }
+        Ok(Some(user_id))
+    }
+
+    #[instrument(skip_all)]
+    async fn ping(&self) -> Result<()> {
+        let _: Option<ApiKey> = self
             .db
             .fluent()
             .select()
-            .by_id_in("apiKeys")
+            .by_id_in(API_KEYS)
             .obj()
-            .one(api_key)
+            .one(READINESS_DOC_ID)
             .await?;
-
-        match doc {
-            Some(api_key) => Ok(api_key.user_id),
-            None => Err(anyhow::anyhow!("api key not found")),
-        }
+        Ok(())
     }
 
     #[instrument]

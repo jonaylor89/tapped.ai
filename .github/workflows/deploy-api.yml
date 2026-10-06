@@ -108,11 +108,17 @@ jobs:
           set_api_image "$image"
           docker compose config --quiet
           docker compose pull api mail-worker
+          # The image runs as the unprivileged `app` user (uid 10001). Give it the mail volume
+          # (created by earlier root images) and read access to the Firebase credentials.
+          docker compose run --rm --no-deps --user root --entrypoint chown api -R 10001:10001 /data
+          chown 10001:10001 credentials.json
+          chmod 400 credentials.json
           docker compose up -d --no-deps api mail-worker
 
           echo "Waiting for api to be ready..."
           for i in $(seq 1 24); do
-            if docker exec tapped-api-1 bash -c 'exec 3<>/dev/tcp/127.0.0.1/3000' 2>/dev/null; then
+            # /health/ready checks Firestore, Typesense and the mail store, not just the port.
+            if docker exec tapped-api-1 bash -c 'exec 3<>/dev/tcp/127.0.0.1/3000 && printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "' 2>/dev/null; then
               echo "API is ready after $((i * 5)) seconds"
               break
             fi
@@ -139,7 +145,7 @@ jobs:
               --show-error \
               --max-time 10 \
               --header 'Cache-Control: no-cache' \
-              "https://api.tapped.ai/health?deployment=${DEPLOY_SHA}"; then
+              "https://api.tapped.ai/health/ready?deployment=${DEPLOY_SHA}"; then
               echo
               exit 0
             fi

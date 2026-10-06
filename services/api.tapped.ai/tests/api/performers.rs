@@ -6,7 +6,7 @@ async fn get_performer_by_id_returns_performer() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/user-123", &app.address))
+        .get(format!("{}/v1/performer/user-123", app.address))
         .header("tapped-api-key", "test-key")
         .send()
         .await
@@ -23,7 +23,7 @@ async fn get_performer_by_username_returns_performer() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/username/testuser", &app.address))
+        .get(format!("{}/v1/performer/username/testuser", app.address))
         .header("tapped-api-key", "test-key")
         .send()
         .await
@@ -43,7 +43,7 @@ async fn search_performers_returns_empty_array() {
 
     let response = app
         .api_client
-        .get(&format!("{}/v1/performer/search?query=test", &app.address))
+        .get(format!("{}/v1/performer/search?query=test", app.address))
         .header("tapped-api-key", "test-key")
         .send()
         .await

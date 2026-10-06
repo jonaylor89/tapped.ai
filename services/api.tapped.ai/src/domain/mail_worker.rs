@@ -29,10 +29,16 @@ fn safe_header(value: &str) -> String {
     value.replace(['\r', '\n'], " ")
 }
 
+const DOWNLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+
 async fn download_attachments(email: &QueuedEmail) -> anyhow::Result<Vec<EncodedAttachment>> {
     let mut attachments = email.encoded_attachments.clone();
     for (index, url) in email.attachments.iter().enumerate() {
-        let response = reqwest::get(url).await?.error_for_status()?;
+        let response = crate::http::client_with_timeout(DOWNLOAD_TIMEOUT)
+            .get(url)
+            .send()
+            .await?
+            .error_for_status()?;
         let content_type = response
             .headers()
             .get(reqwest::header::CONTENT_TYPE)
