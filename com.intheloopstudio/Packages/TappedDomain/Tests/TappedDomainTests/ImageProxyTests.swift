@@ -39,4 +39,20 @@ struct ImageProxyTests {
         #expect(ImageProxy.disabled.url(for: source, pixelWidth: 100, pixelHeight: 100) == source)
         #expect(proxy.url(for: source, pixelWidth: 0, pixelHeight: 100) == source)
     }
+
+    @Test func quantisesBoxesToTheSamePreset() {
+        // A sheet growing from 300 to 380 pt wide @3x stays on one rung, so its URL doesn't change.
+        let sizes = stride(from: 900, through: 1080, by: 30).map { ImageProxy.preset(pixelWidth: $0, pixelHeight: 600) }
+        #expect(Set(sizes) == [ImageProxy.Preset(kind: .width, pixels: 1080)])
+        #expect(ImageProxy.preset(pixelWidth: 1081, pixelHeight: 600)?.description == "w1600")
+        #expect(ImageProxy.preset(pixelWidth: 0, pixelHeight: 600) == nil)
+    }
+
+    @Test func presetURLMatchesSizedURL() {
+        let preset = ImageProxy.Preset(kind: .square, pixels: 256)
+        #expect(proxy.url(for: source, preset: preset) == proxy.url(for: source, pixelWidth: 200, pixelHeight: 200))
+        #expect(proxy.proxies(source))
+        #expect(!ImageProxy.disabled.proxies(source))
+        #expect(ImageProxy.disabled.url(for: source, preset: preset) == source)
+    }
 }
