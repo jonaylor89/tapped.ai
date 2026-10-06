@@ -5,7 +5,6 @@ import { getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
-import { getRemoteConfig } from "firebase-admin/remote-config";
 import { getStorage } from "firebase-admin/storage";
 import { defineSecret } from "firebase-functions/params";
 
@@ -16,7 +15,6 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 export const fcm = getMessaging(app);
-export const remote = getRemoteConfig(app);
 
 export const usersRef = db.collection("users");
 export const loopsRef = db.collection("loops");
@@ -41,7 +39,6 @@ export const creditsRef = db.collection("credits");
 export const opportunitiesRef = db.collection("opportunities");
 export const opportunityFeedsRef = db.collection("opportunityFeeds");
 
-export const googlePlacesCacheRef = db.collection("googlePlacesCache");
 export const contactVenuesRef = db.collection("contactVenues");
 export const orphanEmailsRef = db.collection("orphanEmails");
 export const spotifyAccessTokenRef = db.collection("spotifyAccessToken");
@@ -58,13 +55,8 @@ export const mainBucket = storage.bucket("in-the-loop-306520.appspot.com");
 
 export const streamKey = defineSecret("STREAM_KEY");
 export const streamSecret = defineSecret("STREAM_SECRET");
-export const stripePublishableTestKey = defineSecret("STRIPE_PUBLISHABLE_TEST_KEY");
-export const stripeEndpointSecret = defineSecret("STRIPE_ENDPOINT_SECRET");
-export const stripeKey = defineSecret("STRIPE_KEY");
-export const stripePublishableKey = defineSecret("STRIPE_PUBLISHABLE_KEY");
 
 export const OPEN_AI_KEY = defineSecret("OPEN_AI_KEY");
-export const GOOGLE_PLACES_API_KEY = defineSecret("GOOGLE_PLACES_API_KEY");
 export const SENDGRID_API_KEY = defineSecret("SENDGRID_API_KEY");
 export const MAIL_API_SECRET = defineSecret("MAIL_API_SECRET");
 export const MAIL_INGRESS_SECRET = defineSecret("MAIL_INGRESS_SECRET");

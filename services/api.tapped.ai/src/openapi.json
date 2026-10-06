@@ -289,6 +289,121 @@
         ]
       }
     },
+    "/app/v1/spotify/artists/{artist_id}": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Spotify artist by ID",
+        "description": "Spotify's artist object, cached for an hour.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artist_id",
+            "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
+            "required": true,
+            "schema": {
+              "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/spotify/artists/{artist_id}/top-tracks": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Spotify top tracks for an artist",
+        "description": "Spotify's `{ tracks }` response, cached for an hour.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "artist_id",
+            "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
+            "required": true,
+            "schema": {
+              "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "query",
+            "name": "market",
+            "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
+            "schema": {
+              "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
     "/app/v1/opportunity-venue-notifications": {
       "post": {
         "tags": [
@@ -907,6 +1022,18 @@
             "description": "A unique error ID, also written to the server logs.",
             "type": "string",
             "format": "uuid"
+          }
+        }
+      },
+      "ArtistIdPath": {
+        "type": "object",
+        "required": [
+          "artist_id"
+        ],
+        "properties": {
+          "artist_id": {
+            "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
+            "type": "string"
           }
         }
       },
@@ -1769,6 +1896,18 @@
             "type": "integer",
             "format": "uint64",
             "minimum": 0.0
+          }
+        }
+      },
+      "TopTracksParams": {
+        "type": "object",
+        "properties": {
+          "market": {
+            "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

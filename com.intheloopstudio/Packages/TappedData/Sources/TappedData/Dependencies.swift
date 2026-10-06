@@ -26,6 +26,7 @@ public struct Dependencies: Sendable {
     /// Injected into the view tree as `\.imageProxy` for `RemoteImage`.
     public var imageProxy: ImageProxy
     public var location: any LocationRepository
+    public var spotify: any SpotifyRepository
 
     public init(
         mode: Mode,
@@ -42,7 +43,8 @@ public struct Dependencies: Sendable {
         venueOutreach: any VenueOutreachRepository = MockVenueOutreachRepository(),
         opportunityNotifications: any OpportunityNotificationRepository = MockOpportunityNotificationRepository(),
         imageProxy: ImageProxy = .disabled,
-        location: any LocationRepository = MockLocationRepository()
+        location: any LocationRepository = MockLocationRepository(),
+        spotify: any SpotifyRepository = MockSpotifyRepository()
     ) {
         self.mode = mode
         self.auth = auth
@@ -59,6 +61,7 @@ public struct Dependencies: Sendable {
         self.opportunityNotifications = opportunityNotifications
         self.imageProxy = imageProxy
         self.location = location
+        self.spotify = spotify
     }
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
@@ -82,7 +85,8 @@ public struct Dependencies: Sendable {
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
             opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL),
             imageProxy: ImageProxy(baseURL: config.imageProxyURL),
-            location: CoreLocationRepository()
+            location: CoreLocationRepository(),
+            spotify: TappedAPISpotifyRepository(baseURL: config.tappedAPIURL)
         )
     }
 

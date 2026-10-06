@@ -50,6 +50,7 @@ private struct NameStep: View {
     @FocusState private var focus: Field?
 
     var body: some View {
+        SpotifyImportSection(model: model)
         Section {
             TextField("display name", text: $model.artistName)
                 .textContentType(.nickname)
@@ -106,6 +107,97 @@ private struct NameStep: View {
         } else {
             Text("we'll make one from your name. you can type your own.")
         }
+    }
+}
+
+/// `onboard_with_spotify_view.dart`: paste an artist link to prefill the name, photo and genres.
+private struct SpotifyImportSection: View {
+    @Bindable var model: OnboardingViewModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var photoSize: CGFloat = 44
+
+    private var canImport: Bool {
+        !model.isImportingSpotify && !model.spotifyLink.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        Section {
+            if let artist = model.spotifyArtist {
+                if dynamicTypeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: TappedSpacing.sm) {
+                        HStack {
+                            photo(artist)
+                            Spacer()
+                            removeButton
+                        }
+                        artistLabels(artist)
+                    }
+                } else {
+                    HStack(spacing: TappedSpacing.md) {
+                        photo(artist)
+                        artistLabels(artist)
+                        Spacer()
+                        removeButton
+                    }
+                }
+            } else {
+                let layout = dynamicTypeSize.isAccessibilitySize
+                    ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.sm))
+                    : AnyLayout(HStackLayout())
+                layout {
+                    TextField("open.spotify.com/artist/…", text: $model.spotifyLink)
+                        .textContentType(.URL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .submitLabel(.go)
+                        .onSubmit(importArtist)
+                    if model.isImportingSpotify {
+                        ProgressView()
+                    } else {
+                        Button("import", action: importArtist)
+                            .fontWeight(.semibold)
+                            .disabled(!canImport)
+                    }
+                }
+            }
+        } header: {
+            Label("on spotify?", systemImage: "waveform")
+        } footer: {
+            if let error = model.spotifyError {
+                Text(error).foregroundStyle(TappedColors.error)
+            } else if model.spotifyArtist == nil {
+                Text("paste your artist link to fill in your name, photo and genres.")
+            }
+        }
+    }
+
+    private func photo(_ artist: SpotifyArtist) -> some View {
+        RemoteImage(url: artist.imageURL) {
+            Image(systemName: "person.crop.circle.fill").resizable().foregroundStyle(.secondary)
+        }
+        .frame(width: min(photoSize, 88), height: min(photoSize, 88))
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+
+    private func artistLabels(_ artist: SpotifyArtist) -> some View {
+        VStack(alignment: .leading) {
+            Text(verbatim: artist.name)
+            Text("imported from spotify").font(.footnote).foregroundStyle(.secondary)
+        }
+    }
+
+    private var removeButton: some View {
+        Button("remove spotify", systemImage: "xmark.circle.fill") { model.clearSpotify() }
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.secondary)
+            .buttonStyle(.plain)
+    }
+
+    private func importArtist() {
+        guard canImport else { return }
+        Task { await model.importFromSpotify() }
     }
 }
 

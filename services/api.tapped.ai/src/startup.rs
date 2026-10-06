@@ -1,6 +1,6 @@
 use crate::{
     data::places::{AutocompletePrediction, PlaceDetails},
-    data::{database::Firestore, places::GooglePlaces, search::Typesense},
+    data::{database::Firestore, places::GooglePlaces, search::Typesense, spotify::SpotifyHttp},
     docs::{docs_routes, serve_docs},
     domain::{
         app_functions::{
@@ -20,6 +20,7 @@ use crate::{
             reverse_geocode,
         },
         public_docs::{get_public_opportunity, get_public_user_by_username},
+        spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
     },
     errors::{AppError, json_error_bodies, panic_response},
     rate_limit::RateLimits,
@@ -127,6 +128,11 @@ impl Application {
         if google_places_api_key.is_empty() {
             tracing::warn!("GOOGLE_PLACES_API_KEY is not set; /app/v1/places will return 502");
         }
+        let spotify_client_id = std::env::var("SPOTIFY_CLIENT_ID").unwrap_or_default();
+        let spotify_client_secret = std::env::var("SPOTIFY_CLIENT_SECRET").unwrap_or_default();
+        if spotify_client_id.is_empty() || spotify_client_secret.is_empty() {
+            tracing::warn!("SPOTIFY_CLIENT_ID/SECRET are not set; /app/v1/spotify will return 502");
+        }
         let state = AppStateDyn {
             database: Arc::new(Firestore::new(firestore_instance)),
             search: Arc::new(Typesense::from_env()),
@@ -134,6 +140,7 @@ impl Application {
             mail,
             response_cache: Default::default(),
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
+            spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
         };
 
         let server = run(listener, state).await?;
@@ -250,6 +257,22 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             get_with(reverse_geocode, |op| {
                 app_op(op, "Locality place for a coordinate")
                     .response::<200, Json<ReverseGeocodeResponse>>()
+            }),
+        )
+        .api_route(
+            "/spotify/artists/:artist_id",
+            get_with(get_spotify_artist, |op| {
+                app_op(op, "Spotify artist by ID")
+                    .description("Spotify's artist object, cached for an hour.")
+                    .response::<200, Json<serde_json::Value>>()
+            }),
+        )
+        .api_route(
+            "/spotify/artists/:artist_id/top-tracks",
+            get_with(get_spotify_artist_top_tracks, |op| {
+                app_op(op, "Spotify top tracks for an artist")
+                    .description("Spotify's `{ tracks }` response, cached for an hour.")
+                    .response::<200, Json<serde_json::Value>>()
             }),
         )
         .api_route(

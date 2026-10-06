@@ -4,61 +4,9 @@ import { error, info } from "firebase-functions/logger";
 import { onRequest } from "firebase-functions/v2/https";
 import { type Message, StreamChat, type User } from "stream-chat";
 import type { UserModel } from "../types/models";
-import { addUserToPremiumChat, removeUserFromPremiumChat } from "./direct_messaging";
 import { sendEmailToVenueFromStreamMessage } from "./dm_email_sync/venue_contacting";
-import {
-  sendEmailSubscriptionExpiration,
-  sendEmailSubscriptionPurchase,
-  sendEmailToPerformerFromStreamMessage,
-} from "./email_triggers";
+import { sendEmailToPerformerFromStreamMessage } from "./email_triggers";
 import { MAIL_API_SECRET, MAIL_INGRESS_SECRET, streamKey, streamSecret, usersRef } from "./firebase";
-
-// send email on subscription purchase
-export const sendEmailOnSubscriptionPurchase = onRequest(
-  { secrets: [MAIL_API_SECRET, streamKey, streamSecret] },
-  async (req, res) => {
-    try {
-      info("sendEmailOnSubscriptionPurchase", req.body);
-      const { event } = req.body;
-      const { app_user_id: userId } = event;
-
-      await sendEmailSubscriptionPurchase(MAIL_API_SECRET.value(), userId);
-
-      // add them to group chat
-      await addUserToPremiumChat(userId, {
-        streamKey: streamKey.value(),
-        streamSecret: streamSecret.value(),
-      });
-
-      res.sendStatus(200);
-    } catch (e: any) {
-      error(e.message);
-      res.status(500);
-    }
-  },
-);
-
-export const sendEmailOnSubscriptionExpiration = onRequest(
-  { secrets: [MAIL_API_SECRET, streamKey, streamSecret] },
-  async (req, res) => {
-    try {
-      info("sendEmailOnSubscriptionExpiration", req.body);
-      const { event } = req.body;
-      const { app_user_id: userId } = event;
-
-      await sendEmailSubscriptionExpiration(MAIL_API_SECRET.value(), userId);
-
-      // remove from group chat
-      await removeUserFromPremiumChat(userId, {
-        streamKey: streamKey.value(),
-        streamSecret: streamSecret.value(),
-      });
-    } catch (e: any) {
-      error(e.message);
-      res.status(500);
-    }
-  },
-);
 
 // Deprecated: configure Stream to call api.tapped.ai instead. Kept during rollout for rollback safety.
 export const streamBeforeMessageWebhook = onRequest(

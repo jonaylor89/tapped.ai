@@ -36,6 +36,7 @@ pub fn mock_state() -> AppStateDyn {
         mail: tapped_api_rs::domain::mail_bridge::MailBridge::disabled(),
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
+        spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
     }
 }
 

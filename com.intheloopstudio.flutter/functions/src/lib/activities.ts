@@ -1,20 +1,9 @@
 /* eslint-disable import/no-unresolved */
 
 import type { messaging } from "firebase-admin";
-import { Timestamp } from "firebase-admin/firestore";
 import * as functions from "firebase-functions";
 import { debug } from "firebase-functions/logger";
-import { HttpsError } from "firebase-functions/v2/https";
-import type {
-  BookingReminderActivity,
-  BookingRequestActivity,
-  BookingUpdateActivity,
-  FollowActivity,
-  OpportunityInterest,
-  SearchAppearanceActivity,
-} from "../types/models";
-import { activitiesRef, fcm, tokensRef, usersRef } from "./firebase";
-import { authenticated } from "./utils";
+import { fcm, tokensRef, usersRef } from "./firebase";
 
 export const sendToDevice = functions.firestore.document("activities/{activityId}").onCreate(async (snapshot) => {
   const activity = snapshot.data();
@@ -98,48 +87,3 @@ export const sendToDevice = functions.firestore.document("activities/{activityId
     throw new Error(`cannot send notification to device, userId: ${user.id}, ${e.message}`);
   }
 });
-
-export const addActivity = functions.https.onCall((data, context) => {
-  authenticated(context);
-  return createActivity(data);
-});
-
-export const createActivity = async (
-  activity:
-    | FollowActivity
-    | BookingRequestActivity
-    | BookingUpdateActivity
-    | OpportunityInterest
-    | BookingReminderActivity
-    | SearchAppearanceActivity,
-): Promise<{ id: string }> => {
-  // Checking attribute.A
-  if (activity.toUserId.length === 0) {
-    // Throwing an HttpsError so that the client gets the error details.
-    throw new HttpsError("invalid-argument", "The function argument 'toUserId' cannot be empty");
-  }
-
-  const allowedActivityTypes = [
-    "bookingRequest",
-    "bookingUpdate",
-    "opportunityInterest",
-    "bookingReminder",
-    "searchAppearance",
-  ];
-
-  if (!allowedActivityTypes.includes(activity.type)) {
-    // Throwing an HttpsError so that the client gets the error details.
-    throw new functions.https.HttpsError(
-      "invalid-argument",
-      `The function argument 'type' must be either ${allowedActivityTypes.join(", ")}`,
-    );
-  }
-
-  const docRef = await activitiesRef.add({
-    ...activity,
-    timestamp: Timestamp.now(),
-    markedRead: false,
-  });
-
-  return { id: docRef.id };
-};

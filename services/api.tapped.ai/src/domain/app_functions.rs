@@ -538,6 +538,7 @@ mod tests {
                 firebase_project_id: "test".into(),
                 response_cache: Default::default(),
                 places: std::sync::Arc::new(crate::data::places::MockPlaces),
+                spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
                 mail: MailBridge {
                     store: store.clone(),
                     stream: stream.clone(),

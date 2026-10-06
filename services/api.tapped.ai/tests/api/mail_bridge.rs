@@ -141,6 +141,7 @@ async fn test_app() -> (
         firebase_project_id: "test-project".into(),
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
+        spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
         mail: MailBridge {
             store: store.clone(),
             stream: stream.clone(),
@@ -284,6 +285,7 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
         firebase_project_id: "test-project".into(),
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
+        spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
         mail: MailBridge {
             store: store.clone(),
             stream: Arc::new(RecordingStream::default()),
@@ -348,6 +350,18 @@ async fn creating_email_thread_requires_firebase_authentication() {
 #[tokio::test]
 async fn app_function_routes_require_firebase_authentication() {
     let (app, store, _) = test_app().await;
+    for path in [
+        "spotify/artists/4Z8W4fKeB5YxbusRsdQVPb",
+        "spotify/artists/4Z8W4fKeB5YxbusRsdQVPb/top-tracks",
+    ] {
+        let response = app
+            .api_client
+            .get(format!("{}/app/v1/{path}", app.address))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+    }
     for (path, body) in [
         ("stream-token", serde_json::json!({})),
         (

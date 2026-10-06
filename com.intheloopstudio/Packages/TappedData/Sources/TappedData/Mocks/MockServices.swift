@@ -187,6 +187,25 @@ public struct MockRemoteConfigRepository: RemoteConfigRepository {
     public func getPremiumWaitlistEnabled() async -> Bool { premiumWaitlistEnabled }
 }
 
+/// Serves `MockSpotifyRepository.artists` by id.
+public struct MockSpotifyRepository: SpotifyRepository {
+    public static let artists = [
+        SpotifyArtist(
+            id: "4Z8W4fKeB5YxbusRsdQVPb",
+            name: "Nova Waves",
+            genres: ["electronic", "dance pop", "indietronica"],
+            followers: 12_400,
+            imageURL: URL(string: "https://picsum.photos/seed/nova-waves/640")
+        ),
+    ]
+
+    public init() {}
+
+    public func artist(id: String) async throws -> SpotifyArtist? {
+        Self.artists.first { $0.id == id }
+    }
+}
+
 /// Records every venue email thread instead of calling the Tapped API.
 public actor MockVenueOutreachRepository: VenueOutreachRepository {
     public private(set) var threads: [VenueEmailThread] = []
