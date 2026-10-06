@@ -53,7 +53,6 @@ final class OpportunityFeedViewModel {
 
     func load() async {
         isLoading = true
-        defer { isLoading = false }
         do {
             let page = try await database.getOpportunityFeedByUserId(currentUser.id, limit: Self.pageSize, lastOpportunityId: nil)
             opportunities = page
@@ -63,8 +62,16 @@ final class OpportunityFeedViewModel {
         } catch {
             failed = true
         }
-        remainingQuota = await application.remainingQuota()
+        // The first card can render as soon as its page lands; the quota and the venue
+        // reads fill in behind it in parallel.
+        isLoading = false
+        async let quotaLoad: () = loadQuota()
         await loadVenues()
+        await quotaLoad
+    }
+
+    private func loadQuota() async {
+        remainingQuota = await application.remainingQuota()
     }
 
     /// Returns `.needsPremium` when the swipe couldn't be applied (quota exhausted).
@@ -86,14 +93,14 @@ final class OpportunityFeedViewModel {
         case .dismiss:
             break
         }
-        await advance()
+        advance()
         return action == .apply ? .applied : nil
     }
 
-    private func advance() async {
+    private func advance() {
         currentIndex += 1
         if currentIndex >= opportunities.count - 2 {
-            await fetchMore()
+            Task { await fetchMore() }
         }
     }
 
@@ -109,9 +116,28 @@ final class OpportunityFeedViewModel {
     }
 
     private func loadVenues() async {
-        for id in Set(opportunities.map { $0.venueId ?? $0.userId }) where venues[id] == nil {
-            if let user = try? await database.getUserById(id) {
-                venues[id] = user
+        var seen: Set<String> = []
+        var ids = opportunities.compactMap { opportunity -> String? in
+            let id = opportunity.venueId ?? opportunity.userId
+            guard seen.insert(id).inserted, venues[id] == nil else { return nil }
+            return id
+        }
+        // The visible card's venue loads first so it fills in as early as possible.
+        if let current, let index = ids.firstIndex(of: current.venueId ?? current.userId) {
+            ids.swapAt(0, index)
+        }
+        if let first = ids.first {
+            if let user = try? await database.getUserById(first) { venues[first] = user }
+            ids.removeFirst()
+        }
+        await withTaskGroup(of: (String, UserModel?).self) { group in
+            for id in ids {
+                group.addTask { [database] in
+                    (id, try? await database.getUserById(id))
+                }
+            }
+            for await (id, user) in group {
+                if let user { venues[id] = user }
             }
         }
     }

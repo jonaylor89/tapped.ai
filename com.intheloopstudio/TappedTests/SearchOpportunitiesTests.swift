@@ -179,6 +179,40 @@ struct GigSearchViewModelTests {
     }
 }
 
+/// Polls until `condition` holds — for state the app updates on detached background tasks.
+func eventually(_ condition: @Sendable () async -> Bool, timeout: Duration = .seconds(5)) async -> Bool {
+    let deadline = ContinuousClock.now + timeout
+    while ContinuousClock.now < deadline {
+        if await condition() { return true }
+        try? await Task.sleep(for: .milliseconds(20))
+    }
+    return await condition()
+}
+
+/// Venue notification that never returns — apply must not wait for it.
+private actor HangingOpportunityNotifications: OpportunityNotificationRepository {
+    func notifyVenueOfInterestedOpportunities(opportunityIds: [String], note: String) async throws {
+        try await Task.sleep(for: .seconds(3600))
+    }
+}
+
+/// Venue notification that throws a set number of times before succeeding.
+private actor FlakyOpportunityNotifications: OpportunityNotificationRepository {
+    struct Failure: Error {}
+
+    private(set) var attempts = 0
+    let failuresBeforeSuccess: Int
+
+    init(failuresBeforeSuccess: Int) {
+        self.failuresBeforeSuccess = failuresBeforeSuccess
+    }
+
+    func notifyVenueOfInterestedOpportunities(opportunityIds: [String], note: String) async throws {
+        attempts += 1
+        if attempts <= failuresBeforeSuccess { throw Failure() }
+    }
+}
+
 @MainActor
 @Suite("Opportunities")
 struct OpportunityTests {
@@ -189,7 +223,8 @@ struct OpportunityTests {
         let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: false)
         let startingQuota = try #require(await application.remainingQuota())
         #expect(try await application.apply(to: [opportunity], comment: "hi") == .applied)
-        #expect(await application.remainingQuota() == startingQuota - 1)
+        // The quota spend now runs on the background task apply returns ahead of.
+        #expect(await eventually { await application.remainingQuota() == startingQuota - 1 })
         #expect(try await dependencies.database.isUserAppliedForOpportunity(opportunityId: opportunity.id, userId: Samples.performer.id))
         let tooMany = Array(repeating: opportunity, count: startingQuota)
         #expect(try await application.apply(to: tooMany, comment: "") == .needsPremium)
@@ -209,9 +244,53 @@ struct OpportunityTests {
         let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: false)
         let opportunities = Array(Samples.opportunities.prefix(2))
         #expect(try await application.apply(to: opportunities, comment: "pick me") == .applied)
-        #expect(await notifications.venueNotifications == [
-            .init(opportunityIds: opportunities.map(\.id), note: "pick me"),
-        ])
+        #expect(await eventually {
+            await notifications.venueNotifications == [.init(opportunityIds: opportunities.map(\.id), note: "pick me")]
+        })
+    }
+
+    @Test func applyDoesNotBlockOnVenueNotification() async throws {
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
+        dependencies.opportunityNotifications = HangingOpportunityNotifications()
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: true)
+        #expect(try await application.apply(to: [opportunity], comment: "") == .applied)
+    }
+
+    @Test func applySucceedsWhenVenueNotificationFails() async throws {
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
+        dependencies.opportunityNotifications = FlakyOpportunityNotifications(failuresBeforeSuccess: .max)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: true)
+        #expect(try await application.apply(to: [opportunity], comment: "") == .applied)
+    }
+
+    @Test func venueNotificationRetriesThenGivesUp() async {
+        let flaky = FlakyOpportunityNotifications(failuresBeforeSuccess: 1)
+        await OpportunityApplication.notifyVenue(flaky, opportunityIds: ["op-1"], note: "", maxAttempts: 3)
+        #expect(await flaky.attempts == 2)
+
+        let broken = FlakyOpportunityNotifications(failuresBeforeSuccess: .max)
+        await OpportunityApplication.notifyVenue(broken, opportunityIds: ["op-1"], note: "", maxAttempts: 3)
+        #expect(await broken.attempts == 3)
+    }
+
+    @Test func feedFillsQuotaAndVenuesBehindFirstPage() async throws {
+        let model = OpportunityFeedViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false)
+        await model.load()
+        #expect(!model.isLoading)
+        #expect(model.remainingQuota == 3)
+        let current = try #require(model.current)
+        #expect(model.venue(for: current) != nil)
+        #expect(model.opportunities.allSatisfy { model.venue(for: $0) != nil })
+    }
+
+    @Test func feedFetchesCurrentVenueFirst() async throws {
+        let database = MockDatabaseRepository()
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.database = database
+        let model = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer, isPremium: true)
+        await model.load()
+        let current = try #require(model.current)
+        #expect(await database.fetchedUserIds.first == (current.venueId ?? current.userId))
     }
 
     @Test func detailLoadsVenueAndApplies() async {
