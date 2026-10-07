@@ -178,7 +178,7 @@ curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' '<firebase download UR
 
 ## Postgres
 
-Postgres 17 + PostGIS (`postgres` in `docker-compose.prod.yml`) is replacing Firestore. It is only reachable on the Compose network. The API applies migrations from `services/api.tapped.ai/migrations` on boot. While `DATABASE_URL` is empty, the API skips Postgres; if Postgres is down, the API logs `Postgres unavailable` and keeps serving, since nothing reads from it yet.
+Postgres 17 + PostGIS (`postgres` in `docker-compose.prod.yml`) is replacing Firestore. It is only reachable on the Compose network. The API applies migrations from `services/api.tapped.ai/migrations` on boot. While `DATABASE_URL` is empty, the API skips Postgres. If Postgres is down or still starting (for example after a reboot), the API keeps serving, since nothing reads from it yet: it logs `Postgres migrations not applied yet` and retries (backing off to once a minute), and its pool reconnects on its own.
 
 ### One-time setup
 

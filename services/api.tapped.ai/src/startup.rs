@@ -146,7 +146,7 @@ impl Application {
             response_cache: Default::default(),
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
-            postgres: crate::data::postgres::from_env().await,
+            postgres: crate::data::postgres::from_env(),
         };
 
         let server = run(listener, state).await?;

@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use sqlx::Row;
-use tapped_api_rs::data::postgres::{MIGRATOR, connect};
+use tapped_api_rs::data::postgres::{MIGRATOR, connect, connect_lazy};
 
 /// Runs against `DATABASE_URL` (a PostGIS database; CI provides one) and is skipped when unset.
 #[tokio::test]
@@ -52,4 +52,26 @@ async fn migrations_create_a_geo_indexed_users_table() {
         .execute(&pool)
         .await
         .expect("clean up");
+}
+
+/// The boot path: a lazy pool applies migrations in the background once Postgres is reachable.
+#[tokio::test]
+async fn lazy_pool_applies_migrations_in_the_background() {
+    let Ok(url) = std::env::var("DATABASE_URL") else {
+        eprintln!("DATABASE_URL is not set; skipping");
+        return;
+    };
+    let pool = connect_lazy(&url).expect("lazy pool");
+    let expected = MIGRATOR.iter().count() as i64;
+    for _ in 0..300 {
+        let applied: Result<i64, _> =
+            sqlx::query_scalar("SELECT count(*) FROM _sqlx_migrations WHERE success")
+                .fetch_one(&pool)
+                .await;
+        if applied.is_ok_and(|applied| applied == expected) {
+            return;
+        }
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    }
+    panic!("migrations were not applied in the background");
 }
