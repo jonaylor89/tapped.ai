@@ -67,4 +67,6 @@ pub struct AppStateDyn {
     pub response_cache: ResponseCache,
     pub places: Arc<dyn Places>,
     pub spotify: Arc<dyn Spotify>,
+    /// Postgres, which is replacing Firestore. `None` when `DATABASE_URL` is unset or unreachable.
+    pub postgres: Option<sqlx::PgPool>,
 }

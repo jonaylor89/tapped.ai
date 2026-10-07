@@ -8,6 +8,7 @@ pub mod openapi;
 pub mod otel;
 pub mod performers;
 pub mod places;
+pub mod postgres_schema;
 pub mod public_docs;
 mod request_id;
 pub mod root;

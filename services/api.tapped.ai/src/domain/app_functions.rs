@@ -539,6 +539,7 @@ mod tests {
                 response_cache: Default::default(),
                 places: std::sync::Arc::new(crate::data::places::MockPlaces),
                 spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
+                postgres: None,
                 mail: MailBridge {
                     store: store.clone(),
                     stream: stream.clone(),

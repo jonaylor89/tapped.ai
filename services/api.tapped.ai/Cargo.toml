@@ -46,6 +46,14 @@ hex = "=0.4.3"
 mailparse = "=0.15.0"
 minijinja = { version = "=2.12.0", features = ["loader"] }
 rusqlite = { version = "=0.32.1", features = ["bundled"] }
+sqlx = { version = "=0.8.6", default-features = false, features = [
+    "runtime-tokio",
+    "postgres",
+    "macros",
+    "migrate",
+    "chrono",
+    "json",
+] }
 base64 = "=0.22.1"
 tower_governor = "=0.4.3"
 governor = "=0.6.3"
