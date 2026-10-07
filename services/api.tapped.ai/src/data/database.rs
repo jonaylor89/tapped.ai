@@ -136,7 +136,7 @@ pub trait Database: Send + Sync {
 
 const GOOGLE_PLACES_CACHE: &str = "googlePlacesCache";
 const API_KEYS: &str = "apiKeys";
-const READINESS_DOC_ID: &str = "__readiness_probe__";
+const READINESS_DOC_ID: &str = "readiness-probe";
 
 #[derive(Debug, Clone)]
 pub struct Firestore {
