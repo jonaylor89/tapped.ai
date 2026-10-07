@@ -16,8 +16,8 @@ use crate::{
         },
         mail_composer::OpenAiEmailComposer,
         places::{
-            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_place, get_place_photo,
-            reverse_geocode,
+            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_locality_place,
+            get_place, get_place_photo, reverse_geocode,
         },
         public_docs::{get_public_opportunity, get_public_user_by_username},
         spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
@@ -262,6 +262,16 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             get_with(reverse_geocode, |op| {
                 app_op(op, "Locality place for a coordinate")
                     .response::<200, Json<ReverseGeocodeResponse>>()
+            }),
+        )
+        .api_route(
+            "/places/locality",
+            get_with(get_locality_place, |op| {
+                app_op(op, "Locality place details for a coordinate")
+                    .description(
+                        "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
+                    )
+                    .response::<200, Json<PlaceDetails>>()
             }),
         )
         .api_route(

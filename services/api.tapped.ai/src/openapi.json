@@ -289,6 +289,68 @@
         ]
       }
     },
+    "/app/v1/places/locality": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Locality place details for a coordinate",
+        "description": "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "lat",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "lng",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
     "/app/v1/spotify/artists/{artist_id}": {
       "get": {
         "tags": [
