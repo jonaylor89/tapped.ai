@@ -10,6 +10,8 @@ use std::time::Duration;
 use axum::{
     Json,
     extract::{Path, State},
+    http::{HeaderValue, StatusCode, header},
+    response::{IntoResponse, Response},
 };
 use serde_json::{Map, Value};
 
@@ -30,6 +32,13 @@ pub struct OpportunityIdPath {
 }
 
 const PUBLIC_DOC_TTL: Duration = Duration::from_secs(5 * 60);
+/// Misses expire sooner so a new username or opportunity shows up quickly.
+const MISSING_DOC_TTL: Duration = Duration::from_secs(60);
+
+/// Lets Cloudflare serve repeat reads for as long as the process cache would.
+pub const PUBLIC_DOC_CACHE_CONTROL: &str =
+    "public, max-age=60, s-maxage=300, stale-while-revalidate=600";
+pub const MISSING_DOC_CACHE_CONTROL: &str = "public, max-age=30, s-maxage=60";
 
 /// Top-level `users` fields that must never leave the backend.
 pub(crate) const PRIVATE_USER_FIELDS: &[&str] = &[
@@ -120,9 +129,12 @@ where
         .await
         .map_err(|error| AppError::internal(&format!("failed to load {cache_key}"), error))?;
     let value = doc.unwrap_or(Value::Null);
-    state
-        .response_cache
-        .insert(cache_key, value.clone(), PUBLIC_DOC_TTL);
+    let ttl = if value.is_null() {
+        MISSING_DOC_TTL
+    } else {
+        PUBLIC_DOC_TTL
+    };
+    state.response_cache.insert(cache_key, value.clone(), ttl);
 
     match value {
         Value::Null => Err(AppError::not_found("not found")),
@@ -130,42 +142,64 @@ where
     }
 }
 
+/// Adds edge-cache headers to found and missing documents. Other errors aren't cached.
+fn with_cache_control(result: Result<Json<Value>, AppError>) -> Response {
+    let (cache_control, mut response) = match result {
+        Ok(doc) => (Some(PUBLIC_DOC_CACHE_CONTROL), doc.into_response()),
+        Err(error) if error.status == StatusCode::NOT_FOUND => {
+            (Some(MISSING_DOC_CACHE_CONTROL), error.into_response())
+        }
+        Err(error) => (None, error.into_response()),
+    };
+    if let Some(cache_control) = cache_control {
+        response.headers_mut().insert(
+            header::CACHE_CONTROL,
+            HeaderValue::from_static(cache_control),
+        );
+    }
+    response
+}
+
 pub async fn get_public_user_by_username(
     State(state): State<AppStateDyn>,
     Path(UsernamePath { username }): Path<UsernamePath>,
-) -> Result<Json<Value>, AppError> {
+) -> Response {
     if !is_safe_id(&username) {
-        return Err(AppError::bad_request("invalid ID"));
+        return AppError::bad_request("invalid ID").into_response();
     }
     let database = state.database.clone();
-    cached_doc(&state, format!("public-user:{username}"), || async move {
-        Ok(database
-            .get_user_doc_by_username(&username)
-            .await?
-            .and_then(public_user))
-    })
-    .await
+    with_cache_control(
+        cached_doc(&state, format!("public-user:{username}"), || async move {
+            Ok(database
+                .get_user_doc_by_username(&username)
+                .await?
+                .and_then(public_user))
+        })
+        .await,
+    )
 }
 
 pub async fn get_public_opportunity(
     State(state): State<AppStateDyn>,
     Path(OpportunityIdPath { opportunity_id }): Path<OpportunityIdPath>,
-) -> Result<Json<Value>, AppError> {
+) -> Response {
     if !is_safe_id(&opportunity_id) {
-        return Err(AppError::bad_request("invalid ID"));
+        return AppError::bad_request("invalid ID").into_response();
     }
     let database = state.database.clone();
-    cached_doc(
-        &state,
-        format!("public-opportunity:{opportunity_id}"),
-        || async move {
-            Ok(database
-                .get_opportunity_doc(&opportunity_id)
-                .await?
-                .and_then(public_opportunity))
-        },
+    with_cache_control(
+        cached_doc(
+            &state,
+            format!("public-opportunity:{opportunity_id}"),
+            || async move {
+                Ok(database
+                    .get_opportunity_doc(&opportunity_id)
+                    .await?
+                    .and_then(public_opportunity))
+            },
+        )
+        .await,
     )
-    .await
 }
 
 #[cfg(test)]

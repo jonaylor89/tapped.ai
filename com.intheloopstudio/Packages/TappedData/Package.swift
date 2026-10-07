@@ -14,6 +14,8 @@ let package = Package(
         .package(url: "https://github.com/google/GoogleSignIn-iOS.git", exact: "10.0.0"),
         .package(url: "https://github.com/PostHog/posthog-ios.git", exact: "3.79.1"),
         .package(url: "https://github.com/GetStream/stream-chat-swift.git", exact: "5.9.0"),
+        .package(url: "https://github.com/open-telemetry/opentelemetry-swift-core.git", exact: "2.5.1"),
+        .package(url: "https://github.com/open-telemetry/opentelemetry-swift.git", exact: "2.5.1"),
     ],
     targets: [
         .target(
@@ -30,6 +32,10 @@ let package = Package(
                 .product(name: "GoogleSignIn", package: "GoogleSignIn-iOS"),
                 .product(name: "PostHog", package: "posthog-ios"),
                 .product(name: "StreamChat", package: "stream-chat-swift"),
+                .product(name: "OpenTelemetryApi", package: "opentelemetry-swift-core"),
+                .product(name: "OpenTelemetrySdk", package: "opentelemetry-swift-core"),
+                .product(name: "OpenTelemetryProtocolExporterHTTP", package: "opentelemetry-swift"),
+                .product(name: "URLSessionInstrumentation", package: "opentelemetry-swift"),
             ]
         ),
         .testTarget(name: "TappedDataTests", dependencies: ["TappedData"]),

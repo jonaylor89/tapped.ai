@@ -164,7 +164,7 @@ impl GooglePlaces {
 
 #[async_trait]
 impl Places for GooglePlaces {
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "google_places", otel.kind = "client", server.address = "places.googleapis.com"))]
     async fn autocomplete(
         &self,
         query: &str,
@@ -207,7 +207,7 @@ impl Places for GooglePlaces {
             .collect())
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "google_places", otel.kind = "client", server.address = "places.googleapis.com"))]
     async fn place_details(
         &self,
         place_id: &str,
@@ -251,7 +251,7 @@ impl Places for GooglePlaces {
         }))
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "google_places", otel.kind = "client", server.address = "places.googleapis.com"))]
     async fn photo_uri(&self, photo_name: &str, max_height_px: u32) -> Result<Option<String>> {
         self.ensure_configured()?;
         let response: PhotoMediaResponse = self
@@ -270,7 +270,7 @@ impl Places for GooglePlaces {
         Ok(response.photo_uri)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "google_places", otel.kind = "client", server.address = "maps.googleapis.com"))]
     async fn place_id_by_lat_lng(&self, lat: f64, lng: f64) -> Result<Option<String>> {
         self.ensure_configured()?;
         let response: GeocodeResponse = self

@@ -5,18 +5,33 @@ use tapped_api_rs::{
         mail_bridge::SqliteMailStore,
         mail_worker::{MailTransport, run_worker},
     },
-    tracing::{get_subscriber, init_subscriber},
+    startup::shutdown_signal,
+    telemetry::Telemetry,
+    tracing::{get_subscriber_with_tracer, init_subscriber},
 };
 
 #[tokio::main]
 async fn main() -> Result<()> {
     color_eyre::install()?;
     let _ = dotenvy::dotenv();
-    init_subscriber(get_subscriber(
+    let telemetry = Telemetry::from_env("mail-worker.tapped.ai");
+    init_subscriber(get_subscriber_with_tracer(
         "tapped-mail-worker".into(),
         "info".into(),
         std::io::stdout,
+        telemetry
+            .as_ref()
+            .ok()
+            .and_then(Option::as_ref)
+            .map(Telemetry::tracer),
     ));
+    let telemetry = match telemetry {
+        Ok(telemetry) => telemetry,
+        Err(error) => {
+            tracing::warn!("trace export disabled: {error:#}");
+            None
+        }
+    };
     let path = std::env::var("MAIL_STORE_PATH").unwrap_or_else(|_| "tapped-mail.sqlite3".into());
     let transport_name = std::env::var("MAIL_TRANSPORT").unwrap_or_else(|_| "smtp".into());
     let transport = match transport_name.as_str() {
@@ -37,5 +52,12 @@ async fn main() -> Result<()> {
     let store =
         SqliteMailStore::open(&path).map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?;
     tracing::info!(mail_transport = transport_name, "mail worker started");
-    run_worker(Arc::new(store), transport).await;
+    tokio::select! {
+        _ = run_worker(Arc::new(store), transport) => {}
+        () = shutdown_signal() => {}
+    }
+    if let Some(telemetry) = telemetry {
+        telemetry.shutdown().await;
+    }
+    Ok(())
 }

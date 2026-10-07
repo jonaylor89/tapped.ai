@@ -152,16 +152,27 @@ pub async fn get_place(
     Path(PlaceIdPath { place_id }): Path<PlaceIdPath>,
     Query(params): Query<PlaceParams>,
 ) -> Result<Json<PlaceDetails>, AppError> {
-    if !is_safe_path(&place_id) || place_id.contains('/') {
+    place_details(&state, &place_id, params.session_token.as_deref())
+        .await
+        .map(Json)
+}
+
+/// Process cache, then Firestore `googlePlacesCache`, then Google.
+async fn place_details(
+    state: &AppStateDyn,
+    place_id: &str,
+    session_token: Option<&str>,
+) -> Result<PlaceDetails, AppError> {
+    if !is_safe_path(place_id) || place_id.contains('/') {
         return Err(AppError::bad_request("invalid place ID"));
     }
 
     let cache_key = format!("place:{place_id}");
-    if let Some(place) = cached::<Option<PlaceDetails>>(&state, &cache_key) {
-        return place.map(Json).ok_or_else(place_not_found);
+    if let Some(place) = cached::<Option<PlaceDetails>>(state, &cache_key) {
+        return place.ok_or_else(place_not_found);
     }
 
-    let stored = match state.database.get_cached_place(&place_id).await {
+    let stored = match state.database.get_cached_place(place_id).await {
         Ok(stored) => stored,
         Err(error) => {
             tracing::warn!("failed to read googlePlacesCache/{place_id}: {error:#}");
@@ -169,39 +180,35 @@ pub async fn get_place(
         }
     };
     if let Some(place) = stored.as_ref().filter(|place| !place.is_legacy()) {
-        store(&state, cache_key, &Some(place), PLACE_TTL);
-        return Ok(Json(place.clone()));
+        store(state, cache_key, &Some(place), PLACE_TTL);
+        return Ok(place.clone());
     }
 
-    let fetched = match state
-        .places
-        .place_details(&place_id, params.session_token.as_deref())
-        .await
-    {
+    let fetched = match state.places.place_details(place_id, session_token).await {
         Ok(fetched) => fetched,
         // A legacy document is still better than nothing.
         Err(error) => match stored {
             Some(place) => {
                 tracing::error!("google places request failed: {error:#}");
-                return Ok(Json(place));
+                return Ok(place);
             }
             None => return Err(upstream_error(error)),
         },
     };
 
     let Some(mut place) = fetched else {
-        store(&state, cache_key, &None::<PlaceDetails>, MISSING_PLACE_TTL);
+        store(state, cache_key, &None::<PlaceDetails>, MISSING_PLACE_TTL);
         return Err(place_not_found());
     };
     // Google may return a refreshed ID; keep the document keyed by the ID clients store.
-    place.place_id = place_id.clone();
+    place.place_id = place_id.to_owned();
     place.geohash = stored.and_then(|stored| stored.geohash);
     if let Err(error) = state.database.set_cached_place(&place).await {
         tracing::warn!("failed to write googlePlacesCache/{place_id}: {error:#}");
     }
-    store(&state, cache_key, &Some(&place), PLACE_TTL);
+    store(state, cache_key, &Some(&place), PLACE_TTL);
 
-    Ok(Json(place))
+    Ok(place)
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -254,8 +261,8 @@ pub async fn get_place_photo(
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ReverseGeocodeParams {
-    lat: f64,
-    lng: f64,
+    pub lat: f64,
+    pub lng: f64,
 }
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
@@ -270,6 +277,28 @@ pub async fn reverse_geocode(
     _user: FirebaseUser,
     Query(params): Query<ReverseGeocodeParams>,
 ) -> Result<Json<ReverseGeocodeResponse>, AppError> {
+    Ok(Json(ReverseGeocodeResponse {
+        place_id: locality_place_id(&state, &params).await?,
+    }))
+}
+
+/// Locality place details for a coordinate: `reverse-geocode` and `places/{placeId}` in one
+/// request, so the app makes a single round trip.
+pub async fn get_locality_place(
+    State(state): State<AppStateDyn>,
+    _user: FirebaseUser,
+    Query(params): Query<ReverseGeocodeParams>,
+) -> Result<Json<PlaceDetails>, AppError> {
+    let place_id = locality_place_id(&state, &params)
+        .await?
+        .ok_or_else(place_not_found)?;
+    place_details(&state, &place_id, None).await.map(Json)
+}
+
+async fn locality_place_id(
+    state: &AppStateDyn,
+    params: &ReverseGeocodeParams,
+) -> Result<Option<String>, AppError> {
     if !(-90.0..=90.0).contains(&params.lat) || !(-180.0..=180.0).contains(&params.lng) {
         return Err(AppError::bad_request(
             "lat must be in [-90, 90] and lng in [-180, 180]",
@@ -279,8 +308,8 @@ pub async fn reverse_geocode(
     let lng = (params.lng * 1_000.0).round() / 1_000.0;
 
     let cache_key = format!("place-reverse-geocode:{lat:.3},{lng:.3}");
-    if let Some(response) = cached(&state, &cache_key) {
-        return Ok(Json(response));
+    if let Some(response) = cached::<ReverseGeocodeResponse>(state, &cache_key) {
+        return Ok(response.place_id);
     }
 
     let response = ReverseGeocodeResponse {
@@ -290,9 +319,9 @@ pub async fn reverse_geocode(
             .await
             .map_err(upstream_error)?,
     };
-    store(&state, cache_key, &response, REVERSE_GEOCODE_TTL);
+    store(state, cache_key, &response, REVERSE_GEOCODE_TTL);
 
-    Ok(Json(response))
+    Ok(response.place_id)
 }
 
 #[cfg(test)]

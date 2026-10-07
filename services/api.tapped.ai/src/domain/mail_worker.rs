@@ -208,6 +208,7 @@ struct PostmarkEmail {
     message_stream: &'static str,
 }
 
+#[tracing::instrument(skip_all, fields(dependency = "postmark", otel.kind = "client", server.address = "api.postmarkapp.com"))]
 pub async fn submit_postmark(
     client: &Client,
     endpoint: &str,

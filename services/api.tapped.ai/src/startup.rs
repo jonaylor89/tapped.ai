@@ -16,8 +16,8 @@ use crate::{
         },
         mail_composer::OpenAiEmailComposer,
         places::{
-            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_place, get_place_photo,
-            reverse_geocode,
+            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_locality_place,
+            get_place, get_place_photo, reverse_geocode,
         },
         public_docs::{get_public_opportunity, get_public_user_by_username},
         search_index::{SyncUserResponse, spawn_new_user_reconciler, sync_current_user},
@@ -25,6 +25,7 @@ use crate::{
     },
     errors::{AppError, json_error_bodies, panic_response},
     rate_limit::RateLimits,
+    request_id::{RequestId, propagate_request_id},
     routes::v1_routes,
     state::AppStateDyn,
 };
@@ -44,7 +45,7 @@ use axum::{
     extract::MatchedPath,
     http::{Request, StatusCode},
     middleware,
-    response::Html,
+    response::{Html, Response},
     routing::{get, post},
 };
 use axum_swagger_ui::swagger_ui;
@@ -52,6 +53,9 @@ use chrono::TimeDelta;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::WrapErr;
 use firestore::{FirestoreDb, FirestoreDbOptions};
+use opentelemetry::propagation::TextMapPropagator;
+use opentelemetry_http::HeaderExtractor;
+use opentelemetry_sdk::propagation::TraceContextPropagator;
 use serde_json::{Value, json};
 use std::{sync::Arc, time::Duration};
 use tokio::net::TcpListener;
@@ -61,7 +65,8 @@ use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
-use tracing::info_span;
+use tracing::{Span, info_span};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 /// Upper bound for any request, including slow upstreams (LLM email composition, Places).
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
@@ -283,6 +288,16 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             }),
         )
         .api_route(
+            "/places/locality",
+            get_with(get_locality_place, |op| {
+                app_op(op, "Locality place details for a coordinate")
+                    .description(
+                        "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
+                    )
+                    .response::<200, Json<PlaceDetails>>()
+            }),
+        )
+        .api_route(
             "/spotify/artists/:artist_id",
             get_with(get_spotify_artist, |op| {
                 app_op(op, "Spotify artist by ID")
@@ -345,7 +360,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             "/users/username/:username",
             get_with(get_public_user_by_username, |op| {
                 public_op(op, "Public profile by username")
-                    .description("The user document with private fields removed.")
+                    .description("The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")
                     .response::<200, Json<serde_json::Value>>()
             }),
         )
@@ -353,7 +368,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             "/opportunities/:opportunity_id",
             get_with(get_public_opportunity, |op| {
                 public_op(op, "Public opportunity")
-                    .description("The opportunity document with private fields removed.")
+                    .description("The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")
                     .response::<200, Json<serde_json::Value>>()
             }),
         )
@@ -411,7 +426,8 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .finish_api_with(&mut api, api_docs);
 
     let api = Arc::new(api);
-    // Layers run outermost-last: trace -> catch panics -> JSON error bodies -> timeout -> app.
+    // Layers run outermost-last: request ID -> trace -> catch panics -> JSON error bodies ->
+    // timeout -> app.
     let router = app
         .layer(Extension(api.clone())) // Arc is very important here or you will face massive memory and performance issues
         .layer(
@@ -422,23 +438,62 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .layer(middleware::map_response(json_error_bodies))
         .layer(CatchPanicLayer::custom(panic_response))
         .layer(
-            TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
-                // Log the matched route's path (with placeholders not filled in).
-                // Use request.uri() or OriginalUri if you want the real path.
-                let matched_path = request
-                    .extensions()
-                    .get::<MatchedPath>()
-                    .map(MatchedPath::as_str);
+            TraceLayer::new_for_http()
+                .make_span_with(|request: &Request<_>| {
+                    // The matched route's path, with placeholders not filled in.
+                    let matched_path = request
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(MatchedPath::as_str);
+                    let request_id = request
+                        .extensions()
+                        .get::<RequestId>()
+                        .map(|id| id.0.as_str());
 
-                info_span!(
-                    "http_request",
-                    method = ?request.method(),
-                    matched_path,
-                    // Recorded by the Firebase and API-key auth middleware.
-                    user_id = tracing::field::Empty,
-                )
-            }),
+                    let method = request.method();
+                    let span_name = match matched_path {
+                        Some(route) => format!("{method} {route}"),
+                        None => method.to_string(),
+                    };
+
+                    let span = info_span!(
+                        "http_request",
+                        method = %method,
+                        matched_path,
+                        request_id,
+                        // Recorded by the Firebase and API-key auth middleware.
+                        user_id = tracing::field::Empty,
+                        status = tracing::field::Empty,
+                        latency_ms = tracing::field::Empty,
+                        // OpenTelemetry semantic conventions for the exported server span.
+                        otel.name = %span_name,
+                        otel.kind = "server",
+                        otel.status_code = tracing::field::Empty,
+                        http.request.method = %method,
+                        http.route = matched_path,
+                        http.response.status_code = tracing::field::Empty,
+                    );
+                    // Join the caller's trace (W3C `traceparent`/`tracestate`). This fails
+                    // harmlessly when trace export is off.
+                    let parent =
+                        TraceContextPropagator::new().extract(&HeaderExtractor(request.headers()));
+                    let _ = span.set_parent(parent);
+                    span
+                })
+                .on_response(|response: &Response, latency: Duration, span: &Span| {
+                    let status = response.status().as_u16();
+                    let latency_ms = latency.as_secs_f64() * 1_000.0;
+                    span.record("status", status);
+                    span.record("http.response.status_code", i64::from(status));
+                    span.record("latency_ms", latency_ms);
+                    if response.status().is_server_error() {
+                        span.record("otel.status_code", "error");
+                    }
+                    // The fields come from the span, so the line isn't repeated with duplicate keys.
+                    tracing::info!("request completed");
+                }),
         )
+        .layer(middleware::from_fn(propagate_request_id))
         .with_state(state);
 
     (router, api)

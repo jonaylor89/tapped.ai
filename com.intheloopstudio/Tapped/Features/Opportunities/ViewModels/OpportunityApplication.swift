@@ -41,14 +41,41 @@ struct OpportunityApplication: Sendable {
         for opportunity in opportunities {
             try await database.applyForOpportunity(opportunity: opportunity, userId: userId, userComment: comment)
         }
-        try await opportunityNotifications.notifyVenueOfInterestedOpportunities(opportunityIds: opportunities.map(\.id), note: comment)
-        if !isPremium {
-            for _ in opportunities {
-                try? await database.decrementUserOpportunityQuota(userId)
+        // Applying is done once the Firestore write lands. The venue notification drafts
+        // one email per venue server-side and can take seconds, so it runs detached with a
+        // small retry alongside the quota spend and analytics tracking.
+        let opportunityIds = opportunities.map(\.id)
+        Task.detached(priority: .utility) { [database, analytics, opportunityNotifications, isPremium, userId] in
+            if !isPremium {
+                for _ in opportunityIds {
+                    try? await database.decrementUserOpportunityQuota(userId)
+                }
+            }
+            await analytics.track("apply_for_opportunity", properties: ["user_id": .string(userId), "opportunity_count": .int(opportunityIds.count)])
+            await Self.notifyVenue(opportunityNotifications, opportunityIds: opportunityIds, note: comment)
+        }
+        return .applied
+    }
+
+    /// Retries the venue notification on a short backoff, then reports the final failure to Crashlytics.
+    static func notifyVenue(
+        _ opportunityNotifications: any OpportunityNotificationRepository,
+        opportunityIds: [String],
+        note: String,
+        maxAttempts: Int = 3
+    ) async {
+        for attempt in 1...maxAttempts {
+            do {
+                try await opportunityNotifications.notifyVenueOfInterestedOpportunities(opportunityIds: opportunityIds, note: note)
+                return
+            } catch {
+                guard attempt < maxAttempts else {
+                    FirebaseBootstrap.record(error: error)
+                    return
+                }
+                try? await Task.sleep(for: .milliseconds(500 * attempt))
             }
         }
-        await analytics.track("apply_for_opportunity", properties: ["user_id": .string(userId), "opportunity_count": .int(opportunities.count)])
-        return .applied
     }
 
     func dislike(_ opportunity: Opportunity) async throws {

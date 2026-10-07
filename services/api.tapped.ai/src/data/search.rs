@@ -159,6 +159,7 @@ impl Typesense {
 
 #[async_trait]
 impl Search for Typesense {
+    #[instrument(skip_all, fields(dependency = "typesense", otel.kind = "client", db.system.name = "typesense"))]
     async fn ping(&self) -> Result<()> {
         let status = typesense_codegen::apis::health_api::health(&self.config)
             .await
@@ -230,7 +231,7 @@ impl Search for Typesense {
             .collect()
     }
 
-    #[instrument(skip(self))]
+    #[instrument(skip(self), fields(dependency = "typesense", otel.kind = "client", db.system.name = "typesense"))]
     async fn search_users(
         &self,
         query: String,

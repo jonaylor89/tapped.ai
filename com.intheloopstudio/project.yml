@@ -109,12 +109,25 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Tapped.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tapped
         BUNDLE_LOADER: $(TEST_HOST)
+  TappedLaunchTests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: TappedLaunchTests
+    dependencies:
+      - target: Tapped
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.intheloopstudio.TappedLaunchTests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Tapped
 schemes:
   Runner:
     build:
       targets:
         Tapped: all
         TappedTests: [test]
+        TappedLaunchTests: [test]
     run:
       config: Debug
     test:
@@ -124,6 +137,7 @@ schemes:
         TAPPED_MOCK: "1"
       targets:
         - TappedTests
+        - TappedLaunchTests
         - package: TappedDomain/TappedDomainTests
         - package: TappedUI/TappedUITests
     archive:

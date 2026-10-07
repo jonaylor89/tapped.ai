@@ -1,7 +1,10 @@
 services:
   typesense:
     image: typesense/typesense:0.25.2
-    restart: on-failure
+    restart: unless-stopped
+    # Memory budget for the 4 GB VPS: see platform/README.md before changing any limit.
+    mem_limit: 1g
+    mem_reservation: 512m
     volumes:
       - /opt/typesense/data:/data
     command: "--data-dir /data --api-key=${TYPESENSE_API_KEY} --enable-cors"
@@ -14,11 +17,18 @@ services:
 
   api:
     image: ${API_IMAGE}
-    restart: on-failure
+    restart: unless-stopped
+    mem_limit: 512m
+    mem_reservation: 256m
     # The API drains in-flight requests on SIGTERM; requests time out after 90s.
     stop_grace_period: 95s
     environment:
       RUST_LOG: info
+      # Trace export to PostHog; off when the token is empty. EU projects set POSTHOG_HOST.
+      POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+      DEPLOYMENT_ENVIRONMENT: production
+      SERVICE_VERSION: ${API_IMAGE}
       PORT: "3000"
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials.json
@@ -48,9 +58,16 @@ services:
   mail-worker:
     image: ${API_IMAGE}
     command: ["mail_worker"]
-    restart: on-failure
+    restart: unless-stopped
+    mem_limit: 256m
+    mem_reservation: 64m
     environment:
       RUST_LOG: info
+      # Trace export to PostHog; off when the token is empty. EU projects set POSTHOG_HOST.
+      POSTHOG_PROJECT_TOKEN: ${POSTHOG_PROJECT_TOKEN:-}
+      POSTHOG_HOST: ${POSTHOG_HOST:-https://us.i.posthog.com}
+      DEPLOYMENT_ENVIRONMENT: production
+      SERVICE_VERSION: ${API_IMAGE}
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
       MAIL_TRANSPORT: postmark
       POSTMARK_SERVER_TOKEN: ${POSTMARK_SERVER_TOKEN}

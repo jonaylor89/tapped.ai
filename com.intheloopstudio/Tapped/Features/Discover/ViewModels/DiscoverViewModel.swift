@@ -78,6 +78,9 @@ final class DiscoverViewModel {
     private(set) var cameraRequest: MapCameraRequest?
 
     private var visibleBounds: GeoBounds?
+    /// The shell holds the first map search and `load()` until `start()` so they don't compete with its first frame.
+    private let defersStart: Bool
+    private(set) var isStarted = false
     private let database: any DatabaseRepository
     private let search: any SearchRepository
     private let analytics: any AnalyticsRepository
@@ -88,9 +91,11 @@ final class DiscoverViewModel {
         currentUser: UserModel,
         isPremium: Bool,
         claims: [CustomClaim] = [],
+        defersStart: Bool = false,
         now: @escaping () -> Date = { .now }
     ) {
         self.currentUser = currentUser
+        self.defersStart = defersStart
         self.isPremium = isPremium
         self.claims = claims
         self.now = now
@@ -112,6 +117,18 @@ final class DiscoverViewModel {
     var home: Location { currentUser.location ?? .rva }
 
     // MARK: Loading
+
+    /// Shell start, after the first frame: the visible Gigs header's map search first, then the featured rails and
+    /// checklist counts (`load()`).
+    func start() async {
+        guard !isStarted else { return }
+        isStarted = true
+        if let visibleBounds, searchedBounds == nil {
+            await runSearch(in: visibleBounds)
+        }
+        if searchedBounds != nil { LaunchSignposts.mark(.firstGigsResults) }
+        await load()
+    }
 
     func load() async {
         async let performers = try? database.getFeaturedPerformers()
@@ -145,8 +162,10 @@ final class DiscoverViewModel {
 
     func mapRegionChanged(to bounds: GeoBounds) async {
         visibleBounds = bounds
+        if defersStart, !isStarted { return }
         guard let searchedBounds else {
             await runSearch(in: bounds)
+            if defersStart { LaunchSignposts.mark(.firstGigsResults) }
             return
         }
         resultsExpired = bounds != searchedBounds
