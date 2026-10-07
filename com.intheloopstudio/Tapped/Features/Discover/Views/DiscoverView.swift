@@ -52,7 +52,10 @@ struct DiscoverView: View {
                     .padding(.bottom, max(frame.maxY - sheetTop, 0) + TappedSpacing.md)
             }
         }
-        .task { await model.load() }
+        .task {
+            await FirstFrame.rendered()
+            await model.start()
+        }
         .task(id: model.isPremium) { await model.observeQuota() }
     }
 }

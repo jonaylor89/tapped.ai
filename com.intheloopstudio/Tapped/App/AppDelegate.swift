@@ -7,6 +7,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        LaunchSignposts.mark(.didFinishLaunching)
+        LaunchSignposts.begin(.launch)
         // Set before launch finishes so a notification tap that cold-starts the app is delivered to `didReceive`.
         UNUserNotificationCenter.current().delegate = self
         NotificationCategories.register()
@@ -15,6 +17,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
+        AppTelemetry.start(config: config)
         // Provisional permission at sign in (`AppSession`), full prompt from `NotificationsPromptCard`.
         application.registerForRemoteNotifications()
         return true

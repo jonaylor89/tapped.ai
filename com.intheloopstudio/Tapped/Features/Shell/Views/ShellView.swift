@@ -14,6 +14,8 @@ struct ShellView: View {
     @State private var navigator: ShellNavigator
     @State private var discover: DiscoverViewModel
     @State private var showsReauthentication = false
+    /// Chat connect and the activity badge listener wait for the first frame so the Gigs tab's data goes first.
+    @State private var isFirstFrameRendered = false
     @State private var headerHeight: CGFloat = 0
     @State private var containerHeight: CGFloat = 0
     /// Room for the sheet's tab bar below the Gigs header.
@@ -38,6 +40,7 @@ struct ShellView: View {
             currentUser: currentUser,
             isPremium: isPremium,
             claims: claims,
+            defersStart: true,
             now: now
         ))
     }
@@ -72,8 +75,20 @@ struct ShellView: View {
             }
             .environment(shell)
             .onChange(of: session.isPremium) { _, isPremium in discover.isPremium = isPremium }
-            .task { await shell.run() }
-            .task { await shell.observeActivities(database: dependencies.database) }
+            .task {
+                await FirstFrame.rendered()
+                LaunchSignposts.mark(.shellVisible)
+                LaunchSignposts.end(.launch)
+                isFirstFrameRendered = true
+            }
+            .task(id: isFirstFrameRendered) {
+                guard isFirstFrameRendered else { return }
+                await shell.run()
+            }
+            .task(id: isFirstFrameRendered) {
+                guard isFirstFrameRendered else { return }
+                await shell.observeActivities(database: dependencies.database)
+            }
             .task { await shell.observePendingRequests(database: dependencies.database) }
             .task { await applyLaunchOptions() }
             .task(id: inbound?.pending) { await openPendingLink() }
