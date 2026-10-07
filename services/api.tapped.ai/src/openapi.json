@@ -410,6 +410,7 @@
           "app"
         ],
         "summary": "Email venues about opportunities the user is interested in",
+        "description": "Validates the request and queues a job that emails each unclaimed venue behind the opportunities. Retrying the same request (same `Idempotency-Key` header, or the same opportunities and note) within 24 hours returns the original job instead of emailing again.",
         "requestBody": {
           "content": {
             "application/json": {
@@ -420,6 +421,45 @@
           },
           "required": true
         },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "The job was queued, or already exists for this request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyVenueResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/opportunity-venue-notifications/{job_id}": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Status of a venue notification job",
         "responses": {
           "default": {
             "description": "",
@@ -1414,6 +1454,38 @@
           }
         }
       },
+      "JobStatus": {
+        "oneOf": [
+          {
+            "description": "Waiting to run, or waiting to retry after a failed attempt.",
+            "type": "string",
+            "enum": [
+              "queued"
+            ]
+          },
+          {
+            "description": "A worker is composing and queueing the emails.",
+            "type": "string",
+            "enum": [
+              "processing"
+            ]
+          },
+          {
+            "description": "Emails are queued for every venue that should get one; mail-worker delivers them.",
+            "type": "string",
+            "enum": [
+              "completed"
+            ]
+          },
+          {
+            "description": "Gave up after the maximum number of attempts.",
+            "type": "string",
+            "enum": [
+              "failed"
+            ]
+          }
+        ]
+      },
       "LatLngPath": {
         "type": "object",
         "required": [
@@ -1497,11 +1569,23 @@
       "NotifyVenueResponse": {
         "type": "object",
         "required": [
-          "venues_notified"
+          "job_id",
+          "status"
         ],
         "properties": {
+          "job_id": {
+            "description": "Poll `GET /app/v1/opportunity-venue-notifications/{job_id}` for the outcome.",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
           "venues_notified": {
-            "type": "integer",
+            "description": "Venues with an email queued. `null` until the job has completed.",
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "uint",
             "minimum": 0.0
           }

@@ -11,3 +11,4 @@ pub mod places;
 pub mod public_docs;
 mod request_id;
 pub mod root;
+pub mod venue_notifications;

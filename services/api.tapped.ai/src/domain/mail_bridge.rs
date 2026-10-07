@@ -23,6 +23,7 @@ use crate::{
     domain::{
         firebase_auth::FirebaseUser,
         mail_composer::{EmailComposer, StaticEmailComposer},
+        venue_notifications::{VenueNotificationJob, VenueNotificationJobs},
     },
     state::AppStateDyn,
 };
@@ -108,7 +109,7 @@ pub struct StreamDelivery {
 }
 
 #[async_trait]
-pub trait MailStore: Send + Sync {
+pub trait MailStore: VenueNotificationJobs + Send + Sync {
     async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()>;
     async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()>;
     async fn create_thread_and_enqueue(
@@ -194,6 +195,7 @@ struct MemoryState {
 #[derive(Default)]
 pub struct InMemoryMailStore {
     state: Mutex<MemoryState>,
+    pub(crate) venue_notification_jobs: Mutex<Vec<VenueNotificationJob>>,
 }
 
 impl InMemoryMailStore {
@@ -408,7 +410,7 @@ impl MailStore for InMemoryMailStore {
 }
 
 pub struct SqliteMailStore {
-    connection: Mutex<Connection>,
+    pub(crate) connection: Mutex<Connection>,
 }
 
 impl SqliteMailStore {
@@ -449,6 +451,7 @@ impl SqliteMailStore {
             "ALTER TABLE inbound_emails ADD COLUMN state TEXT NOT NULL DEFAULT 'pending'",
             [],
         );
+        crate::domain::venue_notifications::migrate(&connection)?;
         Ok(Self {
             connection: Mutex::new(connection),
         })

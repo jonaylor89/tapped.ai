@@ -1,16 +1,18 @@
-use axum::{Json, extract::State, http::StatusCode};
+use axum::{
+    Json,
+    extract::{Path, State},
+    http::{HeaderMap, StatusCode},
+};
+use chrono::Utc;
+use futures::future::join_all;
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use uuid::Uuid;
 
 use crate::{
     domain::{
         firebase_auth::FirebaseUser,
-        mail_bridge::{EmailThread, QueuedEmail, StreamDelivery, notify_slack},
-        mail_composer::{ComposeVenueEmail, OpportunityContext},
-        models::opportunity::Opportunity,
+        venue_notifications::{self, IDEMPOTENCY_WINDOW, JobStatus, VenueNotificationJob},
     },
     errors::AppError,
     state::AppStateDyn,
@@ -38,6 +40,10 @@ pub async fn stream_user_token(
     Ok(Json(StreamUserTokenResponse { token }))
 }
 
+/// The largest request accepted; the iOS client sends one opportunity per apply.
+pub const MAX_OPPORTUNITIES_PER_NOTIFICATION: usize = 50;
+const IDEMPOTENCY_KEY_HEADER: &str = "idempotency-key";
+
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NotifyVenueOfInterestedOpportunities {
@@ -48,249 +54,96 @@ pub struct NotifyVenueOfInterestedOpportunities {
 
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct NotifyVenueResponse {
-    pub venues_notified: usize,
+    /// Poll `GET /app/v1/opportunity-venue-notifications/{job_id}` for the outcome.
+    pub job_id: String,
+    pub status: JobStatus,
+    /// Venues with an email queued. `null` until the job has completed.
+    pub venues_notified: Option<usize>,
 }
 
-struct VenueOpportunities {
-    opportunities: Vec<Opportunity>,
-    other_performers: Vec<String>,
+impl From<VenueNotificationJob> for NotifyVenueResponse {
+    fn from(job: VenueNotificationJob) -> Self {
+        Self {
+            job_id: job.id,
+            status: job.status,
+            venues_notified: job.venues_notified,
+        }
+    }
 }
 
 /// Replaces the legacy callable. Firebase identity is deliberately the sole source of performer ID.
+///
+/// Only validates and records a job; composing and queueing the venue emails, the Stream mirror
+/// and Slack run in [`venue_notifications::run_worker`]. A retry of the same request (same
+/// `Idempotency-Key` header, or the same opportunities and note) within
+/// [`venue_notifications::IDEMPOTENCY_WINDOW`] returns the original job.
 pub async fn notify_venue_of_interested_opportunities(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
+    headers: HeaderMap,
     Json(command): Json<NotifyVenueOfInterestedOpportunities>,
-) -> Result<Json<NotifyVenueResponse>, AppError> {
+) -> Result<(StatusCode, Json<NotifyVenueResponse>), AppError> {
     if command.opportunity_ids.is_empty() {
-        return Err(AppError::bad_request("opportunityIds must not be empty"));
+        return Err(AppError::unprocessable("opportunityIds must not be empty"));
     }
+    if command.opportunity_ids.len() > MAX_OPPORTUNITIES_PER_NOTIFICATION {
+        return Err(AppError::unprocessable(format!(
+            "at most {MAX_OPPORTUNITIES_PER_NOTIFICATION} opportunityIds per request"
+        )));
+    }
+    let client_key = headers
+        .get(IDEMPOTENCY_KEY_HEADER)
+        .map(|value| value.to_str().map(str::trim))
+        .transpose()
+        .map_err(|_| AppError::bad_request("Idempotency-Key must be ASCII"))?
+        .filter(|key| !key.is_empty());
 
-    let mut opportunities = Vec::new();
-    for opportunity_id in &command.opportunity_ids {
-        if let Ok(opportunity) = state.database.get_opportunity_by_id(opportunity_id).await {
-            opportunities.push(opportunity);
-        }
-    }
-    if opportunities.is_empty() {
-        return Err(AppError::unprocessable("none of the opportunities exist"));
-    }
-
-    let mut by_venue: HashMap<String, VenueOpportunities> = HashMap::new();
-    for opportunity in opportunities {
-        if opportunity.user_id == user.uid {
-            continue;
-        }
-        let Some(reference_event_id) = opportunity.reference_event_id.as_deref() else {
-            continue;
-        };
-        let Ok(bookings) = state
-            .database
-            .get_bookings_by_reference_event_id(reference_event_id)
-            .await
-        else {
-            continue;
-        };
-        let Some(venue_id) = bookings
+    let opportunities = join_all(
+        command
+            .opportunity_ids
             .iter()
-            .find_map(|booking| booking.requester_id.as_deref())
-            .map(str::to_owned)
-        else {
-            continue;
-        };
-        let mut other_performers = Vec::new();
-        for booking in bookings {
-            if let Ok(performer) = state.database.get_user_by_id(&booking.requestee_id).await {
-                let name = performer.display_name().to_string();
-                if !name.is_empty() && !other_performers.contains(&name) {
-                    other_performers.push(name);
-                }
-            }
-        }
-        let entry = by_venue.entry(venue_id).or_insert(VenueOpportunities {
-            opportunities: vec![],
-            other_performers: vec![],
-        });
-        entry.opportunities.push(opportunity);
-        for performer in other_performers {
-            if !entry.other_performers.contains(&performer) {
-                entry.other_performers.push(performer);
-            }
-        }
+            .map(|id| state.database.get_opportunity_by_id(id)),
+    )
+    .await;
+    if !opportunities.iter().any(Result::is_ok) {
+        return Err(AppError::unprocessable("no valid opportunities were found"));
     }
 
-    let performer = state
-        .database
-        .get_user_by_id(&user.uid)
+    let key = venue_notifications::idempotency_key(
+        &user.uid,
+        client_key,
+        &command.opportunity_ids,
+        &command.note,
+    );
+    let dedupe_since = Utc::now().timestamp() - IDEMPOTENCY_WINDOW.as_secs() as i64;
+    let job = state
+        .mail
+        .store
+        .enqueue_venue_notification(
+            VenueNotificationJob::new(user.uid, key, command.opportunity_ids, command.note),
+            dedupe_since,
+        )
         .await
-        .map_err(|_| AppError::not_found("performer profile not found"))?;
-    if performer.username.is_empty() {
-        return Err(AppError::bad_request(
-            "set a username before contacting venues",
-        ));
-    }
+        .map_err(|error| AppError::internal("failed to record venue notification job", error))?;
+    Ok((StatusCode::ACCEPTED, Json(job.into())))
+}
 
-    let mut venues_notified = 0;
-    for (venue_id, context) in by_venue {
-        let Ok(venue) = state.database.get_user_by_id(&venue_id).await else {
-            continue;
-        };
-        // Legacy email outreach was only sent to unclaimed venues.
-        if !venue.is_unclaimed() {
-            continue;
-        }
-        let Some(recipient) = venue.booking_email().map(str::to_owned) else {
-            continue;
-        };
-        let existing = state
-            .mail
-            .store
-            .thread_for_stream(&user.uid, &venue_id)
-            .await
-            .map_err(|error| AppError::internal("mail store", error))?;
-        if existing.is_none()
-            && let Some(auto_reply) = venue.auto_reply()
-        {
-            if let Err(error) = state
-                .mail
-                .stream
-                .send_message(&StreamDelivery {
-                    event_id: format!("venue-auto-reply:{}:{}", user.uid, venue_id),
-                    thread_id: String::new(),
-                    sender_id: venue_id.clone(),
-                    receiver_id: user.uid.clone(),
-                    text: auto_reply.to_owned(),
-                    frozen: true,
-                })
-                .await
-            {
-                tracing::warn!(?error, "failed to send venue auto-reply");
-            }
-            continue;
-        }
-        let previous_messages = match existing.as_ref() {
-            Some(thread) => state
-                .mail
-                .store
-                .messages_for_thread(&thread.id)
-                .await
-                .map_err(|error| AppError::internal("mail store", error))?,
-            None => vec![],
-        };
-        let composed = state
-            .mail
-            .composer
-            .compose(ComposeVenueEmail {
-                performer_display_name: performer.display_name().to_owned(),
-                performer_username: performer.username.clone(),
-                performer_genres: performer.performer_genres().to_vec(),
-                performer_press_kit_url: performer.press_kit_url().map(str::to_owned),
-                performer_social_links: performer.social_links(),
-                venue_name: venue.display_name().to_owned(),
-                note: command.note.clone(),
-                opportunities: context
-                    .opportunities
-                    .iter()
-                    .map(|opportunity| OpportunityContext {
-                        title: opportunity.title.clone(),
-                        date: opportunity.start_time.format("%Y-%m-%d").to_string(),
-                        other_performers: context.other_performers.clone(),
-                    })
-                    .collect(),
-                previous_messages,
-            })
-            .await
-            .map_err(|error| {
-                AppError::upstream("email composer", error)
-                    .with_status(StatusCode::SERVICE_UNAVAILABLE)
-            })?;
-        let event_id = format!("opportunity-notification:{}", Uuid::new_v4());
-        let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
-        let generated_body = composed.generated_body.clone();
-        let is_new_thread = existing.is_none();
-        let queued = if let Some(thread) = existing {
-            state
-                .mail
-                .store
-                .enqueue_outbound(QueuedEmail {
-                    event_id,
-                    thread_id: thread.id,
-                    from: format!("{}@{}", performer.username, state.mail.booking_domain),
-                    to: thread.recipients,
-                    cc: vec![],
-                    subject: thread.subject,
-                    text_body: composed.text_body,
-                    html_body: Some(composed.html_body),
-                    message_id,
-                    in_reply_to: thread.latest_message_id.clone(),
-                    references: thread.latest_message_id,
-                    attachments: vec![],
-                    encoded_attachments: vec![],
-                })
-                .await
-        } else {
-            let thread_id = Uuid::new_v4().to_string();
-            state
-                .mail
-                .store
-                .create_thread_and_enqueue(
-                    EmailThread {
-                        id: thread_id.clone(),
-                        performer_id: user.uid.clone(),
-                        performer_username: performer.username.clone(),
-                        venue_id: venue_id.clone(),
-                        recipients: vec![recipient.clone()],
-                        subject: composed.subject.clone(),
-                        latest_message_id: message_id.clone(),
-                    },
-                    QueuedEmail {
-                        event_id,
-                        thread_id,
-                        from: format!("{}@{}", performer.username, state.mail.booking_domain),
-                        to: vec![recipient],
-                        cc: state.mail.founder_cc.clone(),
-                        subject: composed.subject,
-                        text_body: composed.text_body,
-                        html_body: Some(composed.html_body),
-                        message_id,
-                        in_reply_to: String::new(),
-                        references: String::new(),
-                        attachments: vec![],
-                        encoded_attachments: vec![],
-                    },
-                )
-                .await
-        }
-        .map_err(|error| AppError::internal("mail store", error))?;
-        if queued
-            && is_new_thread
-            && let Err(error) = state
-                .mail
-                .stream
-                .send_message(&StreamDelivery {
-                    event_id: format!("venue-contact:{}:{}", user.uid, venue_id),
-                    thread_id: String::new(),
-                    sender_id: user.uid.clone(),
-                    receiver_id: venue_id.clone(),
-                    text: generated_body,
-                    frozen: true,
-                })
-                .await
-        {
-            tracing::warn!(?error, "failed to mirror venue contact to Stream");
-        }
-        if queued {
-            notify_slack(
-                state.mail.slack_webhook_url.as_deref(),
-                "new venue contact email",
-                &format!("{} => {}", performer.display_name(), venue.display_name()),
-            )
-            .await;
-            venues_notified += 1;
-        }
-    }
-
-    Ok(Json(NotifyVenueResponse { venues_notified }))
+/// The outcome of a job created by [`notify_venue_of_interested_opportunities`]. Jobs are only
+/// visible to the performer who created them.
+pub async fn get_venue_notification(
+    State(state): State<AppStateDyn>,
+    user: FirebaseUser,
+    Path(job_id): Path<String>,
+) -> Result<Json<NotifyVenueResponse>, AppError> {
+    let job = state
+        .mail
+        .store
+        .venue_notification(&job_id)
+        .await
+        .map_err(|error| AppError::internal("failed to read venue notification job", error))?
+        .filter(|job| job.performer_id == user.uid)
+        .ok_or_else(|| AppError::not_found("venue notification job not found"))?;
+    Ok(Json(job.into()))
 }
 
 #[cfg(test)]
@@ -299,12 +152,14 @@ mod tests {
     use crate::{
         data::{database::Database, search::MockSearch},
         domain::{
-            mail_bridge::{InMemoryMailStore, MailBridge, StreamGateway},
+            mail_bridge::{InMemoryMailStore, MailBridge, StreamDelivery, StreamGateway},
             models::{
                 booking::{Booking, BookingStatus},
+                opportunity::Opportunity,
                 review::Review,
                 user::UserModel,
             },
+            venue_notifications::process_due,
         },
     };
     use async_trait::async_trait;
@@ -575,27 +430,68 @@ mod tests {
         assert_eq!(token.claims["user_id"], "artist");
     }
 
+    async fn notify(
+        state: &AppStateDyn,
+        headers: HeaderMap,
+        opportunity_ids: &[&str],
+        note: &str,
+    ) -> Result<NotifyVenueResponse, AppError> {
+        let (status, Json(response)) = notify_venue_of_interested_opportunities(
+            State(state.clone()),
+            artist(),
+            headers,
+            Json(NotifyVenueOfInterestedOpportunities {
+                opportunity_ids: opportunity_ids.iter().map(|id| id.to_string()).collect(),
+                note: note.into(),
+            }),
+        )
+        .await?;
+        assert_eq!(status, StatusCode::ACCEPTED);
+        Ok(response)
+    }
+
+    async fn job(state: &AppStateDyn, id: &str) -> NotifyVenueResponse {
+        get_venue_notification(State(state.clone()), artist(), Path(id.into()))
+            .await
+            .unwrap()
+            .0
+    }
+
+    #[tokio::test]
+    async fn notification_is_accepted_before_any_email_work() {
+        let (state, store, stream) = state();
+        let response = notify(&state, HeaderMap::new(), &["valid"], "")
+            .await
+            .unwrap();
+        assert_eq!(response.status, JobStatus::Queued);
+        assert_eq!(response.venues_notified, None);
+        assert!(store.outbound().is_empty());
+        assert!(stream.deliveries.lock().unwrap().is_empty());
+    }
+
     #[tokio::test]
     async fn notification_groups_and_skips_invalid_opportunities() {
         let (state, store, stream) = state();
-        let Json(response) = notify_venue_of_interested_opportunities(
-            State(state),
-            artist(),
-            Json(NotifyVenueOfInterestedOpportunities {
-                opportunity_ids: vec![
-                    "valid".into(),
-                    "also-valid".into(),
-                    "owned".into(),
-                    "claimed".into(),
-                    "no-email".into(),
-                    "missing-reference".into(),
-                ],
-                note: "Available now".into(),
-            }),
+        let response = notify(
+            &state,
+            HeaderMap::new(),
+            &[
+                "valid",
+                "also-valid",
+                "owned",
+                "claimed",
+                "no-email",
+                "missing-reference",
+                "missing",
+            ],
+            "Available now",
         )
         .await
         .unwrap();
-        assert_eq!(response.venues_notified, 1);
+        assert_eq!(process_due(&state).await.unwrap(), 1);
+        let finished = job(&state, &response.job_id).await;
+        assert_eq!(finished.status, JobStatus::Completed);
+        assert_eq!(finished.venues_notified, Some(1));
         let queued = store.outbound();
         assert_eq!(queued.len(), 1);
         assert_eq!(queued[0].to, ["a@example.com"]);
@@ -611,24 +507,14 @@ mod tests {
     #[tokio::test]
     async fn notification_appends_to_an_existing_thread() {
         let (state, store, _) = state();
-        let request = NotifyVenueOfInterestedOpportunities {
-            opportunity_ids: vec!["valid".into()],
-            note: String::new(),
-        };
-        let _ =
-            notify_venue_of_interested_opportunities(State(state.clone()), artist(), Json(request))
-                .await
-                .unwrap();
-        let _ = notify_venue_of_interested_opportunities(
-            State(state),
-            artist(),
-            Json(NotifyVenueOfInterestedOpportunities {
-                opportunity_ids: vec!["valid".into()],
-                note: "different request".into(),
-            }),
-        )
-        .await
-        .unwrap();
+        notify(&state, HeaderMap::new(), &["valid"], "")
+            .await
+            .unwrap();
+        notify(&state, HeaderMap::new(), &["valid"], "different request")
+            .await
+            .unwrap();
+        process_due(&state).await.unwrap();
+        process_due(&state).await.unwrap();
         let queued = store.outbound();
         assert_eq!(queued.len(), 2);
         assert_eq!(queued[0].thread_id, queued[1].thread_id);
@@ -636,19 +522,68 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn retried_requests_reuse_the_job_and_send_one_email() {
+        let (state, store, stream) = state();
+        let first = notify(&state, HeaderMap::new(), &["valid", "also-valid"], "hi")
+            .await
+            .unwrap();
+        let reordered = notify(&state, HeaderMap::new(), &["also-valid", "valid"], "hi")
+            .await
+            .unwrap();
+        assert_eq!(first.job_id, reordered.job_id);
+        process_due(&state).await.unwrap();
+        let after_completion = notify(&state, HeaderMap::new(), &["valid", "also-valid"], "hi")
+            .await
+            .unwrap();
+        assert_eq!(after_completion.job_id, first.job_id);
+        assert_eq!(after_completion.status, JobStatus::Completed);
+        assert_eq!(process_due(&state).await.unwrap(), 0);
+        assert_eq!(store.outbound().len(), 1);
+        assert_eq!(stream.deliveries.lock().unwrap().len(), 1);
+    }
+
+    #[tokio::test]
+    async fn idempotency_key_header_identifies_the_request() {
+        let (state, _, _) = state();
+        let mut headers = HeaderMap::new();
+        headers.insert(IDEMPOTENCY_KEY_HEADER, "apply-1".parse().unwrap());
+        let first = notify(&state, headers.clone(), &["valid"], "a")
+            .await
+            .unwrap();
+        let retry = notify(&state, headers, &["valid"], "edited").await.unwrap();
+        assert_eq!(first.job_id, retry.job_id);
+        let mut other = HeaderMap::new();
+        other.insert(IDEMPOTENCY_KEY_HEADER, "apply-2".parse().unwrap());
+        let second = notify(&state, other, &["valid"], "a").await.unwrap();
+        assert_ne!(first.job_id, second.job_id);
+    }
+
+    #[tokio::test]
+    async fn a_retried_job_does_not_send_a_second_email() {
+        let (state, store, _) = state();
+        let response = notify(&state, HeaderMap::new(), &["valid"], "")
+            .await
+            .unwrap();
+        process_due(&state).await.unwrap();
+        // Simulate a crash after the email was queued but before the job was marked complete.
+        {
+            let mut jobs = store.venue_notification_jobs.lock().unwrap();
+            jobs[0].status = JobStatus::Queued;
+            jobs[0].available_at = 0;
+        }
+        assert_eq!(process_due(&state).await.unwrap(), 1);
+        assert_eq!(store.outbound().len(), 1);
+        assert_eq!(job(&state, &response.job_id).await.venues_notified, Some(1));
+    }
+
+    #[tokio::test]
     async fn venue_auto_reply_uses_a_frozen_stream_message_instead_of_email() {
         let (state, store, stream) = state();
-        let Json(response) = notify_venue_of_interested_opportunities(
-            State(state),
-            artist(),
-            Json(NotifyVenueOfInterestedOpportunities {
-                opportunity_ids: vec!["auto-reply".into()],
-                note: String::new(),
-            }),
-        )
-        .await
-        .unwrap();
-        assert_eq!(response.venues_notified, 0);
+        let response = notify(&state, HeaderMap::new(), &["auto-reply"], "")
+            .await
+            .unwrap();
+        process_due(&state).await.unwrap();
+        assert_eq!(job(&state, &response.job_id).await.venues_notified, Some(0));
         assert!(store.outbound().is_empty());
         let deliveries = stream.deliveries.lock().unwrap();
         assert_eq!(deliveries.len(), 1);
@@ -657,22 +592,41 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn missing_opportunities_are_rejected() {
+    async fn invalid_requests_are_rejected_without_a_job() {
         let (state, store, _) = state();
+        for ids in [vec![], vec!["missing"]] {
+            assert_eq!(
+                notify(&state, HeaderMap::new(), &ids, "")
+                    .await
+                    .unwrap_err()
+                    .status,
+                StatusCode::UNPROCESSABLE_ENTITY
+            );
+        }
+        let too_many = vec!["valid"; MAX_OPPORTUNITIES_PER_NOTIFICATION + 1];
         assert_eq!(
-            notify_venue_of_interested_opportunities(
-                State(state),
-                artist(),
-                Json(NotifyVenueOfInterestedOpportunities {
-                    opportunity_ids: vec!["missing".into()],
-                    note: String::new()
-                })
-            )
-            .await
-            .unwrap_err()
-            .status,
+            notify(&state, HeaderMap::new(), &too_many, "")
+                .await
+                .unwrap_err()
+                .status,
             StatusCode::UNPROCESSABLE_ENTITY
         );
-        assert!(store.outbound().is_empty());
+        assert!(store.venue_notification_jobs.lock().unwrap().is_empty());
+    }
+
+    #[tokio::test]
+    async fn jobs_are_only_visible_to_their_performer() {
+        let (state, _, _) = state();
+        let response = notify(&state, HeaderMap::new(), &["valid"], "")
+            .await
+            .unwrap();
+        let other = FirebaseUser {
+            uid: "other".into(),
+            email: None,
+        };
+        let error = get_venue_notification(State(state), other, Path(response.job_id))
+            .await
+            .unwrap_err();
+        assert_eq!(error.status, StatusCode::NOT_FOUND);
     }
 }
