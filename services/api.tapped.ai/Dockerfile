@@ -15,6 +15,8 @@ RUN rm src/*.rs
 
 # Copy source code
 COPY ./src ./src
+COPY ./build.rs ./build.rs
+COPY ./migrations ./migrations
 
 # Build for release.
 RUN touch src/main.rs && cargo build --release

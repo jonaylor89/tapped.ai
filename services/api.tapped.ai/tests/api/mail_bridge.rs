@@ -142,6 +142,7 @@ async fn test_app() -> (
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
         spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
+        postgres: None,
         mail: MailBridge {
             store: store.clone(),
             stream: stream.clone(),
@@ -286,6 +287,7 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
         response_cache: Default::default(),
         places: std::sync::Arc::new(tapped_api_rs::data::places::MockPlaces),
         spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
+        postgres: None,
         mail: MailBridge {
             store: store.clone(),
             stream: Arc::new(RecordingStream::default()),

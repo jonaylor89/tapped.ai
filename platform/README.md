@@ -80,11 +80,12 @@ The VPS has 4 GB and no swap headroom to spare, so every long-running container 
 | Service | `mem_limit` | `mem_reservation` | Notes |
 |---------|-------------|-------------------|-------|
 | typesense | 1 GB | 512 MB | Holds the whole index in RAM; restarts reload it from `/opt/typesense/data`, so search is unavailable for a while after an OOM kill. |
+| postgres | 512 MB | 256 MB | `shared_buffers=128MB`, `max_connections=30`; the API pool uses at most 5. |
 | imgproxy | 768 MB | — | Two workers (`IMGPROXY_WORKERS`). |
 | api | 512 MB | 256 MB | The response cache is in-process. |
 | mail-worker | 256 MB | 64 MB | Holds one email's attachments at a time. |
 
-That leaves about 1.5 GB for the OS, Docker, cloudflared and the page cache. Before raising a limit, check what the containers actually use:
+That leaves about 1 GB for the OS, Docker, cloudflared and the page cache. Before raising a limit, check what the containers actually use:
 
 ```bash
 docker stats --no-stream
@@ -173,6 +174,46 @@ cd /opt/tapped
 docker compose pull imgproxy
 docker compose up -d imgproxy cloudflared
 curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' '<firebase download URL>' | base64 | tr '+/' '-_' | tr -d '=\n')"
+```
+
+## Postgres
+
+Postgres 17 + PostGIS (`postgres` in `docker-compose.prod.yml`) is replacing Firestore. It is only reachable on the Compose network. The API applies migrations from `services/api.tapped.ai/migrations` on boot. While `DATABASE_URL` is empty, the API skips Postgres. If Postgres is down or still starting (for example after a reboot), the API keeps serving, since nothing reads from it yet: it logs `Postgres migrations not applied yet` and retries (backing off to once a minute), and its pool reconnects on its own.
+
+### One-time setup
+
+```bash
+cd /opt/tapped
+# Hex keeps the password URL-safe for DATABASE_URL.
+PG_PASSWORD=$(openssl rand -hex 32)
+echo "POSTGRES_PASSWORD=$PG_PASSWORD" >> .env
+echo "DATABASE_URL=postgres://tapped:$PG_PASSWORD@postgres:5432/tapped" >> .env
+mkdir -p /opt/postgres/data /opt/backups/postgres
+docker compose up -d postgres
+docker compose ps postgres            # wait for (healthy)
+docker compose up -d --no-deps api
+docker compose logs api | grep -i postgres   # expect "connected to Postgres; migrations applied"
+```
+
+Open a shell with `docker compose exec postgres psql -U tapped`.
+
+### Backups
+
+Nightly custom-format dump, keeping 14 days (`crontab -e` as root):
+
+```cron
+15 3 * * * cd /opt/tapped && docker compose exec -T postgres pg_dump -U tapped -Fc tapped > /opt/backups/postgres/tapped-$(date +\%F).dump && find /opt/backups/postgres -name '*.dump' -mtime +14 -delete
+```
+
+These stay on the VPS, so copy them off regularly: `scp root@46.225.133.198:/opt/backups/postgres/*.dump ./`.
+
+Restore, or test a dump, into a scratch database:
+
+```bash
+docker compose exec postgres createdb -U tapped restore_check
+docker compose exec -T postgres pg_restore -U tapped -d restore_check < /opt/backups/postgres/tapped-YYYY-MM-DD.dump
+docker compose exec postgres psql -U tapped -d restore_check -c 'select count(*) from users'
+docker compose exec postgres dropdb -U tapped restore_check
 ```
 
 ## Backup
