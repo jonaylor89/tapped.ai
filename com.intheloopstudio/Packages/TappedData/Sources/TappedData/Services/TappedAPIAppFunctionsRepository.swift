@@ -50,6 +50,7 @@ public struct TappedAPIStreamTokenRepository: Sendable {
         var request = URLRequest(url: baseURL.appending(path: "app/v1/stream-token"))
         request.httpMethod = "POST"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         return request
     }
 
@@ -90,6 +91,7 @@ public struct TappedAPIOpportunityNotificationRepository: OpportunityNotificatio
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         request.httpBody = try JSONEncoder().encode(notification)
         return request
     }

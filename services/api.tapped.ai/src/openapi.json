@@ -589,7 +589,7 @@
           "public"
         ],
         "summary": "Public profile by username",
-        "description": "The user document with private fields removed.",
+        "description": "The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
         "parameters": [
           {
             "in": "path",
@@ -635,7 +635,7 @@
           "public"
         ],
         "summary": "Public opportunity",
-        "description": "The opportunity document with private fields removed.",
+        "description": "The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
         "parameters": [
           {
             "in": "path",

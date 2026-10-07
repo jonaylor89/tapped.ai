@@ -111,6 +111,7 @@ public struct TappedAPIPlacesRepository: PlacesRepository {
         guard let url = components?.url else { throw URLError(.badURL) }
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         return request
     }
 
