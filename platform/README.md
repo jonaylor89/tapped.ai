@@ -125,6 +125,27 @@ docker compose logs --since 1h --no-log-prefix api \
 
 For a dependency, select `.dependency != null and (.msg | endswith("- END]"))` and use `{key: .dependency, ms: .elapsed_milliseconds}`. There is no metrics endpoint; the logs are the source.
 
+### Traces in PostHog
+
+The API and mail-worker can also export their spans to PostHog distributed tracing over OTLP/HTTP (`<host>/i/v1/traces`, authenticated with `Authorization: Bearer <project token>`). Export is off unless `POSTHOG_PROJECT_TOKEN` is set, so tests, CI and local runs never call PostHog. The JSON logs above are written either way.
+
+| Variable (`/opt/tapped/.env` or compose) | Value |
+|---|---|
+| `POSTHOG_PROJECT_TOKEN` | PostHog project token (`phc_...`, Project settings → Project token). Not a personal API key (`phx_...`). Empty disables export. |
+| `POSTHOG_HOST` | `https://us.i.posthog.com` (default, US cloud) or `https://eu.i.posthog.com` for an EU project |
+| `DEPLOYMENT_ENVIRONMENT` | `production` in compose; exported as `deployment.environment.name` |
+| `SERVICE_VERSION` | `${API_IMAGE}` in compose; exported as `service.version` (defaults to the crate version) |
+
+Spans and attributes:
+
+- **Server span** per request, `service.name` `api.tapped.ai`, named `<METHOD> <route>` (e.g. `GET /app/v1/places/:place_id`), with `http.route`, `http.request.method`, `http.response.status_code`, `request_id` and `user_id`. 5xx responses set the span status to error. If the request has a W3C `traceparent` (and `tracestate`), the span joins that trace; otherwise it starts a new one.
+- **Client spans** for each downstream call, children of the request span, with `dependency`, `server.address` (or `db.system.name` for `firestore` and `typesense`; OpenAI also has `gen_ai.provider.name` and `gen_ai.operation.name`).
+- The mail-worker's spans use `service.name` `mail-worker.tapped.ai`.
+
+Spans are sent in batches; on SIGTERM the API drains requests and then flushes the remaining spans before exiting, and the mail-worker flushes and exits.
+
+In PostHog's tracing view, filter by service `api.tapped.ai` and the `http.route` or `dependency` attribute and sort by duration to find slow routes and calls; filter by `request_id` to find one request from an `X-Request-Id` or error report. The `jq` recipe above still gives p50/p95 from the logs.
+
 ## Image resizing (img.tapped.ai)
 
 `imgproxy` resizes Firebase Storage images on request and Cloudflare caches each variant at the edge, so the VPS only processes an image once per size. Clients rewrite Firebase Storage download URLs to

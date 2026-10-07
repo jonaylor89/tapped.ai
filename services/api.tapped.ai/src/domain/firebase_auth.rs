@@ -62,7 +62,7 @@ fn max_age(headers: &HeaderMap) -> Duration {
         .min(MAX_JWKS_MAX_AGE)
 }
 
-#[tracing::instrument(fields(dependency = "google_jwks"))]
+#[tracing::instrument(fields(dependency = "google_jwks", otel.kind = "client", server.address = "www.googleapis.com"))]
 async fn fetch_jwks() -> anyhow::Result<(JwkSet, Duration)> {
     let response = crate::http::client()
         .get(FIREBASE_JWK_URL)

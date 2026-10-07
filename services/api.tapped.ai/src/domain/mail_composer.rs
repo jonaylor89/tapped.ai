@@ -199,7 +199,7 @@ struct ChatResponseMessage {
 
 #[async_trait]
 impl EmailComposer for OpenAiEmailComposer {
-    #[tracing::instrument(skip_all, fields(dependency = "openai"))]
+    #[tracing::instrument(skip_all, fields(dependency = "openai", otel.kind = "client", server.address = "api.openai.com", gen_ai.provider.name = "openai", gen_ai.operation.name = "chat"))]
     async fn compose(&self, request: ComposeVenueEmail) -> anyhow::Result<ComposedEmail> {
         let response = self
             .client

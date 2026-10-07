@@ -810,7 +810,7 @@ impl StreamHttpGateway {
 
 #[async_trait]
 impl StreamGateway for StreamHttpGateway {
-    #[tracing::instrument(skip_all, fields(dependency = "stream"))]
+    #[tracing::instrument(skip_all, fields(dependency = "stream", otel.kind = "client", server.address = "chat.stream-io-api.com"))]
     async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
         let query = self.client.post(format!("{}/channels/messaging/query", self.base_url))
             .query(&[("api_key", &self.api_key)])
@@ -885,7 +885,7 @@ pub struct StreamWebhook {
     pub members: Vec<StreamMember>,
 }
 
-#[tracing::instrument(skip_all, fields(dependency = "slack"))]
+#[tracing::instrument(skip_all, fields(dependency = "slack", otel.kind = "client", server.address = "hooks.slack.com"))]
 pub async fn notify_slack(webhook_url: Option<&str>, title: &str, body: &str) {
     let Some(webhook_url) = webhook_url else {
         return;

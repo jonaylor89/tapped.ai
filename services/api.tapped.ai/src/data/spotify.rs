@@ -137,12 +137,12 @@ impl SpotifyHttp {
 
 #[async_trait]
 impl Spotify for SpotifyHttp {
-    #[instrument(skip(self), fields(dependency = "spotify"))]
+    #[instrument(skip(self), fields(dependency = "spotify", otel.kind = "client", server.address = "api.spotify.com"))]
     async fn artist(&self, artist_id: &str) -> Result<Option<Value>> {
         self.get(&format!("/artists/{artist_id}"), &[]).await
     }
 
-    #[instrument(skip(self), fields(dependency = "spotify"))]
+    #[instrument(skip(self), fields(dependency = "spotify", otel.kind = "client", server.address = "api.spotify.com"))]
     async fn top_tracks(&self, artist_id: &str, market: Option<&str>) -> Result<Option<Value>> {
         let query: Vec<(&str, &str)> = market.map(|m| ("market", m)).into_iter().collect();
         self.get(&format!("/artists/{artist_id}/top-tracks"), &query)
