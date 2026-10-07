@@ -2,15 +2,15 @@ import Foundation
 import MetricKit
 import TappedData
 
-/// Forwards MetricKit's daily launch / hang / memory metrics and hang diagnostics to product analytics.
+/// Exports MetricKit's daily launch / hang / memory metrics and hang diagnostics as OpenTelemetry spans.
 final class MetricKitReporter: NSObject, MXMetricManagerSubscriber, Sendable {
-    static let metricsEvent = "app_metrics"
-    static let hangEvent = "app_hang"
+    static let metricsSpan = "metrickit.metrics"
+    static let hangSpan = "metrickit.hang"
 
-    private let analytics: any AnalyticsRepository
+    private let telemetry: any TelemetryRepository
 
-    init(analytics: any AnalyticsRepository) {
-        self.analytics = analytics
+    init(telemetry: any TelemetryRepository) {
+        self.telemetry = telemetry
     }
 
     func start() {
@@ -26,7 +26,8 @@ final class MetricKitReporter: NSObject, MXMetricManagerSubscriber, Sendable {
             (payload.hangDiagnostics ?? []).map {
                 AppHangSummary(
                     durationMs: $0.hangDuration.converted(to: .milliseconds).value,
-                    appVersion: $0.applicationVersion
+                    appVersion: $0.applicationVersion,
+                    reportedAt: payload.timeStampEnd
                 )
             }
         }
@@ -34,26 +35,22 @@ final class MetricKitReporter: NSObject, MXMetricManagerSubscriber, Sendable {
     }
 
     func report(_ summaries: [AppMetricsSummary]) {
-        let analytics = analytics
-        Task {
-            for summary in summaries {
-                await analytics.track(Self.metricsEvent, properties: summary.properties)
-            }
-        }
+        send(summaries.map(\.span))
     }
 
     func report(hangs: [AppHangSummary]) {
-        let analytics = analytics
-        Task {
-            for hang in hangs {
-                await analytics.track(Self.hangEvent, properties: hang.properties)
-            }
-        }
+        send(hangs.map(\.span))
+    }
+
+    private func send(_ spans: [TelemetrySpan]) {
+        guard !spans.isEmpty else { return }
+        let telemetry = telemetry
+        Task { await telemetry.record(spans) }
     }
 }
 
-/// One MetricKit metric payload (usually a day), flattened to analytics properties. Histograms are reduced to their
-/// bucket-weighted mean since PostHog can't take the raw buckets.
+/// One MetricKit metric payload (usually a day), flattened to span attributes over the payload's period. Histograms
+/// are reduced to their bucket-weighted mean since span attributes are scalars.
 struct AppMetricsSummary: Sendable, Equatable {
     var appVersion: String
     var periodStart: Date
@@ -65,23 +62,32 @@ struct AppMetricsSummary: Sendable, Equatable {
     var peakMemoryMB: Double?
     var averageSuspendedMemoryMB: Double?
 
-    var properties: [String: AnalyticsValue] {
-        var properties: [String: AnalyticsValue] = [
-            "app_version": .string(appVersion),
-            "period_hours": .double((periodEnd.timeIntervalSince(periodStart) / 3600).rounded()),
+    var attributes: [String: AnalyticsValue] {
+        var attributes: [String: AnalyticsValue] = [
+            "app.version": .string(appVersion),
+            "metrickit.period_hours": .double((periodEnd.timeIntervalSince(periodStart) / 3600).rounded()),
         ]
         let metrics: [(String, Double?)] = [
-            ("launch_time_to_first_draw_ms", launchTimeToFirstDrawMs),
-            ("launch_optimized_time_to_first_draw_ms", launchOptimizedTimeToFirstDrawMs),
-            ("resume_time_ms", resumeTimeMs),
-            ("hang_time_ms", hangTimeMs),
-            ("peak_memory_mb", peakMemoryMB),
-            ("average_suspended_memory_mb", averageSuspendedMemoryMB),
+            ("metrickit.launch.time_to_first_draw_ms", launchTimeToFirstDrawMs),
+            ("metrickit.launch.optimized_time_to_first_draw_ms", launchOptimizedTimeToFirstDrawMs),
+            ("metrickit.launch.resume_time_ms", resumeTimeMs),
+            ("metrickit.responsiveness.hang_time_ms", hangTimeMs),
+            ("metrickit.memory.peak_mb", peakMemoryMB),
+            ("metrickit.memory.average_suspended_mb", averageSuspendedMemoryMB),
         ]
         for case let (key, value?) in metrics {
-            properties[key] = .double((value * 10).rounded() / 10)
+            attributes[key] = .double((value * 10).rounded() / 10)
         }
-        return properties
+        return attributes
+    }
+
+    var span: TelemetrySpan {
+        TelemetrySpan(
+            name: MetricKitReporter.metricsSpan,
+            start: periodStart,
+            end: max(periodStart, periodEnd),
+            attributes: attributes
+        )
     }
 }
 
@@ -117,11 +123,22 @@ extension AppMetricsSummary {
     }
 }
 
+/// MetricKit only reports a hang's duration, so the span ends when its diagnostic payload was delivered.
 struct AppHangSummary: Sendable, Equatable {
     var durationMs: Double
     var appVersion: String
+    var reportedAt: Date
 
-    var properties: [String: AnalyticsValue] {
-        ["duration_ms": .double(durationMs.rounded()), "app_version": .string(appVersion)]
+    var attributes: [String: AnalyticsValue] {
+        ["metrickit.hang.duration_ms": .double(durationMs.rounded()), "app.version": .string(appVersion)]
+    }
+
+    var span: TelemetrySpan {
+        TelemetrySpan(
+            name: MetricKitReporter.hangSpan,
+            start: reportedAt.addingTimeInterval(-durationMs / 1000),
+            end: reportedAt,
+            attributes: attributes
+        )
     }
 }

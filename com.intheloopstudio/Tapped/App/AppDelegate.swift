@@ -3,8 +3,6 @@ import UIKit
 import UserNotifications
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
-    private var metricKit: MetricKitReporter?
-
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -19,8 +17,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
-        metricKit = MetricKitReporter(analytics: AppEnvironment.dependencies.analytics)
-        metricKit?.start()
+        AppTelemetry.start(config: config)
         // Provisional permission at sign in (`AppSession`), full prompt from `NotificationsPromptCard`.
         application.registerForRemoteNotifications()
         return true
