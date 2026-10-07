@@ -5,7 +5,7 @@ import UIKit
 import WidgetKit
 
 /// Keeps the "Gig Night" Live Activity and the "Next gig" widget in sync with the performer's confirmed bookings.
-/// Runs on sign in and whenever the app becomes active; no server push is needed.
+/// Runs on sign in and when the app becomes active (at most every `refreshInterval`); no server push is needed.
 @MainActor
 final class GigNightCoordinator {
     static let shared = GigNightCoordinator(
@@ -16,8 +16,10 @@ final class GigNightCoordinator {
         openURL: { AppEnvironment.inbound.open($0) }
     )
 
-    static let nearbyRadius = 50_000
-    static let bookingLimit = 25
+    nonisolated static let nearbyRadius = 50_000
+    nonisolated static let bookingLimit = 25
+    /// Foregrounding refreshes at most this often; sign in and confirmed bookings always refresh.
+    static let refreshInterval: TimeInterval = 15 * 60
 
     private let dependencies: Dependencies
     private let liveActivities: any LiveActivityRepository
@@ -27,6 +29,8 @@ final class GigNightCoordinator {
     private let now: () -> Date
     private var isStarted = false
     private var pendingRatings: [String: Int] = [:]
+    private var lastRefresh: Date?
+    private var inFlight: Task<Void, Never>?
 
     init(
         dependencies: Dependencies,
@@ -52,7 +56,7 @@ final class GigNightCoordinator {
             await seedMockGigNight()
             #endif
             for await user in dependencies.auth.authStateChanges() {
-                if user == nil { clear() } else { await refresh() }
+                if user == nil { clear() } else { await refresh(force: true) }
             }
         }
         NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
@@ -60,11 +64,32 @@ final class GigNightCoordinator {
         }
     }
 
-    func refresh() async {
+    /// Throttled to `refreshInterval` unless `force`d; overlapping calls share the run in flight.
+    func refresh(force: Bool = false) async {
+        if let running = inFlight {
+            await running.value
+            guard force else { return }
+            if let rerun = inFlight {
+                await rerun.value
+                return
+            }
+        }
+        if !force, let lastRefresh, now().timeIntervalSince(lastRefresh) < Self.refreshInterval { return }
+        let run = Task { await performRefresh() }
+        inFlight = run
+        await run.value
+        if inFlight == run { inFlight = nil }
+    }
+
+    private func performRefresh() async {
         guard let userId = await dependencies.auth.getAuthUser()?.uid else { return }
         let date = now()
-        let gigs = await confirmedGigs(userId: userId, now: date)
-        let nearby = await nearbyGigCount(userId: userId, now: date)
+        lastRefresh = date
+        let database = dependencies.database
+        let search = dependencies.search
+        async let confirmed = Self.confirmedGigs(database: database, userId: userId, now: date)
+        async let nearbyCount = Self.nearbyGigCount(database: database, search: search, userId: userId, now: date)
+        let (gigs, nearby) = await (confirmed, nearbyCount)
         store.update { snapshot in
             snapshot.upcomingGigs = Array(gigs.filter { $0.endTime > date }.prefix(NextGigTimeline.maxEntries))
             snapshot.nearbyGigCount = nearby ?? snapshot.nearbyGigCount
@@ -77,7 +102,7 @@ final class GigNightCoordinator {
     /// Called when the performer accepts a booking (booking detail or the notification action).
     func bookingConfirmed(_ booking: Booking) async {
         guard booking.isConfirmed else { return }
-        await refresh()
+        await refresh(force: true)
     }
 
     /// Ends the activity once the performer has reviewed the gig; it isn't restarted.
@@ -119,30 +144,38 @@ final class GigNightCoordinator {
     }
 
     private func clear() {
+        lastRefresh = nil
         store.save(WidgetSnapshot(updatedAt: now()))
         reloadWidgets()
         Task { for bookingId in await liveActivities.runningGigNights().keys { await liveActivities.end(bookingId: bookingId) } }
     }
 
-    private func confirmedGigs(userId: String, now: Date) async -> [GigNight] {
-        let database = dependencies.database
-        let bookings = (try? await database.getBookingsByRequestee(userId, limit: Self.bookingLimit, lastBookingRequestId: nil, status: .confirmed)) ?? []
-        var gigs: [GigNight] = []
-        for booking in bookings where booking.isConfirmed && booking.endTime.addingTimeInterval(GigNight.reviewWindow) > now {
-            var venue: UserModel?
-            if let requesterId = booking.requesterId { venue = try? await database.getUserById(requesterId) }
-            if let gig = GigNight(booking: booking, venueName: venue?.displayName) { gigs.append(gig) }
+    /// Venue names are read in parallel, once per venue.
+    nonisolated static func confirmedGigs(database: any DatabaseRepository, userId: String, now: Date) async -> [GigNight] {
+        let bookings = ((try? await database.getBookingsByRequestee(userId, limit: bookingLimit, lastBookingRequestId: nil, status: .confirmed)) ?? [])
+            .filter { $0.isConfirmed && $0.endTime.addingTimeInterval(GigNight.reviewWindow) > now }
+        let venueNames = await withTaskGroup(of: (String, String?).self) { group in
+            for venueId in Set(bookings.compactMap(\.requesterId)) {
+                group.addTask { (venueId, try? await database.getUserById(venueId)?.displayName) }
+            }
+            var names: [String: String] = [:]
+            for await (venueId, name) in group {
+                names[venueId] = name
+            }
+            return names
         }
-        return gigs.sorted { $0.startTime < $1.startTime }
+        return bookings
+            .compactMap { GigNight(booking: $0, venueName: $0.requesterId.flatMap { venueNames[$0] }) }
+            .sorted { $0.startTime < $1.startTime }
     }
 
-    private func nearbyGigCount(userId: String, now: Date) async -> Int? {
-        guard let location = try? await dependencies.database.getUserById(userId)?.location else { return nil }
-        let hits = try? await dependencies.search.queryOpportunities(
+    nonisolated static func nearbyGigCount(database: any DatabaseRepository, search: any SearchRepository, userId: String, now: Date) async -> Int? {
+        guard let location = try? await database.getUserById(userId)?.location else { return nil }
+        let hits = try? await search.queryOpportunities(
             "",
             lat: location.lat,
             lng: location.lng,
-            radius: Self.nearbyRadius,
+            radius: nearbyRadius,
             startTime: now
         )
         return hits?.filter { !$0.deleted && $0.startTime > now }.count

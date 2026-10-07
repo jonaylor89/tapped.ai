@@ -46,6 +46,7 @@ struct TappedAPISpotifyRepositoryTests {
         #expect(request.url == URL(string: "https://api.example.com/base/app/v1/spotify/artists/abc123"))
         #expect(request.httpMethod == "GET")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer firebase-token")
+        #expect(UUID(uuidString: request.value(forHTTPHeaderField: "X-Request-Id") ?? "") != nil)
     }
 
     @Test func rejectsMissingFirebaseToken() async {

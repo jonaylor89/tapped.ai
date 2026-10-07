@@ -265,16 +265,15 @@ final class OnboardingViewModel {
 
     // MARK: - location
 
-    /// After a `LocationButton` grant: device position → Google reverse geocode (locality) → place details, so the
-    /// saved `placeId` is the same kind the city search returns.
+    /// After a `LocationButton` grant: device position → the locality's place details (one API call), so the saved
+    /// `placeId` is the same kind the city search returns.
     func useCurrentCity() async {
         guard !isLocating else { return }
         isLocating = true
         defer { isLocating = false }
         do {
             let coordinate = try await location.currentCoordinate()
-            guard let placeId = try await places.getPlaceIdByLatLng(lat: coordinate.lat, lng: coordinate.lng),
-                  let place = try await places.getPlaceById(placeId)
+            guard let place = try await places.getPlaceByLatLng(lat: coordinate.lat, lng: coordinate.lng)
             else { throw LocationError.unavailable }
             selectedPlace = place
             placeQuery = ""

@@ -34,6 +34,29 @@ struct DiscoverViewModelTests {
         #expect(DiscoverViewModel.defaultOverlay(for: Samples.venues[0], claims: []) == .venues)
     }
 
+    @Test func shellStartHoldsTheMapSearchAndRailsUntilStarted() async {
+        let model = DiscoverViewModel(
+            dependencies: .mock(signedIn: true),
+            currentUser: Samples.performer,
+            isPremium: false,
+            defersStart: true,
+            now: { Samples.referenceDate }
+        )
+        await model.mapRegionChanged(to: Self.rvaBounds)
+        #expect(model.searchedBounds == nil)
+        #expect(model.opportunityHits.isEmpty)
+        #expect(model.featuredPerformers.isEmpty)
+
+        await model.start()
+        #expect(model.searchedBounds == Self.rvaBounds)
+        #expect(!model.opportunityHits.isEmpty)
+        #expect(!model.featuredPerformers.isEmpty)
+
+        await model.start()
+        await model.mapRegionChanged(to: Self.elsewhere)
+        #expect(model.resultsExpired)
+    }
+
     @Test func performerHeaderAnswersIsThereWork() async {
         let model = makeModel()
         await model.mapRegionChanged(to: Self.rvaBounds)

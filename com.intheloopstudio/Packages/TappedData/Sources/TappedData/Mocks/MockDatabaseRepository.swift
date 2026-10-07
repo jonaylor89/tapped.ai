@@ -32,6 +32,8 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public private(set) var feedInteractions: [String: [String: OpportunityInteraction]]
     /// `credits/{userId}.opportunityQuota`; users without an entry get `defaultOpportunityQuota`.
     public private(set) var opportunityQuotas: [String: Int]
+    /// User ids in `getUserById` call order, for asserting fetch ordering in tests.
+    public private(set) var fetchedUserIds: [String] = []
     public var defaultOpportunityQuota: Int
     private var quotaContinuations: [UUID: (userId: String, continuation: AsyncThrowingStream<Int, any Error>.Continuation)] = [:]
 
@@ -68,7 +70,10 @@ public actor MockDatabaseRepository: DatabaseRepository {
     public func getUserByUsername(_ username: String?) async throws -> UserModel? {
         users.values.first { $0.username.username == username }
     }
-    public func getUserById(_ userId: String) async throws -> UserModel? { users[userId] }
+    public func getUserById(_ userId: String) async throws -> UserModel? {
+        fetchedUserIds.append(userId)
+        return users[userId]
+    }
     public func updateUserData(_ user: UserModel) async throws { users[user.id] = user }
     public func checkUsernameAvailability(_ username: String, userId: String) async throws -> Bool {
         if ["anonymous", "*deleted*"].contains(username) { return false }

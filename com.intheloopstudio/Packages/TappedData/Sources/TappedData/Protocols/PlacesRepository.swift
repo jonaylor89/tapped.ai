@@ -7,6 +7,8 @@ public protocol PlacesRepository: Sendable {
     /// Dart `getPhotoUrlFromReference`. `photoName` is the Places (New) resource name `places/{id}/photos/{ref}`.
     func getPhotoUrl(photoName: String, maxHeightPx: Int) async throws -> URL?
     func getPlaceIdByLatLng(lat: Double, lng: Double) async throws -> String?
+    /// Details of the locality containing a coordinate (reverse geocode + place details).
+    func getPlaceByLatLng(lat: Double, lng: Double) async throws -> PlaceData?
     /// Groups autocomplete requests and the selected Place Details request into one billable session.
     func searchPlace(_ query: String, sessionToken: String?) async throws -> [AutocompletePrediction]
     func getPlaceById(_ placeId: String, sessionToken: String?) async throws -> PlaceData?
@@ -19,6 +21,11 @@ public extension PlacesRepository {
 
     func getPlaceById(_ placeId: String, sessionToken: String?) async throws -> PlaceData? {
         try await getPlaceById(placeId)
+    }
+
+    func getPlaceByLatLng(lat: Double, lng: Double) async throws -> PlaceData? {
+        guard let placeId = try await getPlaceIdByLatLng(lat: lat, lng: lng) else { return nil }
+        return try await getPlaceById(placeId)
     }
 }
 

@@ -10,6 +10,7 @@ struct OnboardingViewModelTests {
     private func makeModel(
         database: MockDatabaseRepository = MockDatabaseRepository(),
         location: MockLocationRepository = MockLocationRepository(),
+        places: any PlacesRepository = MockPlacesRepository(),
         storage: MockStorageRepository = MockStorageRepository(),
         now: Date = Date(timeIntervalSince1970: 1_700_000_123.456),
         downloadImage: @escaping @Sendable (URL) async throws -> Data = { _ in Data([0xFF, 0xD8]) }
@@ -19,7 +20,7 @@ struct OnboardingViewModelTests {
             auth: MockAuthRepository(signedInAs: MockAuthRepository.newUser),
             database: database,
             search: MockSearchRepository(),
-            places: MockPlacesRepository(),
+            places: places,
             purchases: MockPurchasesRepository(),
             analytics: MockAnalytics(),
             remoteConfig: MockRemoteConfigRepository(),
@@ -125,6 +126,22 @@ struct OnboardingViewModelTests {
         #expect(model.selectedPlace?.placeId == Location.rva.placeId)
         #expect(model.selectedPlace?.name == "Richmond")
         #expect(model.errorMessage == nil)
+        #expect(!model.isLocating)
+    }
+
+    @Test func currentCityMakesOneLocalityLookup() async {
+        let places = RecordingPlacesRepository(locality: MockPlacesRepository.places[0])
+        let model = makeModel(places: places)
+        await model.useCurrentCity()
+        #expect(model.selectedPlace == MockPlacesRepository.places[0])
+        #expect(places.calls == ["getPlaceByLatLng"])
+    }
+
+    @Test func currentCityWithoutLocalityFallsBackToSearch() async {
+        let model = makeModel(places: RecordingPlacesRepository(locality: nil))
+        await model.useCurrentCity()
+        #expect(model.selectedPlace == nil)
+        #expect(model.errorMessage == "couldn't find your city. search for it instead")
         #expect(!model.isLocating)
     }
 
@@ -238,4 +255,23 @@ struct OnboardingViewModelTests {
         #expect(user.profilePicture == nil)
         #expect(user.socialFollowing.spotifyId == "4Z8W4fKeB5YxbusRsdQVPb")
     }
+}
+
+/// Records which `PlacesRepository` calls a view model makes.
+private final class RecordingPlacesRepository: PlacesRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorded: [String] = []
+    private let locality: PlaceData?
+
+    init(locality: PlaceData?) { self.locality = locality }
+
+    var calls: [String] { lock.withLock { recorded } }
+
+    private func record(_ call: String) { lock.withLock { recorded.append(call) } }
+
+    func searchPlace(_ query: String) async throws -> [AutocompletePrediction] { record("searchPlace"); return [] }
+    func getPlaceById(_ placeId: String) async throws -> PlaceData? { record("getPlaceById"); return locality }
+    func getPhotoUrl(photoName: String, maxHeightPx: Int) async throws -> URL? { record("getPhotoUrl"); return nil }
+    func getPlaceIdByLatLng(lat: Double, lng: Double) async throws -> String? { record("getPlaceIdByLatLng"); return locality?.placeId }
+    func getPlaceByLatLng(lat: Double, lng: Double) async throws -> PlaceData? { record("getPlaceByLatLng"); return locality }
 }

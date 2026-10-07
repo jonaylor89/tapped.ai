@@ -130,6 +130,7 @@ mod tests {
             response_cache: Default::default(),
             places: Arc::new(MockPlaces),
             spotify: Arc::new(MockSpotify),
+            postgres: None,
         }
     }
 

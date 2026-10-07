@@ -29,6 +29,20 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "079E8AA36131791339FB20A1"
+               BuildableName = "TappedLaunchTests.xctest"
+               BlueprintName = "TappedLaunchTests"
+               ReferencedContainer = "container:Tapped.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "0D13F765338C37DC3EC6FE96"
                BuildableName = "TappedTests.xctest"
                BlueprintName = "TappedTests"
@@ -61,6 +75,17 @@
                BlueprintIdentifier = "0D13F765338C37DC3EC6FE96"
                BuildableName = "TappedTests.xctest"
                BlueprintName = "TappedTests"
+               ReferencedContainer = "container:Tapped.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "079E8AA36131791339FB20A1"
+               BuildableName = "TappedLaunchTests.xctest"
+               BlueprintName = "TappedLaunchTests"
                ReferencedContainer = "container:Tapped.xcodeproj">
             </BuildableReference>
          </TestableReference>

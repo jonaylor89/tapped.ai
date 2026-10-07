@@ -33,6 +33,7 @@ public struct TappedAPIVenueOutreachRepository: VenueOutreachRepository {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.setValue(UUID().uuidString, forHTTPHeaderField: "X-Request-Id")
         request.httpBody = try JSONEncoder().encode(thread)
         return request
     }

@@ -48,6 +48,7 @@ struct OpportunityFeedView: View {
         }
         .sensoryFeedback(.success, trigger: model.appliedCount)
         .task { await model.load() }
+        .onChange(of: model.current != nil) { _, hasCard in if hasCard { LaunchSignposts.mark(.firstFeedCard) } }
     }
 
     private var deck: some View {

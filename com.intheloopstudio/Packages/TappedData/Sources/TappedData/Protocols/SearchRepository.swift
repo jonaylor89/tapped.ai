@@ -68,13 +68,18 @@ public struct GeoBounds: Sendable, Hashable {
     }
 }
 
+public enum SearchLimits {
+    /// Pins requested per map search; MapKit clusters them, so this only needs to cover what's on screen.
+    public static let map = 50
+}
+
 public extension SearchRepository {
     func queryUsers(_ input: String, filters: UserSearchFilters = .init(), lat: Double? = nil, lng: Double? = nil) async throws -> [UserModel] {
         try await queryUsers(input, filters: filters, lat: lat, lng: lng, radius: 50_000, limit: 20)
     }
 
     func queryUsersInBoundingBox(_ input: String, bounds: GeoBounds, filters: UserSearchFilters = .init()) async throws -> [UserModel] {
-        try await queryUsersInBoundingBox(input, bounds: bounds, filters: filters, limit: 100)
+        try await queryUsersInBoundingBox(input, bounds: bounds, filters: filters, limit: SearchLimits.map)
     }
 
     func queryOpportunities(_ input: String, lat: Double? = nil, lng: Double? = nil, startTime: Date? = nil) async throws -> [Opportunity] {
@@ -82,6 +87,6 @@ public extension SearchRepository {
     }
 
     func queryOpportunitiesInBoundingBox(_ input: String, bounds: GeoBounds, startTime: Date? = nil) async throws -> [Opportunity] {
-        try await queryOpportunitiesInBoundingBox(input, bounds: bounds, limit: 100, startTime: startTime)
+        try await queryOpportunitiesInBoundingBox(input, bounds: bounds, limit: SearchLimits.map, startTime: startTime)
     }
 }

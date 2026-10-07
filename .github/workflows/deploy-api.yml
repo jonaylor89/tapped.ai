@@ -110,7 +110,7 @@ jobs:
           docker compose pull api mail-worker
           # The image runs as the unprivileged `app` user (uid 10001). Give it the mail volume
           # (created by earlier root images) and read access to the Firebase credentials.
-          docker compose run --rm --no-deps --user root --entrypoint chown api -R 10001:10001 /data
+          docker compose run --rm --no-deps --interactive=false --user root --entrypoint chown api -R 10001:10001 /data
           chown 10001:10001 credentials.json
           chmod 400 credentials.json
           docker compose up -d --no-deps api mail-worker
@@ -124,7 +124,7 @@ jobs:
             fi
             if [ "$i" -eq 24 ]; then
               echo "API did not become ready in time" >&2
-              exit 1
+              false # Triggers the ERR trap above, which restores the previous image.
             fi
             sleep 5
           done

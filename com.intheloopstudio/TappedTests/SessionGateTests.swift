@@ -154,6 +154,59 @@ struct SessionGateTests {
         #expect(options.link?.path == "/settings")
     }
 
+    @Test func cachedMaintenanceIsConfirmedByTheServer() async {
+        var dependencies = Dependencies.mock(signedIn: true)
+        let remoteConfig = MockRemoteConfigRepository(downForMaintenance: true)
+        dependencies.remoteConfig = remoteConfig
+        let session = AppSession(dependencies: dependencies, defaults: defaults())
+        await session.run()
+        #expect(session.phase == .maintenance)
+        #expect(remoteConfig.fetchCount == 1)
+    }
+
+    @Test func staleCachedMaintenanceIsClearedByTheServer() async throws {
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.remoteConfig = MockRemoteConfigRepository(downForMaintenance: true, fetched: .init())
+        let session = AppSession(dependencies: dependencies, defaults: defaults())
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.currentUser != nil }
+    }
+
+    @Test func slowRemoteConfigFetchDoesNotHoldLaunch() async throws {
+        var dependencies = Dependencies.mock(signedIn: true)
+        let remoteConfig = MockRemoteConfigRepository(fetched: .init(premiumWaitlistEnabled: true), fetchDelay: .seconds(60))
+        dependencies.remoteConfig = remoteConfig
+        let session = AppSession(dependencies: dependencies, defaults: defaults())
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.currentUser != nil }
+        #expect(remoteConfig.fetchCount == 1)
+        #expect(!session.premiumWaitlistEnabled)
+    }
+
+    @Test func backgroundFetchStillAppliesTheGates() async throws {
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.remoteConfig = MockRemoteConfigRepository(
+            fetched: .init(minimumAppVersion: "2.1.0", premiumWaitlistEnabled: true),
+            fetchDelay: .milliseconds(50)
+        )
+        let session = AppSession(dependencies: dependencies, appVersion: AppVersion("2.0.0")!, defaults: defaults())
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.phase == .updateRequired(minimum: "2.1.0") }
+        #expect(session.premiumWaitlistEnabled == false)
+    }
+
+    @Test func freshConfigFlagsApplyAfterTheBackgroundFetch() async throws {
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.remoteConfig = MockRemoteConfigRepository(fetched: .init(premiumWaitlistEnabled: true), fetchDelay: .milliseconds(20))
+        let session = AppSession(dependencies: dependencies, defaults: defaults())
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.currentUser != nil && session.premiumWaitlistEnabled }
+    }
+
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
         for _ in 0..<300 {
             if condition() { return }

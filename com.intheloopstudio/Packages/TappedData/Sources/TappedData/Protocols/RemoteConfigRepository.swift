@@ -2,6 +2,10 @@ import Foundation
 
 /// `lib/data/remote_config_repository.dart`
 public protocol RemoteConfigRepository: Sendable {
+    /// Activates the config fetched on a previous launch (or the defaults) without touching the network.
+    @discardableResult
+    func activateCached() async -> Bool
+    /// Network fetch, bounded by a short timeout; launch runs it in the background after `activateCached()`.
     @discardableResult
     func fetchAndActivate() async throws -> Bool
     func getDownForMaintenanceStatus() async -> Bool

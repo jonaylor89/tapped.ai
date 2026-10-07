@@ -18,6 +18,9 @@ use tracing::instrument;
 #[derive(Debug, Clone, Default)]
 pub struct MockDatabase;
 
+/// Public-document lookups for this ID or username find nothing in [`MockDatabase`].
+pub const MOCK_MISSING_ID: &str = "missing";
+
 #[async_trait]
 impl Database for MockDatabase {
     async fn get_user_from_api_key(&self, api_key: &str) -> Result<Option<String>> {
@@ -63,6 +66,9 @@ impl Database for MockDatabase {
     }
 
     async fn get_user_doc_by_username(&self, username: &str) -> Result<Option<Value>> {
+        if username == MOCK_MISSING_ID {
+            return Ok(None);
+        }
         Ok(Some(json!({
             "id": "mock-user-id",
             "username": username,
@@ -76,6 +82,9 @@ impl Database for MockDatabase {
     }
 
     async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
+        if id == MOCK_MISSING_ID {
+            return Ok(None);
+        }
         Ok(Some(json!({
             "id": id,
             "title": "Mock Opportunity",
@@ -127,7 +136,7 @@ pub trait Database: Send + Sync {
 
 const GOOGLE_PLACES_CACHE: &str = "googlePlacesCache";
 const API_KEYS: &str = "apiKeys";
-const READINESS_DOC_ID: &str = "__readiness_probe__";
+const READINESS_DOC_ID: &str = "readiness-probe";
 
 #[derive(Debug, Clone)]
 pub struct Firestore {
@@ -178,7 +187,7 @@ impl Firestore {
 #[async_trait]
 impl Database for Firestore {
     // The key is a credential: never record it in spans or logs.
-    #[instrument(skip_all)]
+    #[instrument(skip_all, fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_user_from_api_key(&self, api_key: &str) -> Result<Option<String>> {
         let hashed = hash_api_key(api_key);
         if let Some(doc) = self.api_key_doc(&hashed).await? {
@@ -196,7 +205,7 @@ impl Database for Firestore {
         Ok(Some(user_id))
     }
 
-    #[instrument(skip_all)]
+    #[instrument(skip_all, fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn ping(&self) -> Result<()> {
         let _: Option<ApiKey> = self
             .db
@@ -209,7 +218,7 @@ impl Database for Firestore {
         Ok(())
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_user_by_id(&self, id: &str) -> Result<UserModel> {
         tracing::info!("getting user by id from Firestore: {}", id);
 
@@ -229,7 +238,7 @@ impl Database for Firestore {
         }
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_user_by_username(&self, username: &str) -> Result<UserModel> {
         tracing::info!("getting user by username from Firestore: '{}'", username);
 
@@ -252,7 +261,7 @@ impl Database for Firestore {
         }
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity> {
         let doc: Option<Opportunity> = self
             .db
@@ -265,7 +274,7 @@ impl Database for Firestore {
         doc.ok_or_else(|| anyhow::anyhow!("opportunity not found"))
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_bookings_by_reference_event_id(
         &self,
         reference_event_id: &str,
@@ -282,7 +291,7 @@ impl Database for Firestore {
         Ok(object_stream.try_collect().await?)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_bookings_by_performer_id(&self, performer_id: &str) -> Result<Vec<Booking>> {
         tracing::info!(
             "getting bookings by performer id from Firestore: '{}'",
@@ -312,7 +321,7 @@ impl Database for Firestore {
         Ok(as_vec)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_bookings_by_booker_id(&self, booker_id: &str) -> Result<Vec<Booking>> {
         tracing::info!(
             "getting bookings by booker id from Firestore: '{}'",
@@ -342,7 +351,7 @@ impl Database for Firestore {
         Ok(as_vec)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_reviews_by_performer_id(&self, performer_id: &str) -> Result<Vec<Review>> {
         tracing::info!(
             "getting reviews by performer id from Firestore: '{}'",
@@ -372,7 +381,7 @@ impl Database for Firestore {
         Ok(as_vec)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_reviews_by_booker_id(&self, booker_id: &str) -> Result<Vec<Review>> {
         tracing::info!(
             "getting reviews by booker id from Firestore: '{}'",
@@ -402,7 +411,7 @@ impl Database for Firestore {
         Ok(as_vec)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_cached_place(&self, place_id: &str) -> Result<Option<PlaceDetails>> {
         let doc: Option<PlaceDetails> = self
             .db
@@ -416,7 +425,7 @@ impl Database for Firestore {
         Ok(doc)
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn set_cached_place(&self, place: &PlaceDetails) -> Result<()> {
         let _: PlaceDetails = self
             .db
@@ -431,7 +440,7 @@ impl Database for Firestore {
         Ok(())
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_user_doc_by_username(&self, username: &str) -> Result<Option<Value>> {
         let docs: Vec<Value> = self
             .db
@@ -447,7 +456,7 @@ impl Database for Firestore {
         Ok(docs.into_iter().next())
     }
 
-    #[instrument]
+    #[instrument(skip(self), fields(dependency = "firestore", otel.kind = "client", db.system.name = "firestore"))]
     async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
         let doc: Option<Value> = self
             .db

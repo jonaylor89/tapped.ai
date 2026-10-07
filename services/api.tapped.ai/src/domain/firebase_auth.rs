@@ -62,6 +62,7 @@ fn max_age(headers: &HeaderMap) -> Duration {
         .min(MAX_JWKS_MAX_AGE)
 }
 
+#[tracing::instrument(fields(dependency = "google_jwks", otel.kind = "client", server.address = "www.googleapis.com"))]
 async fn fetch_jwks() -> anyhow::Result<(JwkSet, Duration)> {
     let response = crate::http::client()
         .get(FIREBASE_JWK_URL)
@@ -246,6 +247,7 @@ mod tests {
             response_cache: Default::default(),
             places: std::sync::Arc::new(crate::data::places::MockPlaces),
             spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
+            postgres: None,
         }
     }
 

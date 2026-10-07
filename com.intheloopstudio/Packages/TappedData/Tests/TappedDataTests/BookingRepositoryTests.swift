@@ -74,6 +74,7 @@ struct BookingRepositoryTests {
         #expect(request.url?.absoluteString == "https://api.tapped.ai/app/v1/venue-email-threads")
         #expect(request.httpMethod == "POST")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer token")
+        #expect(UUID(uuidString: request.value(forHTTPHeaderField: "X-Request-Id") ?? "") != nil)
         let body = try JSONSerialization.jsonObject(with: try #require(request.httpBody)) as? [String: String]
         #expect(body == ["id": "req:v1", "venue_id": "v1", "subject": "Performance inquiry from DJ Nova", "text_body": "hello"])
     }

@@ -13,6 +13,7 @@ struct TappedAPIAppFunctionsRepositoryTests {
         #expect(request.url == URL(string: "https://api.example.com/base/app/v1/stream-token"))
         #expect(request.httpMethod == "POST")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer firebase-token")
+        #expect(UUID(uuidString: request.value(forHTTPHeaderField: "X-Request-Id") ?? "") != nil)
         #expect(request.httpBody == nil)
     }
 
@@ -25,6 +26,7 @@ struct TappedAPIAppFunctionsRepositoryTests {
         #expect(request.url == URL(string: "https://api.example.com/base/app/v1/opportunity-venue-notifications"))
         #expect(request.httpMethod == "POST")
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer firebase-token")
+        #expect(UUID(uuidString: request.value(forHTTPHeaderField: "X-Request-Id") ?? "") != nil)
         #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
         #expect(json?["opportunityIds"] as? [String] == ["op-1", "op-2"])
         #expect(json?["note"] as? String == "Available Friday")

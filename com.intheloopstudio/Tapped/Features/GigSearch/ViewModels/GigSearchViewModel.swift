@@ -32,7 +32,6 @@ final class GigSearchViewModel {
     private(set) var isSearching = false
     private(set) var failed = false
 
-    private let database: any DatabaseRepository
     private let search: any SearchRepository
     private let places: any PlacesRepository
     private let analytics: any AnalyticsRepository
@@ -40,7 +39,6 @@ final class GigSearchViewModel {
     init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
         self.currentUser = currentUser
         self.isPremium = isPremium
-        database = dependencies.database
         search = dependencies.search
         places = dependencies.places
         analytics = dependencies.analytics
@@ -79,9 +77,9 @@ final class GigSearchViewModel {
                 radius: 50_000,
                 limit: 150
             )
-            let fresh = await refreshed(hits)
+            // Hits carry `venueInfo`, so they're used as-is; profiles re-read the venue when opened.
             let performer = currentUser.performerInfo
-            results = VenueFit.sorted(fresh, for: performer)
+            results = VenueFit.sorted(hits, for: performer)
             fits = Dictionary(uniqueKeysWithValues: results.map { ($0.id, VenueFit(venue: $0, performer: performer)) })
             selectedIds = []
             failed = false
@@ -109,19 +107,5 @@ final class GigSearchViewModel {
 
     func selectAll(_ selected: Bool) {
         selectedIds = selected ? Set(results.map(\.id)) : []
-    }
-
-    /// Dart re-reads every hit from Firestore for the full document; keep hits that fail to load.
-    private func refreshed(_ hits: [UserModel]) async -> [UserModel] {
-        let database = database
-        let loaded = await withTaskGroup(of: (Int, UserModel).self) { group in
-            for (index, hit) in hits.enumerated() {
-                group.addTask { (index, (try? await database.getUserById(hit.id)) ?? hit) }
-            }
-            var out: [(Int, UserModel)] = []
-            for await pair in group { out.append(pair) }
-            return out
-        }
-        return loaded.sorted { $0.0 < $1.0 }.map(\.1)
     }
 }
