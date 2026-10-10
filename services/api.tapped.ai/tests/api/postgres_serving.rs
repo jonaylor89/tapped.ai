@@ -288,7 +288,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
             .unwrap();
     assert!(public_search[0].get("email").is_none());
     assert!(repository.get_user_by_id(&b.uid).await.is_ok());
-    app_data::update(
+    let _ = app_data::update(
         State(state.clone()),
         a.clone(),
         Path(DocumentPath::from(("users".into(), a.uid.clone()))),
