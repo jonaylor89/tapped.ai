@@ -1,0 +1,10 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // API-only hard cutover. Firebase Auth remains enabled; no client application data access.
+    // Admin SDK access bypasses these rules: legacy writers must also be retired separately.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

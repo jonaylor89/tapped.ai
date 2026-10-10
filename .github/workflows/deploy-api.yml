@@ -99,9 +99,14 @@ jobs:
           }
 
           rollback() {
-            echo "Deployment failed; restoring $previous_image" >&2
-            set_api_image "$previous_image"
-            docker compose up -d --no-deps api mail-worker || true
+            if [ "$(docker image inspect "$previous_image" --format '{{ index .Config.Labels "io.tapped.datastore" }}')" = postgres ]; then
+              echo "Deployment failed; restoring Postgres-compatible $previous_image" >&2
+              set_api_image "$previous_image"
+              docker compose up -d --no-deps api mail-worker || true
+            else
+              echo "Deployment failed; refusing to restore the legacy Firestore serving image" >&2
+              docker compose stop api mail-worker || true
+            fi
           }
           trap rollback ERR
 
@@ -121,15 +126,13 @@ jobs:
             sleep 5
           done
           # The image runs as the unprivileged `app` user (uid 10001). Give it the mail volume
-          # (created by earlier root images) and read access to the Firebase credentials.
+          # (created by earlier root images). Firebase admin credentials are no longer mounted.
           docker compose run --rm --no-deps --interactive=false --user root --entrypoint chown api -R 10001:10001 /data
-          chown 10001:10001 credentials.json
-          chmod 400 credentials.json
           docker compose up -d --no-deps api mail-worker
 
           echo "Waiting for api to be ready..."
           for i in $(seq 1 24); do
-            # /health/ready checks Firestore, Typesense and the mail store, not just the port.
+            # /health/ready checks Postgres projections, Redis, Typesense and the mail store.
             if docker exec tapped-api-1 bash -c 'exec 3<>/dev/tcp/127.0.0.1/3000 && printf "GET /health/ready HTTP/1.0\r\n\r\n" >&3 && head -n1 <&3 | grep -q " 200 "' 2>/dev/null; then
               echo "API is ready after $((i * 5)) seconds"
               break

@@ -87,7 +87,7 @@
           "meta"
         ],
         "summary": "Readiness",
-        "description": "Firestore, Typesense and the mail store all respond within 3s.",
+        "description": "Postgres serving projections, Redis, Typesense and the mail store all respond within 3s.",
         "responses": {
           "default": {
             "description": "",
@@ -124,6 +124,427 @@
             }
           }
         }
+      }
+    },
+    "/app/v1/data/{table}": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "List documents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "referenceEventId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesteeId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesterId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "reviewType",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Create an owned document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/data/{table}/{id}": {
+      "get": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Read a document",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "referenceEventId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesteeId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesterId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "reviewType",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Update an owned document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Soft delete an owned document",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
       }
     },
     "/app/v1/stream-token": {
@@ -513,6 +934,296 @@
             "FirebaseAuth": []
           }
         ]
+      }
+    },
+    "/app/v1/public/data/{table}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "List public documents",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "referenceEventId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesteeId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesterId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "reviewType",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/app/v1/public/data/{table}/{id}": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Read a public document",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int64"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "order",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "referenceEventId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesteeId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "requesterId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "reviewType",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "userId",
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
       }
     },
     "/app/v1/places/autocomplete": {
@@ -1326,7 +2037,6 @@
         "type": "object",
         "required": [
           "bookerId",
-          "bookingId",
           "id",
           "performerId",
           "rating",
@@ -1337,7 +2047,10 @@
             "type": "string"
           },
           "bookingId": {
-            "type": "string"
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "id": {
             "type": "string"
@@ -1485,6 +2198,72 @@
           "latlng": {
             "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
             "type": "string"
+          }
+        }
+      },
+      "ListParams": {
+        "type": "object",
+        "properties": {
+          "after": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "mode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "order": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "referenceEventId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requesteeId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "requesterId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reviewType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "userId": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

@@ -55,21 +55,6 @@ async fn migrate_with_retry(pool: PgPool) {
     }
 }
 
-/// Lazy pool for `DATABASE_URL`, or `None` when it's unset. Nothing serves requests from
-/// Postgres yet, so an unreachable database is logged and retried rather than fatal.
-pub fn from_env() -> Option<PgPool> {
-    let url = std::env::var("DATABASE_URL")
-        .ok()
-        .filter(|url| !url.is_empty())?;
-    match connect_lazy(&url) {
-        Ok(pool) => Some(pool),
-        Err(error) => {
-            tracing::error!("Postgres disabled: {error:#}");
-            None
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

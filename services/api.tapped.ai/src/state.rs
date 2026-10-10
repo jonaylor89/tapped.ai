@@ -16,7 +16,7 @@ use std::{
 ///
 /// Values are serialized JSON so handlers can cache responses without requiring all API models
 /// to be `Clone`. This keeps repeated public profile, search, and location requests from causing
-/// additional Firestore and Typesense reads. The short TTLs intentionally limit stale data.
+/// additional Postgres and Typesense reads. The short TTLs intentionally limit stale data.
 #[derive(Clone, Default)]
 pub struct ResponseCache {
     entries: Arc<Mutex<HashMap<String, CachedResponse>>>,
@@ -68,10 +68,10 @@ pub struct AppStateDyn {
     pub firebase_project_id: String,
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
-    /// Three-month shared cache for Google Place details; falls back to Firestore while unset.
+    /// Required production Redis cache; optional only in injected test states.
     pub place_cache: Option<RedisPlaceCache>,
     pub places: Arc<dyn Places>,
     pub spotify: Arc<dyn Spotify>,
-    /// Postgres, which is replacing Firestore. `None` when `DATABASE_URL` is unset or unreachable.
+    /// Required serving Postgres pool. `None` only in injected mock test states.
     pub postgres: Option<sqlx::PgPool>,
 }

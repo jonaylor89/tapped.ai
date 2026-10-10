@@ -9,6 +9,7 @@ pub mod otel;
 pub mod performers;
 pub mod places;
 pub mod postgres_schema;
+mod postgres_serving;
 pub mod public_docs;
 mod request_id;
 pub mod root;

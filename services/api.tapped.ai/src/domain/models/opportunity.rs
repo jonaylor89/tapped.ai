@@ -9,6 +9,5 @@ pub struct Opportunity {
     pub user_id: String,
     pub reference_event_id: Option<String>,
     pub title: String,
-    #[serde(with = "firestore::serialize_as_timestamp")]
     pub start_time: DateTime<Utc>,
 }

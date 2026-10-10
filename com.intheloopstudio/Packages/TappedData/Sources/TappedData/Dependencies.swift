@@ -66,7 +66,7 @@ public struct Dependencies: Sendable {
 
     /// Requires `FirebaseBootstrap.configure()` to have run before any repository is used.
     public static func live(config: TappedConfig = .fromBundle()) -> Dependencies {
-        let database = FirestoreDatabaseRepository()
+        let database = TappedAPIDatabaseRepository(baseURL: config.tappedAPIURL)
         return Dependencies(
             mode: .live,
             auth: FirebaseAuthRepository(),
@@ -76,7 +76,7 @@ public struct Dependencies: Sendable {
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
             remoteConfig: FirebaseRemoteConfigRepository(),
-            notifications: FirebaseNotificationRepository(),
+            notifications: FirebaseNotificationRepository(baseURL: config.tappedAPIURL),
             chat: StreamChatRepository(
                 apiKey: config.streamAPIKey,
                 tokenProvider: TappedAPIStreamTokenRepository(baseURL: config.tappedAPIURL).fetch

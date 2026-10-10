@@ -182,13 +182,7 @@ async fn place_details(
                 None
             }
         },
-        None => match state.database.get_cached_place(place_id).await {
-            Ok(stored) => stored,
-            Err(error) => {
-                tracing::warn!("failed to read googlePlacesCache/{place_id}: {error:#}");
-                None
-            }
-        },
+        None => None, // Injected mock states only; production requires Redis.
     };
     if let Some(place) = stored.as_ref().filter(|place| !place.is_legacy()) {
         store(state, cache_key, &Some(place), PLACE_TTL);
@@ -214,19 +208,10 @@ async fn place_details(
     // Google may return a refreshed ID; keep the document keyed by the ID clients store.
     place.place_id = place_id.to_owned();
     place.geohash = stored.and_then(|stored| stored.geohash);
-    match &state.place_cache {
-        Some(cache) => {
-            if let Err(error) = cache.set(&place).await {
-                tracing::warn!(
-                    "failed to write Redis Google Places cache for {place_id}: {error:#}"
-                );
-            }
-        }
-        None => {
-            if let Err(error) = state.database.set_cached_place(&place).await {
-                tracing::warn!("failed to write googlePlacesCache/{place_id}: {error:#}");
-            }
-        }
+    if let Some(cache) = &state.place_cache
+        && let Err(error) = cache.set(&place).await
+    {
+        tracing::warn!("failed to write Redis Google Places cache for {place_id}: {error:#}");
     }
     store(state, cache_key, &Some(&place), PLACE_TTL);
 

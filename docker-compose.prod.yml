@@ -64,13 +64,12 @@ services:
       SERVICE_VERSION: ${API_IMAGE}
       PORT: "3000"
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-      GOOGLE_APPLICATION_CREDENTIALS: /run/secrets/firebase-credentials.json
       TYPESENSE_HOST: typesense
       TYPESENSE_PORT: "8108"
       TYPESENSE_PROTOCOL: http
       TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_API_KEY}
       # postgres://tapped:<POSTGRES_PASSWORD>@postgres:5432/tapped; Postgres is skipped when empty.
-      DATABASE_URL: ${DATABASE_URL:-}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required for the Postgres-only API}
       REDIS_URL: redis://redis:6379/0
       STREAM_KEY: ${STREAM_KEY}
       STREAM_SECRET: ${STREAM_SECRET}
@@ -83,7 +82,6 @@ services:
       SPOTIFY_CLIENT_ID: ${SPOTIFY_CLIENT_ID}
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
     volumes:
-      - ./credentials.json:/run/secrets/firebase-credentials.json:ro
       - mail-data:/data
     depends_on:
       typesense:

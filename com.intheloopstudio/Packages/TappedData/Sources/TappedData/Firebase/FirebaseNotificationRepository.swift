@@ -1,5 +1,4 @@
 import Foundation
-@preconcurrency import FirebaseFirestore
 @preconcurrency import FirebaseMessaging
 import UIKit
 import UserNotifications
@@ -10,9 +9,10 @@ public struct FirebaseNotificationRepository: NotificationRepository {
     /// Flutter writes `Platform.operatingSystem`.
     static let platform = "ios"
 
-    public init() {}
-
-    private var tokens: CollectionReference { Firestore.firestore().collection("device_tokens") }
+    private let client: TappedAPIDataClient
+    public init(baseURL: URL = URL(string:"https://api.tapped.ai")!) {
+        client = TappedAPIDataClient(baseURL: baseURL)
+    }
 
     public func requestAuthorization() async throws -> Bool {
         let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound])
@@ -39,10 +39,7 @@ public struct FirebaseNotificationRepository: NotificationRepository {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
         let token = try await Messaging.messaging().token()
-        try await tokens.document(userId).collection("tokens").document(token).setData([
-            "token": token,
-            "platform": Self.platform,
-        ])
+        try await client.registerDeviceToken(token,platform:Self.platform)
     }
 
     public func setBadgeCount(_ count: Int) async {

@@ -16,11 +16,8 @@ pub struct Booking {
     #[serde(default)]
     pub rate: f64,
     pub location: Option<Location>,
-    #[serde(with = "firestore::serialize_as_timestamp")]
     pub start_time: DateTime<Utc>,
-    #[serde(with = "firestore::serialize_as_timestamp")]
     pub end_time: DateTime<Utc>,
-    #[serde(with = "firestore::serialize_as_timestamp")]
     pub timestamp: DateTime<Utc>,
     pub flier_url: Option<String>,
     pub event_url: Option<String>,

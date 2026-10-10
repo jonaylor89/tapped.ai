@@ -8,8 +8,7 @@ pub struct Review {
     pub id: String,
     pub booker_id: String,
     pub performer_id: String,
-    pub booking_id: String,
-    #[serde(with = "firestore::serialize_as_timestamp")]
+    pub booking_id: Option<String>,
     pub timestamp: DateTime<Utc>,
     pub overall_rating: f64,
     pub overall_review: String,
@@ -37,7 +36,7 @@ pub struct GuardedReview {
     pub id: String,
     pub performer_id: String,
     pub booker_id: String,
-    pub booking_id: String,
+    pub booking_id: Option<String>,
     pub rating: f64,
     pub text: String,
 }

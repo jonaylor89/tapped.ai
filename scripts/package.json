@@ -1,0 +1,19 @@
+{
+  "name": "tapped-data-cutover",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc --noEmit --target es2020 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --types node import_firestore_users.ts import_firestore_core_collections.ts import_opportunities_reviews.ts export_migrated_firestore.ts seed_firestore_places_cache_to_redis.ts helpers/database.ts"
+  },
+  "dependencies": {
+    "firebase-admin": "11.11.1",
+    "pg": "8.13.1",
+    "redis": "4.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "20.10.7",
+    "@types/pg": "8.11.10",
+    "ts-node": "10.9.2",
+    "typescript": "4.9.5"
+  }
+}

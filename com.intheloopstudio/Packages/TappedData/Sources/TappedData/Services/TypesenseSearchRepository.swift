@@ -132,9 +132,9 @@ public struct TypesenseSearchRepository: SearchRepository {
     }
 
     private func searchUsers(_ params: [String: String]) async throws -> [UserModel] {
-        var params = params
-        params["include_fields"] = Self.userIncludeFields
-        return try Self.decodeUsers(from: await search(collection: "users", params: params))
+        let ids = try await searchIDs(collection:"users",params:params)
+        let database = database
+        return try await ids.concurrentCompactMap { try await database.getUserById($0) }
     }
 
     private func searchIDs(collection: String, params: [String: String]) async throws -> [String] {

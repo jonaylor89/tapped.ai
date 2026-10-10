@@ -1,7 +1,7 @@
 use crate::{
     data::places::{AutocompletePrediction, PlaceDetails},
     data::{
-        database::Firestore, places::GooglePlaces, redis_places::RedisPlaceCache,
+        pg_database::PostgresDatabase, places::GooglePlaces, redis_places::RedisPlaceCache,
         search::Typesense, spotify::SpotifyHttp,
     },
     docs::{docs_routes, serve_docs},
@@ -53,7 +53,6 @@ use axum::{
 use axum_swagger_ui::swagger_ui;
 use color_eyre::eyre::Result;
 use color_eyre::eyre::WrapErr;
-use firestore::{FirestoreDb, FirestoreDbOptions};
 use opentelemetry::propagation::TextMapPropagator;
 use opentelemetry_http::HeaderExtractor;
 use opentelemetry_sdk::propagation::TraceContextPropagator;
@@ -77,25 +76,20 @@ pub struct Application {
     server: Serve<Router, Router>,
 }
 
-const DEFAULT_CREDENTIALS_PATH: &str = "./credentials.json";
-
 impl Application {
     pub async fn build(port: u16, project_id: String) -> Result<Self> {
         let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.wrap_err(
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
         )?;
 
-        let credentials_path = std::env::var("GOOGLE_APPLICATION_CREDENTIALS")
-            .unwrap_or_else(|_| DEFAULT_CREDENTIALS_PATH.into());
-        let firestore_instance = if std::path::Path::new(&credentials_path).exists() {
-            FirestoreDb::with_options_service_account_key_file(
-                FirestoreDbOptions::new(project_id.clone()),
-                credentials_path.into(),
-            )
-            .await?
-        } else {
-            FirestoreDb::new(project_id.clone()).await?
-        };
+        // A hard cutover: missing or unavailable Postgres fails boot, never selects Firestore.
+        let database_url = std::env::var("DATABASE_URL").wrap_err("DATABASE_URL is required")?;
+        let postgres = crate::data::postgres::connect(&database_url)
+            .await
+            .map_err(|e| color_eyre::eyre::eyre!("Postgres initialization failed: {e:#}"))?;
+        let place_cache = RedisPlaceCache::from_env()
+            .map_err(|e| color_eyre::eyre::eyre!("Redis initialization failed: {e:#}"))?
+            .ok_or_else(|| color_eyre::eyre::eyre!("REDIS_URL is required"))?;
 
         let mail_store_path =
             std::env::var("MAIL_STORE_PATH").unwrap_or_else(|_| "tapped-mail.sqlite3".into());
@@ -142,16 +136,15 @@ impl Application {
             tracing::warn!("SPOTIFY_CLIENT_ID/SECRET are not set; /app/v1/spotify will return 502");
         }
         let state = AppStateDyn {
-            database: Arc::new(Firestore::new(firestore_instance)),
+            database: Arc::new(PostgresDatabase::new(postgres.clone())),
             search: Arc::new(Typesense::from_env()),
             firebase_project_id: project_id,
             mail,
             response_cache: Default::default(),
-            place_cache: RedisPlaceCache::from_env()
-                .map_err(|error| color_eyre::eyre::eyre!("failed to configure Redis: {error:#}"))?,
+            place_cache: Some(place_cache),
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
-            postgres: crate::data::postgres::from_env(),
+            postgres: Some(postgres),
         };
 
         let server = run(listener, state).await?;
@@ -248,6 +241,14 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     let mut api = OpenApi::default();
 
     let app_v1_authenticated = ApiRouter::new()
+        .api_route("/data/:table", get_with(crate::domain::app_data::list_private, |op| app_op(op,"List documents").response::<200,Json<Value>>())
+            .post_with(crate::domain::app_data::create, |op| app_op(op,"Create an owned document").response::<200,Json<Value>>()))
+        .api_route("/data/:table/:id", get_with(crate::domain::app_data::get_private, |op| app_op(op,"Read a document").response::<200,Json<Value>>())
+            .put_with(crate::domain::app_data::update, |op| app_op(op,"Update an owned document").response::<200,Json<Value>>())
+            .delete_with(crate::domain::app_data::remove, |op| app_op(op,"Soft delete an owned document").response::<200,Json<Value>>()))
+        .route("/username-availability/:username", get(crate::domain::app_data::username_available))
+        .route("/opportunities/:id/interest", get(crate::domain::app_data::interest_status).put(crate::domain::app_data::set_interest))
+        .route("/device-token", post(crate::domain::app_data::register_token))
         .route("/venue-email-threads", post(create_email_thread))
         .api_route(
             "/stream-token",
@@ -314,6 +315,10 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     // Public: the web app has no signed-in user. Google spend is bounded by the Places quota caps
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
     let app_v1_public = ApiRouter::new()
+        .api_route("/public/data/:table", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
+        .api_route("/public/data/:table/:id", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
+        .route("/public/users/:id/booking-count", get(crate::domain::app_data::booking_count))
+        .route("/public/opportunities/:id/interests", get(crate::domain::app_data::interests))
         .api_route(
             "/places/autocomplete",
             get_with(autocomplete_places, |op| {
@@ -371,7 +376,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             "/health/ready",
             get_with(ready, |op| {
                 meta_op(op, "Readiness")
-                    .description("Firestore, Typesense and the mail store all respond within 3s.")
+                    .description("Postgres serving projections, Redis, Typesense and the mail store all respond within 3s.")
                     .response::<200, Json<Readiness>>()
                     .response::<503, Json<Readiness>>()
             }),

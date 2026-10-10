@@ -1,3 +1,4 @@
+pub mod app_data;
 pub mod app_functions;
 pub mod auth;
 pub mod controller;

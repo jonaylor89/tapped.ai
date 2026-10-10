@@ -16,12 +16,18 @@ impl RedisPlaceCache {
 
     pub fn from_env() -> Result<Option<Self>> {
         let Ok(url) = std::env::var("REDIS_URL") else {
-            tracing::warn!("REDIS_URL is not set; using the legacy Firestore Google Places cache");
+            tracing::debug!("REDIS_URL is not set (allowed only for injected test states)");
             return Ok(None);
         };
         Ok(Some(Self {
             client: redis::Client::open(url)?,
         }))
+    }
+
+    pub async fn ping(&self) -> Result<()> {
+        let mut connection = self.client.get_multiplexed_async_connection().await?;
+        let _: String = redis::cmd("PING").query_async(&mut connection).await?;
+        Ok(())
     }
 
     fn key(place_id: &str) -> String {

@@ -73,15 +73,22 @@ async fn probe(name: &str, check: impl Future<Output = anyhow::Result<()>>) -> S
     }
 }
 
-/// Readiness: Firestore, Typesense and the mail store all answer. Deploys gate on this.
+/// Readiness of the required serving stores. Production requires Postgres and Redis at boot.
 pub async fn ready(State(state): State<AppStateDyn>) -> Result<Json<Readiness>, NotReady> {
-    let (firestore, typesense, mail_store) = tokio::join!(
-        probe("firestore", state.database.ping()),
+    let (postgres, redis, typesense, mail_store) = tokio::join!(
+        probe("postgres", state.database.ping()),
+        probe("redis", async {
+            match &state.place_cache {
+                Some(cache) => cache.ping().await,
+                None => Ok(()),
+            }
+        }),
         probe("typesense", state.search.ping()),
         probe("mail_store", state.mail.store.ping()),
     );
     let checks = BTreeMap::from([
-        ("firestore".to_owned(), firestore),
+        ("postgres".to_owned(), postgres),
+        ("redis".to_owned(), redis),
         ("typesense".to_owned(), typesense),
         ("mail_store".to_owned(), mail_store),
     ]);

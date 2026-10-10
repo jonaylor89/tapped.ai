@@ -110,7 +110,7 @@ async fn readiness_reports_each_dependency() {
     assert_eq!(response.status(), StatusCode::OK);
     let body: Value = response.json().await.unwrap();
     assert_eq!(body["status"], "ok");
-    for check in ["firestore", "typesense", "mail_store"] {
+    for check in ["postgres", "redis", "typesense", "mail_store"] {
         assert_eq!(body["checks"][check], "ok", "{body}");
     }
 }

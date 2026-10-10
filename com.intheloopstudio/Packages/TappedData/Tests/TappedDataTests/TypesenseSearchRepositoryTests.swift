@@ -109,14 +109,13 @@ struct TypesenseSearchNetworkTests {
         #expect(StubTypesenseProtocol.lastQuery?["include_fields"] == "id")
     }
 
-    @Test func usersAreDecodedFromHitsWithoutTheDatabase() async throws {
+    @Test func usersAreHydratedThroughTheDatabaseInsteadOfExposingSearchDocuments() async throws {
         StubTypesenseProtocol.respond(#"{"hits": [{"document": {"id": "not-in-db", "venueInfo.capacity": 80}}]}"#)
         let bounds = GeoBounds(swLatitude: 1, swLongitude: 2, neLatitude: 3, neLongitude: 4)
         let users = try await makeRepository(database: MockDatabaseRepository(users: [])).queryUsersInBoundingBox("", bounds: bounds)
-        #expect(users.map(\.id) == ["not-in-db"])
-        #expect(users.first?.venueInfo?.capacity == 80)
+        #expect(users.isEmpty) // Stale/private search documents are not served as profiles.
         let query = try #require(StubTypesenseProtocol.lastQuery)
-        #expect(query["include_fields"] == TypesenseSearchRepository.userIncludeFields)
+        #expect(query["include_fields"] == "id")
         #expect(query["per_page"] == String(SearchLimits.map))
     }
 }

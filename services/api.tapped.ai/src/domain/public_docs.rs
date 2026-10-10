@@ -40,22 +40,6 @@ pub const PUBLIC_DOC_CACHE_CONTROL: &str =
     "public, max-age=60, s-maxage=300, stale-while-revalidate=600";
 pub const MISSING_DOC_CACHE_CONTROL: &str = "public, max-age=30, s-maxage=60";
 
-/// Top-level `users` fields that must never leave the backend.
-const PRIVATE_USER_FIELDS: &[&str] = &[
-    "email",
-    "phoneNumber",
-    "stripeConnectedAccountId",
-    "stripeCustomerId",
-    "emailNotifications",
-    "pushNotifications",
-    "aiCredits",
-    "airtableId",
-    "latestAppVersion",
-    "shadowBanned",
-    "source",
-];
-/// Legacy flattened notification settings (`emailNotificationsAppReleases`, ...).
-const PRIVATE_USER_FIELD_PREFIXES: &[&str] = &["emailNotifications", "pushNotifications"];
 const PRIVATE_VENUE_INFO_FIELDS: &[&str] = &["bookingEmail", "phoneNumber"];
 
 fn is_safe_id(value: &str) -> bool {
@@ -76,7 +60,7 @@ fn strip_firestore_metadata(doc: &mut Map<String, Value>) {
     doc.retain(|key, _| !key.starts_with("_firestore"));
 }
 
-fn public_user(doc: Value) -> Option<Value> {
+pub(crate) fn public_user(doc: Value) -> Option<Value> {
     let Value::Object(mut doc) = doc else {
         return None;
     };
@@ -84,12 +68,24 @@ fn public_user(doc: Value) -> Option<Value> {
         return None;
     }
     strip_firestore_metadata(&mut doc);
-    doc.retain(|key, _| {
-        !PRIVATE_USER_FIELDS.contains(&key.as_str())
-            && !PRIVATE_USER_FIELD_PREFIXES
-                .iter()
-                .any(|prefix| key.starts_with(prefix))
-    });
+    // An allowlist ensures imported extension fields and future private fields cannot leak.
+    const PUBLIC_FIELDS: &[&str] = &[
+        "id",
+        "username",
+        "artistName",
+        "bio",
+        "occupations",
+        "profilePicture",
+        "location",
+        "performerInfo",
+        "venueInfo",
+        "bookerInfo",
+        "socialFollowing",
+        "unclaimed",
+        "timestamp",
+        "deleted",
+    ];
+    doc.retain(|key, _| PUBLIC_FIELDS.contains(&key.as_str()));
     if let Some(Value::Object(venue_info)) = doc.get_mut("venueInfo") {
         venue_info.retain(|key, _| !PRIVATE_VENUE_INFO_FIELDS.contains(&key.as_str()));
     }
