@@ -71,7 +71,7 @@ public struct Dependencies: Sendable {
             mode: .live,
             auth: FirebaseAuthRepository(),
             database: database,
-            search: TypesenseSearchRepository(config: config, database: database),
+            search: TappedAPISearchRepository(config: config),
             places: TappedAPIPlacesRepository(baseURL: config.tappedAPIURL),
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),

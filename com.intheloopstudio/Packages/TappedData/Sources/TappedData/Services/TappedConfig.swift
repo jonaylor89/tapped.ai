@@ -2,10 +2,6 @@ import Foundation
 
 /// Non-Firebase runtime configuration, read from the app's Info.plist (`Tapped*` keys).
 public struct TappedConfig: Sendable, Hashable {
-    public var typesenseHost: String
-    public var typesensePort: Int
-    public var typesenseProtocol: String
-    public var typesenseSearchAPIKey: String
     public var postHogAPIKey: String
     public var postHogHost: String
     /// StoreKit product IDs that grant the `premium` entitlement.
@@ -18,10 +14,6 @@ public struct TappedConfig: Sendable, Hashable {
     public var imageProxyURL: URL
 
     public init(
-        typesenseHost: String = "search.tapped.ai",
-        typesensePort: Int = 443,
-        typesenseProtocol: String = "https",
-        typesenseSearchAPIKey: String = "",
         postHogAPIKey: String = "",
         postHogHost: String = "https://us.i.posthog.com",
         premiumProductIds: [String] = TappedConfig.defaultPremiumProductIds,
@@ -29,10 +21,6 @@ public struct TappedConfig: Sendable, Hashable {
         streamAPIKey: String = TappedConfig.defaultStreamAPIKey,
         imageProxyURL: URL = TappedConfig.defaultImageProxyURL
     ) {
-        self.typesenseHost = typesenseHost
-        self.typesensePort = typesensePort
-        self.typesenseProtocol = typesenseProtocol
-        self.typesenseSearchAPIKey = typesenseSearchAPIKey
         self.postHogAPIKey = postHogAPIKey
         self.postHogHost = postHogHost
         self.premiumProductIds = premiumProductIds
@@ -62,10 +50,6 @@ public struct TappedConfig: Sendable, Hashable {
         }
         let defaults = TappedConfig()
         return TappedConfig(
-            typesenseHost: string("TappedTypesenseHost") ?? defaults.typesenseHost,
-            typesensePort: string("TappedTypesensePort").flatMap(Int.init) ?? defaults.typesensePort,
-            typesenseProtocol: string("TappedTypesenseProtocol") ?? defaults.typesenseProtocol,
-            typesenseSearchAPIKey: string("TappedTypesenseSearchAPIKey") ?? "",
             postHogAPIKey: string("TappedPostHogAPIKey") ?? "",
             postHogHost: string("TappedPostHogHost") ?? defaults.postHogHost,
             premiumProductIds: (bundle.object(forInfoDictionaryKey: "TappedPremiumProductIds") as? [String]) ?? defaults.premiumProductIds,

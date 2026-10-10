@@ -66,14 +66,6 @@
 	<string>phc_MuGz46pQGEIxmaphCeSESEJZaqp1f4qAO9MSUW4D6b2</string>
 	<key>TappedPostHogHost</key>
 	<string>https://us.i.posthog.com</string>
-	<key>TappedTypesenseHost</key>
-	<string>search.tapped.ai</string>
-	<key>TappedTypesensePort</key>
-	<string>443</string>
-	<key>TappedTypesenseProtocol</key>
-	<string>https</string>
-	<key>TappedTypesenseSearchAPIKey</key>
-	<string>sRkjhWNnQ5klpbiH98F3Qhr2S9Ynyzx4</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

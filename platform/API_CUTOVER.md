@@ -10,7 +10,9 @@ Places uses Redis keys places:details:{place_id}, JSON, TTL 7,776,000 seconds.
 Postgres and Redis are internal only. No client connects to Postgres.
 
 Web public data reads use /app/v1 public projections. Native live database/token registration uses
-Firebase-authenticated API calls. Typesense remains a search index; hits are hydrated through the API.
+Firebase-authenticated API calls. Search (text/typo, filters, radius and bounding box) reads current
+Postgres rows through Rust too, so creates and edits are immediately searchable without index sync.
+Neither client needs a Typesense/search key.
 Native observers poll every 30 seconds with bounded buffering and cancellation.
 
 Explicitly disabled/unmigrated: badges, curated leaderboards, premium waitlist, historical contact flags,
@@ -63,6 +65,22 @@ No Firestore documents/collections were deleted. platform/firestore.rules is the
 shutdown rule. Rules do not block Admin SDKs, so administrative writers must also remain retired.
 API containers no longer mount Firebase admin credentials. Deployment refuses rollback to a
 legacy Firestore-serving image; failures must roll forward or use a Postgres-compatible image.
+
+Deny-all client rules deployed and verified:
+projects/in-the-loop-306520/rulesets/267a6f32-3751-4aac-9396-65b9495e3aaa.
+Authenticated production probes verified imported reads, owned writes reflected directly in Postgres,
+cross-user write denial, sanitized profiles/bookings, both review types, opportunities/interests,
+device tokens, absence of dual writes, and Firestore client HTTP 403. Probe data/identities were removed.
+Pre-cutover rules were backed up alongside the ZIPs.
+
+The committed native Firebase identity key had been deleted, breaking sign-in. It was restricted
+BEFORE restoration to Firebase identity/messaging/configuration/telemetry APIs only; Places and Firestore
+are excluded. No new credential was committed. A separate identity-only administrative probe key is
+not a Places/Rust API key and must not be installed as a privileged client credential.
+
+Web deployment is a separate Vercel step; a successful Node CI build does not deploy app.tapped.ai.
+No Vercel token/project login is available in this environment. Do not claim the production website
+was updated until its production deployment and API-only reads are verified.
 
 ## Native distribution
 

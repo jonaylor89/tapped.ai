@@ -75,7 +75,7 @@ async fn probe(name: &str, check: impl Future<Output = anyhow::Result<()>>) -> S
 
 /// Readiness of the required serving stores. Production requires Postgres and Redis at boot.
 pub async fn ready(State(state): State<AppStateDyn>) -> Result<Json<Readiness>, NotReady> {
-    let (postgres, redis, typesense, mail_store) = tokio::join!(
+    let (postgres, redis, search, mail_store) = tokio::join!(
         probe("postgres", state.database.ping()),
         probe("redis", async {
             match &state.place_cache {
@@ -83,13 +83,13 @@ pub async fn ready(State(state): State<AppStateDyn>) -> Result<Json<Readiness>, 
                 None => Ok(()),
             }
         }),
-        probe("typesense", state.search.ping()),
+        probe("search", state.search.ping()),
         probe("mail_store", state.mail.store.ping()),
     );
     let checks = BTreeMap::from([
         ("postgres".to_owned(), postgres),
         ("redis".to_owned(), redis),
-        ("typesense".to_owned(), typesense),
+        ("search".to_owned(), search),
         ("mail_store".to_owned(), mail_store),
     ]);
     if checks.values().all(|result| result == "ok") {

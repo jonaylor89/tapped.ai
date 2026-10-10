@@ -269,6 +269,77 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
         repository.get_user_from_api_key(&credential).await.unwrap(),
         Some(a.uid.clone())
     );
+    // Search must see an API write immediately, with no Firestore/Typesense indexer.
+    use tapped_api_rs::data::pg_search::{PostgresSearch, SearchParams, documents};
+    use tapped_api_rs::data::search::{Search, UserSearchOptionsBuilder};
+    let params = SearchParams {
+        q: a.uid.clone(),
+        lat: Some(38.9),
+        lng: Some(-77.0),
+        genres: vec!["rock".into()],
+        labels: vec!["Independent".into()],
+        ..Default::default()
+    };
+    let result = documents(&pool, "users", &params, None).await.unwrap();
+    assert!(result.iter().any(|v| v["id"] == a.uid));
+    let Json(public_search) =
+        app_data::search_public(State(state.clone()), Path("users".into()), Json(params))
+            .await
+            .unwrap();
+    assert!(public_search[0].get("email").is_none());
+    assert!(repository.get_user_by_id(&b.uid).await.is_ok());
+    let options = UserSearchOptionsBuilder::default()
+        .hits_per_page(Some(5))
+        .build()
+        .unwrap();
+    let users = PostgresSearch::new(pool.clone())
+        .search_users(a.uid.clone(), options)
+        .await
+        .unwrap();
+    assert_eq!(users[0].id, a.uid);
+    let bounds = SearchParams {
+        q: a.uid.clone(),
+        sw_lat: Some(38.0),
+        sw_lng: Some(-78.0),
+        ne_lat: Some(40.0),
+        ne_lng: Some(-76.0),
+        ..Default::default()
+    };
+    assert!(
+        documents(&pool, "users", &bounds, None)
+            .await
+            .unwrap()
+            .iter()
+            .any(|v| v["id"] == a.uid)
+    );
+    let invalid = SearchParams {
+        lat: Some(91.0),
+        lng: Some(0.0),
+        ..Default::default()
+    };
+    assert!(invalid.validate().is_err());
+    let invalid = SearchParams {
+        sw_lat: Some(38.0),
+        ..Default::default()
+    };
+    assert!(invalid.validate().is_err());
+    let book = SearchParams {
+        q: "show".into(),
+        ..Default::default()
+    };
+    assert!(
+        !documents(&pool, "bookings", &book, None)
+            .await
+            .unwrap()
+            .is_empty()
+    );
+    let opportunities = SearchParams::default();
+    assert!(
+        !documents(&pool, "opportunities", &opportunities, None)
+            .await
+            .unwrap()
+            .is_empty()
+    );
     let Json(_) = app_data::remove(
         State(state.clone()),
         a.clone(),

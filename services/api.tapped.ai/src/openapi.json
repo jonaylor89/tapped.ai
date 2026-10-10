@@ -87,7 +87,7 @@
           "meta"
         ],
         "summary": "Readiness",
-        "description": "Postgres serving projections, Redis, Typesense and the mail store all respond within 3s.",
+        "description": "Postgres serving projections and search, Redis and the mail store all respond within 3s.",
         "responses": {
           "default": {
             "description": "",
@@ -124,6 +124,64 @@
             }
           }
         }
+      }
+    },
+    "/app/v1/search/{table}": {
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Search current records with participant privacy",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
       }
     },
     "/app/v1/data/{table}": {
@@ -1012,6 +1070,59 @@
             "FirebaseAuth": []
           }
         ]
+      }
+    },
+    "/app/v1/public/search/{table}": {
+      "post": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Search public profiles, confirmed bookings and opportunities",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SearchParams"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
       }
     },
     "/app/v1/public/data/{table}": {
@@ -2729,6 +2840,149 @@
         }
       },
       "SearchParams": {
+        "type": "object",
+        "properties": {
+          "genres": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "hitsPerPage": {
+            "default": null,
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "labels": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "lat": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "lng": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "maxCapacity": {
+            "default": null,
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "minCapacity": {
+            "default": null,
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint32",
+            "minimum": 0.0
+          },
+          "neLat": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "neLng": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "occupations": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "occupationsBlacklist": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "q": {
+            "default": "",
+            "type": "string"
+          },
+          "radius": {
+            "default": null,
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "uint64",
+            "minimum": 0.0
+          },
+          "startTime": {
+            "default": null,
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "swLat": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "swLng": {
+            "default": null,
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "unclaimed": {
+            "default": null,
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "venueGenres": {
+            "default": [],
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "SearchParams2": {
         "type": "object",
         "properties": {
           "query": {

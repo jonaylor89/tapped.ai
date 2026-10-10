@@ -792,7 +792,7 @@ async fn save(
         } else {
             (text(&doc, "bookerId"), "bookerInfo")
         };
-        sqlx::query("UPDATE users SET profile=jsonb_set(profile,ARRAY[$2],coalesce(profile->$2,'{}'::jsonb) || jsonb_build_object('reviewCount',(SELECT count(*) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3),'rating',(SELECT avg(overall_rating) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3))) WHERE id=$1")
+        sqlx::query("UPDATE users SET profile=jsonb_set(profile,ARRAY[$2],(CASE WHEN jsonb_typeof(profile->$2)='object' THEN profile->$2 ELSE '{}'::jsonb END) || jsonb_build_object('reviewCount',(SELECT count(*) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3),'rating',(SELECT avg(overall_rating) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3))) WHERE id=$1")
             .bind(uid).bind(section).bind(text(&doc,"type")).execute(&mut *tx).await.map_err(db_error)?;
     }
     tx.commit().await.map_err(db_error)?;
@@ -956,6 +956,41 @@ pub async fn set_interest(
     }
     tx.commit().await.map_err(db_error)?;
     Ok(Json(json!({"id":id})))
+}
+async fn search_docs(
+    state: &AppStateDyn,
+    table: &str,
+    p: crate::data::pg_search::SearchParams,
+    uid: Option<&str>,
+) -> ApiResult {
+    if !matches!(table, "users" | "bookings" | "opportunities") {
+        return Err(forbidden());
+    }
+    p.validate()
+        .map_err(|e| AppError::bad_request(e.to_string()))?;
+    let docs = crate::data::pg_search::documents(pool(state)?, table, &p, uid)
+        .await
+        .map_err(|e| AppError::internal("database search failed", e))?;
+    Ok(Json(Value::Array(
+        docs.into_iter()
+            .filter_map(|v| visible(table, v, uid))
+            .collect(),
+    )))
+}
+pub async fn search_public(
+    State(state): State<AppStateDyn>,
+    Path(CollectionPath { table }): Path<CollectionPath>,
+    Json(p): Json<crate::data::pg_search::SearchParams>,
+) -> ApiResult {
+    search_docs(&state, &table, p, None).await
+}
+pub async fn search_private(
+    State(state): State<AppStateDyn>,
+    user: FirebaseUser,
+    Path(CollectionPath { table }): Path<CollectionPath>,
+    Json(p): Json<crate::data::pg_search::SearchParams>,
+) -> ApiResult {
+    search_docs(&state, &table, p, Some(&user.uid)).await
 }
 pub async fn register_token(
     State(state): State<AppStateDyn>,

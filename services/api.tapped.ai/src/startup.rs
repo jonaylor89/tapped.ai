@@ -1,8 +1,8 @@
 use crate::{
     data::places::{AutocompletePrediction, PlaceDetails},
     data::{
-        pg_database::PostgresDatabase, places::GooglePlaces, redis_places::RedisPlaceCache,
-        search::Typesense, spotify::SpotifyHttp,
+        pg_database::PostgresDatabase, pg_search::PostgresSearch, places::GooglePlaces,
+        redis_places::RedisPlaceCache, spotify::SpotifyHttp,
     },
     docs::{docs_routes, serve_docs},
     domain::{
@@ -137,7 +137,7 @@ impl Application {
         }
         let state = AppStateDyn {
             database: Arc::new(PostgresDatabase::new(postgres.clone())),
-            search: Arc::new(Typesense::from_env()),
+            search: Arc::new(PostgresSearch::new(postgres.clone())),
             firebase_project_id: project_id,
             mail,
             response_cache: Default::default(),
@@ -241,6 +241,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     let mut api = OpenApi::default();
 
     let app_v1_authenticated = ApiRouter::new()
+        .api_route("/search/:table", post_with(crate::domain::app_data::search_private, |op| app_op(op,"Search current records with participant privacy").response::<200,Json<Value>>()))
         .api_route("/data/:table", get_with(crate::domain::app_data::list_private, |op| app_op(op,"List documents").response::<200,Json<Value>>())
             .post_with(crate::domain::app_data::create, |op| app_op(op,"Create an owned document").response::<200,Json<Value>>()))
         .api_route("/data/:table/:id", get_with(crate::domain::app_data::get_private, |op| app_op(op,"Read a document").response::<200,Json<Value>>())
@@ -315,6 +316,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     // Public: the web app has no signed-in user. Google spend is bounded by the Places quota caps
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
     let app_v1_public = ApiRouter::new()
+        .api_route("/public/search/:table", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
         .api_route("/public/data/:table", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
         .api_route("/public/data/:table/:id", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
         .route("/public/users/:id/booking-count", get(crate::domain::app_data::booking_count))
@@ -376,7 +378,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             "/health/ready",
             get_with(ready, |op| {
                 meta_op(op, "Readiness")
-                    .description("Postgres serving projections, Redis, Typesense and the mail store all respond within 3s.")
+                    .description("Postgres serving projections and search, Redis and the mail store all respond within 3s.")
                     .response::<200, Json<Readiness>>()
                     .response::<503, Json<Readiness>>()
             }),

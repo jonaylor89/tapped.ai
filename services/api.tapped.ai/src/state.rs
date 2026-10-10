@@ -16,7 +16,7 @@ use std::{
 ///
 /// Values are serialized JSON so handlers can cache responses without requiring all API models
 /// to be `Clone`. This keeps repeated public profile, search, and location requests from causing
-/// additional Postgres and Typesense reads. The short TTLs intentionally limit stale data.
+/// additional Postgres reads. The short TTLs intentionally limit stale data.
 #[derive(Clone, Default)]
 pub struct ResponseCache {
     entries: Arc<Mutex<HashMap<String, CachedResponse>>>,

@@ -27,7 +27,6 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 
 | Key | Value |
 | --- | --- |
-| `TappedTypesenseHost` / `Port` / `Protocol` / `SearchAPIKey` | `search.tapped.ai`, search-only key (same public key the Flutter app ships) |
 | `TappedPostHogAPIKey` / `TappedPostHogHost` | PostHog project key / `https://us.i.posthog.com` |
 | `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In (same OAuth client as Flutter) |
 | `TappedPremiumProductIds` | optional override for StoreKit product IDs |
@@ -124,7 +123,7 @@ com.intheloopstudio/
 ├── TappedTests/                 Swift Testing: view models, session, router
 ├── Packages/
 │   ├── TappedDomain/            Codable/Sendable models (Firestore field names), Samples; no deps
-│   ├── TappedData/              repository protocols + Firebase/Typesense/Places/StoreKit/PostHog impls + mocks + Dependencies
+│   ├── TappedData/              repository protocols + Rust API/Firebase Auth/Places/StoreKit/PostHog impls + mocks + Dependencies
 │   └── TappedUI/                tokens, Liquid Glass components, MapsStyleSheet, RiveView; depends on TappedDomain + Rive
 └── ci_scripts/ci_post_clone.sh  Xcode Cloud
 ```
@@ -159,7 +158,7 @@ Port of `lib/ui/discover/**`: `MKMapView` (via `UIViewRepresentable`, for built-
 clustering), glass top chrome (avatar · search capsule · messages, venues/gigs picker, "finish setting up" banner,
 "search this area"), floating controls (filters, locate, debug zoom) that fade from `.medium` to `.large`, and
 `MapsStyleSheet` with results header, quick actions, results, genre chips, top performers, featured gigs.
-`DiscoverViewModel` mirrors `DiscoverCubit` (bounding-box Typesense search, premium-gated filters, venue fit sort).
+`DiscoverViewModel` mirrors `DiscoverCubit` (bounding-box API/Postgres search, premium-gated filters, venue fit sort).
 
 ## Conventions
 
@@ -222,7 +221,7 @@ map-like gradient) so glass is visible. `ComponentGallery` shows everything at o
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`) everywhere.
 - `TappedDomainTests`: Firestore/Typesense JSON fixtures → models (timestamps, defaults, scalar→array coercion).
-- `TappedDataTests`: mocks and Typesense request building. Run from `Packages/TappedData`: when the app and a
+- `TappedDataTests`: mocks and API database/search request handling. Run from `Packages/TappedData`: when the app and a
   package test bundle both link Firebase in one build, Xcode turns `FirebaseFirestore` into a dynamic framework
   and linking fails (unresolved abseil symbols), so it isn't part of the `Tapped` scheme's test action.
 - `TappedUITests`: `ImageRenderer` smoke renders of every component in light/dark + sheet math.

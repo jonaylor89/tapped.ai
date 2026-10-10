@@ -54,7 +54,7 @@ public struct TelemetrySettings: Sendable, Equatable {
                 "os.name": "iOS",
                 "os.version": app.osVersion,
             ],
-            spanHosts: apiHosts.union([config.typesenseHost]),
+            spanHosts: apiHosts,
             propagationHosts: apiHosts
         )
     }

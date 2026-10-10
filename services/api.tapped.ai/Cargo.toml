@@ -28,7 +28,6 @@ tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
 uuid = { version = "=1.10.0", features = ["serde", "v4"] }
 schemars = { version = "=0.8.21", features = ["uuid1"] }
 axum-macros = "=0.4.1"
-typesense_codegen = "=0.25.1"
 dotenvy = "=0.15.7"
 futures = "=0.3.30"
 tracing-log = "=0.2.0"
