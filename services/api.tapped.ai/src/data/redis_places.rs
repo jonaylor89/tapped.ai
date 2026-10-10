@@ -11,6 +11,7 @@ pub struct RedisPlaceCache {
 }
 
 impl RedisPlaceCache {
+    // Keep in sync with the Firestore-to-Redis cache seed script.
     pub const TTL_SECONDS: u64 = 90 * 24 * 60 * 60;
 
     pub fn from_env() -> Result<Option<Self>> {
