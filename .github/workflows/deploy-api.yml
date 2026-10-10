@@ -107,7 +107,19 @@ jobs:
 
           set_api_image "$image"
           docker compose config --quiet
-          docker compose pull api mail-worker
+          docker compose pull api mail-worker redis
+          docker compose up -d redis
+          redis_id="$(docker compose ps -q redis)"
+          for i in $(seq 1 12); do
+            if [ "$(docker inspect --format '{{.State.Health.Status}}' "$redis_id")" = healthy ]; then
+              break
+            fi
+            if [ "$i" -eq 12 ]; then
+              echo "Redis did not become healthy in time" >&2
+              false # Triggers the ERR trap above, which restores the previous API image.
+            fi
+            sleep 5
+          done
           # The image runs as the unprivileged `app` user (uid 10001). Give it the mail volume
           # (created by earlier root images) and read access to the Firebase credentials.
           docker compose run --rm --no-deps --interactive=false --user root --entrypoint chown api -R 10001:10001 /data
