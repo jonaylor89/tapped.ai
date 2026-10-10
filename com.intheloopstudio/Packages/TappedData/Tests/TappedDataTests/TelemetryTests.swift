@@ -30,7 +30,7 @@ struct TelemetrySettingsTests {
             "os.name": "iOS",
             "os.version": "26.0.0",
         ])
-        #expect(settings.spanHosts == ["api.tapped.ai", "search.tapped.ai"])
+        #expect(settings.spanHosts == ["api.tapped.ai"])
         #expect(settings.propagationHosts == ["api.tapped.ai"])
     }
 }

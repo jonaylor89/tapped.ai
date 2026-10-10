@@ -75,8 +75,9 @@ Pre-cutover rules were backed up alongside the ZIPs.
 
 The committed native Firebase identity key had been deleted, breaking sign-in. It was restricted
 BEFORE restoration to Firebase identity/messaging/configuration/telemetry APIs only; Places and Firestore
-are excluded. No new credential was committed. A separate identity-only administrative probe key is
-not a Places/Rust API key and must not be installed as a privileged client credential.
+are excluded. No new credential was committed. The temporary identity-only administrative probe key is removed after verification.
+The original committed native identity configuration was verified against live Firebase Auth; no
+client-side Places or privileged Rust API key is needed.
 
 Web deployment is a separate Vercel step; a successful Node CI build does not deploy app.tapped.ai.
 No Vercel token/project login is available in this environment. Do not claim the production website
