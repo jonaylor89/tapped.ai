@@ -134,6 +134,15 @@
         "summary": "List documents",
         "parameters": [
           {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
             "in": "query",
             "name": "after",
             "schema": {
@@ -280,6 +289,17 @@
           "app"
         ],
         "summary": "Create an owned document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -326,6 +346,24 @@
         ],
         "summary": "Read a document",
         "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
           {
             "in": "query",
             "name": "after",
@@ -473,6 +511,26 @@
           "app"
         ],
         "summary": "Update an owned document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -516,6 +574,26 @@
           "app"
         ],
         "summary": "Soft delete an owned document",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          }
+        ],
         "responses": {
           "default": {
             "description": "",
@@ -944,6 +1022,15 @@
         "summary": "List public documents",
         "parameters": [
           {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
             "in": "query",
             "name": "after",
             "schema": {
@@ -1088,6 +1175,24 @@
         ],
         "summary": "Read a public document",
         "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "style": "simple"
+          },
           {
             "in": "query",
             "name": "after",
@@ -1874,6 +1979,32 @@
             "items": {
               "$ref": "#/components/schemas/GuardedBooking"
             }
+          }
+        }
+      },
+      "CollectionPath": {
+        "type": "object",
+        "required": [
+          "table"
+        ],
+        "properties": {
+          "table": {
+            "type": "string"
+          }
+        }
+      },
+      "DocumentPath": {
+        "type": "object",
+        "required": [
+          "id",
+          "table"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "table": {
+            "type": "string"
           }
         }
       },

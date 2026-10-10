@@ -33,6 +33,33 @@ fn pool(state: &AppStateDyn) -> Result<&PgPool, AppError> {
         AppError::new("database unavailable").with_status(StatusCode::SERVICE_UNAVAILABLE)
     })
 }
+#[derive(Deserialize, schemars::JsonSchema)]
+pub struct CollectionPath {
+    pub table: String,
+}
+impl From<&str> for CollectionPath {
+    fn from(table: &str) -> Self {
+        Self {
+            table: table.to_owned(),
+        }
+    }
+}
+impl From<String> for CollectionPath {
+    fn from(table: String) -> Self {
+        Self { table }
+    }
+}
+#[derive(Deserialize, schemars::JsonSchema)]
+pub struct DocumentPath {
+    pub table: String,
+    pub id: String,
+}
+impl From<(String, String)> for DocumentPath {
+    fn from((table, id): (String, String)) -> Self {
+        Self { table, id }
+    }
+}
+
 pub fn fields(table: &str) -> Result<&'static [(&'static str, &'static str)], AppError> {
     Ok(match table {
         "users" => &[
@@ -212,7 +239,7 @@ fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<Value> {
 }
 pub async fn get_public(
     State(state): State<AppStateDyn>,
-    Path((table, id)): Path<(String, String)>,
+    Path(DocumentPath { table, id }): Path<DocumentPath>,
     Query(p): Query<ListParams>,
 ) -> ApiResult {
     if table == "activities" {
@@ -233,7 +260,7 @@ pub async fn get_public(
 pub async fn get_private(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-    Path((table, id)): Path<(String, String)>,
+    Path(DocumentPath { table, id }): Path<DocumentPath>,
     Query(p): Query<ListParams>,
 ) -> ApiResult {
     let doc = document_with_kind(
@@ -436,7 +463,7 @@ async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>
 }
 pub async fn list_public(
     State(state): State<AppStateDyn>,
-    Path(table): Path<String>,
+    Path(CollectionPath { table }): Path<CollectionPath>,
     Query(p): Query<ListParams>,
 ) -> ApiResult {
     list(&state, &table, p, None).await
@@ -444,7 +471,7 @@ pub async fn list_public(
 pub async fn list_private(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-    Path(table): Path<String>,
+    Path(CollectionPath { table }): Path<CollectionPath>,
     Query(p): Query<ListParams>,
 ) -> ApiResult {
     list(&state, &table, p, Some(&user.uid)).await
@@ -824,7 +851,7 @@ async fn persist(
 pub async fn create(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-    Path(table): Path<String>,
+    Path(CollectionPath { table }): Path<CollectionPath>,
     Json(input): Json<Value>,
 ) -> ApiResult {
     let id = text(&input, "id").to_owned();
@@ -833,7 +860,7 @@ pub async fn create(
 pub async fn update(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-    Path((table, id)): Path<(String, String)>,
+    Path(DocumentPath { table, id }): Path<DocumentPath>,
     Json(input): Json<Value>,
 ) -> ApiResult {
     save(&state, &user, &table, &id, input, false).await
@@ -841,7 +868,7 @@ pub async fn update(
 pub async fn remove(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
-    Path((table, id)): Path<(String, String)>,
+    Path(DocumentPath { table, id }): Path<DocumentPath>,
 ) -> ApiResult {
     if !matches!(table.as_str(), "users" | "services" | "opportunities") {
         return Err(forbidden());

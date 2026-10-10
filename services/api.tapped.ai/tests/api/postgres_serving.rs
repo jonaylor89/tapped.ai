@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use tapped_api_rs::{
     data::{database::Database, pg_database::PostgresDatabase, postgres::connect},
     domain::{
-        app_data::{self, ListParams},
+        app_data::{self, DocumentPath, ListParams},
         firebase_auth::FirebaseUser,
     },
 };
@@ -46,7 +46,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     assert_eq!(repository.get_user_by_id(&a.uid).await.unwrap().id, a.uid);
     let Json(public) = app_data::get_public(
         State(state.clone()),
-        Path(("users".into(), a.uid.clone())),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
         Query(ListParams::default()),
     )
     .await
@@ -56,7 +56,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     let Json(private) = app_data::get_private(
         State(state.clone()),
         a.clone(),
-        Path(("users".into(), a.uid.clone())),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
         Query(ListParams::default()),
     )
     .await
@@ -65,7 +65,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     let _ = app_data::update(
         State(state.clone()),
         a.clone(),
-        Path(("users".into(), a.uid.clone())),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
         Json(json!({"bio":"from Postgres"})),
     )
     .await
@@ -78,7 +78,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
         app_data::update(
             State(state.clone()),
             b.clone(),
-            Path(("users".into(), a.uid.clone())),
+            Path(DocumentPath::from(("users".into(), a.uid.clone()))),
             Json(json!({"bio":"stolen"}))
         )
         .await
@@ -93,7 +93,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     assert!(
         app_data::get_public(
             State(state.clone()),
-            Path(("bookings".into(), booking.clone())),
+            Path(DocumentPath::from(("bookings".into(), booking.clone()))),
             Query(ListParams::default())
         )
         .await
@@ -102,7 +102,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     let _ = app_data::update(
         State(state.clone()),
         a.clone(),
-        Path(("bookings".into(), booking.clone())),
+        Path(DocumentPath::from(("bookings".into(), booking.clone()))),
         Json(json!({"status":"confirmed"})),
     )
     .await
@@ -115,7 +115,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     assert_eq!(played[0].note, "private");
     let Json(public) = app_data::get_public(
         State(state.clone()),
-        Path(("bookings".into(), booking.clone())),
+        Path(DocumentPath::from(("bookings".into(), booking.clone()))),
         Query(ListParams::default()),
     )
     .await
@@ -209,7 +209,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
         app_data::update(
             State(state.clone()),
             b.clone(),
-            Path(("services".into(), service.clone())),
+            Path(DocumentPath::from(("services".into(), service.clone()))),
             Json(json!({"userId":b.uid}))
         )
         .await
@@ -272,7 +272,7 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     let Json(_) = app_data::remove(
         State(state.clone()),
         a.clone(),
-        Path(("users".into(), a.uid.clone())),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
     )
     .await
     .unwrap();

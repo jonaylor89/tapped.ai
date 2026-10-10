@@ -178,6 +178,11 @@ jobs:
           set -Eeuo pipefail
           cd /opt/tapped
 
+          if [ "$(docker image inspect "$1" --format '{{ index .Config.Labels "io.tapped.datastore" }}')" != postgres ]; then
+            echo "Refusing health-check rollback to legacy Firestore serving" >&2
+            docker compose stop api mail-worker
+            exit 1
+          fi
           grep -q '^API_IMAGE=' .env
           sed -i "s|^API_IMAGE=.*$|API_IMAGE=$1|" .env
           chmod 600 .env
