@@ -672,6 +672,13 @@ async fn save(
             ("bookerInfo", &["rating", "reviewCount"][..]),
             ("venueInfo", &["topPerformerIds", "bookingsByDayOfWeek"][..]),
         ] {
+            if !doc[section].is_object()
+                && old
+                    .as_ref()
+                    .is_some_and(|v| keys.iter().any(|key| v[section].get(*key).is_some()))
+            {
+                doc[section] = json!({});
+            }
             if let Some(object) = doc[section].as_object_mut() {
                 for key in keys {
                     match old.as_ref().and_then(|v| v[section].get(*key)) {

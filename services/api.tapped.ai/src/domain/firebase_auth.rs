@@ -198,7 +198,13 @@ pub async fn verify_firebase_token(
         email: token_data.claims.email,
     });
 
-    Ok(next.run(req).await)
+    let mut response = next.run(req).await;
+    // Owned profiles/booking terms must never enter shared or device HTTP caches.
+    response.headers_mut().insert(
+        CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    Ok(response)
 }
 
 #[async_trait]

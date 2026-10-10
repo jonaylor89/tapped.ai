@@ -288,6 +288,27 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
             .unwrap();
     assert!(public_search[0].get("email").is_none());
     assert!(repository.get_user_by_id(&b.uid).await.is_ok());
+    app_data::update(
+        State(state.clone()),
+        a.clone(),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
+        Json(json!({"performerInfo":null})),
+    )
+    .await
+    .unwrap();
+    let Json(protected) = app_data::get_private(
+        State(state.clone()),
+        a.clone(),
+        Path(DocumentPath::from(("users".into(), a.uid.clone()))),
+        Query(ListParams::default()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(protected["performerInfo"]["reviewCount"], 1);
+    assert_eq!(protected["performerInfo"]["rating"], 5);
+    // Legacy non-finite metadata remains raw in storage, but not in serving models.
+    sqlx::query("UPDATE users SET profile=jsonb_set(profile,'{performerInfo,rating}','\"NaN\"'::jsonb) WHERE id=$1").bind(&a.uid).execute(&pool).await.unwrap();
+    assert!(repository.get_user_by_id(&a.uid).await.is_ok());
     let options = UserSearchOptionsBuilder::default()
         .hits_per_page(Some(5))
         .build()
