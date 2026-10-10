@@ -36,6 +36,18 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7.4.2-alpine
+    restart: unless-stopped
+    mem_limit: 128m
+    mem_reservation: 32m
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "96mb", "--maxmemory-policy", "allkeys-lru"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   api:
     image: ${API_IMAGE}
     restart: unless-stopped
@@ -59,6 +71,7 @@ services:
       TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_API_KEY}
       # postgres://tapped:<POSTGRES_PASSWORD>@postgres:5432/tapped; Postgres is skipped when empty.
       DATABASE_URL: ${DATABASE_URL:-}
+      REDIS_URL: redis://redis:6379/0
       STREAM_KEY: ${STREAM_KEY}
       STREAM_SECRET: ${STREAM_SECRET}
       MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}
@@ -74,6 +87,8 @@ services:
       - mail-data:/data
     depends_on:
       typesense:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   mail-worker:

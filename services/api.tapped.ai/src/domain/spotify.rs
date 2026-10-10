@@ -128,6 +128,7 @@ mod tests {
             firebase_project_id: "test-project".into(),
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
             response_cache: Default::default(),
+            place_cache: None,
             places: Arc::new(MockPlaces),
             spotify: Arc::new(MockSpotify),
             postgres: None,

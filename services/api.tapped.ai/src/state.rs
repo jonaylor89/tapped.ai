@@ -1,5 +1,8 @@
 use crate::{
-    data::{database::Database, places::Places, search::Search, spotify::Spotify},
+    data::{
+        database::Database, places::Places, redis_places::RedisPlaceCache, search::Search,
+        spotify::Spotify,
+    },
     domain::mail_bridge::MailBridge,
 };
 use serde_json::Value;
@@ -65,6 +68,8 @@ pub struct AppStateDyn {
     pub firebase_project_id: String,
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
+    /// Three-month shared cache for Google Place details; falls back to Firestore while unset.
+    pub place_cache: Option<RedisPlaceCache>,
     pub places: Arc<dyn Places>,
     pub spotify: Arc<dyn Spotify>,
     /// Postgres, which is replacing Firestore. `None` when `DATABASE_URL` is unset or unreachable.

@@ -245,6 +245,7 @@ mod tests {
             firebase_project_id: TEST_PROJECT_ID.to_string(),
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
             response_cache: Default::default(),
+            place_cache: None,
             places: std::sync::Arc::new(crate::data::places::MockPlaces),
             spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
             postgres: None,

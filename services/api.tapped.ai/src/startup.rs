@@ -1,6 +1,9 @@
 use crate::{
     data::places::{AutocompletePrediction, PlaceDetails},
-    data::{database::Firestore, places::GooglePlaces, search::Typesense, spotify::SpotifyHttp},
+    data::{
+        database::Firestore, places::GooglePlaces, redis_places::RedisPlaceCache,
+        search::Typesense, spotify::SpotifyHttp,
+    },
     docs::{docs_routes, serve_docs},
     domain::{
         app_functions::{
@@ -144,6 +147,8 @@ impl Application {
             firebase_project_id: project_id,
             mail,
             response_cache: Default::default(),
+            place_cache: RedisPlaceCache::from_env()
+                .map_err(|error| color_eyre::eyre::eyre!("failed to configure Redis: {error:#}"))?,
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
             postgres: crate::data::postgres::from_env(),

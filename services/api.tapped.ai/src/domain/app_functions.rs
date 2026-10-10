@@ -537,6 +537,7 @@ mod tests {
                 search: Arc::new(MockSearch),
                 firebase_project_id: "test".into(),
                 response_cache: Default::default(),
+                place_cache: None,
                 places: std::sync::Arc::new(crate::data::places::MockPlaces),
                 spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
                 postgres: None,
