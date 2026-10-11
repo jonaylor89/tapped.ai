@@ -4,11 +4,16 @@ import type { Opportunity } from "@/domain/types/opportunity";
 import type { Option } from "@/domain/types/option";
 import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
+import { batchUsers } from "@/lib/batch-users";
 import { tappedApiUrl } from "./tapped_api";
 
 // Public pages never carry API keys or Firebase admin credentials.
-async function read<T>(path: string, cacheMode: RequestCache = "default"): Promise<T | null> {
-	const response = await fetch(`${tappedApiUrl}/app/v1/${path}`, { cache: cacheMode });
+async function read<T>(
+	path: string,
+	cacheMode: RequestCache = "default",
+	signal?: AbortSignal
+): Promise<T | null> {
+	const response = await fetch(`${tappedApiUrl}/app/v1/${path}`, { cache: cacheMode, signal });
 	if (response.status === 404) return null;
 	if (!response.ok) throw new Error(`Tapped API request failed (${response.status})`);
 	return response.json() as Promise<T>;
@@ -29,6 +34,28 @@ async function cachedUser(key: string, path: string): Promise<Option<UserModel>>
 }
 export function getUserById(userId: string): Promise<Option<UserModel>> {
 	return cachedUser(`id:${userId}`, `public/data/users/${id(userId)}`);
+}
+export function getUsersByIds(userIds: string[], signal?: AbortSignal): Promise<UserModel[]> {
+	return batchUsers(
+		userIds,
+		async (chunk, requestSignal) => {
+			const missing = chunk.filter((userId) => !cache.has(`id:${userId}`));
+			const rows = missing.length
+				? ((await read<UserModel[]>(
+						`public/data/users?ids=${id(missing.join(","))}`,
+						"default",
+						requestSignal
+					)) ?? [])
+				: [];
+			requestSignal?.throwIfAborted();
+			for (const row of rows) cache.set(`id:${row.id}`, userDates(row));
+			return chunk.flatMap((userId) => {
+				const user = cache.get(`id:${userId}`);
+				return user ? [user] : [];
+			});
+		},
+		signal
+	);
 }
 export function getUserByUsername(username: string): Promise<Option<UserModel>> {
 	return cachedUser(`username:${username}`, `users/username/${id(username)}`);

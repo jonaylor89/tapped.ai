@@ -1,8 +1,9 @@
 import { Copy } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import UserCluster from "@/components/user/UserCluster";
-import { getUserById } from "@/data/database";
+import { getUsersByIds } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
+import { areaPerformerIds } from "@/lib/batch-users";
 import VenueCard from "../location/VenueCard";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
@@ -26,31 +27,23 @@ export default function LocationSideSheet({
 	const { toast } = useToast();
 
 	const [performers, setPerformers] = useState<UserModel[]>([]);
+	const [performerError, setPerformerError] = useState(false);
+	// Equivalent venue arrays/reordering must not restart a request already in progress.
+	const performerIdsKey = JSON.stringify(areaPerformerIds(venues));
 	useEffect(() => {
-		// Avoid hundreds of eager profile reads while this sidebar is closed.
 		if (!isOpen) return;
-		const getPerformers = async () => {
-			const nestedPerfs = await Promise.all(
-				venues.map(async (venue) => {
-					const topPerformersIds = venue.venueInfo?.topPerformerIds ?? [];
-					return (
-						await Promise.all(
-							topPerformersIds.map(async (performerId) => {
-								return await getUserById(performerId);
-							})
-						)
-					).filter((performer) => performer !== null) as UserModel[];
-				})
-			);
-
-			const perfs = nestedPerfs
-				.flat()
-				.filter((item, index, self) => index === self.findIndex((obj) => obj.id === item.id));
-			setPerformers(perfs);
-		};
-
-		getPerformers().catch(() => setPerformers([]));
-	}, [venues, isOpen]);
+		const controller = new AbortController();
+		setPerformers([]);
+		setPerformerError(false);
+		getUsersByIds(JSON.parse(performerIdsKey) as string[], controller.signal)
+			.then((rows) => {
+				if (!controller.signal.aborted) setPerformers(rows);
+			})
+			.catch(() => {
+				if (!controller.signal.aborted) setPerformerError(true);
+			});
+		return () => controller.abort();
+	}, [performerIdsKey, isOpen]);
 
 	const genreMap = useMemo(() => {
 		if (venues.length === 0) {
@@ -236,6 +229,9 @@ export default function LocationSideSheet({
 							{mediumVenues}
 							<h3 className="font-bold text-lg lg:text-2xl">large venues</h3>
 							{largeVenues}
+							{performerError && (
+								<output>Performers could not be loaded. Please reopen this area to retry.</output>
+							)}
 							{performersGroupedByCategory}
 						</div>
 					</div>

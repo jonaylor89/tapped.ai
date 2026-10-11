@@ -280,6 +280,8 @@ pub async fn get_private(
 #[serde(rename_all = "camelCase")]
 pub struct ListParams {
     pub user_id: Option<String>,
+    /// Explicit profile IDs only, comma-separated, at most 50 (no enumeration).
+    pub ids: Option<String>,
     pub requester_id: Option<String>,
     pub requestee_id: Option<String>,
     pub reference_event_id: Option<String>,
@@ -290,6 +292,22 @@ pub struct ListParams {
     pub order: Option<String>,
     pub mode: Option<String>,
 }
+fn profile_ids(ids: Option<&str>) -> Result<Vec<String>, AppError> {
+    let ids = ids.ok_or_else(forbidden)?;
+    let values: Vec<&str> = ids.split(',').collect();
+    if values.len() > 50 {
+        return Err(AppError::bad_request("at most 50 profile IDs required"));
+    }
+    let mut unique = Vec::new();
+    for id in values {
+        safe_id(id)?;
+        if !unique.iter().any(|v| v == id) {
+            unique.push(id.to_owned());
+        }
+    }
+    Ok(unique)
+}
+
 async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>) -> ApiResult {
     fields(table)?;
     let limit = p.limit.unwrap_or(100);
@@ -300,8 +318,20 @@ async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>
         safe_id(id)?;
     }
     if table == "users" {
-        return Err(forbidden());
-    } // no bulk profile enumeration
+        let ids = profile_ids(p.ids.as_deref())?;
+        // Always the public allowlist, even for authenticated callers requesting their own ID.
+        let rows: Vec<Value> = sqlx::query_scalar("SELECT doc FROM api_users WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(pool(state)?)
+            .await
+            .map_err(db_error)?;
+        return Ok(Json(Value::Array(
+            rows.into_iter().filter_map(public_user).collect(),
+        )));
+    }
+    if p.ids.is_some() {
+        return Err(AppError::bad_request("ids is only supported for users"));
+    }
     if table == "activities" && (uid.is_none() || p.user_id.as_deref() != uid) {
         return Err(forbidden());
     }
@@ -1016,6 +1046,19 @@ pub async fn register_token(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_profile_batches_are_bounded_and_validated() {
+        assert_eq!(profile_ids(Some("a,b,a")).unwrap(), vec!["a", "b"]);
+        assert_eq!(profile_ids(None).unwrap_err().status, StatusCode::FORBIDDEN);
+        for ids in ["", "a,", "../private", "a/b"] {
+            assert_eq!(
+                profile_ids(Some(ids)).unwrap_err().status,
+                StatusCode::BAD_REQUEST
+            );
+        }
+        assert!(profile_ids(Some(&vec!["a"; 50].join(","))).is_ok());
+        assert!(profile_ids(Some(&vec!["a"; 51].join(","))).is_err());
+    }
     #[test]
     fn public_profile_and_private_bookings_are_guarded() {
         assert!(visible("activities", json!({"toUserId":"someone"}), Some("other")).is_none());

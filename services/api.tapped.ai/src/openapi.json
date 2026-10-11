@@ -213,6 +213,19 @@
           },
           {
             "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "type": [
@@ -426,6 +439,19 @@
             "in": "query",
             "name": "after",
             "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
               "type": [
                 "string",
                 "null"
@@ -1154,6 +1180,19 @@
           },
           {
             "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "type": [
@@ -1308,6 +1347,19 @@
             "in": "query",
             "name": "after",
             "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
               "type": [
                 "string",
                 "null"
@@ -2447,6 +2499,13 @@
         "type": "object",
         "properties": {
           "after": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ids": {
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
             "type": [
               "string",
               "null"

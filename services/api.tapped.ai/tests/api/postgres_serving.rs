@@ -62,6 +62,44 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
     .await
     .unwrap();
     assert_eq!(private["email"], "artist@example.test");
+    let batch_params = || ListParams {
+        ids: Some(format!("{},{},{},missing-{suffix}", a.uid, b.uid, a.uid)),
+        ..Default::default()
+    };
+    for Json(batch) in [
+        app_data::list_public(
+            State(state.clone()),
+            Path("users".into()),
+            Query(batch_params()),
+        )
+        .await
+        .unwrap(),
+        app_data::list_private(
+            State(state.clone()),
+            a.clone(),
+            Path("users".into()),
+            Query(batch_params()),
+        )
+        .await
+        .unwrap(),
+    ] {
+        let rows = batch.as_array().unwrap();
+        assert_eq!(rows.len(), 2);
+        for row in rows {
+            assert!(row.get("email").is_none());
+            assert!(row.get("pushNotifications").is_none());
+            assert!(row.get("stripeCustomerId").is_none());
+        }
+    }
+    assert!(
+        app_data::list_public(
+            State(state.clone()),
+            Path("users".into()),
+            Query(ListParams::default())
+        )
+        .await
+        .is_err()
+    );
     let _ = app_data::update(
         State(state.clone()),
         a.clone(),
