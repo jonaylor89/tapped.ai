@@ -5,6 +5,7 @@ import type { Option } from "@/domain/types/option";
 import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
 import { batchUsers } from "@/lib/batch-users";
+import { type PublicBooking, publicBooking } from "@/lib/public-booking";
 import { tappedApiUrl } from "./tapped_api";
 
 // Public pages never carry API keys or Firebase admin credentials.
@@ -139,6 +140,13 @@ async function bookings(
 		startTime: new Date(value.startTime),
 		endTime: new Date(value.endTime),
 	}));
+}
+export async function getBookingById(bookingId: string): Promise<PublicBooking | null> {
+	const value = await read<Record<string, unknown>>(
+		`public/data/bookings/${id(bookingId)}`,
+		"no-store"
+	);
+	return value ? publicBooking(value) : null;
 }
 export function getBookingsByRequestee(
 	userId: string,
