@@ -536,6 +536,7 @@ mod tests {
                 database: Arc::new(database),
                 search: Arc::new(MockSearch),
                 firebase_project_id: "test".into(),
+                firebase_auth_emulator: false,
                 response_cache: Default::default(),
                 place_cache: None,
                 places: std::sync::Arc::new(crate::data::places::MockPlaces),

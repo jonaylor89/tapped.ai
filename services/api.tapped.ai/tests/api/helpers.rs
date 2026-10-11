@@ -33,6 +33,7 @@ pub fn mock_state() -> AppStateDyn {
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
         firebase_project_id: "test-project".to_string(),
+        firebase_auth_emulator: false,
         mail: tapped_api_rs::domain::mail_bridge::MailBridge::disabled(),
         response_cache: Default::default(),
         place_cache: None,

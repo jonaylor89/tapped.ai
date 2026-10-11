@@ -66,6 +66,8 @@ pub struct AppStateDyn {
     pub database: Arc<dyn Database>,
     pub search: Arc<dyn Search>,
     pub firebase_project_id: String,
+    /// Accept unsigned Firebase Auth Emulator tokens (local stacks only, `demo-*` projects).
+    pub firebase_auth_emulator: bool,
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
     /// Required production Redis cache; optional only in injected test states.

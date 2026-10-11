@@ -42,8 +42,24 @@ public struct TappedConfig: Sendable, Hashable {
         "prod_11999_1y",
     ]
 
-    public static func fromBundle(_ bundle: Bundle = .main) -> TappedConfig {
+    static let environmentOverrides = [
+        "TappedAPIURL": "TAPPED_API_URL",
+        "TappedImageProxyURL": "TAPPED_IMAGE_PROXY_URL",
+        "TappedStreamAPIKey": "TAPPED_STREAM_API_KEY",
+    ]
+
+    /// Debug builds also accept `TAPPED_API_URL`, `TAPPED_IMAGE_PROXY_URL` and `TAPPED_STREAM_API_KEY`
+    /// launch environment overrides, so simulator runs can target a local stack (`platform/local`).
+    public static func fromBundle(
+        _ bundle: Bundle = .main,
+        environment: [String: String] = ProcessInfo.processInfo.environment
+    ) -> TappedConfig {
         func string(_ key: String) -> String? {
+            #if DEBUG
+            if let override = Self.environmentOverrides[key].flatMap({ environment[$0] }), !override.isEmpty {
+                return override
+            }
+            #endif
             guard let value = bundle.object(forInfoDictionaryKey: key) as? String,
                   !value.isEmpty, !value.hasPrefix("$(") else { return nil }
             return value

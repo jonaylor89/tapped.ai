@@ -16,6 +16,11 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         guard AppEnvironment.dependencies.mode == .live else { return true }
         FirebaseBootstrap.configure()
         let config = TappedConfig.fromBundle()
+        // Local-stack runs must not report into production analytics.
+        guard !FirebaseBootstrap.usesEmulators else {
+            application.registerForRemoteNotifications()
+            return true
+        }
         PostHogAnalytics.configure(apiKey: config.postHogAPIKey, host: config.postHogHost)
         AppTelemetry.start(config: config)
         // Provisional permission at sign in (`AppSession`), full prompt from `NotificationsPromptCard`.

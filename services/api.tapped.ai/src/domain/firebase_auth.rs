@@ -5,6 +5,7 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Response},
 };
+use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use jsonwebtoken::{
     DecodingKey, Validation, decode, decode_header,
     jwk::{Jwk, JwkSet},
@@ -145,6 +146,52 @@ pub async fn seed_jwk_cache(jwks: JwkSet) {
     });
 }
 
+/// Whether to accept unsigned Firebase Auth Emulator tokens, from `FIREBASE_AUTH_EMULATOR_HOST`
+/// (the variable the Firebase Admin SDKs use). Emulator mode is refused unless the project is a
+/// `demo-*` project, which Firebase guarantees can never reach real resources.
+pub fn auth_emulator_enabled(
+    project_id: &str,
+    emulator_host: Option<&str>,
+) -> anyhow::Result<bool> {
+    match emulator_host.filter(|host| !host.is_empty()) {
+        None => Ok(false),
+        Some(_) if project_id.starts_with("demo-") => Ok(true),
+        Some(host) => anyhow::bail!(
+            "FIREBASE_AUTH_EMULATOR_HOST={host} requires a demo-* FIREBASE_PROJECT_ID, got {project_id}"
+        ),
+    }
+}
+
+#[derive(Deserialize)]
+struct EmulatorClaims {
+    sub: String,
+    email: Option<String>,
+    aud: String,
+    iss: String,
+    exp: u64,
+}
+
+/// The Auth Emulator signs nothing (`alg: none`), so only the claims are checked.
+fn emulator_user(token: &str, project_id: &str) -> Result<FirebaseUser, AppError> {
+    let payload = token.split('.').nth(1).ok_or_else(invalid_token)?;
+    let claims: EmulatorClaims = URL_SAFE_NO_PAD
+        .decode(payload)
+        .ok()
+        .and_then(|bytes| serde_json::from_slice(&bytes).ok())
+        .ok_or_else(invalid_token)?;
+    let valid = !claims.sub.is_empty()
+        && claims.aud == project_id
+        && claims.iss == format!("https://securetoken.google.com/{project_id}")
+        && claims.exp > jsonwebtoken::get_current_timestamp();
+    if !valid {
+        return Err(invalid_token());
+    }
+    Ok(FirebaseUser {
+        uid: claims.sub,
+        email: claims.email,
+    })
+}
+
 fn invalid_token() -> AppError {
     AppError::unauthorized("invalid or expired Firebase ID token")
 }
@@ -186,10 +233,13 @@ async fn verified_firebase_user(
             AppError::unauthorized("missing Authorization: Bearer <Firebase ID token>")
         })?;
 
+    let project_id = &state.firebase_project_id;
+    if state.firebase_auth_emulator {
+        return emulator_user(token, project_id);
+    }
+
     let header = decode_header(token).map_err(|_| invalid_token())?;
     let kid = header.kid.ok_or_else(invalid_token)?;
-
-    let project_id = &state.firebase_project_id;
 
     let jwk = find_jwk(&kid)
         .await
@@ -258,6 +308,7 @@ mod tests {
             database: Arc::new(MockDatabase),
             search: Arc::new(MockSearch),
             firebase_project_id: TEST_PROJECT_ID.to_string(),
+            firebase_auth_emulator: false,
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
             response_cache: Default::default(),
             place_cache: None,
@@ -580,5 +631,65 @@ mod tests {
         .unwrap();
         assert!(body["error"].as_str().unwrap().contains("Bearer"));
         assert!(body["error_id"].is_string());
+    }
+
+    fn emulator_token(claims: serde_json::Value) -> String {
+        let header = URL_SAFE_NO_PAD.encode(r#"{"alg":"none","typ":"JWT"}"#);
+        format!("{header}.{}.", URL_SAFE_NO_PAD.encode(claims.to_string()))
+    }
+
+    fn emulator_claims(project: &str, exp: u64) -> serde_json::Value {
+        serde_json::json!({
+            "sub": "emulator-user",
+            "email": "alice@example.test",
+            "aud": project,
+            "iss": format!("https://securetoken.google.com/{project}"),
+            "exp": exp,
+        })
+    }
+
+    #[test]
+    fn emulator_mode_requires_demo_project() {
+        assert!(!auth_emulator_enabled("in-the-loop-306520", None).unwrap());
+        assert!(!auth_emulator_enabled("in-the-loop-306520", Some("")).unwrap());
+        assert!(auth_emulator_enabled("in-the-loop-306520", Some("localhost:9099")).is_err());
+        assert!(auth_emulator_enabled("demo-tapped", Some("localhost:9099")).unwrap());
+    }
+
+    #[test]
+    fn accepts_unsigned_emulator_tokens_for_the_project() {
+        let now = jsonwebtoken::get_current_timestamp();
+        let token = emulator_token(emulator_claims("demo-tapped", now + 3600));
+        let user = emulator_user(&token, "demo-tapped").unwrap();
+        assert_eq!(user.uid, "emulator-user");
+        assert_eq!(user.email.as_deref(), Some("alice@example.test"));
+    }
+
+    #[test]
+    fn rejects_emulator_tokens_for_other_projects_or_expired() {
+        let now = jsonwebtoken::get_current_timestamp();
+        let other = emulator_token(emulator_claims("demo-other", now + 3600));
+        assert!(emulator_user(&other, "demo-tapped").is_err());
+        let expired = emulator_token(emulator_claims("demo-tapped", now - 1));
+        assert!(emulator_user(&expired, "demo-tapped").is_err());
+        assert!(emulator_user("garbage", "demo-tapped").is_err());
+    }
+
+    #[tokio::test]
+    async fn signed_mode_rejects_emulator_tokens() {
+        setup_jwk_cache().await;
+        let now = jsonwebtoken::get_current_timestamp();
+        let token = emulator_token(emulator_claims(TEST_PROJECT_ID, now + 3600));
+        let resp = test_app()
+            .oneshot(
+                Request::builder()
+                    .uri("/protected")
+                    .header("Authorization", format!("Bearer {token}"))
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
     }
 }
