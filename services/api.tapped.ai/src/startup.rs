@@ -316,6 +316,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     // Public: the web app has no signed-in user. Google spend is bounded by the Places quota caps
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
     let app_v1_public = ApiRouter::new()
+        .api_route("/public/map", get_with(crate::domain::public_map::get_map, |op| public_op(op,"Map venues, referenced public performers and genre summary in one query").response::<200,Json<crate::domain::public_map::MapBundle>>()))
         .api_route("/public/search/:table", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
         .api_route("/public/data/:table", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
         .api_route("/public/data/:table/:id", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
