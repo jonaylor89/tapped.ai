@@ -23,7 +23,7 @@
 
 ## Testing Guidelines
 - `npm test` runs Node's built-in test runner (`tests/*.test.mjs`). TypeScript helpers are compiled with the existing TypeScript dependency for these tests.
-- `pnpm test:browser` runs optional real-Chrome/CDP regressions with API/image fixtures (Node 22+). Start `NEXT_PUBLIC_MAPBOX_TOKEN=pk.qa-fixture pnpm build && pnpm start --port 3101` (the suite intercepts Mapbox styles, so no real token is needed) and isolated Chrome with remote debugging on 9222 first. Override `QA_BASE_URL` / `CDP_URL` as needed. Checks singleton dialog/focus/keyboard behavior, closed-sheet silence, deduplicated profile batches and bounded thumbnail requests. This is not deployment verification.
+- `pnpm test:browser` runs optional real-Chrome/CDP regressions with API/image fixtures (Node 22+). Start `NEXT_PUBLIC_MAPBOX_TOKEN=pk.qa-fixture pnpm build && pnpm start --port 3101` (the suite intercepts Mapbox styles, so no real token is needed) and isolated Chrome with remote debugging on 9222 first. Override `QA_BASE_URL` / `CDP_URL` as needed. Checks singleton dialog/focus/keyboard behavior, one foreground map bundle plus an idle viewport buffer, cached nearby pans and area/profile interactions, related-profile cache reuse, prefetch deduplication, fresh 404 invalidation, save-data guards, failed-refresh retention and bounded thumbnail requests. This is not deployment verification.
 - If you add tests, also add the matching npm script(s) and document them here.
 
 ## Commit & Pull Request Guidelines

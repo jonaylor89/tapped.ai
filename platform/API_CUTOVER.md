@@ -183,6 +183,55 @@ Final production verification after deployment d7bd63cb6be7:
   decision for existing users), or gate all authenticated reads/writes (strictest but may lock out
   existing clients/users). Do not conflate any of these with the Postgres migration.
 
+## Bundled map and client prefetching (local, not deployed)
+
+This supersedes opening-triggered area-sheet batches above: public map/profile data is fetched
+before interaction, rather than minimizing reads by waiting for a sheet to open.
+
+- `/app/v1/public/map` returns up to 250 venues, 1,000 deduplicated referenced public profiles
+  (first 20 references per venue), genre counts and truncation flags in **one SQL statement**.
+  Bounds are required, finite, nonempty and support the date line. Migration
+  `20261015000000_map_viewport_index.sql` adds the matching partial geometry GiST index;
+  the existing geography/radius index remains. Profiles use the existing public allowlist.
+- `/app/v1/public/users/:id/details` is also one SQL statement: a public user, confirmed incoming
+  count, deduplicated confirmed history (up to 40 per role), latest public performer-review
+  summary, and up to 200 explicitly referenced public profiles (history/reviewer/top 20 performers).
+  Deleted/banned users return 404. Private user fields, booking notes/financial/service fields,
+  and imported review extension fields are excluded. Both new endpoints send `no-store`.
+- Shared client public-profile cache: at most 2,000 entries, ID/case-insensitive username aliases,
+  60-second freshness and five-minute retention. Older writes cannot undo a newer missing-profile
+  result or steal a reassigned username. Full details have a separate 100-entry metadata cache
+  (30 seconds fresh, five minutes retained); related users seed the normalized cache, not duplicate
+  arrays in every details entry. Missing referenced profiles are negatively cached.
+- Map reads wait for actual bounds and use load/moveend/resize, not render events or an initial
+  unbounded search. Superseded reads are cancelled. Eight viewport snapshots are retained for
+  five minutes (30 seconds fresh). Complete outer results can answer nearby pans immediately;
+  capped outer results cannot pretend to cover a smaller viewport. Previous markers/sidebar
+  data remain during navigation and failed refreshes. Opening the area sheet performs no reads.
+- Idle prefetch adds a 15% viewport margin after 750ms, at most six speculative map reads/minute.
+  Tiny pans inside a still-warm margin do not refetch another buffer. Hover/focus has a 250ms
+  dwell, one active details request, one latest waiting intent and eight attempts/minute. Opening
+  joins an in-flight prefetch, shows the cached public user immediately and refreshes by ID;
+  fresh 404s clear the preview. Hidden tabs, save-data and 2G/3G connections skip speculative work.
+  Authenticated/private reads and action eligibility are not served from these public caches.
+- Markers, area chips/cards, selected profiles, reviews and booking previews share four remote
+  image slots. Visible selected content takes priority over queued markers; offscreen content
+  waits for intersection. Native preloads keep their slot until completion even after UI unmount,
+  because removing an img element does not necessarily cancel its network request. Server proxy
+  workers/timeouts/source allowlists and API rate limits are unchanged.
+- Local verification: 39 web tests, typecheck/build; 52 Rust library + 70 API tests with an isolated
+  PostGIS DATABASE_URL, formatting and clippy. Chrome fixture suite checks one initial map bundle
+  plus one idle buffer, no extra reads on nearby pan/area opening, cached profile rendering while
+  details are held, reviewer/top-performer cache reuse, fresh 404 invalidation, save-data guards,
+  outage retention, dialog focus, and 250 thumbnails with at most four concurrent requests.
+  Synthetic EXPLAIN ANALYZE (100,000 distant venues, 300 NYC venues, 1,000 performers; transaction
+  rolled back) used `users_map_location_idx`: 36.5ms execution and 15.0ms planning for the capped
+  250-venue/1,000-profile payload. This is a local measurement, not a production latency claim.
+- Rollout is still pending: deploy the API routes **and migration before the frontend**. Verify
+  production privacy, payload caps, query plans, request counts, cache interactions and proxy
+  failures afterwards. These commits are not pushed/deployed. Firebase Auth, deny-all Firestore
+  client rules and the separate identity/macOS/verified-email decisions above are unchanged.
+
 ## Native distribution
 
 A simulator build is not an App Store release. Archive/sign/upload the native app and release it
