@@ -80,8 +80,24 @@ The original committed native identity configuration was verified against live F
 client-side Places or privileged Rust API key is needed.
 
 Web deployment is a separate Vercel step; a successful Node CI build does not deploy app.tapped.ai.
-No Vercel token/project login is available in this environment. Do not claim the production website
-was updated until its production deployment and API-only reads are verified.
+No Vercel token/project login is available locally, in GitHub secrets, or in the browser session.
+Do not claim the production website was updated until its production deployment and API-only reads
+are verified. The legacy client Typesense search key was revoked (old clients may fail); key metadata
+was backed up alongside the ZIPs. New clients require no index key.
+
+Final production verification after deployment d7bd63cb6be7:
+- Postgres serving projections/search, Redis and mail-store readiness: healthy.
+- Authenticated HTTP create/update/read, direct SQL reflection, cross-user denial and no dual writes.
+- Reviews update nullable booker profiles correctly; clearing a profile section cannot erase ratings.
+- New writes appear in Postgres search immediately; public results omit private fields.
+- Authenticated responses are no-store; Firestore client requests are HTTP 403.
+- Redis-only Places reads verified with a short-lived synthetic entry, removed afterwards.
+- Two imported non-finite rating strings normalize to null in the view; raw JSONB remains unchanged.
+- Nine archive SHA-256 checks reverified. Administrative staging and the temporary PostGIS container
+  and credential env files were removed. The canonical admin credential remains root-owned 0600,
+  unmounted from API containers.
+- Rust 50 unit + 64 API tests, web production build, native app build and 83 TappedData tests passed;
+  Rust, Node and native simulator CI passed. App Store distribution remains separate.
 
 ## Native distribution
 

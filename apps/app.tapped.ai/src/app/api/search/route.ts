@@ -18,20 +18,14 @@ const venueCache = new LRUCache<string, UserModel[]>({
 	ttl: 60 * 1000,
 });
 
-function buildUserCacheKey(query: string, options: UserSearchOptions): string {
-	const lat = options.lat?.toFixed(3) ?? "null";
-	const lng = options.lng?.toFixed(3) ?? "null";
-	const hitsPerPage = options.hitsPerPage ?? "null";
-	return `users:${query}:${lat}:${lng}:${hitsPerPage}`;
+function searchOptionsKey(options: UserSearchOptions): string {
+	return JSON.stringify(Object.entries(options).sort(([a], [b]) => a.localeCompare(b)));
 }
-
+function buildUserCacheKey(query: string, options: UserSearchOptions): string {
+	return JSON.stringify(["users", query, searchOptionsKey(options)]);
+}
 function buildVenueCacheKey(boundingBox: BoundingBox | null, options: UserSearchOptions): string {
-	const neLat = boundingBox?.ne.lat.toFixed(3) ?? "null";
-	const neLng = boundingBox?.ne.lng.toFixed(3) ?? "null";
-	const swLat = boundingBox?.sw.lat.toFixed(3) ?? "null";
-	const swLng = boundingBox?.sw.lng.toFixed(3) ?? "null";
-	const hitsPerPage = options.hitsPerPage ?? "null";
-	return `venues:${neLat}:${neLng}:${swLat}:${swLng}:${hitsPerPage}`;
+	return JSON.stringify(["venues", boundingBox, searchOptionsKey(options)]);
 }
 
 export async function POST(request: NextRequest) {
