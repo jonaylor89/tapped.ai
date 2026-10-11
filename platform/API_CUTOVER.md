@@ -79,10 +79,9 @@ are excluded. No new credential was committed. The temporary identity-only admin
 The original committed native identity configuration was verified against live Firebase Auth; no
 client-side Places or privileged Rust API key is needed.
 
-Web deployment is a separate Vercel step; a successful Node CI build does not deploy app.tapped.ai.
-No Vercel token/project login is available locally, in GitHub secrets, or in the browser session.
-Do not claim the production website was updated until its production deployment and API-only reads
-are verified. The legacy client Typesense search key was revoked (old clients may fail); key metadata
+Vercel automatically deploys pushes to main. Node CI success alone is not deployment verification;
+check the live website rather than treating missing local Vercel credentials as a blocker.
+Live web venue search was verified to return the same IDs as Postgres, with private fields absent. The legacy client Typesense search key was revoked (old clients may fail); key metadata
 was backed up alongside the ZIPs. New clients require no index key.
 
 Final production verification after deployment d7bd63cb6be7:
@@ -98,6 +97,34 @@ Final production verification after deployment d7bd63cb6be7:
   unmounted from API containers.
 - Rust 50 unit + 64 API tests, web production build, native app build and 83 TappedData tests passed;
   Rust, Node and native simulator CI passed. App Store distribution remains separate.
+
+## Post-cutover QA follow-up (2026-10-11)
+
+- Email verification failure reproduced in Chrome: generated Firebase email links selected the public
+  Maps Embed key (UID `27fa8e80-c627-4fd7-b698-cb6eabb8e967`), which rejected the hosted auth referrer.
+  Its restrictions now allow only Maps Embed, Identity Toolkit and Secure Token, with the exact
+  `https://in-the-loop-306520.firebaseapp.com/*` referrer added. No Places, Geocoding, Gemini or
+  Firestore access was enabled. An unchanged generated link verified a fresh account through the
+  hosted page; all temporary identities were deleted. Previous restrictions are backed up privately
+  at `/opt/tapped/security-backups/20261011T115307Z-firebase-email-key/before.json` (root, 0600).
+- 9,015 obsolete follow notifications were deleted from Postgres, with other type counts unchanged.
+  A private, checksum-verified recovery snapshot is retained under
+  `/opt/tapped/postgres-maintenance/20261011T105754Z-remove-follow-notifications/`.
+- Code fixes (production rollout must be verified separately): cancellable 30-second session-profile refresh,
+  fresh Settings loads that preserve unsaved edits, no-store auth failures and public opportunity
+  responses, fresh web opportunity reads/404 handling, deterministic initial responsive layout,
+  and accessible dialog titles/descriptions. Closed map sidebars no longer eagerly fetch profiles.
+- Verification: 204 native app tests passed; 50 Rust library and 66 API tests passed (database-backed
+  cases require DATABASE_URL and are not evidence of production rollout). Web typecheck/build and
+  seven helper tests passed. A production-mode web preview rendered 250 markers with no hydration
+  errors, dialog warnings or API errors; the search dialog had an accessible title and description.
+  A missing opportunity page returned HTTP 404.
+- Email-verification enforcement policy is unchanged pending a product decision. Native new-account
+  onboarding gates on verification, but API writes currently do not; existing native profiles also
+  bypass the onboarding verification gate.
+- Still not signed off: full gigs swipe/apply UI, premium chat send/receive, real push delivery,
+  Spotify linking, in-app account deletion, every web filter and signed-in web flows. Remaining
+  Admin SDK webhooks/background writers need a separate retirement audit.
 
 ## Native distribution
 
