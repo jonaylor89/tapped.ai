@@ -19,11 +19,9 @@ import { Button } from "@/components/ui/button";
 import UserCluster from "@/components/user/UserCluster";
 import UserInfoSection from "@/components/user/UserInfoSection";
 import {
-	getBookingCount,
-	getBookingsByRequestee,
-	getBookingsByRequester,
-	getLatestPerformerReviewByPerformerId,
-	getUserById,
+	getCachedProfileDetails,
+	getPublicProfileDetails,
+	getUsersByIds,
 	isVerified,
 } from "@/data/database";
 import type { Booking } from "@/domain/types/booking";
@@ -84,45 +82,20 @@ export default function ProfileHeader({ user, full = false }: { user: UserModel;
 
 	const [bookingCount, setBookingCount] = useState<number | null>(null);
 	useEffect(() => {
-		const fetchBookingCount = async () => {
-			const bookingCount = await getBookingCount(user.id);
-			setBookingCount(bookingCount);
+		let active = true;
+		const apply = (details: Awaited<ReturnType<typeof getPublicProfileDetails>>) => {
+			if (!active) return;
+			setBookingCount(details?.bookingCount ?? null);
+			setBookings(full ? (details?.bookings ?? []) : []);
+			setLatestReview(details?.latestReview ?? null);
 		};
-		fetchBookingCount();
-	}, [user.id]);
-
-	useEffect(() => {
-		const fetchBooking = async () => {
-			if (user === null || !full) {
-				return;
-			}
-
-			// fetch latest booking
-			const latestRequesteeBookings = await getBookingsByRequestee(user.id, { limit: 40 });
-			const latestRequesterBookings = await getBookingsByRequester(user.id, { limit: 40 });
-			const latestBookings = latestRequesteeBookings
-				.concat(latestRequesterBookings)
-				.sort((a, b) => {
-					return b.startTime.getTime() - a.startTime.getTime();
-				});
-
-			setBookings(latestBookings);
+		apply(getCachedProfileDetails(user.id));
+		void getPublicProfileDetails(user.id)
+			.then(apply)
+			.catch(() => {});
+		return () => {
+			active = false;
 		};
-		fetchBooking();
-
-		const fetchLatestReview = async () => {
-			if (user === null) {
-				return;
-			}
-
-			// get latest review
-			const latestPerformerReview = await getLatestPerformerReviewByPerformerId(user.id);
-			const latestBookerReview = await getLatestPerformerReviewByPerformerId(user.id);
-
-			const latestReview = latestPerformerReview ?? latestBookerReview ?? null;
-			setLatestReview(latestReview);
-		};
-		fetchLatestReview();
 	}, [user, full]);
 
 	return (
@@ -319,17 +292,13 @@ function FullRows({
 	const [topPerformers, setTopPerformers] = useState<UserModel[]>([]);
 	useEffect(() => {
 		const topPerformerIds = user.venueInfo?.topPerformerIds ?? [];
-		const fetchTopPerformers = async () => {
-			const performers = (
-				await Promise.all(
-					topPerformerIds.map(async (id) => {
-						return await getUserById(id);
-					})
-				)
-			).filter((user) => user !== null) as UserModel[];
-			setTopPerformers(performers);
-		};
-		fetchTopPerformers();
+		const controller = new AbortController();
+		void getUsersByIds(topPerformerIds, controller.signal)
+			.then((performers) => {
+				if (!controller.signal.aborted) setTopPerformers(performers);
+			})
+			.catch(() => {});
+		return () => controller.abort();
 	}, [user.venueInfo]);
 
 	return (

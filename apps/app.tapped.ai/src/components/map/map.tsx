@@ -3,7 +3,7 @@
 import classNames from "classnames";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { type JSX, useCallback, useMemo, useRef, useState } from "react";
+import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
 	FullscreenControl,
 	GeolocateControl,
@@ -12,11 +12,12 @@ import {
 	Marker,
 } from "react-map-gl";
 import TappedBanner from "@/components/TappedBanner";
-import { useDebounce } from "@/context/debounce";
-import { useSearch } from "@/context/search";
+import { prefetchPublicProfile } from "@/data/database";
 import type { BoundingBox } from "@/data/typesense";
 import { profileImage } from "@/domain/types/user_model";
+import { usePublicMap } from "@/hooks/use-public-map";
 import { venueSearchBounds } from "@/lib/map-bounds";
+import { canonicalMapBounds, mapBoundsKey } from "@/lib/map-cache";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/utils/tracking";
 import BottomNavBar from "./BottomNavBar";
@@ -35,38 +36,31 @@ export default function VenueMap({ lat, lng, zoom }: { lat: number; lng: number;
 function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: number }) {
 	const [bounds, setBounds] = useState<null | BoundingBox>(null);
 	const [sidebarIsOpen, setSidebarIsOpen] = useState(false);
-	const { useVenueData } = useSearch();
-	const debouncedBounds = useDebounce<null | BoundingBox>(bounds, LIMIT);
 	const router = useRouter();
 	const { resolvedTheme } = useTheme();
+	const { data, isFetching, isError } = usePublicMap(bounds);
+	const cancelIntent = useRef<(() => void) | null>(null);
+	useEffect(() => () => cancelIntent.current?.(), []);
 
-	const { data, isFetching } = useVenueData(debouncedBounds, {
-		hitsPerPage: LIMIT,
-	});
-
-	const onRender = useCallback((e: MapEvent) => {
+	// Read bounds only once loaded or navigation has settled, never on every image/map render.
+	const onViewportSettled = useCallback((e: MapEvent) => {
 		const currentMapBounds = e.target.getBounds();
 		if (currentMapBounds === null) {
 			return;
 		}
 
-		setBounds(venueSearchBounds(currentMapBounds));
-
-		// const { lat: newLat, lng: newLng } = e.target.getCenter();
-		// const newZoom = e.target.getZoom();
-		// setCenter({ lat: newLat, lng: newLng });
-		// setZoom(newZoom);
-		// router.push(`/map?lat=${newLat}&lng=${newLng}&zoom=${newZoom}`);
+		const next = canonicalMapBounds(venueSearchBounds(currentMapBounds));
+		setBounds((previous) =>
+			previous && mapBoundsKey(previous) === mapBoundsKey(next) ? previous : next
+		);
 	}, []);
 
 	const cachedMarkers = useRef<JSX.Element[]>([]);
 
 	const markers = useMemo(() => {
-		if (isFetching) {
-			return cachedMarkers.current;
-		}
-
-		const newMarkers = (data ?? [])
+		// Query placeholder data keeps the previous viewport visible; warm cached areas render
+		// immediately even while their stale snapshot is being refreshed.
+		const newMarkers = (data?.venues ?? [])
 			.map((venue) => {
 				const lat = venue.location?.lat ?? null;
 				const lng = venue.location?.lng ?? null;
@@ -80,20 +74,26 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 
 				const hasBookingData = venue.venueInfo?.bookingsByDayOfWeek?.some((val) => val !== 0);
 				return (
-					<Marker
-						key={venue.id}
-						longitude={lng}
-						latitude={lat}
-						anchor="center"
-						onClick={() => {
-							trackEvent("marker_clicked", {
-								venueId: venue.id,
-							});
-							const newPathname = `/map?username=${venue.username}`;
-							router.push(newPathname);
-						}}
-					>
-						<div
+					<Marker key={venue.id} longitude={lng} latitude={lat} anchor="center">
+						<button
+							type="button"
+							aria-label={`View ${venue.artistName || venue.username}`}
+							onClick={() => {
+								trackEvent("marker_clicked", { venueId: venue.id });
+								const params = new URLSearchParams(window.location.search);
+								params.set("username", venue.username);
+								router.push(`/map?${params}`);
+							}}
+							onMouseEnter={() => {
+								cancelIntent.current = prefetchPublicProfile(venue.id);
+							}}
+							onFocus={() => {
+								cancelIntent.current = prefetchPublicProfile(venue.id);
+							}}
+							onMouseLeave={(event) => {
+								if (document.activeElement !== event.currentTarget) cancelIntent.current?.();
+							}}
+							onBlur={() => cancelIntent.current?.()}
 							className={cn(
 								"flex transform flex-row items-center justify-center rounded-xl bg-background px-1 py-1 shadow-lg transition-all duration-200 ease-in-out hover:scale-105 hover:cursor-pointer",
 								hasBookingData
@@ -107,7 +107,7 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 							{venueCapacity !== 0 && (
 								<p className={classNames("pr-1 pl-1")}>{venueCapacity.toLocaleString()}</p>
 							)}
-						</div>
+						</button>
 					</Marker>
 				);
 			})
@@ -116,13 +116,16 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 		cachedMarkers.current = newMarkers;
 
 		return newMarkers;
-	}, [data, router, isFetching]);
+	}, [data, router]);
 
 	const mapTheme = resolvedTheme === "light" ? mapboxLightStyle : mapboxDarkStyle;
 	return (
 		<>
 			<LocationSideSheet
-				venues={data ?? []}
+				venues={data?.venues ?? []}
+				performers={data?.performers ?? []}
+				genres={data?.genres ?? {}}
+				performersTruncated={data?.performersTruncated ?? false}
 				lat={lat}
 				lng={lng}
 				zoom={zoom}
@@ -130,6 +133,11 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 				onOpenChange={() => setSidebarIsOpen(!sidebarIsOpen)}
 			/>
 			<TappedBanner />
+			{isError && (
+				<output className="fixed top-16 left-4 z-40 rounded bg-background p-3">
+					Map refresh unavailable. Previously loaded venues remain visible.
+				</output>
+			)}
 			<div className="fixed inset-0 z-0 flex h-full w-full flex-col overflow-hidden pt-12">
 				<BottomNavBar
 					queryLimit={LIMIT}
@@ -150,7 +158,9 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 						}}
 						mapStyle={`mapbox://styles/${mapTheme}`}
 						mapboxAccessToken={defaultMapboxToken}
-						onRender={onRender}
+						onLoad={onViewportSettled}
+						onMoveEnd={onViewportSettled}
+						onResize={onViewportSettled}
 					>
 						<GeolocateControl position="bottom-right" showUserHeading trackUserLocation />
 						<FullscreenControl position="bottom-right" />

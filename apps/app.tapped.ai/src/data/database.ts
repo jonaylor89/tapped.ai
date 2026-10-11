@@ -5,7 +5,9 @@ import type { Option } from "@/domain/types/option";
 import type { Review } from "@/domain/types/review";
 import type { UserModel } from "@/domain/types/user_model";
 import { batchUsers } from "@/lib/batch-users";
+import { createIntentPrefetch, speculativeNetworkAllowed } from "@/lib/intent-prefetch";
 import { type PublicBooking, publicBooking } from "@/lib/public-booking";
+import { PublicProfileCache } from "@/lib/public-profile-cache";
 import { tappedApiUrl } from "./tapped_api";
 
 // Public pages never carry API keys or Firebase admin credentials.
@@ -20,27 +22,58 @@ async function read<T>(
 	return response.json() as Promise<T>;
 }
 const id = encodeURIComponent;
-const cache = new LRUCache<string, UserModel>({ max: 500, ttl: 60_000 });
+const profiles = new PublicProfileCache<UserModel>();
+const profileReads = new Map<string, Promise<Option<UserModel>>>();
 function userDates(user: UserModel): UserModel {
 	return { ...user, timestamp: user.timestamp ? new Date(user.timestamp) : undefined };
 }
-async function cachedUser(key: string, path: string): Promise<Option<UserModel>> {
-	const cached = cache.get(key);
-	if (cached) return cached;
-	const value = await read<UserModel>(path);
-	if (!value) return null;
-	const user = userDates(value);
-	cache.set(key, user);
-	return user;
+export function primePublicProfiles(users: UserModel[], fetchedAt = Date.now()): void {
+	for (const user of users) profiles.put(userDates(user), fetchedAt);
+}
+export function primeMissingPublicProfiles(userIds: string[], fetchedAt = Date.now()): void {
+	for (const userId of userIds) profiles.missing(userId, fetchedAt);
+}
+export function getCachedUserByUsername(username: string): UserModel | null {
+	return profiles.getByUsername(username, true) ?? null;
+}
+export function getCachedUserById(userId: string): UserModel | null {
+	return profiles.getById(userId, true) ?? null;
+}
+async function cachedUser(
+	key: string,
+	path: string,
+	lookup: () => UserModel | null | undefined
+): Promise<Option<UserModel>> {
+	const cached = lookup();
+	if (cached !== undefined) return cached;
+	const pending = profileReads.get(key);
+	if (pending) return pending;
+	const startedAt = Date.now();
+	const promise = read<UserModel>(path, "no-store")
+		.then((value) => {
+			if (!value) {
+				if (key.startsWith("id:")) profiles.missing(key.slice(3), startedAt);
+				return null;
+			}
+			const user = userDates(value);
+			profiles.put(user, startedAt);
+			return user;
+		})
+		.finally(() => profileReads.delete(key));
+	profileReads.set(key, promise);
+	return promise;
 }
 export function getUserById(userId: string): Promise<Option<UserModel>> {
-	return cachedUser(`id:${userId}`, `public/data/users/${id(userId)}`);
+	return cachedUser(`id:${userId}`, `public/data/users/${id(userId)}`, () =>
+		profiles.getById(userId)
+	);
 }
 export function getUsersByIds(userIds: string[], signal?: AbortSignal): Promise<UserModel[]> {
 	return batchUsers(
 		userIds,
 		async (chunk, requestSignal) => {
-			const missing = chunk.filter((userId) => !cache.has(`id:${userId}`));
+			const startedAt = Date.now();
+			const missing = chunk.filter((userId) => profiles.getById(userId) === undefined);
 			const rows = missing.length
 				? ((await read<UserModel[]>(
 						`public/data/users?ids=${id(missing.join(","))}`,
@@ -49,9 +82,11 @@ export function getUsersByIds(userIds: string[], signal?: AbortSignal): Promise<
 					)) ?? [])
 				: [];
 			requestSignal?.throwIfAborted();
-			for (const row of rows) cache.set(`id:${row.id}`, userDates(row));
+			primePublicProfiles(rows, startedAt);
+			for (const userId of missing)
+				if (!rows.some((row) => row.id === userId)) profiles.missing(userId, startedAt);
 			return chunk.flatMap((userId) => {
-				const user = cache.get(`id:${userId}`);
+				const user = profiles.getById(userId);
 				return user ? [user] : [];
 			});
 		},
@@ -59,7 +94,9 @@ export function getUsersByIds(userIds: string[], signal?: AbortSignal): Promise<
 	);
 }
 export function getUserByUsername(username: string): Promise<Option<UserModel>> {
-	return cachedUser(`username:${username}`, `users/username/${id(username)}`);
+	return cachedUser(`username:${username}`, `users/username/${id(username)}`, () =>
+		profiles.getByUsername(username)
+	);
 }
 // Badges and curated leaderboard data were not migrated. Explicitly disabled, no Firestore fallback.
 export async function isVerified(_userId: string): Promise<boolean> {
@@ -148,6 +185,69 @@ export async function getBookingById(bookingId: string): Promise<PublicBooking |
 	);
 	return value ? publicBooking(value) : null;
 }
+export type PublicProfileDetails = {
+	user: UserModel;
+	bookingCount: number;
+	bookings: Booking[];
+	latestReview: Review | null;
+};
+type ProfileDetailsJSON = Omit<PublicProfileDetails, "bookings" | "latestReview"> & {
+	bookings: BookingJSON[];
+	latestReview: ReviewJSON | null;
+};
+const detailsCache = new LRUCache<string, { value: PublicProfileDetails; fetchedAt: number }>({
+	max: 100,
+	ttl: 300_000,
+});
+const detailReads = new Map<string, Promise<PublicProfileDetails | null>>();
+export function getCachedProfileDetails(userId: string): PublicProfileDetails | null {
+	return detailsCache.get(userId)?.value ?? null;
+}
+export function getPublicProfileDetails(
+	userId: string,
+	revalidate = false
+): Promise<PublicProfileDetails | null> {
+	const cached = detailsCache.get(userId);
+	if (!revalidate && cached && Date.now() - cached.fetchedAt < 30_000)
+		return Promise.resolve(cached.value);
+	const pending = detailReads.get(userId);
+	if (pending) return pending;
+	const startedAt = Date.now();
+	const promise = read<ProfileDetailsJSON>(`public/users/${id(userId)}/details`, "no-store")
+		.then((row) => {
+			if (!row) {
+				detailsCache.delete(userId);
+				profiles.missing(userId, startedAt);
+				return null;
+			}
+			const value: PublicProfileDetails = {
+				...row,
+				user: userDates(row.user),
+				bookings: row.bookings.map((booking) => ({
+					...booking,
+					note: "",
+					rate: 0,
+					timestamp: new Date(booking.timestamp),
+					startTime: new Date(booking.startTime),
+					endTime: new Date(booking.endTime),
+				})),
+				latestReview: row.latestReview ? reviewDates(row.latestReview) : null,
+			};
+			primePublicProfiles([value.user], startedAt);
+			if (profiles.getById(userId, true) === null) return null;
+			if ((detailsCache.get(userId)?.fetchedAt ?? 0) <= startedAt)
+				detailsCache.set(userId, { value, fetchedAt: startedAt });
+			return value;
+		})
+		.finally(() => detailReads.delete(userId));
+	detailReads.set(userId, promise);
+	return promise;
+}
+export const prefetchPublicProfile = createIntentPrefetch(
+	(userId) => getPublicProfileDetails(userId),
+	speculativeNetworkAllowed
+);
+
 export function getBookingsByRequestee(
 	userId: string,
 	params?: { limit: number }

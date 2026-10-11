@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
+import { useProfileIntent } from "@/hooks/use-profile-intent";
 
 export default function VenueCard({ venue }: { venue: UserModel }) {
 	const pathname = usePathname();
@@ -20,8 +21,9 @@ export default function VenueCard({ venue }: { venue: UserModel }) {
 	);
 
 	const pfp = profileImage(venue);
+	const intent = useProfileIntent(venue.id);
 	return (
-		<Link href={`${pathname}?${createQueryString("username", venue.username)}`}>
+		<Link {...intent} href={`${pathname}?${createQueryString("username", venue.username)}`}>
 			<div className="group flex flex-col items-start rounded-lg">
 				<div className="relative aspect-square h-32 w-32 overflow-hidden rounded-lg bg-card">
 					<Image

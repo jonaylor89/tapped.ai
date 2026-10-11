@@ -2,14 +2,17 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
+import { useProfileIntent } from "@/hooks/use-profile-intent";
 
 export default function UserChip({ user, onClick }: { user: UserModel; onClick?: () => void }) {
 	const router = useRouter();
 	const pathname = usePathname();
 	const imageSrc = profileImage(user);
+	const intent = useProfileIntent(user.id);
 
 	return (
 		<Button
+			{...intent}
 			variant={"outline"}
 			onClick={() => {
 				onClick?.();

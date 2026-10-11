@@ -1,9 +1,7 @@
 import { Copy } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import UserCluster from "@/components/user/UserCluster";
-import { getUsersByIds } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
-import { areaPerformerIds } from "@/lib/batch-users";
 import VenueCard from "../location/VenueCard";
 import { Button } from "../ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
@@ -14,6 +12,9 @@ export default function LocationSideSheet({
 	lng,
 	zoom,
 	venues,
+	performers,
+	genres: genreMap,
+	performersTruncated,
 	isOpen,
 	onOpenChange,
 }: {
@@ -21,46 +22,15 @@ export default function LocationSideSheet({
 	lng: number;
 	zoom: number;
 	venues: UserModel[];
+	performers: UserModel[];
+	genres: Record<string, number>;
+	performersTruncated: boolean;
 	isOpen: boolean;
 	onOpenChange: () => void;
 }) {
 	const { toast } = useToast();
 
-	const [performers, setPerformers] = useState<UserModel[]>([]);
-	const [performerError, setPerformerError] = useState(false);
-	// Equivalent venue arrays/reordering must not restart a request already in progress.
-	const performerIdsKey = JSON.stringify(areaPerformerIds(venues));
-	useEffect(() => {
-		if (!isOpen) return;
-		const controller = new AbortController();
-		setPerformers([]);
-		setPerformerError(false);
-		getUsersByIds(JSON.parse(performerIdsKey) as string[], controller.signal)
-			.then((rows) => {
-				if (!controller.signal.aborted) setPerformers(rows);
-			})
-			.catch(() => {
-				if (!controller.signal.aborted) setPerformerError(true);
-			});
-		return () => controller.abort();
-	}, [performerIdsKey, isOpen]);
-
-	const genreMap = useMemo(() => {
-		if (venues.length === 0) {
-			return {};
-		}
-
-		const venuesGenres = venues.map((venue) => venue.venueInfo?.genres ?? []);
-
-		// get genre: count map
-		return venuesGenres.flat().reduce(
-			(acc, genre) => {
-				acc[genre] = (acc[genre] ?? 0) + 1;
-				return acc;
-			},
-			{} as Record<string, number>
-		);
-	}, [venues]);
+	// All data arrives with the viewport bundle; opening this sheet performs no profile reads.
 
 	const GenreChips = useMemo(
 		() => (
@@ -229,8 +199,8 @@ export default function LocationSideSheet({
 							{mediumVenues}
 							<h3 className="font-bold text-lg lg:text-2xl">large venues</h3>
 							{largeVenues}
-							{performerError && (
-								<output>Performers could not be loaded. Please reopen this area to retry.</output>
+							{performersTruncated && (
+								<p>Showing a limited performer selection. Zoom in for a smaller area.</p>
 							)}
 							{performersGroupedByCategory}
 						</div>

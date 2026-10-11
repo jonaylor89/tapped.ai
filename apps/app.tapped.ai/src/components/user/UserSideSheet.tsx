@@ -7,8 +7,7 @@ import ProfileHeader from "@/components/profile/ProfileHeader";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
-import { getUserByUsername } from "@/data/database";
-import type { UserModel } from "@/domain/types/user_model";
+import { usePublicProfile } from "@/hooks/use-public-profile";
 import { trackEvent } from "@/utils/tracking";
 
 export default function UserSideSheet() {
@@ -19,7 +18,7 @@ export default function UserSideSheet() {
 	const username = searchParams.get("username");
 	const isOpen = username !== null;
 
-	const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
+	const { user: selectedUser, loading, failed } = usePublicProfile(username);
 	const [initialSearchParams, setInitialSearchParams] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -29,21 +28,8 @@ export default function UserSideSheet() {
 		}
 	}, [searchParams, initialSearchParams]);
 
-	useEffect(() => {
-		if (username === null) {
-			return;
-		}
-
-		const fetchUser = async () => {
-			const user = await getUserByUsername(username);
-			setSelectedUser(user ?? null);
-		};
-		fetchUser();
-	}, [username]);
-
 	const onOpenChange = (isOpen: boolean) => {
 		if (!isOpen && initialSearchParams) {
-			setSelectedUser(null);
 			const params = new URLSearchParams(initialSearchParams);
 
 			// Remove the username parameter if it exists
@@ -96,11 +82,15 @@ export default function UserSideSheet() {
 				<div className="flex justify-center">
 					{selectedUser === null ? (
 						<div className="flex min-h-screen items-center justify-center">
-							<LoadingSpinner />
+							{loading ? (
+								<LoadingSpinner />
+							) : (
+								<p>{failed ? "Profile could not be refreshed." : "Profile unavailable."}</p>
+							)}
 						</div>
 					) : (
 						<div className="w-full overflow-y-scroll">
-							<ProfileHeader user={selectedUser} full />
+							<ProfileHeader key={selectedUser.id} user={selectedUser} full />
 						</div>
 					)}
 				</div>
