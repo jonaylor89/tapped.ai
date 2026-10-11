@@ -399,14 +399,105 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
             .unwrap()
             .is_empty()
     );
-    let Json(_) = app_data::remove(
+    let active_services = |uid: &str| ListParams {
+        user_id: Some(uid.to_owned()),
+        ..Default::default()
+    };
+    let Json(before) = app_data::list_public(
+        State(state.clone()),
+        Path("services".into()),
+        Query(active_services(&a.uid)),
+    )
+    .await
+    .unwrap();
+    assert_eq!(before.as_array().unwrap().len(), 4); // three onboarding defaults + custom
+    assert!(
+        app_data::remove(
+            State(state.clone()),
+            b.clone(),
+            Path(DocumentPath::from(("users".into(), a.uid.clone())))
+        )
+        .await
+        .is_err()
+    );
+    let (removed, racing_service) = tokio::join!(
+        app_data::remove(
+            State(state.clone()),
+            a.clone(),
+            Path(DocumentPath::from(("users".into(), a.uid.clone())))
+        ),
+        app_data::create(
+            State(state.clone()),
+            a.clone(),
+            Path("services".into()),
+            Json(
+                json!({"id":format!("racing-{suffix}"),"userId":a.uid,"title":"concurrent retry"})
+            )
+        )
+    );
+    let _ = removed.unwrap();
+    if let Err(error) = racing_service {
+        assert_eq!(error.status, axum::http::StatusCode::FORBIDDEN);
+    }
+    assert!(repository.get_user_by_id(&a.uid).await.is_err());
+    for uid in [&a.uid, &b.uid] {
+        let Json(services) = app_data::list_public(
+            State(state.clone()),
+            Path("services".into()),
+            Query(active_services(uid)),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            services.as_array().unwrap().len(),
+            if uid == &a.uid { 0 } else { 3 }
+        );
+    }
+    assert!(
+        app_data::get_public(
+            State(state.clone()),
+            Path(DocumentPath::from(("services".into(), service.clone()))),
+            Query(ListParams::default())
+        )
+        .await
+        .is_err()
+    );
+    let Json(batch) = app_data::list_public(
+        State(state.clone()),
+        Path("users".into()),
+        Query(batch_params()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(batch.as_array().unwrap().len(), 1); // deleted profiles never enter batches
+    assert_eq!(batch[0]["id"], b.uid);
+    let _ = app_data::remove(
         State(state.clone()),
         a.clone(),
         Path(DocumentPath::from(("users".into(), a.uid.clone()))),
     )
     .await
-    .unwrap();
-    assert!(repository.get_user_by_id(&a.uid).await.is_err());
+    .unwrap(); // retry is safe
+    assert!(
+        app_data::create(
+            State(state.clone()),
+            a.clone(),
+            Path("services".into()),
+            Json(json!({"id":format!("late-{suffix}"),"userId":a.uid,"title":"late retry"}))
+        )
+        .await
+        .is_err()
+    );
+    assert!(
+        app_data::update(
+            State(state.clone()),
+            a.clone(),
+            Path(DocumentPath::from(("services".into(), service.clone()))),
+            Json(json!({"deleted":false}))
+        )
+        .await
+        .is_err()
+    );
     assert_eq!(
         repository.get_user_from_api_key(&credential).await.unwrap(),
         None
@@ -420,7 +511,8 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
             opportunity.clone(),
         ),
         ("opportunities", "id", opportunity),
-        ("services", "id", service),
+        ("services", "user_id", a.uid.clone()),
+        ("services", "user_id", b.uid.clone()),
         ("reviews", "id", review),
         ("bookings", "id", booking),
         ("users", "id", a.uid),

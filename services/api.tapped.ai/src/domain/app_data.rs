@@ -803,8 +803,35 @@ async fn save(
                 .map_err(db_error)?;
         }
     }
+    if table == "services" {
+        // Serialize service writes with owner deletion so an onboarding/retry write cannot
+        // create or resurrect an orphan after the deletion transaction has committed.
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
+            .bind(format!("users:{}", user.uid))
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        let owner_active: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT deleted)")
+                .bind(&user.uid)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        if !owner_active {
+            return Err(forbidden());
+        }
+    }
     persist(&mut tx, table, mapping, &doc).await?;
-    if table == "users" && create {
+    if table == "users" && doc["deleted"] == true {
+        // The retired Firebase onUserDeleted trigger used to do this. Keep the profile and
+        // all services (default, custom and imported) unavailable atomically in Postgres.
+        sqlx::query("UPDATE services SET deleted=true WHERE user_id=$1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+    }
+    if table == "users" && create && doc["deleted"] != true {
         for title in ["30 min set", "45 min set", "60 min set"] {
             sqlx::query("INSERT INTO services(id,user_id,title,description,rate_type) VALUES($1,$2,$3,$3,'hourly')")
                 .bind(uuid::Uuid::new_v4().to_string()).bind(id).bind(title).execute(&mut *tx).await.map_err(db_error)?;
