@@ -15,6 +15,7 @@ import InstagramButton from "@/components/profile/InstagramButton";
 import SpotifyButton from "@/components/profile/SpotifyButton";
 import TiktokButton from "@/components/profile/TiktokButton";
 import TwitterButton from "@/components/profile/TwitterButton";
+import QueuedImage from "@/components/QueuedImage";
 import { Button } from "@/components/ui/button";
 import UserCluster from "@/components/user/UserCluster";
 import UserInfoSection from "@/components/user/UserInfoSection";
@@ -103,15 +104,12 @@ export default function ProfileHeader({ user, full = false }: { user: UserModel;
 			<div className="flex flex-row flex-col items-center justify-start">
 				<div className="flex aspect-square w-full flex-col items-center justify-center">
 					<div className="relative z-1 h-full w-full overflow-hidden rounded-xl">
-						<Image
+						<QueuedImage
 							src={imageSrc}
 							alt={`${user.artistName} profile picture`}
-							fill
 							sizes="(min-width: 768px) 30vw, 100vw"
-							style={{
-								objectFit: "cover",
-								objectPosition: "center",
-							}}
+							className="object-cover object-center"
+							priority={2}
 						/>
 					</div>
 				</div>
@@ -291,7 +289,9 @@ function FullRows({
 
 	const [topPerformers, setTopPerformers] = useState<UserModel[]>([]);
 	useEffect(() => {
-		const topPerformerIds = user.venueInfo?.topPerformerIds ?? [];
+		// Match the bounded map/profile bundle instead of blocking warm chips on cold tails.
+		const ids = user.venueInfo?.topPerformerIds;
+		const topPerformerIds = Array.isArray(ids) ? [...new Set(ids.slice(0, 20))] : [];
 		const controller = new AbortController();
 		void getUsersByIds(topPerformerIds, controller.signal)
 			.then((performers) => {

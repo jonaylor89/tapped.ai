@@ -1,8 +1,8 @@
 "use client";
 
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { getCachedMapData, getMapData } from "@/data/public_map";
+import { useEffect, useState } from "react";
+import { getCachedMapData, getMapData, type PublicMapBundle } from "@/data/public_map";
 import type { BoundingBox } from "@/data/typesense";
 import { speculativeNetworkAllowed } from "@/lib/intent-prefetch";
 import {
@@ -41,6 +41,10 @@ export function usePublicMap(bounds: BoundingBox | null) {
 		retry: false, // No retry storm on 429; a later settled viewport/refocus may refresh.
 	});
 	const { data, isFetching, isPlaceholderData } = query;
+	const [lastData, setLastData] = useState<PublicMapBundle>();
+	useEffect(() => {
+		if (data) setLastData(data);
+	}, [data]);
 	useEffect(() => {
 		return client.getQueryCache().subscribe((event) => {
 			if (event.type !== "updated") return;
@@ -94,5 +98,7 @@ export function usePublicMap(bounds: BoundingBox | null) {
 				void client.cancelQueries({ queryKey, exact: true });
 		};
 	}, [bounds, client, data, isFetching, isPlaceholderData]);
-	return query;
+	// React Query drops placeholder data on a new viewport's error; keep the last good
+	// snapshot instead of blanking the map/sidebar after a 429 or temporary outage.
+	return { ...query, data: data ?? lastData };
 }

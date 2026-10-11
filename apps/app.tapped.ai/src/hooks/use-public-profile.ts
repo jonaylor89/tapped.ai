@@ -37,9 +37,23 @@ export function usePublicProfile(username: string | null) {
 				return;
 			}
 			setState({ username, user, loading: true, failed: false });
-			const details = await getPublicProfileDetails(user.id, true);
+			let details = await getPublicProfileDetails(user.id, true);
+			if (!active) return;
+			// A cached username may have been renamed/reassigned. Fresh details remove its
+			// old alias; resolve the requested name once rather than showing the wrong ID.
+			if (details && details.user.username.toLowerCase() !== username.toLowerCase()) {
+				const current = await getUserByUsername(username);
+				if (!active) return;
+				details = current ? await getPublicProfileDetails(current.id, true) : null;
+			}
 			if (active)
-				setState({ username, user: details?.user ?? null, loading: false, failed: false });
+				setState({
+					username,
+					user:
+						details?.user.username.toLowerCase() === username.toLowerCase() ? details.user : null,
+					loading: false,
+					failed: false,
+				});
 		};
 		void refresh().catch(() => {
 			if (active) setState((previous) => ({ ...previous, loading: false, failed: true }));

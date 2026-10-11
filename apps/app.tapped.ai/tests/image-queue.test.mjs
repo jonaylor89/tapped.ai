@@ -39,3 +39,27 @@ test("unmounted queued markers never start, and load/error completion is idempot
 	enqueue((release) => { works = true; release(); });
 	assert.equal(works, true);
 });
+
+test("selected visible images jump queued markers without interrupting active loads", () => {
+	const enqueue = createImageQueue(1);
+	let done;
+	const order = [];
+	enqueue((release) => { order.push("active"); done = release; }, 0);
+	enqueue((release) => { order.push("marker"); release(); }, 0);
+	enqueue((release) => { order.push("profile"); release(); }, 2);
+	enqueue((release) => { order.push("card"); release(); }, 1);
+	done();
+	assert.deepEqual(order, ["active", "profile", "card", "marker"]);
+});
+
+test("a detached native preload retains its slot until network completion", () => {
+	const enqueue = createImageQueue(1, true);
+	let done;
+	const cancel = enqueue((release) => { done = release; });
+	let started = false;
+	enqueue((release) => { started = true; release(); });
+	cancel();
+	assert.equal(started, false);
+	done();
+	assert.equal(started, true);
+});

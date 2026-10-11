@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import QueuedImage from "@/components/QueuedImage";
 import { Skeleton } from "@/components/ui/skeleton";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
 
@@ -14,15 +14,11 @@ export default function UserTile({ user }: { user: UserModel | null }) {
 		<Link href={`/u/${user.username}`}>
 			<div className="flex flex-row items-center">
 				<div className="relative h-12 w-12 overflow-hidden rounded-full">
-					<Image
+					<QueuedImage
 						src={imageSrc}
 						alt={`${user.artistName} profile picture`}
-						fill
 						sizes="48px"
-						style={{
-							objectFit: "cover",
-							objectPosition: "center",
-						}}
+						className="object-cover object-center"
 					/>
 				</div>
 				<div className="ml-4">

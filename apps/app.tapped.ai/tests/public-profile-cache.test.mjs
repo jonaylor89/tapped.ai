@@ -46,3 +46,14 @@ test("a 404 invalidates both aliases and an obsolete/same-tick prefetch cannot r
 	cache.put({ id: "a", username: "artist", deleted: true }, 102);
 	assert.equal(cache.getByUsername("artist"), null);
 });
+
+test("a replayed old map profile cannot steal a newly reassigned username alias", () => {
+	const cache = new PublicProfileCache(10, 60, 300, () => 100);
+	cache.put({ id: "old-id", username: "artist" }, 90);
+	cache.put({ id: "new-id", username: "Artist" }, 100);
+	cache.put({ id: "old-id", username: "artist" }, 95);
+	assert.equal(cache.getByUsername("artist").id, "new-id");
+	cache.missing("new-id", 101);
+	cache.put({ id: "old-id", username: "artist" }, 101);
+	assert.equal(cache.getByUsername("artist"), null);
+});

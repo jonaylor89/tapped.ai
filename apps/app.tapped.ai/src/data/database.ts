@@ -31,7 +31,10 @@ export function primePublicProfiles(users: UserModel[], fetchedAt = Date.now()):
 	for (const user of users) profiles.put(userDates(user), fetchedAt);
 }
 export function primeMissingPublicProfiles(userIds: string[], fetchedAt = Date.now()): void {
-	for (const userId of userIds) profiles.missing(userId, fetchedAt);
+	for (const userId of userIds) {
+		profiles.missing(userId, fetchedAt);
+		if (profiles.getById(userId, true) === null) detailsCache.delete(userId);
+	}
 }
 export function getCachedUserByUsername(username: string): UserModel | null {
 	return profiles.getByUsername(username, true) ?? null;
@@ -52,7 +55,7 @@ async function cachedUser(
 	const promise = read<UserModel>(path, "no-store")
 		.then((value) => {
 			if (!value) {
-				if (key.startsWith("id:")) profiles.missing(key.slice(3), startedAt);
+				if (key.startsWith("id:")) primeMissingPublicProfiles([key.slice(3)], startedAt);
 				return null;
 			}
 			const user = userDates(value);
@@ -84,7 +87,7 @@ export function getUsersByIds(userIds: string[], signal?: AbortSignal): Promise<
 			requestSignal?.throwIfAborted();
 			primePublicProfiles(rows, startedAt);
 			for (const userId of missing)
-				if (!rows.some((row) => row.id === userId)) profiles.missing(userId, startedAt);
+				if (!rows.some((row) => row.id === userId)) primeMissingPublicProfiles([userId], startedAt);
 			return chunk.flatMap((userId) => {
 				const user = profiles.getById(userId);
 				return user ? [user] : [];
@@ -194,6 +197,7 @@ export type PublicProfileDetails = {
 type ProfileDetailsJSON = Omit<PublicProfileDetails, "bookings" | "latestReview"> & {
 	bookings: BookingJSON[];
 	latestReview: ReviewJSON | null;
+	relatedUsers?: UserModel[];
 };
 const detailsCache = new LRUCache<string, { value: PublicProfileDetails; fetchedAt: number }>({
 	max: 100,
@@ -217,12 +221,12 @@ export function getPublicProfileDetails(
 		.then((row) => {
 			if (!row) {
 				detailsCache.delete(userId);
-				profiles.missing(userId, startedAt);
+				primeMissingPublicProfiles([userId], startedAt);
 				return null;
 			}
 			const value: PublicProfileDetails = {
-				...row,
 				user: userDates(row.user),
+				bookingCount: row.bookingCount,
 				bookings: row.bookings.map((booking) => ({
 					...booking,
 					note: "",
@@ -233,7 +237,29 @@ export function getPublicProfileDetails(
 				})),
 				latestReview: row.latestReview ? reviewDates(row.latestReview) : null,
 			};
-			primePublicProfiles([value.user], startedAt);
+			const related = row.relatedUsers ?? [];
+			primePublicProfiles([value.user, ...related], startedAt);
+			if (row.relatedUsers) {
+				const found = new Set([value.user.id, ...related.map((user) => user.id)]);
+				const tops = value.user.venueInfo?.topPerformerIds;
+				const refs = [
+					...(Array.isArray(tops) ? tops.slice(0, 20) : []),
+					...value.bookings.flatMap((booking) => [booking.requesterId, booking.requesteeId]),
+					...(value.latestReview
+						? [value.latestReview.bookerId, value.latestReview.performerId]
+						: []),
+				];
+				primeMissingPublicProfiles(
+					[
+						...new Set(
+							refs.filter(
+								(ref): ref is string => typeof ref === "string" && ref.length > 0 && !found.has(ref)
+							)
+						),
+					],
+					startedAt
+				);
+			}
 			if (profiles.getById(userId, true) === null) return null;
 			if ((detailsCache.get(userId)?.fetchedAt ?? 0) <= startedAt)
 				detailsCache.set(userId, { value, fetchedAt: startedAt });

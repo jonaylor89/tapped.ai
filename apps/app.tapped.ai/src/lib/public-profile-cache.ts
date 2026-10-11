@@ -29,7 +29,17 @@ export class PublicProfileCache<T extends { id: string; username: string; delete
 			return; // An obsolete prefetch cannot undo a newer read/404.
 		this.remove(id);
 		this.rows.set(id, { value, username, fetchedAt });
-		if (username) this.aliases.set(username, id);
+		if (username) {
+			const ownerId = this.aliases.get(username);
+			const owner = ownerId ? this.rows.get(ownerId) : undefined;
+			if (
+				!owner ||
+				ownerId === id ||
+				owner.fetchedAt < fetchedAt ||
+				(owner.fetchedAt === fetchedAt && owner.value !== null)
+			)
+				this.aliases.set(username, id);
+		}
 		while (this.rows.size > this.max) {
 			const oldest = this.rows.keys().next().value;
 			if (oldest === undefined) break;

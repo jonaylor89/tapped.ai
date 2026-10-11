@@ -81,3 +81,24 @@ test("an older details response cannot undo a newer missing-profile read", async
 	assert.equal(await pending, null);
 	assert.equal(db.getCachedProfileDetails("v"), null);
 });
+
+test("details warm reviewers/booking participants/top performers without retaining duplicate profile arrays", async (t) => {
+	let calls = 0;
+	const reviewer = { id: "r", username: "Reviewer" };
+	const { db } = client(t, async () => {
+		calls++;
+		return response({ user: venue, bookingCount: 1, relatedUsers: [performer, reviewer],
+			bookings: [{ id: "b", requesterId: "r", requesteeId: "v", status: "confirmed", timestamp: "2026-10-11T00:00:00Z", startTime: "2026-10-11T00:00:00Z", endTime: "2026-10-11T00:00:00Z", note: "unexpected", rate: 100 }],
+			latestReview: { id: "review", bookerId: "r", performerId: "v", bookingId: "b", type: "performer", timestamp: "2026-10-11T00:00:00Z", overallRating: 4, overallReview: "Public" },
+		});
+	});
+	const details = await db.getPublicProfileDetails("v");
+	assert.equal((await db.getUserById("r")).username, "Reviewer");
+	assert.equal((await db.getUserByUsername("Reviewer")).id, "r");
+	assert.deepEqual((await db.getUsersByIds(["p", "missing"])).map((row) => row.id), ["p"]);
+	assert.equal(details.relatedUsers, undefined);
+	assert.ok(details.latestReview.timestamp instanceof Date);
+	assert.ok(details.bookings[0].startTime instanceof Date);
+	assert.equal(details.bookings[0].note, ""); assert.equal(details.bookings[0].rate, 0);
+	assert.equal(calls, 1);
+});

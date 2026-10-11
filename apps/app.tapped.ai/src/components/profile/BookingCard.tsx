@@ -1,5 +1,5 @@
-import Image from "next/image";
 import Link from "next/link";
+import QueuedImage from "@/components/QueuedImage";
 import { type Booking, bookingImage } from "@/domain/types/booking";
 import type { UserModel } from "@/domain/types/user_model";
 
@@ -10,12 +10,10 @@ export default function BookingCard({ booking, user }: { booking: Booking; user:
 	return (
 		<Link href={`/booking/${booking.id}`} className="group">
 			<div className="relative h-[156px] w-[156px] overflow-hidden rounded-lg">
-				<Image
+				<QueuedImage
 					src={bookerImageSrc}
 					alt={"booking image"}
-					className="aspect-square rounded-lg transition-all duration-150 ease-in-out group-hover:scale-105"
-					style={{ objectFit: "cover" }}
-					fill
+					className="aspect-square rounded-lg object-cover transition-all duration-150 ease-in-out group-hover:scale-105"
 					sizes="156px"
 				/>
 			</div>
