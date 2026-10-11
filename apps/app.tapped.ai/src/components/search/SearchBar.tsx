@@ -1,14 +1,11 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Suspense, useEffect, useRef, useState } from "react";
-import { useHotkeys } from "react-hotkeys-hook";
 import { useDebounce } from "@/context/debounce";
 import { useSearchToggle } from "@/context/use-search-toggle";
 import { useStore } from "@/context/use-store";
 import type { UserModel } from "@/domain/types/user_model";
 import { trackEvent } from "@/utils/tracking";
-import SearchDialog from "../admin-panel/search-dialog";
 import { LoadingSpinner } from "../LoadingSpinner";
 import { Input } from "../ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
@@ -27,17 +24,12 @@ const phrases = [
 	"'Chandler'",
 ];
 
-const queryClient = new QueryClient();
 export default function SearchBar(props: {
 	animatedPlaceholder?: boolean;
 	onSelect?: (user: UserModel) => void;
 	openDialog?: boolean;
 }) {
 	const searchBar = useStore(useSearchToggle, (state) => state);
-	useHotkeys("/", (e) => {
-		e.preventDefault();
-		searchBar?.setIsOpen();
-	});
 
 	return (
 		<Suspense
@@ -47,32 +39,29 @@ export default function SearchBar(props: {
 				</div>
 			}
 		>
-			<QueryClientProvider client={queryClient}>
-				<SearchDialog />
-				<TooltipProvider disableHoverableContent>
-					<Tooltip delayDuration={100}>
-						<TooltipTrigger asChild>
-							{(props.openDialog ?? true) ? (
-								<button
-									type="button"
-									className="w-full"
-									onClick={() => {
-										trackEvent("search_bar_clicked", {
-											open: searchBar?.isOpen,
-										});
-										searchBar?.setIsOpen();
-									}}
-								>
-									<_SearchBar {...props} />
-								</button>
-							) : (
+			<TooltipProvider disableHoverableContent>
+				<Tooltip delayDuration={100}>
+					<TooltipTrigger asChild>
+						{(props.openDialog ?? true) ? (
+							<button
+								type="button"
+								className="w-full"
+								onClick={() => {
+									trackEvent("search_bar_clicked", {
+										open: searchBar?.isOpen,
+									});
+									searchBar?.setIsOpen(true);
+								}}
+							>
 								<_SearchBar {...props} />
-							)}
-						</TooltipTrigger>
-						<TooltipContent side="bottom">search</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			</QueryClientProvider>
+							</button>
+						) : (
+							<_SearchBar {...props} />
+						)}
+					</TooltipTrigger>
+					<TooltipContent side="bottom">search</TooltipContent>
+				</Tooltip>
+			</TooltipProvider>
 		</Suspense>
 	);
 }

@@ -22,12 +22,14 @@ const Command = React.forwardRef<
 ));
 Command.displayName = CommandPrimitive.displayName;
 
-type CommandDialogProps = DialogProps;
+type CommandDialogProps = DialogProps & {
+	onCloseAutoFocus?: React.ComponentPropsWithoutRef<typeof DialogContent>["onCloseAutoFocus"];
+};
 
-const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
+const CommandDialog = ({ children, onCloseAutoFocus, ...props }: CommandDialogProps) => {
 	return (
 		<Dialog {...props}>
-			<DialogContent className="overflow-hidden p-0 shadow-lg">
+			<DialogContent className="overflow-hidden p-0 shadow-lg" onCloseAutoFocus={onCloseAutoFocus}>
 				<DialogTitle className="sr-only">Search Tapped</DialogTitle>
 				<DialogDescription className="sr-only">
 					Find venues, performers and cities.

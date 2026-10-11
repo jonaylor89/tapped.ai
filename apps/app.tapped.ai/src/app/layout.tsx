@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Titillium_Web as FontSans } from "next/font/google";
 import type React from "react";
+import SearchShell from "@/components/search/SearchShell";
 import { Toaster } from "@/components/ui/toaster";
 import { CSPostHogProvider } from "@/context/analytics";
 import { ThemeProvider } from "@/context/themes";
@@ -75,7 +76,7 @@ export default function RootLayout({
 						enableSystem
 						disableTransitionOnChange
 					>
-						{children}
+						<SearchShell>{children}</SearchShell>
 					</ThemeProvider>
 				</CSPostHogProvider>
 				<Toaster />
