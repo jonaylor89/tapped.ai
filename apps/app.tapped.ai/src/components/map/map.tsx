@@ -1,7 +1,6 @@
 "use client";
 
 import classNames from "classnames";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { type JSX, useCallback, useMemo, useRef, useState } from "react";
@@ -22,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { trackEvent } from "@/utils/tracking";
 import BottomNavBar from "./BottomNavBar";
 import LocationSideSheet from "./LocationSideSheet";
+import MapMarkerImage from "./MapMarkerImage";
 
 const defaultMapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 const mapboxDarkStyle = "mapbox/dark-v11";
@@ -102,14 +102,7 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 							)}
 						>
 							<div className="relative h-[22px] w-[22px]">
-								<Image
-									src={imageSrc}
-									alt="venue profile picture"
-									className="rounded-md"
-									style={{ objectFit: "cover", overflow: "hidden" }}
-									fill
-									sizes="22px"
-								/>
+								<MapMarkerImage src={imageSrc} />
 							</div>
 							{venueCapacity !== 0 && (
 								<p className={classNames("pr-1 pl-1")}>{venueCapacity.toLocaleString()}</p>
