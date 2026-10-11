@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/use-toast";
 import { getUserByUsername } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
@@ -59,6 +59,10 @@ export default function UserSideSheet() {
 	return (
 		<Sheet open={isOpen} onOpenChange={onOpenChange}>
 			<SheetContent className="overflow-y-scroll">
+				<SheetTitle className="sr-only">User profile</SheetTitle>
+				<SheetDescription className="sr-only">
+					Profile, reviews, services and bookings.
+				</SheetDescription>
 				<div className="flex justify-start bg-background/10">
 					<Button
 						variant="secondary"

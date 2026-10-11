@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import type { Metadata, ResolvingMetadata } from "next/types";
 import Footer from "@/components/Footer";
 import OpportunityView from "@/components/opportunity/OpportunityView";
+import { getOpportunityById } from "@/data/database";
 import { tappedApiUrl } from "@/data/tapped_api";
 import { type Opportunity, opImage } from "@/domain/types/opportunity";
 
@@ -19,7 +21,8 @@ export async function generateMetadata(
 		const { opportunityId } = params;
 
 		const res = await fetch(
-			`${tappedApiUrl}/app/v1/opportunities/${encodeURIComponent(opportunityId)}`
+			`${tappedApiUrl}/app/v1/opportunities/${encodeURIComponent(opportunityId)}`,
+			{ cache: "no-store" }
 		);
 		if (!res.ok) {
 			throw new Error(`error getting opportunity ${opportunityId} (${res.status})`);
@@ -63,6 +66,7 @@ export default async function Page(props: Props) {
 	const searchParams = await props.searchParams;
 	const params = await props.params;
 	const { opportunityId } = params;
+	if (!(await getOpportunityById(opportunityId))) notFound();
 	const rawShowConfirmation = searchParams.show_confirmation ?? "false";
 	const showConfirmation = rawShowConfirmation === "true";
 

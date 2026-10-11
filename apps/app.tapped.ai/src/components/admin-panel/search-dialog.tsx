@@ -141,7 +141,7 @@ export default function SearchDialog() {
 	}, [placesData, router, searchBar, showCities]);
 
 	return (
-		<CommandDialog open={searchBar?.isOpen} onOpenChange={searchBar?.setIsOpen}>
+		<CommandDialog open={searchBar?.isOpen ?? false} onOpenChange={searchBar?.setIsOpen}>
 			<CommandInput placeholder="search tapped..." onValueChange={(value) => setQuery(value)} />
 			<CommandList>
 				<div className="flex w-full flex-row justify-start gap-4 px-2 py-2">

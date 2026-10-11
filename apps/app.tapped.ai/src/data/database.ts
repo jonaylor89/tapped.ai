@@ -7,8 +7,8 @@ import type { UserModel } from "@/domain/types/user_model";
 import { tappedApiUrl } from "./tapped_api";
 
 // Public pages never carry API keys or Firebase admin credentials.
-async function read<T>(path: string): Promise<T | null> {
-	const response = await fetch(`${tappedApiUrl}/app/v1/${path}`);
+async function read<T>(path: string, cacheMode: RequestCache = "default"): Promise<T | null> {
+	const response = await fetch(`${tappedApiUrl}/app/v1/${path}`, { cache: cacheMode });
 	if (response.status === 404) return null;
 	if (!response.ok) throw new Error(`Tapped API request failed (${response.status})`);
 	return response.json() as Promise<T>;
@@ -62,7 +62,7 @@ type OpportunityJSON = Omit<Opportunity, "timestamp" | "startTime" | "endTime" |
 	deadline?: string | null;
 };
 export async function getOpportunityById(opportunityId: string): Promise<Opportunity | null> {
-	const value = await read<OpportunityJSON>(`opportunities/${id(opportunityId)}`);
+	const value = await read<OpportunityJSON>(`opportunities/${id(opportunityId)}`, "no-store");
 	if (!value) return null;
 	return {
 		...value,

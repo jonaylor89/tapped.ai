@@ -5,7 +5,7 @@ import { getUserById } from "@/data/database";
 import type { UserModel } from "@/domain/types/user_model";
 import VenueCard from "../location/VenueCard";
 import { Button } from "../ui/button";
-import { Sheet, SheetContent } from "../ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "../ui/sheet";
 import { useToast } from "../ui/use-toast";
 
 export default function LocationSideSheet({
@@ -27,6 +27,8 @@ export default function LocationSideSheet({
 
 	const [performers, setPerformers] = useState<UserModel[]>([]);
 	useEffect(() => {
+		// Avoid hundreds of eager profile reads while this sidebar is closed.
+		if (!isOpen) return;
 		const getPerformers = async () => {
 			const nestedPerfs = await Promise.all(
 				venues.map(async (venue) => {
@@ -47,8 +49,8 @@ export default function LocationSideSheet({
 			setPerformers(perfs);
 		};
 
-		getPerformers();
-	}, [venues]);
+		getPerformers().catch(() => setPerformers([]));
+	}, [venues, isOpen]);
 
 	const genreMap = useMemo(() => {
 		if (venues.length === 0) {
@@ -201,6 +203,10 @@ export default function LocationSideSheet({
 	return (
 		<Sheet open={isOpen} onOpenChange={onOpenChange}>
 			<SheetContent className="overflow-y-scroll" side="left">
+				<SheetTitle className="sr-only">Venues in this area</SheetTitle>
+				<SheetDescription className="sr-only">
+					Explore venues and performers in the current map area.
+				</SheetDescription>
 				<div>
 					<div className="flex justify-start bg-background/10">
 						<Button

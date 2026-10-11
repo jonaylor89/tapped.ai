@@ -24,6 +24,8 @@ export default function OpportunityView({
 	showConfirmation?: boolean;
 }) {
 	const [opportunity, setOpportunity] = useState<Opportunity | null>(null);
+	const [isLoading, setIsLoading] = useState(true);
+	const [loadError, setLoadError] = useState<string | null>(null);
 	const [booker, setBooker] = useState<UserModel | null>(null);
 	const [location, setLocation] = useState<PlaceData | null>(null);
 	const [linkCopied, setLinkCopied] = useState(false);
@@ -41,15 +43,24 @@ export default function OpportunityView({
 	}, [showConfirmation, toast]);
 
 	useEffect(() => {
+		let cancelled = false;
+		setIsLoading(true);
+		setLoadError(null);
+		setOpportunity(null);
 		const getOpportunity = async () => {
-			if (!opportunityId || typeof opportunityId !== "string") {
-				return;
+			try {
+				const value = await getOpportunityById(opportunityId);
+				if (!cancelled) setOpportunity(value);
+			} catch {
+				if (!cancelled) setLoadError("Couldn't load this opportunity. Please try again.");
+			} finally {
+				if (!cancelled) setIsLoading(false);
 			}
-
-			const opportunity = await getOpportunityById(opportunityId);
-			setOpportunity(opportunity ?? null);
 		};
 		getOpportunity();
+		return () => {
+			cancelled = true;
+		};
 	}, [opportunityId]);
 
 	useEffect(() => {
@@ -76,11 +87,18 @@ export default function OpportunityView({
 		getLocation();
 	}, [opportunity]);
 
-	if (!opportunity) {
+	if (isLoading) {
 		return (
 			<div className="flex min-h-screen items-center justify-center">
 				<LoadingSpinner />
 			</div>
+		);
+	}
+	if (!opportunity) {
+		return (
+			<output className="flex min-h-screen items-center justify-center">
+				{loadError ?? "This opportunity is no longer available."}
+			</output>
 		);
 	}
 
