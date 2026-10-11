@@ -126,6 +126,63 @@ Final production verification after deployment d7bd63cb6be7:
   Spotify linking, in-app account deletion, every web filter and signed-in web flows. Remaining
   Admin SDK webhooks/background writers need a separate retirement audit.
 
+## Confirmed live QA remediation (local changes, not deployed)
+
+- Reproduced area-sheet fan-out in production: an NYC viewport issued 172 profile responses
+  (104 HTTP 200, 68 HTTP 429). The old effect requests every ID occurrence concurrently and
+  deduplicates only afterwards. The replacement uses explicit-ID Postgres reads at
+  `/app/v1/public/data/users?ids=...`, capped at 50 IDs per request, serial client batches,
+  deduplication before requests, the existing short-lived profile cache, stable ID-set effect
+  dependencies and AbortController cleanup. Missing/deleted profiles are omitted; errors are
+  visible instead of silently representing the area as empty. Existing rate limits are unchanged.
+  Batches always use the public-profile allowlist, including authenticated callers' own IDs;
+  unfiltered user enumeration remains forbidden. OpenAPI is updated.
+- imgproxy logs match the reported 25 HTTP 503 images: 64 requests started at 13:10:32 and
+  25 reached the ten-second request timeout at 13:10:42. The two-worker proxy drained the
+  earlier requests before the queued tail timed out. A failed image's original Storage object
+  was still HTTP 200. Map thumbnails now share a four-slot client queue with unmount/load/error
+  cleanup and an accessible failure placeholder. No proxy timeout, source allowlist or server
+  resource limit was relaxed. Other clients/concurrent traffic can still cause upstream errors;
+  production image behavior must be rechecked after rollout.
+- The first six `/u/johannes` booking IDs are real, public confirmed bookings (API HTTP 200).
+  Their `/booking/:id` links targeted a nonexistent Next.js route, not missing database records.
+  Added a public performance-detail route with no-store reads, real notFound handling, explicit
+  public fields and safe http(s) event links. Local production preview returns HTTP 200 for a
+  known booking and HTTP 404 for a nonexistent one; pending/canceled bookings stay unavailable.
+- Chrome reproduced three simultaneous Search Tapped dialogs on `/search`, with the focused
+  input inside an aria-hidden dialog. Search now has one root-level modal/shortcut owner,
+  explicit idempotent open/close state (not persisted), close-on-selection and focus restoration
+  to the opener unless another modal has opened. Titles/ARIA are retained, not suppressed.
+- Account deletion previously soft-deleted only the user while leaving the three API-created
+  onboarding services active; the retired Firebase deletion trigger no longer cleans these up.
+  Postgres now soft-deletes all owned default/custom/imported services in the same transaction.
+  Service writes share the owner lock and require an active owner, preventing late/concurrent
+  retries from leaving or recreating orphans. Another owner's services and historical bookings
+  remain untouched. This is application-data cleanup, not Firebase Auth deletion or hard erasure.
+- Local validation: 20 web helper/regression tests, typecheck and production build; optional
+  `pnpm test:browser` checks real Chrome focus, slash/Escape, a closed sheet making no profile
+  reads, 500 ID occurrences reduced to three batches (145 unique profiles), and 250 thumbnails
+  with at most four concurrent requests. Browser API/image/Mapbox fixtures are not live API proof.
+  Rust: 51 library + 66 API tests, clippy and formatting passed, with DATABASE_URL set to an
+  isolated local PostGIS database so database-backed assertions actually ran. Those include
+  public/authenticated batch privacy, omitted deleted profiles, default/custom-service cleanup,
+  another owner's services, deletion retries and concurrent/late service creation. No new native
+  code was changed; prior main's Node/Rust/iOS CI and API deploy all succeeded, and live readiness
+  reports Postgres/search/Redis/mail-store healthy.
+- Rollout: these fixes are local jj changes, not pushed or deployed. Deploy the batch-capable
+  API **before** the web frontend uses it; the old API intentionally rejects user collection
+  reads without this explicit-ID support. Verify live batch counts/privacy, image behavior,
+  booking routes, focus and a disposable account's service cleanup after deployment. Keep the
+  user's local `.gitignore` change out of published commits.
+- Approval/identity blockers: the orphaned Firebase Auth UID/email was not recoverable from
+  the available local history; require the exact identity and read-only confirmation before
+  deletion. No Auth account was deleted. The macOS blueprint remains unapproved/unimplemented.
+  Verified-email enforcement remains unchanged. Product options: keep current onboarding-only
+  verification (least friction, unverified API writes remain possible), gate authenticated writes
+  only (reduce abuse while preserving public browsing; needs resend/recovery UX and a migration
+  decision for existing users), or gate all authenticated reads/writes (strictest but may lock out
+  existing clients/users). Do not conflate any of these with the Postgres migration.
+
 ## Native distribution
 
 A simulator build is not an App Store release. Archive/sign/upload the native app and release it
