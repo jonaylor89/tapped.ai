@@ -11,4 +11,5 @@ pub mod models;
 pub mod places;
 pub mod public_docs;
 pub mod public_map;
+pub mod public_profile;
 pub mod spotify;

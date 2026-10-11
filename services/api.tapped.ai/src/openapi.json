@@ -1570,6 +1570,40 @@
         }
       }
     },
+    "/app/v1/public/users/{id}/details": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Fresh public profile, confirmed history, count and latest review",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/app/v1/places/autocomplete": {
       "get": {
         "tags": [
@@ -2962,6 +2996,31 @@
               "null"
             ]
           }
+        }
+      },
+      "ProfileDetails": {
+        "type": "object",
+        "required": [
+          "bookingCount",
+          "bookings",
+          "relatedUsers",
+          "user"
+        ],
+        "properties": {
+          "bookingCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "bookings": {
+            "type": "array",
+            "items": true
+          },
+          "latestReview": true,
+          "relatedUsers": {
+            "type": "array",
+            "items": true
+          },
+          "user": true
         }
       },
       "Readiness": {

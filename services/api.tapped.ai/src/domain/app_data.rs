@@ -198,7 +198,7 @@ fn text<'a>(doc: &'a Value, key: &str) -> &'a str {
 fn participant(doc: &Value, uid: &str) -> bool {
     text(doc, "requesterId") == uid || text(doc, "requesteeId") == uid
 }
-fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<Value> {
+pub(crate) fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<Value> {
     match table {
         "users" => {
             if doc["deleted"] == true {

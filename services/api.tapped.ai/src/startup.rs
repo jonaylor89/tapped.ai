@@ -320,6 +320,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .api_route("/public/search/:table", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
         .api_route("/public/data/:table", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
         .api_route("/public/data/:table/:id", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
+        .api_route("/public/users/:id/details", get_with(crate::domain::public_profile::get_details, |op| public_op(op,"Fresh public profile, confirmed history, count and latest review").response::<200,Json<crate::domain::public_profile::ProfileDetails>>()))
         .route("/public/users/:id/booking-count", get(crate::domain::app_data::booking_count))
         .route("/public/opportunities/:id/interests", get(crate::domain::app_data::interests))
         .api_route(
