@@ -70,6 +70,8 @@ services:
       MAIL_API_SECRET: local-api-secret
       OPENAI_API_KEY: local-openai-key
       VENUE_CONTACT_FOUNDER_CC: ""
+    volumes:
+      - mail-data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -78,5 +80,24 @@ services:
       firebase:
         condition: service_healthy
 
+  # Delivers queued outbound mail from the shared mail store into Mailpit.
+  mail-worker:
+    build:
+      context: ./services/api.tapped.ai
+      dockerfile: Dockerfile
+    command: ["mail_worker"]
+    environment:
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      MAIL_TRANSPORT: smtp
+      SMTP_ADDRESS: mailpit:1025
+    volumes:
+      - mail-data:/data
+    depends_on:
+      api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
 volumes:
   postgres-data:
+  mail-data:
