@@ -207,6 +207,40 @@ struct SessionGateTests {
         try await waitUntil { session.currentUser != nil && session.premiumWaitlistEnabled }
     }
 
+    @Test func currentProfileRefreshesAndStopsWithTheSession() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        let session = AppSession(dependencies: dependencies, defaults: defaults(), profileRefreshInterval: .milliseconds(20))
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.currentUser != nil }
+        var user = try #require(session.currentUser)
+        user.artistName = "updated artist"
+        user.bio = "updated remotely"
+        try await dependencies.database.updateUserData(user)
+        try await waitUntil { session.currentUser?.bio == user.bio }
+        #expect(session.currentUser?.artistName == user.artistName)
+
+        run.cancel()
+        await run.value
+        user.bio = "after cancellation"
+        try await dependencies.database.updateUserData(user)
+        try await Task.sleep(for: .milliseconds(80))
+        #expect(session.currentUser?.bio == "updated remotely")
+    }
+
+    @Test func signedOutSessionDoesNotRestoreCachedProfile() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        let session = AppSession(dependencies: dependencies, defaults: defaults(), profileRefreshInterval: .milliseconds(20))
+        let run = Task { await session.run() }
+        defer { run.cancel() }
+        try await waitUntil { session.currentUser != nil }
+        await session.signOut()
+        try await waitUntil { session.phase == .signedOut }
+        try await Task.sleep(for: .milliseconds(80))
+        #expect(session.phase == .signedOut)
+        #expect(session.currentUser == nil)
+    }
+
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
         for _ in 0..<300 {
             if condition() { return }

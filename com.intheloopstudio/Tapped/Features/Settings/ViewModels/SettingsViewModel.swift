@@ -86,7 +86,19 @@ final class SettingsViewModel {
         set { performer.averageTicketPrice = newValue.map { $0 * 100 } }
     }
 
+    /// Refresh only clean drafts; polling must never overwrite an in-progress edit.
+    func receiveCurrentUser(_ user: UserModel) {
+        guard user.id == original.id, !hasChanges, !isSaving else { return }
+        if draft.location != user.location { placeName = nil }
+        original = user
+        draft = user
+        username = user.username.username
+    }
+
     func load() async {
+        if let user = try? await database.getUserById(original.id) {
+            receiveCurrentUser(user)
+        }
         async let services = try? database.getUserServices(draft.id)
         async let place: Void = loadPlaceName()
         self.services = await services ?? []

@@ -52,6 +52,16 @@ struct ProfileViewModelTests {
         #expect(model.phase == .failed("this profile doesn't exist"))
     }
 
+    @Test func ownProfileReceivesSessionUpdatesOnlyForItsUser() {
+        let model = ProfileViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer, userId: Samples.performer.id)
+        var updated = Samples.performer
+        updated.bio = "fresh profile"
+        model.receiveCurrentUser(updated)
+        #expect(model.user?.bio == "fresh profile")
+        model.receiveCurrentUser(Samples.venues[0])
+        #expect(model.user?.bio == "fresh profile")
+    }
+
     @Test func profileLinkMatchesDart() {
         #expect(Samples.performer.profileURL.absoluteString == "https://app.tapped.ai/u/djnova")
     }
@@ -91,6 +101,36 @@ struct SettingsViewModelTests {
         let stored = try await dependencies.database.getUserById(Samples.performer.id)
         #expect(stored == saved)
         #expect(!model.hasChanges)
+    }
+
+    @Test func loadRefreshesTheProfileWithoutSigningOut() async throws {
+        let dependencies = Dependencies.mock(signedIn: true)
+        var updated = Samples.performer
+        updated.artistName = "fresh artist"
+        updated.bio = "fresh bio"
+        try await dependencies.database.updateUserData(updated)
+        let model = SettingsViewModel(dependencies: dependencies, currentUser: Samples.performer)
+        await model.load()
+        #expect(model.draft.artistName == updated.artistName)
+        #expect(model.draft.bio == updated.bio)
+        #expect(!model.hasChanges)
+    }
+
+    @Test func currentUserUpdatesPreserveUnsavedEditsAndRejectOtherUsers() {
+        let model = SettingsViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
+        var updated = Samples.performer
+        updated.bio = "server update"
+        model.receiveCurrentUser(updated)
+        #expect(model.draft.bio == "server update")
+        #expect(!model.hasChanges)
+        model.draft.bio = "unsaved edit"
+        updated.bio = "next server update"
+        model.receiveCurrentUser(updated)
+        model.receiveCurrentUser(Samples.venues[0])
+        #expect(model.draft.bio == "unsaved edit")
+        #expect(model.hasChanges)
+        model.discardChanges()
+        #expect(model.draft.bio == "server update")
     }
 
     @Test func rejectsTakenAndInvalidUsernames() async {

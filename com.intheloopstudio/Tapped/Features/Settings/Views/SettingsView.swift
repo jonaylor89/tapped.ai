@@ -103,10 +103,14 @@ struct SettingsView: View {
             }
         }
         .task { await model.load() }
+        .onChange(of: session.currentUser) { _, user in
+            if let user { model.receiveCurrentUser(user) }
+        }
     }
 
     private func save() async {
-        guard await model.save() != nil else { return }
+        guard let saved = await model.save() else { return }
+        session.updateCurrentUser(saved)
         await session.refreshCurrentUser()
         router.pop()
     }

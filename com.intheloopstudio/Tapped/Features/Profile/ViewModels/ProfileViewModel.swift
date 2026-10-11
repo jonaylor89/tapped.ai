@@ -75,6 +75,11 @@ final class ProfileViewModel {
 
     var isCurrentUser: Bool { currentUser.id == userId }
 
+    func receiveCurrentUser(_ user: UserModel) {
+        guard isCurrentUser, user.id == userId else { return }
+        self.user = user
+    }
+
     var reviewCount: Int { (user?.performerInfo?.reviewCount ?? 0) + (user?.bookerInfo?.reviewCount ?? 0) }
 
     var bookingCount: Int { user?.performerInfo?.bookingCount ?? latestBookings.count }

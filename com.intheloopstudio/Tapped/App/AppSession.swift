@@ -33,6 +33,7 @@ final class AppSession {
 
     private let dependencies: Dependencies
     private let defaults: UserDefaults
+    private let profileRefreshInterval: Duration
     private var started = false
     /// Remote Config put the app behind maintenance / update required; auth no longer drives `phase`.
     private var isBlocked = false
@@ -47,12 +48,14 @@ final class AppSession {
         dependencies: Dependencies,
         launchOptions: LaunchOptions = .none,
         appVersion: AppVersion = .current(),
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        profileRefreshInterval: Duration = .seconds(30)
     ) {
         self.dependencies = dependencies
         self.launchOptions = launchOptions
         self.appVersion = appVersion
         self.defaults = defaults
+        self.profileRefreshInterval = profileRefreshInterval
     }
 
     var currentUser: UserModel? {
@@ -83,6 +86,8 @@ final class AppSession {
         }
 
         let premium = Task { await observePremium() }
+        let profileRefresh = Task { await observeCurrentProfile() }
+        defer { profileRefresh.cancel() }
         let remoteConfig = dependencies.remoteConfig
         remoteConfigRefresh = Task {
             _ = try? await remoteConfig.fetchAndActivate()
@@ -91,6 +96,7 @@ final class AppSession {
             if isBlocked {
                 auth.cancel()
                 premium.cancel()
+                profileRefresh.cancel()
             }
         }
         await withTaskCancellationHandler {
@@ -99,15 +105,16 @@ final class AppSession {
         } onCancel: { [remoteConfigRefresh] in
             auth.cancel()
             premium.cancel()
+            profileRefresh.cancel()
             remoteConfigRefresh?.cancel()
         }
     }
 
     func refreshCurrentUser() async {
-        guard let uid = currentUser?.id else { return }
-        if let user = try? await dependencies.database.getUserById(uid) {
-            phase = .signedIn(user)
-        }
+        guard let previous = currentUser else { return }
+        guard let user = try? await dependencies.database.getUserById(previous.id),
+              !Task.isCancelled, !isBlocked, currentUser == previous else { return }
+        phase = .signedIn(user)
     }
 
     func updateCurrentUser(_ user: UserModel) {
@@ -243,6 +250,17 @@ final class AppSession {
             } catch {
                 FirebaseBootstrap.record(error: error)
             }
+        }
+    }
+
+    private func observeCurrentProfile() async {
+        while !Task.isCancelled {
+            do {
+                try await Task.sleep(for: profileRefreshInterval)
+            } catch {
+                return
+            }
+            await refreshCurrentUser()
         }
     }
 

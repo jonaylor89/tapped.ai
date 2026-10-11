@@ -6,6 +6,7 @@ import TappedUI
 /// Port of `lib/ui/profile/profile_view.dart` (own + other user).
 struct ProfileView: View {
     @Environment(Router.self) private var router
+    @Environment(AppSession.self) private var session: AppSession?
     @Environment(ShellViewModel.self) private var shell: ShellViewModel?
     @State private var model: ProfileViewModel
     @State private var isShowingOptions = false
@@ -36,6 +37,9 @@ struct ProfileView: View {
             .glassToast($model.toast)
             .task { await model.load() }
             .refreshable { await model.load() }
+            .onChange(of: session?.currentUser) { _, user in
+                if let user { model.receiveCurrentUser(user) }
+            }
     }
 
     @ViewBuilder private var content: some View {
