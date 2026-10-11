@@ -13,3 +13,4 @@ mod postgres_serving;
 pub mod public_docs;
 mod request_id;
 pub mod root;
+pub mod venue_notifications;
