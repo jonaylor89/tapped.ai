@@ -3,7 +3,7 @@ use axum::{
     extract::{FromRequestParts, Request, State},
     http::{HeaderMap, header::CACHE_CONTROL, request::Parts},
     middleware::Next,
-    response::Response,
+    response::{IntoResponse, Response},
 };
 use jsonwebtoken::{
     DecodingKey, Validation, decode, decode_header,
@@ -157,9 +157,28 @@ pub async fn verify_firebase_token(
     State(state): State<AppStateDyn>,
     mut req: Request,
     next: Next,
-) -> Result<Response, AppError> {
-    let token = req
-        .headers()
+) -> Response {
+    let mut response = match verified_firebase_user(&state, req.headers()).await {
+        Ok(user) => {
+            tracing::Span::current().record("user_id", user.uid.as_str());
+            req.extensions_mut().insert(user);
+            next.run(req).await
+        }
+        Err(error) => error.into_response(),
+    };
+    // Authentication failures are private responses too, including upstream verification errors.
+    response.headers_mut().insert(
+        CACHE_CONTROL,
+        axum::http::HeaderValue::from_static("no-store"),
+    );
+    response
+}
+
+async fn verified_firebase_user(
+    state: &AppStateDyn,
+    headers: &HeaderMap,
+) -> Result<FirebaseUser, AppError> {
+    let token = headers
         .get("Authorization")
         .and_then(|h| h.to_str().ok())
         .and_then(|h| h.strip_prefix("Bearer "))
@@ -191,20 +210,10 @@ pub async fn verify_firebase_token(
         invalid_token()
     })?;
 
-    // Fills the `user_id` field of the `http_request` span from `startup::run`.
-    tracing::Span::current().record("user_id", token_data.claims.sub.as_str());
-    req.extensions_mut().insert(FirebaseUser {
+    Ok(FirebaseUser {
         uid: token_data.claims.sub,
         email: token_data.claims.email,
-    });
-
-    let mut response = next.run(req).await;
-    // Owned profiles/booking terms must never enter shared or device HTTP caches.
-    response.headers_mut().insert(
-        CACHE_CONTROL,
-        axum::http::HeaderValue::from_static("no-store"),
-    );
-    Ok(response)
+    })
 }
 
 #[async_trait]
@@ -317,6 +326,7 @@ mod tests {
 
         let resp = app.oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(resp.headers()[CACHE_CONTROL], "no-store");
     }
 
     #[tokio::test]
@@ -332,6 +342,7 @@ mod tests {
 
         let resp = app.oneshot(req).await.unwrap();
         assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
+        assert_eq!(resp.headers()[CACHE_CONTROL], "no-store");
     }
 
     #[tokio::test]

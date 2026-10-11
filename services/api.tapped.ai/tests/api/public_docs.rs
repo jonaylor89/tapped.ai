@@ -61,10 +61,7 @@ fn cache_control(response: &reqwest::Response) -> Option<&str> {
 
 #[tokio::test]
 async fn found_public_docs_are_edge_cacheable() {
-    for path in [
-        "/app/v1/users/username/dj_nova",
-        "/app/v1/opportunities/opp-1",
-    ] {
+    for path in ["/app/v1/users/username/dj_nova"] {
         let response = get(path).await;
         assert_eq!(response.status(), StatusCode::OK, "{path}");
         assert_eq!(cache_control(&response), Some(CACHE_CONTROL_200), "{path}");
@@ -74,10 +71,7 @@ async fn found_public_docs_are_edge_cacheable() {
 #[tokio::test]
 async fn missing_public_docs_are_negatively_cached_briefly() {
     // A second read is served from the process cache and must carry the same header.
-    for path in [
-        "/app/v1/users/username/missing",
-        "/app/v1/opportunities/missing",
-    ] {
+    for path in ["/app/v1/users/username/missing"] {
         let app = spawn_app().await;
         for _ in 0..2 {
             let response = app
@@ -92,6 +86,53 @@ async fn missing_public_docs_are_negatively_cached_briefly() {
             assert!(body["error_id"].is_string(), "{body}");
         }
     }
+}
+
+#[tokio::test]
+async fn public_opportunities_are_never_cached() {
+    for (path, status) in [
+        ("/app/v1/opportunities/opp-1", StatusCode::OK),
+        ("/app/v1/opportunities/missing", StatusCode::NOT_FOUND),
+        ("/app/v1/opportunities/bad%20id", StatusCode::BAD_REQUEST),
+    ] {
+        let response = get(path).await;
+        assert_eq!(response.status(), status);
+        assert_eq!(cache_control(&response), Some("no-store"));
+    }
+}
+
+#[tokio::test]
+async fn public_opportunities_ignore_stale_process_snapshots() {
+    let state = crate::helpers::mock_state();
+    state.response_cache.insert(
+        "public-opportunity:opp-1".into(),
+        serde_json::json!({"id":"opp-1","title":"stale snapshot"}),
+        std::time::Duration::from_secs(300),
+    );
+    // The authoritative row is now absent, as after deletion; a cached positive must not survive.
+    state.response_cache.insert(
+        "public-opportunity:missing".into(),
+        serde_json::json!({"id":"missing","title":"deleted opportunity"}),
+        std::time::Duration::from_secs(300),
+    );
+    let app = crate::helpers::spawn_app_with_state(state).await;
+    let response = app
+        .api_client
+        .get(format!("{}/app/v1/opportunities/opp-1", app.address))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(cache_control(&response), Some("no-store"));
+    let doc: serde_json::Value = response.json().await.unwrap();
+    assert_eq!(doc["title"], "Mock Opportunity");
+    let missing = app
+        .api_client
+        .get(format!("{}/app/v1/opportunities/missing", app.address))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    assert_eq!(cache_control(&missing), Some("no-store"));
 }
 
 #[tokio::test]

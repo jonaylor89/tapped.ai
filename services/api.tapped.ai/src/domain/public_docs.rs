@@ -178,23 +178,26 @@ pub async fn get_public_opportunity(
     State(state): State<AppStateDyn>,
     Path(OpportunityIdPath { opportunity_id }): Path<OpportunityIdPath>,
 ) -> Response {
-    if !is_safe_id(&opportunity_id) {
-        return AppError::bad_request("invalid ID").into_response();
-    }
-    let database = state.database.clone();
-    with_cache_control(
-        cached_doc(
-            &state,
-            format!("public-opportunity:{opportunity_id}"),
-            || async move {
-                Ok(database
-                    .get_opportunity_doc(&opportunity_id)
-                    .await?
-                    .and_then(public_opportunity))
-            },
-        )
-        .await,
-    )
+    // Opportunities can be deleted or withdrawn at any time. Never serve a process/edge snapshot.
+    let result = if !is_safe_id(&opportunity_id) {
+        Err(AppError::bad_request("invalid ID"))
+    } else {
+        state
+            .database
+            .get_opportunity_doc(&opportunity_id)
+            .await
+            .map_err(|error| AppError::internal("failed to load public opportunity", error))
+            .and_then(|doc| {
+                doc.and_then(public_opportunity)
+                    .map(Json)
+                    .ok_or_else(|| AppError::not_found("not found"))
+            })
+    };
+    let mut response = result.into_response();
+    response
+        .headers_mut()
+        .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
+    response
 }
 
 #[cfg(test)]
