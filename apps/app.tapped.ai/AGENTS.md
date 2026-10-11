@@ -22,7 +22,7 @@
 - Tailwind CSS is configured; keep class usage consistent with existing components.
 
 ## Testing Guidelines
-- No test framework or scripts are configured in this repo.
+- `npm test` runs Node's built-in test runner (`tests/*.test.mjs`). TypeScript helpers are compiled with the existing TypeScript dependency for these tests.
 - If you add tests, also add the matching npm script(s) and document them here.
 
 ## Commit & Pull Request Guidelines

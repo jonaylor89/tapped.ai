@@ -17,6 +17,7 @@ import { useDebounce } from "@/context/debounce";
 import { useSearch } from "@/context/search";
 import type { BoundingBox } from "@/data/typesense";
 import { profileImage } from "@/domain/types/user_model";
+import { venueSearchBounds } from "@/lib/map-bounds";
 import { cn } from "@/lib/utils";
 import { trackEvent } from "@/utils/tracking";
 import BottomNavBar from "./BottomNavBar";
@@ -49,16 +50,7 @@ function VenueMapInner({ lat, lng, zoom }: { lat: number; lng: number; zoom: num
 			return;
 		}
 
-		setBounds({
-			ne: {
-				lat: currentMapBounds.getNorth(),
-				lng: currentMapBounds.getWest(),
-			},
-			sw: {
-				lat: currentMapBounds.getSouth(),
-				lng: currentMapBounds.getEast(),
-			},
-		});
+		setBounds(venueSearchBounds(currentMapBounds));
 
 		// const { lat: newLat, lng: newLng } = e.target.getCenter();
 		// const newZoom = e.target.getZoom();

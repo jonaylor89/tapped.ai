@@ -31,5 +31,8 @@ jobs:
         run: pnpm run typecheck
         continue-on-error: true
         
+      - name: Test web helpers
+        run: pnpm --filter app.tapped.ai test
+
       - name: Build
         run: pnpm run build
