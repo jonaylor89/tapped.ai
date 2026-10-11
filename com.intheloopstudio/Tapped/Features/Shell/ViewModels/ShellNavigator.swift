@@ -2,11 +2,9 @@ import Foundation
 import Observation
 import TappedUI
 
-/// The five destinations inside the persistent map sheet; Search has its own floating control.
+/// The five tabs inside the persistent map sheet.
 enum ShellTab: String, CaseIterable, Hashable, Sendable {
     case gigs, bookings, messages, profile, search
-
-    static let barTabs: [ShellTab] = [.gigs, .bookings, .messages, .profile]
 
     var title: String { rawValue }
 
