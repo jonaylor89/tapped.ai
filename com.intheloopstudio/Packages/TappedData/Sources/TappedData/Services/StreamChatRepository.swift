@@ -17,8 +17,9 @@ public final class StreamChatRepository: ChatRepository {
     private var chats: [String: Chat] = [:]
     private var watches: [String: Task<Void, any Error>] = [:]
 
-    public nonisolated init(apiKey: String, tokenProvider: @escaping TokenProvider) {
+    public nonisolated init(apiKey: String, baseURL: URL? = nil, tokenProvider: @escaping TokenProvider) {
         var config = ChatClientConfig(apiKeyString: apiKey)
+        if let baseURL { config.baseURL = BaseURL(url: baseURL) }
         // Channels and messages persist on disk so lists render from cache on cold open; `logout()` wipes them.
         config.isLocalStorageEnabled = true
         config.shouldFlushLocalStorageOnStart = false

@@ -79,9 +79,19 @@ Crashlytics, FCM and Google Sign-In. Release builds ignore all of these variable
 
 ## Not emulated
 
-- Google Places, Geocoding and OpenAI are served by `stub.py` on `:8090` (stdlib Python, a few fixed
-  Richmond places such as "The Bluebird", plus a canned email body). The API points at it with
-  `GOOGLE_PLACES_BASE_URL`, `GOOGLE_GEOCODE_URL` and `OPENAI_CHAT_COMPLETIONS_URL`. Running natively:
-  `python3 platform/local/stub.py`.
-- Stream Chat and Spotify use placeholder keys, so chat and Spotify linking fail locally.
+- Google Places, Geocoding, OpenAI, Spotify and Stream Chat are served by `stub.py` on `:8090`
+  (stdlib Python: a few fixed Richmond places such as "The Bluebird", a canned email body, two
+  Spotify artists such as `4Z8W4fKeB5YxbusRsdQVPb`, and an in-memory Stream Chat with WebSocket
+  events). The API points at it with `GOOGLE_PLACES_BASE_URL`, `GOOGLE_GEOCODE_URL`,
+  `OPENAI_CHAT_COMPLETIONS_URL`, `SPOTIFY_TOKEN_URL`, `SPOTIFY_API_BASE_URL` (plus any
+  `SPOTIFY_CLIENT_ID`/`SECRET`) and `STREAM_BASE_URL`. Chat state resets when the stub restarts.
+- The Stream iOS SDK only speaks https/wss, so the stub also listens with TLS on `:8443`. Create and
+  trust the cert, run the stub with it, and point the app at it:
+
+  ```sh
+  platform/local/stream-cert.sh <udid>   # writes platform/local/.certs, trusts it in the simulator
+  STUB_TLS_CERT=platform/local/.certs/stub.pem STUB_TLS_KEY=platform/local/.certs/stub-key.pem \
+    python3 platform/local/stub.py
+  # app: TAPPED_STREAM_BASE_URL=https://localhost:8443 (env or `defaults write`, as above)
+  ```
 - Push notifications: use `xcrun simctl push` with a payload file.

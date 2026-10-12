@@ -84,6 +84,11 @@ services:
       GOOGLE_PLACES_API_KEY: local-places-key
       GOOGLE_PLACES_BASE_URL: http://stub:8090/v1
       GOOGLE_GEOCODE_URL: http://stub:8090/maps/api/geocode/json
+      SPOTIFY_CLIENT_ID: local-spotify-id
+      SPOTIFY_CLIENT_SECRET: local-spotify-secret
+      SPOTIFY_TOKEN_URL: http://stub:8090/api/token
+      SPOTIFY_API_BASE_URL: http://stub:8090/v1
+      STREAM_BASE_URL: http://stub:8090
       VENUE_CONTACT_FOUNDER_CC: ""
     volumes:
       - mail-data:/data
