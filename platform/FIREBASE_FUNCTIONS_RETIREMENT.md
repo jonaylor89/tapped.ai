@@ -2,7 +2,7 @@
 
 The goal is to delete **all custom and extension-managed Firebase Functions**, in every region/generation, without losing required behavior. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
 
-The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. Production now has **57 Functions**: the three founder booking/application/onboarding triggers were deleted after live Rust delivery verification. The original inventory below remains a historical 60-function checklist.
+The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. Production now has **56 Functions**: the three founder booking/application/onboarding triggers were deleted after live Rust delivery verification. The original inventory below remains a historical 60-function checklist.
 
 ## Founder bookings, applications and onboarding — implemented locally
 
@@ -29,23 +29,23 @@ Delivered event keys are retained for deduplication. Payloads contain internal f
 
 ## Second implementation (rollout pending)
 
-Rust now has a separate identity/provider worker, private generic outbox, Auth lifecycle ledger,
+Deployed at `4e0e2307377b` (Deploy API `38308109118`; Rust/Node/functions CI passed; 64 library + 78 real-PostGIS API tests). Rust now has a separate identity/provider worker, private generic outbox, Auth lifecycle ledger,
 per-device FCM jobs, booking email jobs, Stream profile/delete synchronization and stable-ID
 founder welcome DMs. It baselines existing Firebase Auth accounts without replaying old welcomes,
 confirms apparent deletions with an individual Auth lookup, and never reads/writes Firestore.
-Auth effects stay held until baseline/cutover is complete. Email templates were read once from the
+The production baseline completed with **119,548 Auth identities**, without replaying old accounts. Auth effects stay held until lifecycle cutover and delivery verification complete. Email templates were read once from the
 legacy template collection, preserved privately for Postgres provisioning, without changing source.
 An isolated principal with only `firebaseauth.users.get` and `cloudmessaging.messages.create` was
 provisioned; live checks confirmed Auth reads work and Firestore access is denied (403). Its private
 credential is mounted only in the optional identity worker, never the serving API.
 
 A Stream conformance gap was also fixed: success must return JSON with the entire original message,
-not a plain-text status. Attachment-only messages and claimed-user DM email preferences are supported.
+not a plain-text status. Attachment-only messages and claimed-user DM email preferences are supported. The provider callback was then changed directly to Rust and a real signed Stream message preserved custom fields. Synthetic users/channel were cleaned; `streamBeforeMessageWebhook` was deleted only after this check.
 
 **Postmark blocker:** changing InboundHookUrl was rejected with HTTP 422: "You are not entitled to
 Inbound processing. To add inbound, upgrade to the next tier." No plan upgrade was made; the existing
 provider URL remains unchanged. Zero Functions requires an approved upgrade or alternative provider.
-The old inbound URL must remain a compatibility proxy in the meantime.
+The old inbound URL must remain a compatibility proxy in the meantime. That named Function was selectively updated to the Rust-only bridge, and its unchanged public URL was verified to persist in the Rust mail store. The plan itself was not upgraded.
 
 ## Required remaining work
 
@@ -120,7 +120,7 @@ No blanket delete/uninstall command is supplied: some extension uninstall/cleanu
 | `spotifyAuthorizeCodeGrant` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
 | `spotifyRedirect` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
 | `spotifyRefreshToken` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
-| `streamBeforeMessageWebhook` | Point Stream provider callback directly to Rust and verify signatures, chat/venue-email side effects |
+| `streamBeforeMessageWebhook` | **Deleted** after direct provider routing and signed message verification |
 | `transformLocationPayloadForSearch` | Postgres search replaces legacy indexing; verify no remaining external indexing webhook caller then retire |
 | `updateStreamUserOnUserUpdate` | Replace/verify Stream profile synchronization from authoritative API profile changes, without Firestore |
 

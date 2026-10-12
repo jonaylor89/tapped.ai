@@ -368,7 +368,7 @@ impl ProviderWorker {
                         .fetch_optional(&self.pool)
                         .await?;
                 let user=doc.map(|doc|json!({"email":doc["email"],"name":doc["artistName"],"username":doc["username"],"image":doc["profilePicture"]}))
-                    .unwrap_or_else(||json!({"email":a.email,"name":a.display_name}));
+                    .unwrap_or_else(||json!({"email":a.email,"name":if a.display_name.is_empty(){&a.local_id}else{&a.display_name},"username":a.local_id}));
                 self.stream_upsert(&a.local_id, user).await?;
                 if !a.email.is_empty() && !a.email.ends_with("@tapped.ai") {
                     self.send_mail(&format!("welcome:{id}"), &a.email, "welcome")

@@ -1082,6 +1082,59 @@ fn mailbox_username(address: &str) -> &str {
         .trim_matches('<')
 }
 
+async fn record_orphan_and_notify(
+    state: &AppStateDyn,
+    raw: &[u8],
+    reason: &str,
+) -> anyhow::Result<()> {
+    use sha2::Digest;
+    let key = hex::encode(Sha256::digest(raw));
+    state.mail.store.record_orphan(raw, reason).await?;
+    let envelope: serde_json::Value = serde_json::from_slice(raw).unwrap_or_default();
+    let subject = envelope["Subject"]
+        .as_str()
+        .unwrap_or("unparsed inbound email");
+    let from = envelope["From"].as_str().unwrap_or("unknown sender");
+    let text = envelope["TextBody"]
+        .as_str()
+        .unwrap_or("The private mail store contains the original raw email.");
+    state
+        .mail
+        .store
+        .enqueue_outbound(QueuedEmail {
+            event_id: format!("orphan-forward:{key}"),
+            thread_id: format!("orphan:{key}"),
+            from: "no-reply@tapped.ai".into(),
+            to: vec!["johannes@tapped.ai".into()],
+            cc: vec![],
+            subject: format!("Orphan Email: {subject}"),
+            text_body: format!("{reason}\nFrom: {from}\n\n{text}"),
+            html_body: None,
+            message_id: format!("<{key}@tapped.ai>"),
+            in_reply_to: String::new(),
+            references: String::new(),
+            attachments: vec![],
+            encoded_attachments: vec![],
+        })
+        .await?;
+    if let Some(pool) = &state.postgres {
+        let mut tx = pool.begin().await?;
+        crate::domain::founder_notifications::enqueue(
+            &mut tx,
+            &format!("orphan:{key}"),
+            "orphan_mail",
+            &key,
+            "mail-ingress",
+            &crate::domain::founder_notifications::FounderMessage {
+                text: format!("*Orphan Email* - An email was not able to be processed: {reason}"),
+            },
+        )
+        .await?;
+        tx.commit().await?;
+    }
+    Ok(())
+}
+
 async fn deliver_inbound(
     state: &AppStateDyn,
     raw: &[u8],
@@ -1091,11 +1144,15 @@ async fn deliver_inbound(
     text: String,
 ) -> (StatusCode, &'static str) {
     if username.is_empty() || message_id.is_empty() || references.is_empty() {
-        let _ = state
-            .mail
-            .store
-            .record_orphan(raw, "missing routing headers")
-            .await;
+        if record_orphan_and_notify(state, raw, "missing routing headers")
+            .await
+            .is_err()
+        {
+            return (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "notification queue error",
+            );
+        }
         return (StatusCode::UNPROCESSABLE_ENTITY, "missing routing headers");
     }
     let thread = match state
@@ -1106,11 +1163,15 @@ async fn deliver_inbound(
     {
         Ok(Some(thread)) => thread,
         Ok(None) => {
-            let _ = state
-                .mail
-                .store
-                .record_orphan(raw, "thread not found")
-                .await;
+            if record_orphan_and_notify(state, raw, "thread not found")
+                .await
+                .is_err()
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "notification queue error",
+                );
+            }
             return (StatusCode::NOT_FOUND, "thread not found");
         }
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
@@ -1196,7 +1257,15 @@ pub async fn inbound_email(
     let parsed = match parse_mail(&body) {
         Ok(parsed) => parsed,
         Err(_) => {
-            let _ = state.mail.store.record_orphan(&body, "invalid email").await;
+            if record_orphan_and_notify(&state, &body, "invalid email")
+                .await
+                .is_err()
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "notification queue error",
+                );
+            }
             return (StatusCode::BAD_REQUEST, "invalid email");
         }
     };
@@ -1282,11 +1351,15 @@ pub async fn postmark_inbound_email(
     let message: PostmarkInboundEmail = match serde_json::from_slice(&body) {
         Ok(message) => message,
         Err(_) => {
-            let _ = state
-                .mail
-                .store
-                .record_orphan(&body, "invalid Postmark payload")
-                .await;
+            if record_orphan_and_notify(&state, &body, "invalid Postmark payload")
+                .await
+                .is_err()
+            {
+                return (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "notification queue error",
+                );
+            }
             return (StatusCode::BAD_REQUEST, "invalid Postmark payload");
         }
     };
