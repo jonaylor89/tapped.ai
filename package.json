@@ -5,7 +5,6 @@
     "apps/*",
     "services/event-crawler",
     "services/ticket-crawler",
-    "com.intheloopstudio/functions",
     "packages/*"
   ],
   "scripts": {

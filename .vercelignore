@@ -9,6 +9,7 @@ ci_scripts
 scripts
 services/api.tapped.ai
 services/mail-gateway
+services/firebase-functions
 services/midia-to-threads
 **/node_modules
 **/.next

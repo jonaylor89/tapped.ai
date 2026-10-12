@@ -1,0 +1,14 @@
+[
+  "addUserToMailchimpOnCreated",
+  "deleteStreamUser",
+  "getArtistBySpotifyId",
+  "getTopTracksByArtistId",
+  "inboundEmailWebhook",
+  "notifyFoundersOnSignUp",
+  "notifyFoundersOnUserDelete",
+  "sendWelcomeEmailOnUserCreated",
+  "spotifyAuthorizeCodeGrant",
+  "spotifyRedirect",
+  "spotifyRefreshToken",
+  "streamBeforeMessageWebhook"
+]

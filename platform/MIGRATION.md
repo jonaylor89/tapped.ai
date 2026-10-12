@@ -1,7 +1,9 @@
 # Migrating Cloud Functions → Rust API
 
 ## Overview
-Move HTTP/callable Cloud Functions from `com.intheloopstudio/functions/` to the Rust API at `https://api.tapped.ai` (deployed on the Hetzner VPS).
+Historical Cloud Functions migration notes. Maintained backend source/config now lives in `services/firebase-functions/`, independently of mobile code. The Rust API is at `https://api.tapped.ai`.
+
+**This document's original status tables are historical, not current deployment state.** The read-only live inventory in [services/firebase-functions/DEPLOYMENT_AUDIT.md](../services/firebase-functions/DEPLOYMENT_AUDIT.md) is authoritative for the cleanup snapshot; [API_CUTOVER.md](API_CUTOVER.md) describes serving. "Removed from source" does not mean "undeployed". Firestore triggers are not required to stay: migrated application data is Postgres-only, and legacy writers must not be restored.
 
 ## Status
 
@@ -27,11 +29,7 @@ firebase-verifyid = "0.1.5"
 - Extracts Firebase UID (`sub`) — same as `context.auth.uid` in Cloud Functions
 - Project ID: `in-the-loop-306520`
 
-Flutter side:
-```dart
-final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
-// Send as: Authorization: Bearer $idToken
-```
+Native/web clients obtain a Firebase ID token and send it as `Authorization: Bearer <idToken>`. Firebase handles identity/email verification; Rust handles application data.
 
 ## Functions that CAN move to Rust API
 
@@ -57,7 +55,7 @@ final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
 |----------|------|-------------|
 | `cancelBookingIfExpired` | bookings.ts | Cancel stale pending bookings (hourly) |
 
-## Functions that MUST stay as Cloud Functions
+## Historical trigger inventory (not a requirement to retain or redeploy)
 
 ### Firestore Triggers
 | Function | File | Trigger |

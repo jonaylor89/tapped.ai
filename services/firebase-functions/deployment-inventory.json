@@ -1,0 +1,721 @@
+{
+  "projectId": "in-the-loop-306520",
+  "checkedAt": "2026-10-12T17:15:23.312468+00:00",
+  "scope": "Read-only Cloud Functions inventory; excludes environment variables, secrets and source archives. ACTIVE does not prove usage or scheduler activity.",
+  "functions": [
+    {
+      "name": "addUserToMailchimpOnCreated",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "source": "src/lib/mailchimp.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "createConnectedAccount",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "createPaymentIntent",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "createStreamUserOnUserCreated",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/stream.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/users/{userId}"
+    },
+    {
+      "name": "deleteStreamUser",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.delete",
+      "source": "src/lib/stream.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "ext-auth-chat-createStreamUser",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "ext-auth-chat-deleteStreamUser",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.delete",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "ext-auth-chat-getStreamUserToken",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-auth-chat-revokeStreamUserToken",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-73n7-fsexportbigquery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.write",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/bookings/{documentId}"
+    },
+    {
+      "name": "ext-firestore-bigquery-export-73n7-fsimportexistingdocs",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-73n7-initBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-73n7-setupBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-73n7-syncBigQuery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-d85k-fsexportbigquery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.write",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/crawler/{documentId}"
+    },
+    {
+      "name": "ext-firestore-bigquery-export-d85k-fsimportexistingdocs",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-d85k-initBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-d85k-setupBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-d85k-syncBigQuery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-fsexportbigquery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.write",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/users/{documentId}"
+    },
+    {
+      "name": "ext-firestore-bigquery-export-fsimportexistingdocs",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-initBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-setupBigQuerySync",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-bigquery-export-syncBigQuery",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-schedule-writes-deliverWrites",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "google.pubsub.topic.publish",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/topics/firebase-ext-firestore-schedule-writes-deliverWrites"
+    },
+    {
+      "name": "ext-firestore-send-email-processQueue",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.write",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/mail/{id}"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createCheckoutSession",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/customers/{uid}/checkout_sessions/{id}"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createCustomer",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createPortalLink",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-stripe-payments-handleWebhookEvents",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "ext-firestore-stripe-payments-onCustomerDataDeleted",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.delete",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/customers/{uid}"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-onUserDeleted",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.delete",
+      "source": null,
+      "ownership": "firebase-extension",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "getAccountById",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "getArtistBySpotifyId",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/spotify.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "getTopTracksByArtistId",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/spotify.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "inboundEmailWebhook",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/webhooks.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "notifyFoundersOnAppRemoved",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/google.firebase.analytics/eventTypes/event.log",
+      "source": "src/lib/signups.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/events/app_remove"
+    },
+    {
+      "name": "notifyFoundersOnBookings",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/bookings.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/bookings/{bookingId}"
+    },
+    {
+      "name": "notifyFoundersOnEmail",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": "src/lib/dm_email_sync/venue_contacting.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "database",
+          "value": "(default)"
+        },
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "contactVenues/{userId}/venuesContacted/{venueId}/emailsSent/{emailId}"
+        }
+      ]
+    },
+    {
+      "name": "notifyFoundersOnOpportunityInterest",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/opportunities.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/opportunities/{opportunityId}/interestedUsers/{userId}"
+    },
+    {
+      "name": "notifyFoundersOnOrphanEmail",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": "src/lib/dm_email_sync/venue_contacting.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "database",
+          "value": "(default)"
+        },
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "orphanEmails/{emailId}"
+        }
+      ]
+    },
+    {
+      "name": "notifyFoundersOnSignUp",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "source": "src/lib/signups.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "notifyFoundersOnUserDelete",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.delete",
+      "source": "src/lib/signups.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "notifyFoundersOnUserFeedbackSubmitted",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "database",
+          "value": "(default)"
+        },
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "userFeedback/{feedbackId}"
+        }
+      ]
+    },
+    {
+      "name": "notifyFoundersOnUserOnboarded",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": "src/lib/signups.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "users/{userId}"
+        },
+        {
+          "attribute": "database",
+          "value": "(default)"
+        }
+      ]
+    },
+    {
+      "name": "notifyFoundersOnVenueContact",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": "src/lib/dm_email_sync/venue_contacting.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "contactVenues/{userId}/venuesContacted/{venueId}"
+        },
+        {
+          "attribute": "database",
+          "value": "(default)"
+        },
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        }
+      ]
+    },
+    {
+      "name": "notifyVenueOfInterestedOpportunities",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "sendBookingRequestReceivedEmailOnBooking",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/email_triggers.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/bookings/{bookingId}"
+    },
+    {
+      "name": "sendBookingRequestSentEmailOnBooking",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/email_triggers.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/bookings/{bookingId}"
+    },
+    {
+      "name": "sendEmailOnSubscriptionExpiration",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "sendEmailOnSubscriptionPurchase",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "sendToDevice",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "UNKNOWN",
+      "eventType": "providers/cloud.firestore/eventTypes/document.create",
+      "source": "src/lib/activities.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/activities/{activityId}"
+    },
+    {
+      "name": "sendWelcomeEmailOnUserCreated",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "providers/firebase.auth/eventTypes/user.create",
+      "source": "src/lib/email_triggers.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true,
+      "triggerResource": "projects/in-the-loop-306520"
+    },
+    {
+      "name": "setLatestContactRequest",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "google.cloud.firestore.document.v1.created",
+      "source": "src/lib/dm_email_sync/venue_contacting.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerFilters": [
+        {
+          "attribute": "namespace",
+          "value": "(default)"
+        },
+        {
+          "attribute": "document",
+          "operator": "match-path-pattern",
+          "value": "contactVenues/{userId}/venuesContacted/{venueId}"
+        },
+        {
+          "attribute": "database",
+          "value": "(default)"
+        }
+      ]
+    },
+    {
+      "name": "spotifyAuthorizeCodeGrant",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/spotify.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "spotifyRedirect",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/spotify.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "spotifyRefreshToken",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/spotify.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "streamBeforeMessageWebhook",
+      "region": "us-central1",
+      "generation": "GEN_2",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": "src/lib/webhooks.ts",
+      "ownership": "custom",
+      "deploymentAllowed": true
+    },
+    {
+      "name": "transformLocationPayloadForSearch",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "ACTIVE",
+      "eventType": "HTTP",
+      "source": null,
+      "ownership": "custom",
+      "deploymentAllowed": false
+    },
+    {
+      "name": "updateStreamUserOnUserUpdate",
+      "region": "us-central1",
+      "generation": "GEN_1",
+      "state": "UNKNOWN",
+      "eventType": "providers/cloud.firestore/eventTypes/document.update",
+      "source": "src/lib/stream.ts",
+      "ownership": "custom",
+      "deploymentAllowed": false,
+      "triggerResource": "projects/in-the-loop-306520/databases/(default)/documents/users/{userId}"
+    }
+  ]
+}

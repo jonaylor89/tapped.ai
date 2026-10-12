@@ -90,10 +90,10 @@ No production DNS changes are required for this stack.
 - [ ] Confirm `/health`, API logs, worker startup, SQLite WAL creation, and Postmark API connectivity.
 - [ ] Authenticate Application Default Credentials with `gcloud auth application-default login`, then preview the legacy migration with `python3 services/mail-gateway/tools/backfill_mail_threads.py`.
 - [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible thread/message and written counts match. The import is idempotent and records historical messages as sent without redelivery.
-- [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records. Until then, deploy the `inboundEmailWebhook` proxy function against the unchanged Postmark URL.
+- [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records. Until then, selectively deploy the `inboundEmailWebhook` proxy from `services/firebase-functions/` against the unchanged Postmark URL.
 - [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`.
-- [ ] Build and release the Flutter app that calls `POST /app/v1/venue-email-threads`.
+- [ ] Build and release the native SwiftUI app that calls `POST /app/v1/venue-email-threads`.
 - [ ] Run **Post-deploy mail smoke** manually. IMAP is used only by this optional end-to-end deliverability test, not by production infrastructure.
 - [ ] Verify app → Postmark → recipient, recipient reply → Postmark webhook → Stream, Stream follow-up → Postmark, duplicate webhook retries, and attachment handling.
-- [ ] Keep deprecated Firebase handlers for a 72-hour rollback window.
+- [ ] Retain only API-backed compatibility handlers while provider URLs cannot change; never roll back to Firestore-backed handlers.
 - [ ] After 72 healthy hours, remove deprecated handlers and obsolete Functions configuration. Keep the actual Postmark server token under `POSTMARK_SERVER_TOKEN`; never reuse it as `MAIL_API_SECRET`.

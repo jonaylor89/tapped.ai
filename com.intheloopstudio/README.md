@@ -1,11 +1,13 @@
 # Tapped for iOS (native SwiftUI)
 
-Native rewrite of the Flutter app in `../com.intheloopstudio.flutter/`. The Flutter app is the **read-only spec**:
-never edit it from this project.
+The production native iOS app. Its source, tests and this README define the supported behaviour;
+the legacy mobile app is retired and Android is no longer supported. Backend Firebase hooks/config
+live independently in [`../services/firebase-functions/`](../services/firebase-functions/README.md).
+Application data/search use Rust/Postgres; Firebase remains for identity/email verification and the SDK services listed below.
 
 - Swift 6, `SWIFT_STRICT_CONCURRENCY=complete`, SwiftUI only, iOS 26 minimum
 - SPM only (no CocoaPods), every dependency pinned with `exact:` and `Package.resolved` committed
-- Bundle ID `com.intheloopstudio` (same as Flutter, so it ships as an update to the existing app)
+- Bundle ID `com.intheloopstudio` (ships as an update to the existing App Store app)
 
 ## Setup
 
@@ -19,7 +21,7 @@ open Tapped.xcodeproj
 ### Firebase config
 
 `Tapped/Resources/GoogleService-Info.plist` contains the production configuration for the same Firebase project
-(`in-the-loop-306520`) and bundle ID as the Flutter app. It is committed so local and Xcode Cloud release builds use
+(`in-the-loop-306520`) and existing bundle ID. It is committed so local and Xcode Cloud release builds use
 live Firebase. Regenerate it from Firebase console → Project settings → iOS app `com.intheloopstudio` if the Firebase
 configuration changes.
 
@@ -28,21 +30,20 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 | Key | Value |
 | --- | --- |
 | `TappedPostHogAPIKey` / `TappedPostHogHost` | PostHog project key / `https://us.i.posthog.com` |
-| `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In (same OAuth client as Flutter) |
+| `GIDClientID` + reversed-client-ID URL scheme | Google Sign-In using the existing OAuth client |
 | `TappedPremiumProductIds` | optional override for StoreKit product IDs |
 | `TappedAPIURL` | optional; Tapped API base URL used by authenticated app requests, including venue outreach and Stream tokens (default `https://api.tapped.ai`) |
-| `TappedStreamAPIKey` | optional; Stream Chat **public** app key (default is the key the Flutter app ships). The user token comes from the authenticated Tapped API, never from the app bundle |
+| `TappedStreamAPIKey` | optional; Stream Chat **public** app key. The user token comes from the authenticated Tapped API, never from the app bundle |
 
-Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; create the `ios_*` / waitlist keys in the Firebase console,
-Flutter has no equivalents):
+Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; configure the `ios_*` keys in the Firebase console):
 
 | Key | Type / default | Effect |
 | --- | --- | --- |
 | `down_for_maintenance` | bool / `false` | `MaintenanceView` gate |
 | `booking_fee` | number | fee shown on booking forms |
-| `ios_minimum_app_version` | string / `""` | semver; installed version below it → blocking `UpdateRequiredView` (replaces Flutter's `upgrader`). Empty/unparseable = off |
+| `ios_minimum_app_version` | string / `""` | semver; installed version below it → blocking `UpdateRequiredView`. Empty/unparseable = off |
 | `ios_latest_app_version` | string / `""` | semver; installed version below it → dismissible "update available" alert (update now / later / ignore this version) |
-| `premium_waitlist_enabled` | bool / `false` | `Route.paywall` shows the premium waitlist instead of the StoreKit paywall |
+| `premium_waitlist_enabled` | bool / `false` | legacy/mock configuration; live premium waitlist is disabled during the API cutover |
 
 ## Build / test / run
 
@@ -114,7 +115,7 @@ Mock sign-in: any email + password works, except the password `wrong` (which ret
 com.intheloopstudio/
 ├── project.yml                  xcodegen spec (source of truth for Tapped.xcodeproj)
 ├── Tapped/                      app target
-│   ├── App/                     TappedApp, AppDelegate, AppSession (auth gate), ContentView, LaunchOptions
+│   ├── App/                     TappedApp, AppDelegate, AppSession (auth/profile gate), ContentView, LaunchOptions
 │   ├── Features/<Feature>/
 │   │   ├── Views/               screens (SwiftUI)
 │   │   ├── ViewModels/          @Observable @MainActor view models
@@ -122,11 +123,14 @@ com.intheloopstudio/
 │   └── Resources/               Info.plist, entitlements, assets, GoogleService-Info.plist
 ├── TappedTests/                 Swift Testing: view models, session, router
 ├── Packages/
-│   ├── TappedDomain/            Codable/Sendable models (Firestore field names), Samples; no deps
+│   ├── TappedDomain/            Codable/Sendable models, Samples; no deps
 │   ├── TappedData/              repository protocols + Rust API/Firebase Auth/Places/StoreKit/PostHog impls + mocks + Dependencies
 │   └── TappedUI/                tokens, Liquid Glass components, MapsStyleSheet, RiveView; depends on TappedDomain + Rive
-└── ci_scripts/ci_post_clone.sh  Xcode Cloud
 ```
+
+Repository-root `../ci_scripts/ci_post_clone.sh` handles Xcode Cloud.
+Configure Xcode Cloud with `com.intheloopstudio/Tapped.xcodeproj` and scheme `Runner`;
+it resolves the committed SPM lockfile without Flutter, CocoaPods or sibling source folders.
 
 Dependency direction: `Tapped → TappedUI, TappedData → TappedDomain`. `TappedUI` never imports `TappedData`;
 `TappedDomain` imports nothing but Foundation.
@@ -134,13 +138,13 @@ Dependency direction: `Tapped → TappedUI, TappedData → TappedDomain`. `Tappe
 ### Flow
 
 `TappedApp` resolves `Dependencies` once and injects it with `.environment(\.dependencies, …)` alongside `AppSession`
-and `Router`. `AppSession.run()` (the port of `AuthenticationBloc` + `DownForMaintenanceBloc`) drives
+and `Router`. `AppSession.run()` drives
 `ContentView`: `splash → maintenance | updateRequired | signedOut (AuthFlowView) | confirmEmail | onboarding
 (OnboardingView) | signedIn (ShellView)`. Entering `signedIn` publishes `latestAppVersion`, requests push permission
-and saves the FCM token to `device_tokens/{uid}/tokens/{token}`.
+and registers the FCM token through the authenticated Rust API. Current session profiles refresh centrally every 30 seconds; edits update the session immediately without discarding unsaved drafts.
 
 Links: `TappedApp.onOpenURL` (universal links on the associated domains + the `com.intheloopstudio://` scheme) and
-notification taps (`AppDelegate` → `NotificationPayload`, which reads Flutter's `url` key) feed `InboundLinks`, which
+notification taps (`AppDelegate` → `NotificationPayload`, using the `url` payload key) feed `InboundLinks`, which
 buffers a `DeepLink` until `ShellView` is on screen; `DeepLinkResolver` turns it into a `Route`. So cold-start
 links survive splash/auth/onboarding.
 
@@ -150,15 +154,15 @@ Remote Config: `down_for_maintenance`, `booking_fee`, `ios_minimum_app_version` 
 Destructive actions: wrap them in `.reauthenticationSheet(isPresented:reason:onSuccess:)`; it offers the account's
 linked providers (password / apple / google).
 `ShellView` is a `NavigationStack(path: $router.path)` whose root is `DiscoverView`; profile and messages are pushed
-from Discover's top chrome, like Flutter.
+from Discover's top chrome.
 
 ### Discover
 
-Port of `lib/ui/discover/**`: `MKMapView` (via `UIViewRepresentable`, for built-in `clusteringIdentifier`
+`MKMapView` (via `UIViewRepresentable`, for built-in `clusteringIdentifier`
 clustering), glass top chrome (avatar · search capsule · messages, venues/gigs picker, "finish setting up" banner,
 "search this area"), floating controls (filters, locate, debug zoom) that fade from `.medium` to `.large`, and
 `MapsStyleSheet` with results header, quick actions, results, genre chips, top performers, featured gigs.
-`DiscoverViewModel` mirrors `DiscoverCubit` (bounding-box API/Postgres search, premium-gated filters, venue fit sort).
+`DiscoverViewModel` handles bounding-box API/Postgres search, premium-gated filters and venue-fit sorting.
 
 ## Conventions
 
@@ -168,17 +172,16 @@ clustering), glass top chrome (avatar · search capsule · messages, venues/gigs
   expose `async` intents, and are unit-tested with mocks. No Combine.
 - **Repositories** are protocols in `TappedData`. Views and view models only see protocols and `TappedDomain`
   types; `import Firebase…` is allowed only inside `Packages/TappedData/Sources/TappedData/Firebase` and `Services`.
-- **Concurrency**: `async/await` everywhere; Firestore listeners are `AsyncThrowingStream`s (`…Observer` methods);
+- **Concurrency**: `async/await` everywhere; database observers are cancellable, bounded `AsyncThrowingStream`s backed by 30-second API polling;
   domain types are `Sendable` structs; mocks are actors.
-- **Copy is lowercase** ("search tapped", "finish setting up", "get booked."), matching the brand and Flutter app.
+- **Copy is lowercase** ("search tapped", "finish setting up", "get booked."), matching the brand.
   Route titles, errors, buttons, empty states, all of it.
 - **Design**: Liquid Glass for floating chrome only (nav, search capsule, map controls, bottom bars, sheets) via
   `tappedGlass(_:in:interactive:)`; forms/settings use native `Form`/inset-grouped lists; system font + SF Symbols;
   accent (`TappedColors.accent`, `#0086CC`) as tint/outline, not fills. Use `TappedSpacing`/`TappedRadius`/
   `GlassRadius`/`GlassMetrics`/`GlassMotion` tokens instead of literals.
-- **No third-party UI libraries.** Allowed SDKs: Firebase (Auth, Firestore, Functions, Storage, Remote Config,
-  Crashlytics, Messaging), GoogleSignIn, PostHog, Rive, Stream Chat (messaging session). Not used: Firebase
-  Analytics, Stripe, RevenueCat, Mapbox, Lottie, Google Maps SDK.
+- **SDKs**: Firebase (Auth, Storage, Remote Config, Crashlytics, Messaging), GoogleSignIn, PostHog, Rive,
+  Stream Chat (messaging session). No Firestore/Functions serving SDK or Typesense; application data, functions and search use Rust API clients. Not used: Firebase Analytics, Stripe, RevenueCat, Mapbox, Lottie, Google Maps SDK.
 - **Pinning**: `.package(url:…, exact: "x.y.z")` only. After changing a dependency, resolve in Xcode (or
   `xcodebuild -resolvePackageDependencies`) and commit
   `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. CI resolves with
@@ -187,7 +190,7 @@ clustering), glass top chrome (avatar · search capsule · messages, venues/gigs
 ### Adding a feature
 
 1. Create `Tapped/Features/<Feature>/{Views,ViewModels,Components}`.
-2. If it's a destination, it already has a `Route` case (mirrors `tapped_route.dart`). Resolve it in
+2. If it's a destination, add or reuse a `Route` case. Resolve it in
    `Features/Navigation/Views/RouteDestination.swift` (or the feature's `…RouteDestination`), and add a
    `TAPPED_MOCK_ROUTE` name in `Route+MockLaunch.swift`.
 3. Build the view model against `Dependencies`; add `#Preview`s using `Dependencies.mock()` and `Samples`.
@@ -200,8 +203,8 @@ with `NavigationLink(destination:)`.
 
 ### Adding a repository method
 
-1. Add it to the protocol (e.g. `DatabaseRepository`), keeping the Dart method name and arguments.
-2. Implement it in `FirestoreDatabaseRepository` (or the relevant live impl).
+1. Add it to the protocol (e.g. `DatabaseRepository`) using domain types.
+2. Implement it in `TappedAPIDatabaseRepository` (or the relevant live implementation). Never add a Firestore fallback or dual writes.
 3. Implement it in the mock (`MockDatabaseRepository`) against `Samples`.
 4. Add a `TappedDataTests` test for the mock (and a decoding fixture in `TappedDomainTests` if new JSON).
 
@@ -220,10 +223,9 @@ map-like gradient) so glass is visible. `ComponentGallery` shows everything at o
 ### Testing
 
 - Swift Testing (`import Testing`, `@Test`, `#expect`) everywhere.
-- `TappedDomainTests`: Firestore/Typesense JSON fixtures → models (timestamps, defaults, scalar→array coercion).
-- `TappedDataTests`: mocks and API database/search request handling. Run from `Packages/TappedData`: when the app and a
-  package test bundle both link Firebase in one build, Xcode turns `FirebaseFirestore` into a dynamic framework
-  and linking fails (unresolved abseil symbols), so it isn't part of the `Tapped` scheme's test action.
+- `TappedDomainTests`: current API and legacy-encoding JSON fixtures → models (timestamps, defaults, scalar→array coercion); no Firestore/Typesense serving dependency.
+- `TappedDataTests`: mocks and API database/search request handling. Run separately from `Packages/TappedData`;
+  it isn't part of the `Runner` scheme's test action.
 - `TappedUITests`: `ImageRenderer` smoke renders of every component in light/dark + sheet math.
 - `TappedTests`: view models (`DiscoverViewModel`, auth), `AppSession`, `Router`, `Route`, `LaunchOptions`.
 
@@ -239,15 +241,15 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 | Bookings | Bookings list (upcoming/past, sent/received), booking detail + accept/decline/cancel, create booking, confirmation, add past booking, booking history map, request to perform (+ add collaborators) and confirmation, services list / detail / create-edit | `bookings`, `booking`, `createBooking`, `bookingConfirmation`, `addPastBooking`, `bookingHistory`, `requestToPerform`, `requestToPerformConfirmation`, `addCollaborators`, `serviceSelection`, `service`, `createService` | #20 |
 | Search & opportunities | Search (performers/venues, recents), advanced search, location form, gig search (premium, venue fit), opportunity detail + apply, opportunities list, feed, interested users, reviews (new reviews carry the most recent confirmed booking id between the two users) | `search`, `advancedSearch`, `locationForm`, `gigSearch`, `opportunity`, `opportunities`, `opportunityFeed`, `interestedUsers`, `reviews` | #23 |
 | Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), FCM token, Remote Config gates (maintenance, update required/available, premium waitlist), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
-| Premium, messaging, admin | StoreKit 2 paywall (`PaywallGate`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen, as in Flutter), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
+| Premium, messaging, admin | StoreKit 2 paywall (`PaywallGate`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
 
 `Route.discovery` pops to the root (Discover is the shell root).
 
 ## What's stubbed
 
-- Video call is a "coming soon" screen (Flutter's `VideoCallView` is empty too).
+- Video call remains a "coming soon" screen.
 - StoreKit uses the existing App Store Connect `Tapped Premium` subscription products: `prod_2499_1m` ($12.99/month)
   and `prod_11999_1y` ($119.99/year). `StoreKit/Tapped.storekit` mirrors them for local testing.
-- Push: no topic subscriptions (Flutter has none either).
-- Live Firebase / Stream / Storage / APNs paths compile and are unit-tested against mocks only; this repo has no real
-  `GoogleService-Info.plist`.
+- Push: no topic subscriptions; token registration goes through Rust.
+- Badges, curated leaders, premium waitlist, historical contact flags, blocking/reporting are explicitly disabled/unmigrated (contact support@tapped.ai). Applications are unmetered and feeds are computed.
+- Public Firebase configuration is committed at `Tapped/Resources/GoogleService-Info.plist`; it is not a service-account credential. Unit tests use mocks; simulator tests and actual App Store distribution remain separate validation paths.

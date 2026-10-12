@@ -47,7 +47,7 @@ clean: stop
 
 # Install all dependencies
 install:
-    pnpm install
+    pnpm install --frozen-lockfile
 
 # Lint all packages
 lint:
@@ -79,13 +79,17 @@ build-rust: build-api build-venue
 # Build everything
 build-all: build-node build-rust
 
-# Run Flutter app (iOS simulator)
-flutter-ios:
-    cd com.intheloopstudio && flutter run
+# Build and test the native iOS app (override if simulator names repeat)
+ios-test destination="platform=iOS Simulator,name=iPhone 17":
+    cd com.intheloopstudio && xcodebuild build test -project Tapped.xcodeproj -scheme Runner -destination '{{destination}}'
 
-# Run Flutter app (Android)
-flutter-android:
-    cd com.intheloopstudio && flutter run -d android
+# Test the native data package separately
+ios-data-test destination="platform=iOS Simulator,name=iPhone 17":
+    cd com.intheloopstudio/Packages/TappedData && xcodebuild test -scheme TappedData -destination '{{destination}}'
+
+# Standalone Firebase backend; deliberately excluded from the pnpm/Turbo workspace
+functions-test:
+    cd services/firebase-functions && npm ci && npm run lint && npm run build && npm test
 
 # Dev server for main web app
 dev-app:

@@ -2,70 +2,66 @@
 
 ## Setup
 
-Requires [just](https://github.com/casey/just), Node 22 + pnpm (via Corepack, version from `packageManager`), Rust stable, and Flutter 3.41.5 for the mobile app.
+Use Node + pnpm via Corepack (version from the root `packageManager`), Rust, and Xcode with Swift 6/iOS 26 for the native app. Flutter/Dart are not required; Android is no longer supported.
 
 ```bash
-just install        # pnpm install (frozen lockfile)
-just lint           # Biome across all Node packages
+just install        # pnpm install --frozen-lockfile
+just lint           # Biome across pnpm packages
 just typecheck
-just build-node     # all apps/ and Node services/
-just build-api      # Rust API
-just dev-app        # app.tapped.ai dev server
-just dev <package>  # any other package
-just flutter-ios / flutter-android
+just build-node
+just build-api
+just dev-app
+just dev <package>
+just ios-test       # native app + UI/domain tests
+just ios-data-test  # native data package tests
+just functions-test # isolated npm Firebase backend
 ```
 
-Run `just --list` for everything else (Typesense, Docker, migrations).
+For an isolated API/Auth-emulator development stack, see [platform/local/README.md](platform/local/README.md).
+For native setup and release configuration, see [com.intheloopstudio/README.md](com.intheloopstudio/README.md).
+Firebase backend source/config lives in [services/firebase-functions/](services/firebase-functions/README.md), not in the mobile app. It has its own npm lockfile and is intentionally excluded from pnpm/Turbo.
 
 ## Code style
 
-- TypeScript: Biome (`biome.json`) — 2-space indent, 120 cols, double quotes, semicolons. `just lint-fix` before committing.
-- Rust: `cargo fmt` + `cargo clippy` clean.
-- Flutter: `flutter analyze` clean of warnings/errors (info-level lints are non-fatal in CI).
-- Shared TS code goes in `packages/`; Flutter code only under `com.intheloopstudio/`.
+- TypeScript: Biome — 2-space indent, 120 columns, double quotes, semicolons.
+- Rust: `cargo fmt` and `cargo clippy`.
+- Swift: SwiftUI, Swift 6 strict concurrency; see the native README.
+- Shared TS code goes in `packages/`; native code in `com.intheloopstudio/`.
 
 ## Pull requests
 
-- Branch from `main`, keep PRs small and single-purpose.
-- CI (`node.yml`, `rust.yml`, `flutter.yml`) must be green; `pubspec.lock` / `pnpm-lock.yaml` / `Cargo.lock` changes are committed alongside the manifest change.
-- Never commit secrets: `key.properties`, `*.jks`, `.env*`, service-account JSON. CI reads them from GitHub Actions secrets.
+- Branch from `main`; keep PRs small and single-purpose.
+- Relevant Node, Rust, native iOS and Firebase functions CI must pass.
+- Commit lockfile changes alongside manifests.
+- Never commit private credentials, signing keys, env files or service-account JSON. Public client identity configuration and placeholder `.env.example` files are distinct from private credentials.
+- Firebase Auth remains in use. Application data/search are served by Rust/Postgres; do not reintroduce Firestore serving, fallback, synchronization or dual writes.
 
 ## Dependency pinning
 
-Every dependency and every toolchain version in this repo is pinned to an exact version. Floating ranges (`^1.2.3`, `~1.2.3`, `>=1.2.3`, `*`, `latest`) and moving branches (`stable`, `main`) are not allowed. A build that resolves differently today than it did yesterday is a bug.
+Every dependency and toolchain version must be exact. Floating ranges (`^1.2.3`, `~1.2.3`, `>=1.2.3`, `*`, `latest`) and moving branches are not allowed.
 
-Why: the Flutter `stable` channel drifted from 3.41 to 3.47 and broke `flutter pub get` on Xcode Cloud (`flutter_localizations` started requiring `intl ^0.20.3` while the app pinned `0.20.2`). Nothing in the repo had changed.
+### Node workspace
 
-### Flutter (`com.intheloopstudio/`)
+- Commit `pnpm-lock.yaml`; CI uses `pnpm install --frozen-lockfile`.
+- Keep new dependencies and toolchain versions exact.
 
-- `pubspec.yaml`: every entry in `dependencies`, `dev_dependencies`, and `dependency_overrides` is an exact version (`foo: 1.2.3`, never `foo: ^1.2.3`).
-- Git dependencies pin `ref` to a full commit SHA, not a branch or tag.
-- `environment.sdk` and `environment.flutter` are exact versions.
-- `pubspec.lock` is committed. Run `flutter pub get` after editing `pubspec.yaml` and commit the lockfile change in the same PR.
-- To upgrade a package: change the version in `pubspec.yaml` by hand, run `flutter pub get`, commit both files. Do not run `flutter pub upgrade` without reviewing the resulting diff.
+### Firebase functions
 
-### Flutter toolchain
+- Use `npm ci` inside `services/firebase-functions/`, with its committed `package-lock.json`.
+- Pin dependency versions, `packageManager`, and Node in `.node-version`/`firebase-functions.yml`.
+- Only named, allowlisted handlers may be deployed through the service's deployment command; no blanket function or Firestore rules deployments. See its live deployment audit first.
 
-The Flutter version is pinned in three places and they must always agree:
+### Native iOS
 
-| Location | Key |
-|----------|-----|
-| `.github/workflows/flutter.yml` | `flutter-version:` (three jobs) |
-| `com.intheloopstudio/ios/ci_scripts/ci_post_clone.sh` | `FLUTTER_VERSION=` |
-| `com.intheloopstudio/pubspec.yaml` | `environment.flutter` |
+- SPM only: `.package(url: …, exact: "x.y.z")`.
+- Commit `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`.
+- Resolve/build in CI with `-disableAutomaticPackageResolution`.
+- Xcode Cloud uses the repository-root `ci_scripts/ci_post_clone.sh`, project `com.intheloopstudio/Tapped.xcodeproj`, and scheme `Runner`.
 
-Check the Dart version bundled with that Flutter release (`flutter --version`) and update `environment.sdk` to match when bumping.
+### Rust
 
-### Node (`apps/`, `packages/`, `services/*` on Node)
-
-- `pnpm-lock.yaml` is committed and CI installs with `pnpm install --frozen-lockfile`.
-- `packageManager` in the root `package.json` and `node-version` in `.github/workflows/node.yml` are exact versions.
-- New `package.json` entries should be exact versions.
-
-### Rust (`services/api.tapped.ai/`, `services/venue-enrichment/`)
-
-- `Cargo.lock` is committed. Exact versions in `Cargo.toml` are preferred for new dependencies.
+- Commit `Cargo.lock`; prefer exact versions for new dependencies.
 
 ### GitHub Actions
 
-- Pin third-party actions to a release tag (e.g. `subosito/flutter-action@v2`) and pass exact tool versions to them (`flutter-version: 3.41.5`, `node-version: '22'`).
+- Pin actions to release tags and toolchains to exact versions. Do not use `latest` for new toolchain pins.
