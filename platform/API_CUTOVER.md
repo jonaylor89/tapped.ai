@@ -183,7 +183,7 @@ Final production verification after deployment d7bd63cb6be7:
   decision for existing users), or gate all authenticated reads/writes (strictest but may lock out
   existing clients/users). Do not conflate any of these with the Postgres migration.
 
-## Bundled map and client prefetching (local, not deployed)
+## Bundled map and client prefetching (implementation; rollout below)
 
 This supersedes opening-triggered area-sheet batches above: public map/profile data is fetched
 before interaction, rather than minimizing reads by waiting for a sheet to open.
@@ -227,10 +227,15 @@ before interaction, rather than minimizing reads by waiting for a sheet to open.
   Synthetic EXPLAIN ANALYZE (100,000 distant venues, 300 NYC venues, 1,000 performers; transaction
   rolled back) used `users_map_location_idx`: 36.5ms execution and 15.0ms planning for the capped
   250-venue/1,000-profile payload. This is a local measurement, not a production latency claim.
-- Rollout is still pending: deploy the API routes **and migration before the frontend**. Verify
-  production privacy, payload caps, query plans, request counts, cache interactions and proxy
-  failures afterwards. These commits are not pushed/deployed. Firebase Auth, deny-all Firestore
-  client rules and the separate identity/macOS/verified-email decisions above are unchanged.
+- Rollout (2026-10-12): API was deployed first through GHA run `38247149867`, then main was
+  published at `4a51eff39833` (Node/Rust CI succeeded; main API deploy run `38248106655` succeeded).
+  Live readiness is healthy. NYC map response: 250 venues/171 deduplicated public profiles;
+  live details sample: 40 confirmed bookings/44 related public profiles. Both returned no-store
+  and passed public-field checks. Web deployment is now handled by manual `Deploy Web` GHA:
+  exact checked-out files, successful Node CI required, API capability check, and live commit
+  verification. Vercel Git branch lookup is currently broken; no automatic rollout is assumed.
+  Production browser/image behavior must still be checked after the web run. Firebase Auth,
+  deny-all Firestore rules and separate identity/macOS/verified-email decisions are unchanged.
 
 ## Native distribution
 
