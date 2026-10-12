@@ -60,11 +60,12 @@ SIMCTL_CHILD_FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199 \
 xcrun simctl launch <udid> com.intheloopstudio
 ```
 
-Emulator runs skip PostHog and OpenTelemetry. Release builds ignore all of these variables.
+Emulator runs configure Firebase with a fake `demo-tapped` app instead of the bundled
+`GoogleService-Info.plist`, use Remote Config's in-code defaults, and skip PostHog, OpenTelemetry,
+Crashlytics, FCM and Google Sign-In. Release builds ignore all of these variables.
 
 ## Not emulated
 
 - Stream Chat, Google Places, Spotify and OpenAI use placeholder keys, so chat, place lookups, Spotify
   and AI email composition fail locally.
 - Push notifications: use `xcrun simctl push` with a payload file.
-- Remote Config still reads the production project's published defaults (read-only).

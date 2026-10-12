@@ -22,7 +22,9 @@ public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
     }
 
     public func fetchAndActivate() async throws -> Bool {
-        try await configured().fetchAndActivate() != .error
+        // Local-stack runs use the in-code defaults.
+        guard !FirebaseBootstrap.usesEmulators else { return false }
+        return try await configured().fetchAndActivate() != .error
     }
 
     private func configured() -> RemoteConfig {

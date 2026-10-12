@@ -36,6 +36,7 @@ public struct FirebaseNotificationRepository: NotificationRepository {
     }
 
     public func saveDeviceToken(userId: String) async throws {
+        guard !FirebaseBootstrap.usesEmulators else { return }
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
         let token = try await Messaging.messaging().token()

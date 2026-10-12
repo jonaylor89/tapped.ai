@@ -18,9 +18,13 @@ public enum FirebaseBootstrap {
 
     @MainActor
     public static func configure() {
-        guard FirebaseApp.app() == nil, hasConfiguration() else { return }
+        guard FirebaseApp.app() == nil else { return }
+        if usesEmulators {
+            configureLocal()
+            return
+        }
+        guard hasConfiguration() else { return }
         FirebaseApp.configure()
-        useEmulators()
         if let clientId = FirebaseApp.app()?.options.clientID {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
         }
@@ -48,8 +52,25 @@ public enum FirebaseBootstrap {
         return host.isEmpty ? nil : (host, port)
     }
 
-    private static func useEmulators() {
+    static let localProjectID = "demo-tapped"
+
+    /// A fake `demo-*` app, so no SDK (Remote Config, Crashlytics, FCM, Installations) can reach the
+    /// production project bundled in `GoogleService-Info.plist`.
+    static var localOptions: FirebaseOptions {
+        let options = FirebaseOptions(googleAppID: "1:000000000000:ios:0000000000000000", gcmSenderID: "000000000000")
+        options.projectID = localProjectID
+        options.apiKey = "AIzaSyDemoTappedLocalEmulatorKey0000000"
+        options.storageBucket = "\(localProjectID).appspot.com"
+        options.bundleID = Bundle.main.bundleIdentifier ?? "com.intheloopstudio"
+        return options
+    }
+
+    @MainActor
+    private static func configureLocal() {
         #if DEBUG
+        FirebaseApp.configure(options: localOptions)
+        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(false)
+        Messaging.messaging().isAutoInitEnabled = false
         if let auth = emulatorAddress("FIREBASE_AUTH_EMULATOR_HOST") {
             Auth.auth().useEmulator(withHost: auth.host, port: auth.port)
         }
@@ -66,7 +87,7 @@ public enum FirebaseBootstrap {
     }
 
     public static func setAPNSToken(_ deviceToken: Data) {
-        guard isConfigured else { return }
+        guard isConfigured, !usesEmulators else { return }
         Messaging.messaging().apnsToken = deviceToken
     }
 
@@ -75,7 +96,7 @@ public enum FirebaseBootstrap {
     }
 
     public static func record(error: any Error) {
-        guard isConfigured else { return }
+        guard isConfigured, !usesEmulators else { return }
         Crashlytics.crashlytics().record(error: error)
     }
 }
