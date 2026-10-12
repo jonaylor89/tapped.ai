@@ -1,4 +1,5 @@
 pub mod auth;
+mod founder_notifications;
 pub mod hardening;
 pub mod health_check;
 pub mod helpers;

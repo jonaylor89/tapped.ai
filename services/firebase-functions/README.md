@@ -20,6 +20,8 @@ The lockfile was regenerated from the old resolved dependency versions, removing
 
 ## Production boundaries
 
+**This package is transitional. The target is to remove every Firebase Function**, including Auth hooks and managed extensions, once required behavior/provider routing is replaced. Firebase Auth/email verification itself remains. Track the [all-functions retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md); do not delete business notifications merely because they listened to Firestore.
+
 Read [DEPLOYMENT_AUDIT.md](DEPLOYMENT_AUDIT.md) **before deploying**. Many deployed functions/extensions are not maintained by the current entrypoint, and some deployed custom handlers have no source here.
 
 - `src/index.ts` exports only named, allowlisted HTTP/Auth functions; no wildcard exports.

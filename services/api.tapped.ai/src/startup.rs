@@ -11,6 +11,7 @@ use crate::{
             stream_user_token,
         },
         firebase_auth::verify_firebase_token,
+        founder_notifications::{SlackWebhook, run_worker as run_founder_worker},
         health::{Health, Readiness, Version, health, ready, version},
         mail_bridge::{
             MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_message,
@@ -74,6 +75,7 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
 pub struct Application {
     port: u16,
     server: Serve<Router, Router>,
+    founder_worker: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Application {
@@ -157,8 +159,30 @@ impl Application {
             postgres: Some(postgres),
         };
 
+        let founder_transport = state
+            .mail
+            .slack_webhook_url
+            .as_deref()
+            .filter(|url| !url.trim().is_empty())
+            .map(SlackWebhook::new)
+            .transpose()
+            .map_err(|error| color_eyre::eyre::eyre!("{error}"))?;
+        let founder_pool = state.postgres.clone().expect("production Postgres pool");
         let server = run(listener, state).await?;
-        Ok(Self { port, server })
+        let founder_worker = founder_transport.map(|transport| {
+            tracing::info!("Postgres founder notification worker enabled");
+            tokio::spawn(run_founder_worker(founder_pool, transport))
+        });
+        if founder_worker.is_none() {
+            tracing::warn!(
+                "SLACK_WEBHOOK_URL unset; founder events remain queued until a worker is configured"
+            );
+        }
+        Ok(Self {
+            port,
+            server,
+            founder_worker,
+        })
     }
 
     pub async fn build_with_state(port: u16, state: AppStateDyn) -> Result<Self> {
@@ -168,7 +192,11 @@ impl Application {
         let port = listener.local_addr()?.port();
 
         let server = run(listener, state).await?;
-        Ok(Self { port, server })
+        Ok(Self {
+            port,
+            server,
+            founder_worker: None,
+        })
     }
 
     pub fn port(&self) -> u16 {
@@ -178,7 +206,12 @@ impl Application {
     /// Serves until SIGTERM/SIGINT, then stops accepting connections and lets in-flight
     /// requests finish.
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
-        self.server.with_graceful_shutdown(shutdown_signal()).await
+        let result = self.server.with_graceful_shutdown(shutdown_signal()).await;
+        if let Some(worker) = self.founder_worker {
+            worker.abort();
+            let _ = worker.await;
+        }
+        result
     }
 }
 

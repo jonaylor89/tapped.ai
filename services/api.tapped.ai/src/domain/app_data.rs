@@ -2,7 +2,7 @@
 //! Public responses are separately projected; authentication never grants access to another user's
 //! private profile, pending bookings, activities, credentials or interest comments.
 use crate::{
-    domain::{firebase_auth::FirebaseUser, public_docs::public_user},
+    domain::{firebase_auth::FirebaseUser, founder_notifications, public_docs::public_user},
     errors::AppError,
     state::AppStateDyn,
 };
@@ -872,6 +872,11 @@ async fn save(
         sqlx::query("UPDATE users SET profile=jsonb_set(profile,ARRAY[$2],(CASE WHEN jsonb_typeof(profile->$2)='object' THEN profile->$2 ELSE '{}'::jsonb END) || jsonb_build_object('reviewCount',(SELECT count(*) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3),'rating',(SELECT avg(overall_rating) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3))) WHERE id=$1")
             .bind(uid).bind(section).bind(text(&doc,"type")).execute(&mut *tx).await.map_err(db_error)?;
     }
+    if create {
+        founder_notifications::record_created(&mut tx, table, &doc, &user.uid)
+            .await
+            .map_err(db_error)?;
+    }
     tx.commit().await.map_err(db_error)?;
     Ok(Json(json!({"id":id})))
 }
@@ -1023,8 +1028,18 @@ pub async fn set_interest(
             if comment.len() > 4000 {
                 return Err(AppError::bad_request("comment too long"));
             }
-            sqlx::query("INSERT INTO opportunity_interested_users(opportunity_id,user_id,profile) VALUES($1,$2,$3) ON CONFLICT(opportunity_id,user_id) DO UPDATE SET profile=EXCLUDED.profile")
-             .bind(&id).bind(&user.uid).bind(json!({"userComment":comment,"timestamp":chrono::Utc::now().to_rfc3339()})).execute(&mut *tx).await.map_err(db_error)?;
+            let profile =
+                json!({"userComment":comment,"timestamp":chrono::Utc::now().to_rfc3339()});
+            let inserted: Option<i32> = sqlx::query_scalar("INSERT INTO opportunity_interested_users(opportunity_id,user_id,profile) VALUES($1,$2,$3) ON CONFLICT(opportunity_id,user_id) DO NOTHING RETURNING 1")
+                .bind(&id).bind(&user.uid).bind(&profile).fetch_optional(&mut *tx).await.map_err(db_error)?;
+            if inserted.is_some() {
+                founder_notifications::record_application(&mut tx, &id, &user.uid, comment)
+                    .await
+                    .map_err(db_error)?;
+            } else {
+                sqlx::query("UPDATE opportunity_interested_users SET profile=$3 WHERE opportunity_id=$1 AND user_id=$2")
+                    .bind(&id).bind(&user.uid).bind(profile).execute(&mut *tx).await.map_err(db_error)?;
+            }
         }
         "dislike" => {
             sqlx::query("INSERT INTO opportunity_dismissals(opportunity_id,user_id) VALUES($1,$2) ON CONFLICT DO NOTHING").bind(&id).bind(&user.uid).execute(&mut *tx).await.map_err(db_error)?;

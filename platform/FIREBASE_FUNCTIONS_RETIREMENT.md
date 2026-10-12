@@ -1,0 +1,113 @@
+# Target: zero Firebase Functions
+
+The goal is to delete **all custom and extension-managed Firebase Functions**, in every region/generation, without losing required behavior. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
+
+The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. No functions have been deleted in this implementation.
+
+## Founder bookings, applications and onboarding — implemented locally
+
+- Migration `20261016000000_founder_notification_outbox.sql` and `src/domain/founder_notifications.rs` add a private Postgres outbox.
+- New profile creation, new booking creation and first opportunity application enqueue inside the **same business transaction**. Imports/updates/repeated applications do not replay old events.
+- Legacy filters remain: skip unclaimed/deleted onboarding; skip scraper/crawler bookings and ordinary manually added history; retain missing-requester/location founder alerts. Initial application comments are captured once.
+- The worker runs inside the production Rust API when `SLACK_WEBHOOK_URL` is configured. Missing configuration retains events for later delivery; it never silently discards them.
+- Atomic leases, recovery after worker crashes, bounded backoff and Slack Retry-After handling protect delivery. API retries/concurrent applications generate one event.
+- Delivery is **at-least-once**, not exactly-once: Slack incoming webhooks have no cross-database/idempotency contract. A crash or lost response after Slack acceptance can repeat a message.
+- The queue is not exposed through public/private collection APIs. Logs contain no message bodies or webhook credentials.
+- Validation: library tests, full API tests with a real isolated PostGIS DB, rollback/lease/retry/concurrency tests, and one explicitly labelled real Slack smoke message accepted by the existing webhook.
+- The existing Slack secret was staged privately in production `.env` with a root-only backup; no services were restarted. Compose passes it into Rust on the next rollout.
+- **Code is not pushed/deployed yet.** Do not delete `notifyFoundersOnBookings`, `notifyFoundersOnOpportunityInterest` or `notifyFoundersOnUserOnboarded` until live API-created actions reach Slack and queue delivery is verified.
+
+Queue operations (run only through a trusted administrative DB connection; do not publish payloads):
+
+```sql
+SELECT event_type, count(*), min(created_at), max(attempts)
+FROM founder_notification_outbox WHERE delivered_at IS NULL GROUP BY event_type;
+SELECT count(*) FROM founder_notification_outbox WHERE locked_until < now() AND delivered_at IS NULL;
+```
+
+Delivered event keys are retained for deduplication. Payloads contain internal founder-notification data; include this table in private Postgres backups/retention policy, never client serving.
+
+## Required remaining work
+
+1. Deploy/verify the founder outbox above.
+2. Replace Auth side effects with a reliable account-lifecycle source that handles signup/deletion, including admin/provider-created accounts. Bootstrap/baseline existing identities to avoid replaying welcomes or Mailchimp subscriptions. Firebase login/verification must remain intact.
+3. Verify/implement push delivery and booking email/reminder behavior. Token registration and stored activities are **not** proof of remote push or email delivery.
+4. Finish Stream profile/user/token lifecycle and direct Stream/Postmark provider routing. Postmark's unchanged inbound URL/plan is a real removal dependency, not a reason to keep a Function indefinitely; change the provider configuration/plan or choose a supported alternative before deleting its proxy.
+5. Resolve billing/entitlement/webhook behavior and missing-source custom functions. Retire genuinely obsolete features explicitly; do not infer that an active subscription/webhook is unused from source grep.
+6. Retire extensions deliberately, including their Pub/Sub/Eventarc/scheduler resources, while preserving source documents and billing/analytics data.
+7. Delete bounded batches only after their gates below pass; refresh the all-regions Gen1/Gen2 inventory after each batch. Remove the standalone Firebase backend package/CI once no deployment source is needed.
+
+No blanket delete/uninstall command is supplied: some extension uninstall/cleanup paths can affect data, and the inventory alone does not establish safety.
+
+## Every remaining function has a removal gate
+
+| Function | Replacement / deletion gate |
+| --- | --- |
+| `addUserToMailchimpOnCreated` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `createConnectedAccount` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `createPaymentIntent` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `createStreamUserOnUserCreated` | Replace/verify Stream profile synchronization from authoritative API profile changes, without Firestore |
+| `deleteStreamUser` | Rust token endpoint exists; verify/replace Stream user provisioning, deletion and token revocation before removing Auth hooks/extension |
+| `ext-auth-chat-createStreamUser` | Rust token endpoint exists; verify/replace Stream user provisioning, deletion and token revocation before removing Auth hooks/extension |
+| `ext-auth-chat-deleteStreamUser` | Rust token endpoint exists; verify/replace Stream user provisioning, deletion and token revocation before removing Auth hooks/extension |
+| `ext-auth-chat-getStreamUserToken` | Rust token endpoint exists; verify/replace Stream user provisioning, deletion and token revocation before removing Auth hooks/extension |
+| `ext-auth-chat-revokeStreamUserToken` | Rust token endpoint exists; verify/replace Stream user provisioning, deletion and token revocation before removing Auth hooks/extension |
+| `ext-firestore-bigquery-export-73n7-fsexportbigquery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-73n7-fsimportexistingdocs` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-73n7-initBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-73n7-setupBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-73n7-syncBigQuery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-d85k-fsexportbigquery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-d85k-fsimportexistingdocs` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-d85k-initBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-d85k-setupBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-d85k-syncBigQuery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-fsexportbigquery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-fsimportexistingdocs` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-initBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-setupBigQuerySync` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-bigquery-export-syncBigQuery` | Retire Firestore analytics export extension after deciding Postgres analytics replacement/retention; do not delete datasets blindly |
+| `ext-firestore-schedule-writes-deliverWrites` | Keep scheduler paused; preserve/replace any required booking reminders/expiry jobs before extension retirement |
+| `ext-firestore-send-email-processQueue` | Verify all email producers moved to Rust mail worker; reconcile pending legacy mail without duplicate delivery |
+| `ext-firestore-stripe-payments-createCheckoutSession` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `ext-firestore-stripe-payments-createCustomer` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `ext-firestore-stripe-payments-createPortalLink` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `ext-firestore-stripe-payments-handleWebhookEvents` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `ext-firestore-stripe-payments-onCustomerDataDeleted` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `ext-firestore-stripe-payments-onUserDeleted` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `getAccountById` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `getArtistBySpotifyId` | Rust Spotify lookup routes exist; verify live callers then delete legacy callable |
+| `getTopTracksByArtistId` | Rust Spotify lookup routes exist; verify live callers then delete legacy callable |
+| `inboundEmailWebhook` | Switch Postmark inbound provider URL/authentication to Rust and verify real replies; old URL currently requires compatibility proxy |
+| `notifyFoundersOnAppRemoved` | Legacy analytics removal signal; Android retired/native Firebase Analytics unused, confirm intentional retirement |
+| `notifyFoundersOnBookings` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnEmail` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
+| `notifyFoundersOnOpportunityInterest` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnOrphanEmail` | Rust records orphan mail, but founder orphan alert/forwarding needs an explicit replacement |
+| `notifyFoundersOnSignUp` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `notifyFoundersOnUserDelete` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `notifyFoundersOnUserFeedbackSubmitted` | Recover missing handler behavior or replace founder feedback delivery via the supported feedback/support channel |
+| `notifyFoundersOnUserOnboarded` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnVenueContact` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
+| `notifyVenueOfInterestedOpportunities` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
+| `sendBookingRequestReceivedEmailOnBooking` | Preserve booking-request email recipients/templates/filters with durable Rust delivery before retiring |
+| `sendBookingRequestSentEmailOnBooking` | Preserve booking-request email recipients/templates/filters with durable Rust delivery before retiring |
+| `sendEmailOnSubscriptionExpiration` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `sendEmailOnSubscriptionPurchase` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
+| `sendToDevice` | Verify/implement Rust FCM/APNs delivery from authoritative events; API token registration alone is not push delivery |
+| `sendWelcomeEmailOnUserCreated` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `setLatestContactRequest` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
+| `spotifyAuthorizeCodeGrant` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
+| `spotifyRedirect` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
+| `spotifyRefreshToken` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
+| `streamBeforeMessageWebhook` | Point Stream provider callback directly to Rust and verify signatures, chat/venue-email side effects |
+| `transformLocationPayloadForSearch` | Postgres search replaces legacy indexing; verify no remaining external indexing webhook caller then retire |
+| `updateStreamUserOnUserUpdate` | Replace/verify Stream profile synchronization from authoritative API profile changes, without Firestore |
+
+## Completion criteria
+
+- All required business effects execute through Rust/explicitly supported non-Function infrastructure; live end-to-end tests pass.
+- Provider callback URLs and supported clients no longer depend on Cloud Functions endpoints.
+- Google Cloud lists **zero Gen1 and zero Gen2 Firebase Functions across all regions**, including extension-generated functions; no managed extension can recreate them.
+- No orphan trigger/scheduler continues invoking removed handlers or mutating migrated data.
+- Firebase Auth/email verification still work; source Firestore archives/documents remain protected.

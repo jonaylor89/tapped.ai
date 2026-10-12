@@ -6,6 +6,7 @@ This is a read-only inventory, not a deployment or retirement operation. `ACTIVE
 
 ## Findings
 
+- **Target is zero Firebase Functions, including extensions—not retaining Auth/compatibility handlers permanently.** See [the full retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md). Founder booking/application/onboarding alerts are required business behavior, not obsolete triggers: Rust outbox replacements are implemented/tested locally but must be deployed and verified before deletion. Other notification/Auth effects must also be accounted for.
 - Backend source and Firebase project/deployment configuration are independent of the retired mobile directory.
 - The entrypoint explicitly exports only the 12 allowlisted Auth side effects and HTTP compatibility endpoints. Legacy Firestore modules are preserved for reference, **not exported or approved for deployment**. Previously deleted triggers (including `onUserDeleted`, default-service and review-counter writers) cannot be recreated by the supported deployment command.
 - Both webhook compatibility handlers delegate to Rust; the Stream proxy forwards the original bytes/signature instead of accessing Firestore. These local changes have **not been deployed**.

@@ -899,7 +899,12 @@ pub async fn notify_slack(webhook_url: Option<&str>, title: &str, body: &str) {
         .await
         .and_then(reqwest::Response::error_for_status)
     {
-        tracing::warn!(?error, "failed to send mail Slack notification");
+        // reqwest errors can contain the webhook URL/credential. Log metadata only.
+        tracing::warn!(
+            timeout = error.is_timeout(),
+            status = error.status().map(|status| status.as_u16()),
+            "failed to send mail Slack notification"
+        );
     }
 }
 

@@ -237,6 +237,15 @@ before interaction, rather than minimizing reads by waiting for a sheet to open.
   Production browser/image behavior must still be checked after the web run. Firebase Auth,
   deny-all Firestore rules and separate identity/macOS/verified-email decisions are unchanged.
 
+## Firebase Functions retirement
+
+Target: zero custom and extension-managed Functions while retaining Firebase Auth/email verification.
+The founder booking/application/onboarding notification gap is addressed by a local transactional
+Postgres outbox and retrying Rust worker; code rollout and live API-action validation are pending.
+A labelled real Slack smoke test passed, and production Slack configuration is staged privately.
+No functions or source Firestore data were deleted. Remaining Auth, email/push, provider, billing
+and extension dependencies are tracked in [FIREBASE_FUNCTIONS_RETIREMENT.md](FIREBASE_FUNCTIONS_RETIREMENT.md).
+
 ## Native distribution
 
 A simulator build is not an App Store release. Archive/sign/upload the native app and release it
