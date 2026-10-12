@@ -144,7 +144,7 @@ public final class StreamChatRepository: ChatRepository {
 
     public func createDirectConversation(with userId: String) async throws -> String {
         guard client.currentUserId != nil else { throw ChatError.notConnected }
-        let chat = try client.makeDirectMessageChat(with: [userId], extraData: [:])
+        let chat = try client.makeDirectMessageChat(with: [userId], messageOrdering: .bottomToTop, extraData: [:])
         try await chat.get(watch: true)
         guard let id = chat.state.cid?.rawValue else { throw ChatError.invalidConversationId }
         chats[id] = chat
@@ -177,7 +177,8 @@ public final class StreamChatRepository: ChatRepository {
         if let chat = chats[conversationId] { return chat }
         guard client.currentUserId != nil else { throw ChatError.notConnected }
         guard let cid = try? ChannelId(cid: conversationId) else { throw ChatError.invalidConversationId }
-        let chat = client.makeChat(for: cid)
+        // ChannelView lists oldest → newest; the SDK default (`.topToBottom`) is newest-first.
+        let chat = client.makeChat(for: cid, messageOrdering: .bottomToTop)
         chats[conversationId] = chat
         return chat
     }
