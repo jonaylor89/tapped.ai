@@ -803,7 +803,9 @@ impl StreamHttpGateway {
             client: crate::http::client(),
             api_key,
             server_token,
-            base_url: "https://chat.stream-io-api.com".into(),
+            // Local stacks point this at a stub.
+            base_url: std::env::var("STREAM_BASE_URL")
+                .unwrap_or_else(|_| "https://chat.stream-io-api.com".into()),
         })
     }
 }
