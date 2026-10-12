@@ -27,13 +27,13 @@ SELECT count(*) FROM founder_notification_outbox WHERE locked_until < now() AND 
 
 Delivered event keys are retained for deduplication. Payloads contain internal founder-notification data; include this table in private Postgres backups/retention policy, never client serving.
 
-## Second implementation (rollout pending)
+## Identity/provider rollout (deployed; retirement gates remain)
 
 Deployed at `4e0e2307377b` (Deploy API `38308109118`; Rust/Node/functions CI passed; 64 library + 78 real-PostGIS API tests). Rust now has a separate identity/provider worker, private generic outbox, Auth lifecycle ledger,
 per-device FCM jobs, booking email jobs, Stream profile/delete synchronization and stable-ID
 founder welcome DMs. It baselines existing Firebase Auth accounts without replaying old welcomes,
 confirms apparent deletions with an individual Auth lookup, and never reads/writes Firestore.
-The production baseline completed with **119,548 Auth identities**, without replaying old accounts. Auth effects stay held until lifecycle cutover and delivery verification complete. Email templates were read once from the
+The production baseline completed with **119,548 Auth identities**, without replaying old accounts. A real synthetic Auth signup was captured once while held, then its enabled provider effects completed; deletion was independently confirmed and Stream cleanup completed. The fixture was removed. **Auth effects were returned to held mode** because legacy Auth hooks remain: identity capture continues, and new lifecycle deliveries remain durable in the queue rather than running concurrently with legacy hooks. Email templates were read once from the
 legacy template collection, preserved privately for Postgres provisioning, without changing source.
 An isolated principal with only `firebaseauth.users.get` and `cloudmessaging.messages.create` was
 provisioned; live checks confirmed Auth reads work and Firestore access is denied (403). Its private
@@ -46,6 +46,17 @@ not a plain-text status. Attachment-only messages and claimed-user DM email pref
 Inbound processing. To add inbound, upgrade to the next tier." No plan upgrade was made; the existing
 provider URL remains unchanged. Zero Functions requires an approved upgrade or alternative provider.
 The old inbound URL must remain a compatibility proxy in the meantime. That named Function was selectively updated to the Rust-only bridge, and its unchanged public URL was verified to persist in the Rust mail store. The plan itself was not upgraded.
+
+## Latest production checks and concrete blockers
+
+- API and optional identity worker run `eb577af2bc74` (Deploy API `38311045804` succeeded); readiness checks are healthy. `5ceddc6055cc` also deployed successfully through `38310078030`.
+- Labelled founder mail: provider job → SQLite durable mail handoff → Postmark accepted, final mail state `sent`; synthetic fixture removed.
+- Founder FCM probe: provider identified an expired registration as `UNREGISTERED`; Rust removed that invalid token. **No current-device delivery proven**; obtain a fresh test token before retiring `sendToDevice`.
+- Mailchimp live read probes returned **403 `User Disabled`**, with the configured data center matching the existing key. No customer subscriptions were altered. Account reactivation/provider decision is needed; do not claim successful Mailchimp delivery.
+- Rust orphan handling now durably forwards to the founder and queues a Slack alert, instead of just storing the orphan. Stable keys prevent retry-created duplicate jobs. Local mail tests passed; positive live orphan forwarding/Slack retirement verification remains.
+- Authenticated `POST /app/v1/feedback` accepts `{id: UUID, text: string}`; server owns sender identity, escapes Slack mentions, rejects invalid text and deduplicates per sender/id. Private queue only; local real-PostGIS test passed. Live feedback retirement check remains.
+- Remaining billing/entitlement, managed-extension and reminder retirement gates below are **not complete**. 56 Functions still exist; no blanket deletion is approved or executed.
+- Temporary isolated PostGIS container and tunnel were removed. Original Firestore data is unchanged.
 
 ## Required remaining work
 
