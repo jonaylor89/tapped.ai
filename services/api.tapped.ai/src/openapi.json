@@ -213,6 +213,19 @@
           },
           {
             "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "type": [
@@ -426,6 +439,19 @@
             "in": "query",
             "name": "after",
             "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
               "type": [
                 "string",
                 "null"
@@ -1072,6 +1098,82 @@
         ]
       }
     },
+    "/app/v1/public/map": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Map venues, referenced public performers and genre summary in one query",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "neLat",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "neLng",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "swLat",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "swLng",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            },
+            "style": "form"
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapBundle"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/app/v1/public/search/{table}": {
       "post": {
         "tags": [
@@ -1145,6 +1247,19 @@
             "in": "query",
             "name": "after",
             "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
               "type": [
                 "string",
                 "null"
@@ -1317,6 +1432,19 @@
           },
           {
             "in": "query",
+            "name": "ids",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "schema": {
+              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "style": "form"
+          },
+          {
+            "in": "query",
             "name": "limit",
             "schema": {
               "type": [
@@ -1436,6 +1564,40 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/app/v1/public/users/{id}/details": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Fresh public profile, confirmed history, count and latest review",
+        "responses": {
+          "default": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileDetails"
+                }
               }
             }
           }
@@ -2452,6 +2614,13 @@
               "null"
             ]
           },
+          "ids": {
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "limit": {
             "type": [
               "integer",
@@ -2558,6 +2727,69 @@
             }
           }
         }
+      },
+      "MapBundle": {
+        "type": "object",
+        "required": [
+          "genres",
+          "performers",
+          "performersTruncated",
+          "venues",
+          "venuesTruncated"
+        ],
+        "properties": {
+          "genres": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "uint",
+              "minimum": 0.0
+            }
+          },
+          "performers": {
+            "type": "array",
+            "items": true
+          },
+          "performersTruncated": {
+            "type": "boolean"
+          },
+          "venues": {
+            "type": "array",
+            "items": true
+          },
+          "venuesTruncated": {
+            "description": "A capped result cannot safely answer smaller viewports by client-side filtering.",
+            "type": "boolean"
+          }
+        }
+      },
+      "MapParams": {
+        "type": "object",
+        "required": [
+          "neLat",
+          "neLng",
+          "swLat",
+          "swLng"
+        ],
+        "properties": {
+          "neLat": {
+            "type": "number",
+            "format": "double"
+          },
+          "neLng": {
+            "type": "number",
+            "format": "double"
+          },
+          "swLat": {
+            "type": "number",
+            "format": "double"
+          },
+          "swLng": {
+            "type": "number",
+            "format": "double"
+          }
+        },
+        "additionalProperties": false
       },
       "NotifyVenueOfInterestedOpportunities": {
         "type": "object",
@@ -2764,6 +2996,31 @@
               "null"
             ]
           }
+        }
+      },
+      "ProfileDetails": {
+        "type": "object",
+        "required": [
+          "bookingCount",
+          "bookings",
+          "relatedUsers",
+          "user"
+        ],
+        "properties": {
+          "bookingCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "bookings": {
+            "type": "array",
+            "items": true
+          },
+          "latestReview": true,
+          "relatedUsers": {
+            "type": "array",
+            "items": true
+          },
+          "user": true
         }
       },
       "Readiness": {

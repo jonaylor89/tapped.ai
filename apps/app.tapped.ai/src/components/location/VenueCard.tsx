@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
+import QueuedImage from "@/components/QueuedImage";
 import { profileImage, type UserModel } from "@/domain/types/user_model";
+import { useProfileIntent } from "@/hooks/use-profile-intent";
 
 export default function VenueCard({ venue }: { venue: UserModel }) {
 	const pathname = usePathname();
@@ -20,16 +21,15 @@ export default function VenueCard({ venue }: { venue: UserModel }) {
 	);
 
 	const pfp = profileImage(venue);
+	const intent = useProfileIntent(venue.id);
 	return (
-		<Link href={`${pathname}?${createQueryString("username", venue.username)}`}>
+		<Link {...intent} href={`${pathname}?${createQueryString("username", venue.username)}`}>
 			<div className="group flex flex-col items-start rounded-lg">
 				<div className="relative aspect-square h-32 w-32 overflow-hidden rounded-lg bg-card">
-					<Image
-						className="aspect-square rounded-lg transition-all duration-150 ease-in-out group-hover:scale-105"
+					<QueuedImage
+						className="aspect-square rounded-lg object-cover transition-all duration-150 ease-in-out group-hover:scale-105"
 						src={pfp}
 						alt={venue.artistName ?? venue.username}
-						style={{ objectFit: "cover" }}
-						fill
 						sizes="128px"
 					/>
 				</div>

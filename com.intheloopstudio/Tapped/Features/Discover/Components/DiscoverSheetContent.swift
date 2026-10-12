@@ -20,10 +20,6 @@ struct DiscoverSheetContent: View {
 
     private var bodyOpacity: CGFloat { min(max(model.sheetProgress / 0.1, 0), 1) }
 
-    private var requestCountLabel: String {
-        "\(pendingRequests) \(pendingRequests == 1 ? "request" : "requests")"
-    }
-
     var body: some View {
         List {
             if model.isPerformerFirst, isAccessibilitySize {
@@ -95,18 +91,11 @@ struct DiscoverSheetContent: View {
         VStack(alignment: .leading, spacing: TappedSpacing.xs) {
             if pendingRequests > 0 {
                 Button(action: openBookings) {
-                    Label {
-                        Text("\(requestCountLabel)\(isAccessibilitySize ? "" : " waiting") ›")
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "tray.full.fill")
-                    }
+                    Label("\(pendingRequests) \(pendingRequests == 1 ? "request" : "requests") waiting ›", systemImage: "tray.full.fill")
                         .font(TappedTypography.label.weight(.semibold))
                         .foregroundStyle(TappedColors.accent)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("\(requestCountLabel) waiting")
                 .padding(.bottom, TappedSpacing.xs)
             }
             HStack(alignment: .firstTextBaseline) {
@@ -114,9 +103,7 @@ struct DiscoverSheetContent: View {
                     Button {
                         if model.opportunityHits.isEmpty { expand() } else { router.push(.opportunities(model.opportunityHits)) }
                     } label: {
-                        Text(gigsLine)
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                        Text(gigsLine).multilineTextAlignment(.leading)
                     }
                     .buttonStyle(.plain)
                 } else {

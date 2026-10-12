@@ -1,10 +1,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Sheet as BSheet } from "react-modal-sheet";
 import { styled } from "styled-components";
-import { getUserByUsername } from "@/data/database";
-import type { UserModel } from "@/domain/types/user_model";
-import ProfileView from "./ProfileView";
+import { usePublicProfile } from "@/hooks/use-public-profile";
+import { LoadingSpinner } from "./LoadingSpinner";
+import ProfileHeader from "./profile/ProfileHeader";
 
 const UserSheet = styled(BSheet)`
   .react-modal-sheet-container {
@@ -27,22 +26,11 @@ export default function UserBottomSheet() {
 	const username = searchParams.get("username");
 	const isOpen = username !== null;
 
-	const [selectedUser, setSelectedUser] = useState<UserModel | null>(null);
-	useEffect(() => {
-		if (username === null) {
-			return;
-		}
-		const fetchUser = async () => {
-			const user = await getUserByUsername(username);
-			setSelectedUser(user ?? null);
-		};
-		fetchUser();
-	}, [username]);
-
+	const { user: selectedUser, loading, failed } = usePublicProfile(username);
 	const onClose = () => {
-		setSelectedUser(null);
-		const newPathname = pathname.replace(`?username=${username}`, "");
-		router.push(newPathname);
+		const params = new URLSearchParams(searchParams.toString());
+		params.delete("username");
+		router.push(`${pathname}${params.size ? `?${params}` : ""}`);
 	};
 
 	return (
@@ -51,7 +39,13 @@ export default function UserBottomSheet() {
 				<BSheet.Header />
 				<BSheet.Content>
 					<BSheet.Scroller>
-						{selectedUser === null ? null : <ProfileView username={selectedUser.username} />}
+						{selectedUser ? (
+							<ProfileHeader key={selectedUser.id} user={selectedUser} full />
+						) : loading ? (
+							<LoadingSpinner />
+						) : (
+							<p>{failed ? "Profile could not be refreshed." : "Profile unavailable."}</p>
+						)}
 					</BSheet.Scroller>
 				</BSheet.Content>
 			</BSheet.Container>

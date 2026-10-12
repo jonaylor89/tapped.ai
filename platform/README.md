@@ -44,6 +44,18 @@ docker compose logs -f cloudflared # Cloudflare Tunnel only
 cd /opt/tapped && docker compose restart
 ```
 
+### Deploy the web app through GitHub Actions
+
+Run **Actions → Deploy Web → Run workflow** on `main` after Node.js CI succeeds. The workflow
+checks API readiness/map support, uploads the exact checked-out revision with Vercel CLI 63.1.2,
+and verifies `https://app.tapped.ai/api/version` reports that commit. No application data is exposed
+by this no-store version route. The deployment token is never passed into the application.
+
+`Production` must have a `VERCEL_TOKEN_APP` secret, preferably project-scoped to `app-tapped-ai`.
+For the initial rollout a short-lived CLI access token is used temporarily and removed after
+verification; no refresh credential is transferred. Provision a project-scoped token for future runs.
+Vercel's existing Git link currently fails branch lookup, so this is manual rather than automatic.
+
 ### Deploy a new API version
 
 `.github/workflows/deploy-api.yml` automatically deploys successful `main` builds of the Rust workflow. It builds one immutable Docker image tagged with the commit SHA and deploys that same image to both `api` and `mail-worker`.

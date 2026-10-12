@@ -58,7 +58,8 @@ export default function SearchDialog() {
 					<CommandItem
 						key={hit.id}
 						onSelect={() => {
-							router.push(`${pathname}?username=${hit.username}`);
+							searchBar?.setIsOpen(false);
+							router.push(`${pathname}?username=${encodeURIComponent(hit.username)}`);
 						}}
 					>
 						{/* <Avatar className="h-4 w-4">
@@ -80,7 +81,7 @@ export default function SearchDialog() {
 				))}
 			</CommandGroup>
 		);
-	}, [performerData, pathname, router, showPerformers]);
+	}, [performerData, pathname, router, showPerformers, searchBar]);
 
 	const venueResultsList = useMemo(() => {
 		if (venueData.length === 0 || !showVenues) {
@@ -93,7 +94,8 @@ export default function SearchDialog() {
 					<CommandItem
 						key={hit.id}
 						onSelect={() => {
-							router.push(`${pathname}?username=${hit.username}`);
+							searchBar?.setIsOpen(false);
+							router.push(`${pathname}?username=${encodeURIComponent(hit.username)}`);
 						}}
 					>
 						{/* <Avatar>
@@ -115,7 +117,7 @@ export default function SearchDialog() {
 				))}
 			</CommandGroup>
 		);
-	}, [venueData, pathname, router, showVenues]);
+	}, [venueData, pathname, router, showVenues, searchBar]);
 
 	const PlacesResultsList = useMemo(() => {
 		if (!placesData || placesData.length === 0 || !showCities) {
@@ -128,7 +130,7 @@ export default function SearchDialog() {
 					<CommandItem
 						key={hit.placeId}
 						onSelect={() => {
-							searchBar?.setIsOpen();
+							searchBar?.setIsOpen(false);
 							router.push(`/location/${hit.placeId}`);
 						}}
 					>
@@ -141,7 +143,17 @@ export default function SearchDialog() {
 	}, [placesData, router, searchBar, showCities]);
 
 	return (
-		<CommandDialog open={searchBar?.isOpen ?? false} onOpenChange={searchBar?.setIsOpen}>
+		<CommandDialog
+			open={searchBar?.isOpen ?? false}
+			onOpenChange={searchBar?.setIsOpen}
+			onCloseAutoFocus={(event) => {
+				event.preventDefault();
+				// A result may have opened the profile sheet. Never pull focus out of that modal.
+				if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+				const opener = searchBar?.returnFocusTo;
+				if (opener?.isConnected && !opener.closest('[aria-hidden="true"]')) opener.focus();
+			}}
+		>
 			<CommandInput placeholder="search tapped..." onValueChange={(value) => setQuery(value)} />
 			<CommandList>
 				<div className="flex w-full flex-row justify-start gap-4 px-2 py-2">

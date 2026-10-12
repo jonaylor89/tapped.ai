@@ -1,22 +1,24 @@
 import { create } from "zustand";
-import { createJSONStorage, persist } from "zustand/middleware";
 
 interface useSearchToggleStore {
 	isOpen: boolean;
-	setIsOpen: () => void;
+	returnFocusTo: HTMLElement | null;
+	setIsOpen: (open?: boolean) => void;
 }
 
-export const useSearchToggle = create(
-	persist<useSearchToggleStore>(
-		(set, get) => ({
-			isOpen: false,
-			setIsOpen: () => {
-				set({ isOpen: !get().isOpen });
-			},
+// Transient UI state: reopening a browser should not resurrect a modal from localStorage.
+export const useSearchToggle = create<useSearchToggleStore>((set) => ({
+	isOpen: false,
+	returnFocusTo: null,
+	setIsOpen: (open) =>
+		set((state) => {
+			const isOpen = open ?? !state.isOpen;
+			return {
+				isOpen,
+				returnFocusTo:
+					isOpen && !state.isOpen && typeof document !== "undefined"
+						? (document.activeElement as HTMLElement)
+						: state.returnFocusTo,
+			};
 		}),
-		{
-			name: "searchOpen",
-			storage: createJSONStorage(() => localStorage),
-		}
-	)
-);
+}));

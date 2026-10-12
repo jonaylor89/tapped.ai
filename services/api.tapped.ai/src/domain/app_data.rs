@@ -211,7 +211,7 @@ fn same_field(key: &str, old: &Value, new: &Value) -> bool {
 fn participant(doc: &Value, uid: &str) -> bool {
     text(doc, "requesterId") == uid || text(doc, "requesteeId") == uid
 }
-fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<Value> {
+pub(crate) fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<Value> {
     match table {
         "users" => {
             if doc["deleted"] == true {
@@ -293,6 +293,8 @@ pub async fn get_private(
 #[serde(rename_all = "camelCase")]
 pub struct ListParams {
     pub user_id: Option<String>,
+    /// Explicit profile IDs only, comma-separated, at most 50 (no enumeration).
+    pub ids: Option<String>,
     pub requester_id: Option<String>,
     pub requestee_id: Option<String>,
     pub reference_event_id: Option<String>,
@@ -303,6 +305,22 @@ pub struct ListParams {
     pub order: Option<String>,
     pub mode: Option<String>,
 }
+fn profile_ids(ids: Option<&str>) -> Result<Vec<String>, AppError> {
+    let ids = ids.ok_or_else(forbidden)?;
+    let values: Vec<&str> = ids.split(',').collect();
+    if values.len() > 50 {
+        return Err(AppError::bad_request("at most 50 profile IDs required"));
+    }
+    let mut unique = Vec::new();
+    for id in values {
+        safe_id(id)?;
+        if !unique.iter().any(|v| v == id) {
+            unique.push(id.to_owned());
+        }
+    }
+    Ok(unique)
+}
+
 async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>) -> ApiResult {
     fields(table)?;
     let limit = p.limit.unwrap_or(100);
@@ -313,8 +331,20 @@ async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>
         safe_id(id)?;
     }
     if table == "users" {
-        return Err(forbidden());
-    } // no bulk profile enumeration
+        let ids = profile_ids(p.ids.as_deref())?;
+        // Always the public allowlist, even for authenticated callers requesting their own ID.
+        let rows: Vec<Value> = sqlx::query_scalar("SELECT doc FROM api_users WHERE id = ANY($1)")
+            .bind(&ids)
+            .fetch_all(pool(state)?)
+            .await
+            .map_err(db_error)?;
+        return Ok(Json(Value::Array(
+            rows.into_iter().filter_map(public_user).collect(),
+        )));
+    }
+    if p.ids.is_some() {
+        return Err(AppError::bad_request("ids is only supported for users"));
+    }
     if table == "activities" && (uid.is_none() || p.user_id.as_deref() != uid) {
         return Err(forbidden());
     }
@@ -786,8 +816,35 @@ async fn save(
                 .map_err(db_error)?;
         }
     }
+    if table == "services" {
+        // Serialize service writes with owner deletion so an onboarding/retry write cannot
+        // create or resurrect an orphan after the deletion transaction has committed.
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
+            .bind(format!("users:{}", user.uid))
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        let owner_active: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT deleted)")
+                .bind(&user.uid)
+                .fetch_one(&mut *tx)
+                .await
+                .map_err(db_error)?;
+        if !owner_active {
+            return Err(forbidden());
+        }
+    }
     persist(&mut tx, table, mapping, &doc).await?;
-    if table == "users" && create {
+    if table == "users" && doc["deleted"] == true {
+        // The retired Firebase onUserDeleted trigger used to do this. Keep the profile and
+        // all services (default, custom and imported) unavailable atomically in Postgres.
+        sqlx::query("UPDATE services SET deleted=true WHERE user_id=$1")
+            .bind(id)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+    }
+    if table == "users" && create && doc["deleted"] != true {
         for title in ["30 min set", "45 min set", "60 min set"] {
             sqlx::query("INSERT INTO services(id,user_id,title,description,rate_type) VALUES($1,$2,$3,$3,'hourly')")
                 .bind(uuid::Uuid::new_v4().to_string()).bind(id).bind(title).execute(&mut *tx).await.map_err(db_error)?;
@@ -1029,6 +1086,19 @@ pub async fn register_token(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn explicit_profile_batches_are_bounded_and_validated() {
+        assert_eq!(profile_ids(Some("a,b,a")).unwrap(), vec!["a", "b"]);
+        assert_eq!(profile_ids(None).unwrap_err().status, StatusCode::FORBIDDEN);
+        for ids in ["", "a,", "../private", "a/b"] {
+            assert_eq!(
+                profile_ids(Some(ids)).unwrap_err().status,
+                StatusCode::BAD_REQUEST
+            );
+        }
+        assert!(profile_ids(Some(&vec!["a"; 50].join(","))).is_ok());
+        assert!(profile_ids(Some(&vec!["a"; 51].join(","))).is_err());
+    }
     #[test]
     fn public_profile_and_private_bookings_are_guarded() {
         assert!(visible("activities", json!({"toUserId":"someone"}), Some("other")).is_none());

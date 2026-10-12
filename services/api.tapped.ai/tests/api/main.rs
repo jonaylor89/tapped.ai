@@ -11,5 +11,7 @@ pub mod places;
 pub mod postgres_schema;
 mod postgres_serving;
 pub mod public_docs;
+mod public_map;
+mod public_profile;
 mod request_id;
 pub mod root;
