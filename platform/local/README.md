@@ -12,6 +12,9 @@ DATABASE_URL=postgres://tapped:tapped@localhost:5432/tapped_local platform/local
 platform/local/smoke.sh                           # emulator sign-in + API checks
 ```
 
+`seed.sh` needs a host `psql` (`brew install libpq` or `apt-get install postgresql-client`); without one, run
+`docker compose exec -T postgres psql -U tapped -d tapped_local < platform/local/seed.sql` once the API is ready.
+
 | Service | URL |
 | --- | --- |
 | API | http://localhost:8080 |

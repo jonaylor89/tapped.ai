@@ -4,7 +4,8 @@ name: tapped-local
 
 services:
   postgres:
-    image: postgis/postgis:17-3.5
+    # 17-3.5 is a rolling tag (no patch-level tags exist); the digest pins PostgreSQL 17.5 / PostGIS 3.5.
+    image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
     environment:
       POSTGRES_USER: tapped
       POSTGRES_PASSWORD: tapped
