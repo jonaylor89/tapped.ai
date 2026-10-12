@@ -49,6 +49,16 @@ services:
       timeout: 5s
       retries: 60
 
+  stub:
+    image: python:3.13.9-alpine
+    command: ["python", "/stub/stub.py"]
+    environment:
+      PORT: "8090"
+    volumes:
+      - ./platform/local/stub.py:/stub/stub.py:ro
+    ports:
+      - "8090:8090"
+
   api:
     build:
       context: ./services/api.tapped.ai
@@ -69,6 +79,10 @@ services:
       MAIL_INGRESS_SECRET: local-ingress-secret
       MAIL_API_SECRET: local-api-secret
       OPENAI_API_KEY: local-openai-key
+      OPENAI_CHAT_COMPLETIONS_URL: http://stub:8090/v1/chat/completions
+      GOOGLE_PLACES_API_KEY: local-places-key
+      GOOGLE_PLACES_BASE_URL: http://stub:8090/v1
+      GOOGLE_GEOCODE_URL: http://stub:8090/maps/api/geocode/json
       VENUE_CONTACT_FOUNDER_CC: ""
     volumes:
       - mail-data:/data

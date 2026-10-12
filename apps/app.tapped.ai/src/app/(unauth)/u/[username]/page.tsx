@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Footer from "@/components/Footer";
 import ProfileViewServer, { type ProfileData } from "@/components/profile/ProfileViewServer";
 import {
+	getBookingCount,
 	getBookingsByRequestee,
 	getBookingsByRequester,
 	getLatestPerformerReviewByPerformerId,
@@ -87,12 +88,14 @@ async function fetchProfileData(username: string): Promise<ProfileData | null> {
 		return null;
 	}
 
-	const [requesteeBookings, requesterBookings, latestReview, topPerformers] = await Promise.all([
-		getBookingsByRequestee(user.id, { limit: 5 }),
-		getBookingsByRequester(user.id, { limit: 5 }),
-		getLatestPerformerReviewByPerformerId(user.id),
-		fetchTopPerformers(user.venueInfo?.topPerformerIds ?? []),
-	]);
+	const [requesteeBookings, requesterBookings, latestReview, topPerformers, bookingCount] =
+		await Promise.all([
+			getBookingsByRequestee(user.id, { limit: 5 }),
+			getBookingsByRequester(user.id, { limit: 5 }),
+			getLatestPerformerReviewByPerformerId(user.id),
+			fetchTopPerformers(user.venueInfo?.topPerformerIds ?? []),
+			getBookingCount(user.id).catch(() => null),
+		]);
 
 	const bookings = [...requesteeBookings, ...requesterBookings].sort(
 		(a, b) => b.startTime.getTime() - a.startTime.getTime()
@@ -108,6 +111,7 @@ async function fetchProfileData(username: string): Promise<ProfileData | null> {
 		latestReview: latestReview ?? null,
 		topPerformers,
 		reviewer,
+		bookingCount,
 	};
 }
 

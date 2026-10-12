@@ -14,16 +14,17 @@ export type ProfileData = {
 	latestReview: Review | null;
 	topPerformers: UserModel[];
 	reviewer: UserModel | null;
+	bookingCount: number | null;
 };
 
 export default function ProfileViewServer({ data }: { data: ProfileData }) {
-	const { user, bookings, topPerformers, latestReview, reviewer } = data;
+	const { user, bookings, topPerformers, latestReview, reviewer, bookingCount } = data;
 
 	return (
 		<div className="md:relative md:flex md:justify-center">
 			<div className="md:w-[30vw] md:px-6">
 				<div className="md:sticky md:top-0">
-					<ProfileHeaderServer user={user} />
+					<ProfileHeaderServer user={user} bookingCount={bookingCount} />
 				</div>
 			</div>
 			<div className="lg:grow">

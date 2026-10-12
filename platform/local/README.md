@@ -66,6 +66,9 @@ Crashlytics, FCM and Google Sign-In. Release builds ignore all of these variable
 
 ## Not emulated
 
-- Stream Chat, Google Places, Spotify and OpenAI use placeholder keys, so chat, place lookups, Spotify
-  and AI email composition fail locally.
+- Google Places, Geocoding and OpenAI are served by `stub.py` on `:8090` (stdlib Python, a few fixed
+  Richmond places such as "The Bluebird", plus a canned email body). The API points at it with
+  `GOOGLE_PLACES_BASE_URL`, `GOOGLE_GEOCODE_URL` and `OPENAI_CHAT_COMPLETIONS_URL`. Running natively:
+  `python3 platform/local/stub.py`.
+- Stream Chat and Spotify use placeholder keys, so chat and Spotify linking fail locally.
 - Push notifications: use `xcrun simctl push` with a payload file.

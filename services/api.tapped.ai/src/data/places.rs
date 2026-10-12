@@ -138,6 +138,8 @@ impl Places for MockPlaces {
 pub struct GooglePlaces {
     client: reqwest::Client,
     api_key: String,
+    places_url: String,
+    geocode_url: String,
 }
 
 impl std::fmt::Debug for GooglePlaces {
@@ -147,10 +149,14 @@ impl std::fmt::Debug for GooglePlaces {
 }
 
 impl GooglePlaces {
+    /// `GOOGLE_PLACES_BASE_URL` / `GOOGLE_GEOCODE_URL` point at a stub for local stacks.
     pub fn new(api_key: String) -> Self {
+        let env = |key: &str, default: &str| std::env::var(key).unwrap_or_else(|_| default.into());
         Self {
             client: crate::http::client(),
             api_key,
+            places_url: env("GOOGLE_PLACES_BASE_URL", PLACES_BASE_URL),
+            geocode_url: env("GOOGLE_GEOCODE_URL", GEOCODE_URL),
         }
     }
 
@@ -181,7 +187,7 @@ impl Places for GooglePlaces {
         }
         let response: AutocompleteResponse = self
             .client
-            .post(format!("{PLACES_BASE_URL}/places:autocomplete"))
+            .post(format!("{}/places:autocomplete", self.places_url))
             .header("X-Goog-Api-Key", &self.api_key)
             .json(&body)
             .send()
@@ -216,7 +222,7 @@ impl Places for GooglePlaces {
         self.ensure_configured()?;
         let mut request = self
             .client
-            .get(format!("{PLACES_BASE_URL}/places/{place_id}"))
+            .get(format!("{}/places/{place_id}", self.places_url))
             .query(&[("languageCode", "en")])
             .header("X-Goog-Api-Key", &self.api_key)
             .header("X-Goog-FieldMask", PLACE_DETAILS_FIELD_MASK);
@@ -256,7 +262,7 @@ impl Places for GooglePlaces {
         self.ensure_configured()?;
         let response: PhotoMediaResponse = self
             .client
-            .get(format!("{PLACES_BASE_URL}/{photo_name}/media"))
+            .get(format!("{}/{photo_name}/media", self.places_url))
             .query(&[
                 ("maxHeightPx", max_height_px.to_string()),
                 ("skipHttpRedirect", "true".into()),
@@ -275,7 +281,7 @@ impl Places for GooglePlaces {
         self.ensure_configured()?;
         let response: GeocodeResponse = self
             .client
-            .get(GEOCODE_URL)
+            .get(&self.geocode_url)
             .query(&[
                 ("latlng", format!("{lat},{lng}")),
                 ("result_type", "locality".into()),

@@ -48,6 +48,8 @@ import DayOfWeekGraph from "./DayOrWeekGraph";
 import EmbededMap from "./EmbededMap";
 import ReviewTile from "./ReviewTile";
 
+const rating = (user: UserModel) => user.performerInfo?.rating ?? user.bookerInfo?.rating;
+
 const manrope = Manrope({
 	subsets: ["latin"],
 	weight: ["700", "800"],
@@ -194,9 +196,7 @@ export default function ProfileHeader({ user, full = false }: { user: UserModel;
 					</div>
 				)}
 				<div className="flex flex-col items-center justify-center">
-					<h3 className="font-bold text-2xl">
-						{user.performerInfo?.rating ? `${user.performerInfo?.rating}/5` : "N/A"}
-					</h3>
+					<h3 className="font-bold text-2xl">{rating(user) ? `${rating(user)}/5` : "N/A"}</h3>
 					<p className="text-gray-400 text-sm">rating</p>
 				</div>
 			</div>
