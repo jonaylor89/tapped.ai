@@ -89,7 +89,9 @@ impl OpenAiEmailComposer {
             client: crate::http::client_with_timeout(COMPLETION_TIMEOUT),
             api_key,
             model,
-            endpoint: "https://api.openai.com/v1/chat/completions".into(),
+            // Local stacks point this at a stub.
+            endpoint: std::env::var("OPENAI_CHAT_COMPLETIONS_URL")
+                .unwrap_or_else(|_| "https://api.openai.com/v1/chat/completions".into()),
         }
     }
 

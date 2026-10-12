@@ -195,6 +195,19 @@ async fn document_with_kind(
 fn text<'a>(doc: &'a Value, key: &str) -> &'a str {
     doc[key].as_str().unwrap_or("")
 }
+/// Clients re-encode stored timestamps (iOS sends `…00.123Z` for Postgres' `…00.123456+00:00`),
+/// so times are compared as instants to the millisecond.
+fn same_field(key: &str, old: &Value, new: &Value) -> bool {
+    let instant = |v: &Value| {
+        v.as_str()
+            .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+            .map(|t| t.timestamp_millis())
+    };
+    old == new
+        || matches!(key, "startTime" | "endTime")
+            && instant(old).is_some_and(|t| Some(t) == instant(new))
+}
+
 fn participant(doc: &Value, uid: &str) -> bool {
     text(doc, "requesterId") == uid || text(doc, "requesteeId") == uid
 }
@@ -577,7 +590,7 @@ fn writable(
                 if uid != text(old, "requesterId")
                     && ["rate", "startTime", "endTime", "note", "name", "location"]
                         .iter()
-                        .any(|k| old[*k] != doc[*k])
+                        .any(|k| !same_field(k, &old[*k], &doc[*k]))
                     && old["addedByUser"] != true
                 {
                     return Err(forbidden());
@@ -1105,6 +1118,22 @@ mod tests {
         .unwrap();
         assert!(b.get("note").is_none());
         assert!(b.get("rate").is_none());
+    }
+    #[test]
+    fn requestee_can_accept_with_re_encoded_times() {
+        let user = FirebaseUser {
+            uid: "b".into(),
+            email: None,
+        };
+        let old = json!({"requesterId":"a","requesteeId":"b","status":"pending",
+            "startTime":"2026-10-20T19:00:00.123456+00:00","endTime":"2026-10-20T20:00:00+00:00"});
+        let mut accepted = old.clone();
+        accepted["status"] = json!("confirmed");
+        accepted["startTime"] = json!("2026-10-20T19:00:00.123Z");
+        accepted["endTime"] = json!("2026-10-20T20:00:00.000Z");
+        assert!(writable("bookings", &accepted, Some(&old), &user).is_ok());
+        accepted["startTime"] = json!("2026-10-20T18:00:00.123Z");
+        assert!(writable("bookings", &accepted, Some(&old), &user).is_err());
     }
     #[test]
     fn prevents_ownership_and_privilege_changes() {

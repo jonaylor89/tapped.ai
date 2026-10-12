@@ -194,6 +194,10 @@ private enum GoogleSignInFlow {
         if GIDSignIn.sharedInstance.configuration == nil, let clientId = FirebaseApp.app()?.options.clientID {
             GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
         }
+        // The local-stack demo app has no OAuth client.
+        guard GIDSignIn.sharedInstance.configuration != nil else {
+            throw AuthError.underlying("Google sign in isn't available on the local stack")
+        }
         guard let presenter = UIApplication.shared.topViewController else { throw AuthError.noPresentingWindow }
         let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: presenter)
         guard let idToken = result.user.idToken?.tokenString else { throw AuthError.missingIdentityToken }

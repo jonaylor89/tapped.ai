@@ -1,0 +1,10 @@
+rules_version = '2';
+// Local emulator only: any signed-in emulator user may read and write.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read;
+      allow write: if request.auth != null;
+    }
+  }
+}

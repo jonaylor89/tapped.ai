@@ -82,6 +82,15 @@ impl Application {
             "Failed to bind to the port. Make sure you have the correct permissions to bind to the port",
         )?;
 
+        let firebase_auth_emulator = crate::domain::firebase_auth::auth_emulator_enabled(
+            &project_id,
+            std::env::var("FIREBASE_AUTH_EMULATOR_HOST").ok().as_deref(),
+        )
+        .map_err(|e| color_eyre::eyre::eyre!("{e:#}"))?;
+        if firebase_auth_emulator {
+            tracing::warn!("accepting unsigned Firebase Auth Emulator tokens for {project_id}");
+        }
+
         // A hard cutover: missing or unavailable Postgres fails boot, never selects Firestore.
         let database_url = std::env::var("DATABASE_URL").wrap_err("DATABASE_URL is required")?;
         let postgres = crate::data::postgres::connect(&database_url)
@@ -139,6 +148,7 @@ impl Application {
             database: Arc::new(PostgresDatabase::new(postgres.clone())),
             search: Arc::new(PostgresSearch::new(postgres.clone())),
             firebase_project_id: project_id,
+            firebase_auth_emulator,
             mail,
             response_cache: Default::default(),
             place_cache: Some(place_cache),

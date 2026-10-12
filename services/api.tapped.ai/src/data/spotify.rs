@@ -64,6 +64,8 @@ pub struct SpotifyHttp {
     client_id: String,
     client_secret: String,
     token: Mutex<Option<AppToken>>,
+    token_url: String,
+    api_url: String,
 }
 
 impl std::fmt::Debug for SpotifyHttp {
@@ -85,6 +87,9 @@ impl SpotifyHttp {
             client_id,
             client_secret,
             token: Mutex::new(None),
+            // Local stacks point these at a stub.
+            token_url: std::env::var("SPOTIFY_TOKEN_URL").unwrap_or_else(|_| TOKEN_URL.into()),
+            api_url: std::env::var("SPOTIFY_API_BASE_URL").unwrap_or_else(|_| API_BASE_URL.into()),
         }
     }
 
@@ -98,7 +103,7 @@ impl SpotifyHttp {
         }
         let response: TokenResponse = self
             .client
-            .post(TOKEN_URL)
+            .post(&self.token_url)
             .basic_auth(&self.client_id, Some(&self.client_secret))
             .form(&[("grant_type", "client_credentials")])
             .send()
@@ -120,7 +125,7 @@ impl SpotifyHttp {
         let access_token = self.access_token().await?;
         let response = self
             .client
-            .get(format!("{API_BASE_URL}{path}"))
+            .get(format!("{}{path}", self.api_url))
             .bearer_auth(access_token)
             .query(query)
             .send()

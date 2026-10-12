@@ -18,11 +18,14 @@ public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
     private var remoteConfig: RemoteConfig { RemoteConfig.remoteConfig() }
 
     public func activateCached() async -> Bool {
-        (try? await configured().activate()) ?? false
+        guard !FirebaseBootstrap.usesEmulators else { return false }
+        return (try? await configured().activate()) ?? false
     }
 
     public func fetchAndActivate() async throws -> Bool {
-        try await configured().fetchAndActivate() != .error
+        // Local-stack runs use the in-code defaults.
+        guard !FirebaseBootstrap.usesEmulators else { return false }
+        return try await configured().fetchAndActivate() != .error
     }
 
     private func configured() -> RemoteConfig {
@@ -41,23 +44,31 @@ public struct FirebaseRemoteConfigRepository: RemoteConfigRepository {
         return remoteConfig
     }
 
+    /// Local-stack runs read the in-code defaults, never config cached on the device from a production run.
+    private func value(_ key: String) -> RemoteConfigValue {
+        guard FirebaseBootstrap.usesEmulators, let local = configured().defaultValue(forKey: key) else {
+            return remoteConfig.configValue(forKey: key)
+        }
+        return local
+    }
+
     public func getDownForMaintenanceStatus() async -> Bool {
-        remoteConfig.configValue(forKey: Self.downForMaintenanceKey).boolValue
+        value(Self.downForMaintenanceKey).boolValue
     }
 
     public func getBookingFee() async -> Double {
-        remoteConfig.configValue(forKey: Self.bookingFeeKey).numberValue.doubleValue
+        value(Self.bookingFeeKey).numberValue.doubleValue
     }
 
     public func getMinimumAppVersion() async -> String {
-        remoteConfig.configValue(forKey: Self.minimumAppVersionKey).stringValue
+        value(Self.minimumAppVersionKey).stringValue
     }
 
     public func getLatestAppVersion() async -> String {
-        remoteConfig.configValue(forKey: Self.latestAppVersionKey).stringValue
+        value(Self.latestAppVersionKey).stringValue
     }
 
     public func getPremiumWaitlistEnabled() async -> Bool {
-        remoteConfig.configValue(forKey: Self.premiumWaitlistKey).boolValue
+        value(Self.premiumWaitlistKey).boolValue
     }
 }

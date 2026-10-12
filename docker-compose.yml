@@ -1,52 +1,123 @@
-version: "3.8"
+# Fully local stack for E2E tests: no production data, credentials or Firebase project.
+# See platform/local/README.md. Production runs from docker-compose.prod.yml.
+name: tapped-local
 
 services:
-  typesense:
-    image: typesense/typesense:29.0
-    restart: on-failure
+  postgres:
+    # 17-3.5 is a rolling tag (no patch-level tags exist); the digest pins PostgreSQL 17.5 / PostGIS 3.5.
+    image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+    environment:
+      POSTGRES_USER: tapped
+      POSTGRES_PASSWORD: tapped
+      POSTGRES_DB: tapped_local
     ports:
-      - "8108:8108"
+      - "5432:5432"
     volumes:
-      - typesense-data:/data
-    command: "--data-dir /data --api-key=devapikey123 --enable-cors"
-    environment:
-      - TYPESENSE_API_KEY=devapikey123
-      - TYPESENSE_DATA_DIR=/data
+      - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8108/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      test: ["CMD-SHELL", "pg_isready -U tapped -d tapped_local"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
 
-  # Optional: Typesense Dashboard for easy management
-  typesense-dashboard:
-    image: ghcr.io/bfritscher/typesense-dashboard:latest
+  redis:
+    image: redis:7.4.6-alpine
     ports:
-      - "3001:80"
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  mailpit:
+    image: axllent/mailpit:v1.27.10
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+  firebase:
+    build:
+      context: ./platform/local
+      dockerfile: firebase.Dockerfile
+    ports:
+      - "4000:4000"
+      - "9099:9099"
+      - "9199:9199"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9099/"]
+      interval: 2s
+      timeout: 5s
+      retries: 60
+
+  stub:
+    image: python:3.13.9-alpine
+    command: ["python", "/stub/stub.py"]
     environment:
-      - TYPESENSE_HOST=typesense
-      - TYPESENSE_PORT=8108
-      - TYPESENSE_PROTOCOL=http
-      - TYPESENSE_API_KEY=devapikey123
-    depends_on:
-      - typesense
+      PORT: "8090"
+    volumes:
+      - ./platform/local/stub.py:/stub/stub.py:ro
+    ports:
+      - "8090:8090"
 
   api:
     build:
       context: ./services/api.tapped.ai
       dockerfile: Dockerfile
-    restart: on-failure
     ports:
-      - "3000:3000"
-    env_file:
-      - ./services/api.tapped.ai/.env
+      - "8080:8080"
     environment:
-      - RUST_LOG=info
+      PORT: "8080"
+      RUST_LOG: info
+      DATABASE_URL: postgres://tapped:tapped@postgres:5432/tapped_local
+      REDIS_URL: redis://redis:6379
+      FIREBASE_PROJECT_ID: demo-tapped
+      FIREBASE_AUTH_EMULATOR_HOST: firebase:9099
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      # Placeholders: chat tokens, mail bridge and AI composition are not wired to real services.
+      STREAM_KEY: local-stream-key
+      STREAM_SECRET: local-stream-secret
+      MAIL_INGRESS_SECRET: local-ingress-secret
+      MAIL_API_SECRET: local-api-secret
+      OPENAI_API_KEY: local-openai-key
+      OPENAI_CHAT_COMPLETIONS_URL: http://stub:8090/v1/chat/completions
+      GOOGLE_PLACES_API_KEY: local-places-key
+      GOOGLE_PLACES_BASE_URL: http://stub:8090/v1
+      GOOGLE_GEOCODE_URL: http://stub:8090/maps/api/geocode/json
+      SPOTIFY_CLIENT_ID: local-spotify-id
+      SPOTIFY_CLIENT_SECRET: local-spotify-secret
+      SPOTIFY_TOKEN_URL: http://stub:8090/api/token
+      SPOTIFY_API_BASE_URL: http://stub:8090/v1
+      STREAM_BASE_URL: http://stub:8090
+      VENUE_CONTACT_FOUNDER_CC: ""
+    volumes:
+      - mail-data:/data
     depends_on:
-      typesense:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      firebase:
         condition: service_healthy
 
+  # Delivers queued outbound mail from the shared mail store into Mailpit.
+  mail-worker:
+    build:
+      context: ./services/api.tapped.ai
+      dockerfile: Dockerfile
+    command: ["mail_worker"]
+    environment:
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      MAIL_TRANSPORT: smtp
+      SMTP_ADDRESS: mailpit:1025
+    volumes:
+      - mail-data:/data
+    depends_on:
+      api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+
 volumes:
-  typesense-data:
-    driver: local
+  postgres-data:
+  mail-data:

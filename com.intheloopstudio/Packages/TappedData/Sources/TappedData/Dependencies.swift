@@ -79,6 +79,7 @@ public struct Dependencies: Sendable {
             notifications: FirebaseNotificationRepository(baseURL: config.tappedAPIURL),
             chat: StreamChatRepository(
                 apiKey: config.streamAPIKey,
+                baseURL: config.streamBaseURL,
                 tokenProvider: TappedAPIStreamTokenRepository(baseURL: config.tappedAPIURL).fetch
             ),
             storage: FirebaseStorageRepository(),
