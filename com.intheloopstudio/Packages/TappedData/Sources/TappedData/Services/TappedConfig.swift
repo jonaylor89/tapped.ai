@@ -52,7 +52,7 @@ public struct TappedConfig: Sendable, Hashable {
     /// launch environment overrides, so simulator runs can target a local stack (`platform/local`).
     public static func fromBundle(
         _ bundle: Bundle = .main,
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        environment: [String: String] = LaunchEnvironment.current
     ) -> TappedConfig {
         func string(_ key: String) -> String? {
             #if DEBUG
@@ -73,5 +73,31 @@ public struct TappedConfig: Sendable, Hashable {
             streamAPIKey: string("TappedStreamAPIKey") ?? defaults.streamAPIKey,
             imageProxyURL: string("TappedImageProxyURL").flatMap(URL.init(string:)) ?? defaults.imageProxyURL
         )
+    }
+}
+
+/// The launch environment plus, in Debug, local-stack keys persisted in user defaults
+/// (`xcrun simctl spawn <udid> defaults write com.intheloopstudio KEY value`), so OS-initiated
+/// cold launches such as a notification tap stay on the local stack.
+public enum LaunchEnvironment {
+    static let localStackKeys = [
+        "TAPPED_API_URL", "TAPPED_IMAGE_PROXY_URL", "TAPPED_STREAM_API_KEY",
+        "FIREBASE_AUTH_EMULATOR_HOST", "FIREBASE_STORAGE_EMULATOR_HOST",
+    ]
+
+    public static var current: [String: String] {
+        merged(ProcessInfo.processInfo.environment, defaults: .standard)
+    }
+
+    static func merged(_ environment: [String: String], defaults: UserDefaults) -> [String: String] {
+        #if DEBUG
+        var result = environment
+        for key in localStackKeys where (result[key] ?? "").isEmpty {
+            if let value = defaults.string(forKey: key), !value.isEmpty { result[key] = value }
+        }
+        return result
+        #else
+        return environment
+        #endif
     }
 }

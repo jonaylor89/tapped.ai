@@ -44,7 +44,7 @@ public enum FirebaseBootstrap {
 
     static func emulatorAddress(
         _ key: String,
-        environment: [String: String] = ProcessInfo.processInfo.environment
+        environment: [String: String] = LaunchEnvironment.current
     ) -> (host: String, port: Int)? {
         guard let value = environment[key], let separator = value.lastIndex(of: ":"),
               let port = Int(value[value.index(after: separator)...]) else { return nil }

@@ -63,6 +63,16 @@ SIMCTL_CHILD_FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199 \
 xcrun simctl launch <udid> com.intheloopstudio
 ```
 
+`SIMCTL_CHILD_*` only applies to that launch. A notification tap or any other OS-initiated cold launch would
+start against production, so also persist the overrides (Debug builds read them from user defaults):
+
+```sh
+for kv in TAPPED_API_URL=http://localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
+          FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199; do
+  xcrun simctl spawn <udid> defaults write com.intheloopstudio "${kv%%=*}" "${kv#*=}"
+done
+```
+
 Emulator runs configure Firebase with a fake `demo-tapped` app instead of the bundled
 `GoogleService-Info.plist`, use Remote Config's in-code defaults, and skip PostHog, OpenTelemetry,
 Crashlytics, FCM and Google Sign-In. Release builds ignore all of these variables.
