@@ -57,6 +57,8 @@ STREAM_LOCK = threading.Lock()
 STREAM_USERS = {}
 STREAM_CHANNELS = {}
 STREAM_SOCKETS = {}
+STREAM_CONNECTIONS = {}
+SOCKET_LOCKS = {}
 
 
 def now():
@@ -132,7 +134,8 @@ def ws_frame(text):
 def ws_send(user_id, event):
     for sock in list(STREAM_SOCKETS.get(user_id, [])):
         try:
-            sock.sendall(ws_frame(json.dumps(event)))
+            with SOCKET_LOCKS.setdefault(sock, threading.Lock()):
+                sock.sendall(ws_frame(json.dumps(event)))
         except OSError:
             STREAM_SOCKETS[user_id].discard(sock)
 
@@ -178,10 +181,19 @@ def stream_add_message(channel, user_id, message):
 
 
 class StreamMixin:
-    """Handlers for the Stream Chat routes; `user_id` comes from the client's `user_id` query/param."""
+    """Handlers for the Stream Chat routes. The caller is the `user_id` claim of the (unverified) user JWT,
+    else its WebSocket connection, else explicit ids (server-side calls from the API)."""
 
     def stream_user_id(self, query, body):
-        return (query.get("user_id") or [None])[0] or body.get("user_id") or body.get("data", {}).get("created_by_id")
+        token_user = None
+        try:
+            claims = self.headers.get("Authorization", "").split(".")[1]
+            token_user = json.loads(base64.urlsafe_b64decode(claims + "=" * (-len(claims) % 4))).get("user_id")
+        except (IndexError, ValueError):
+            pass
+        return (token_user or STREAM_CONNECTIONS.get((query.get("connection_id") or [None])[0])
+                or (query.get("user_id") or [None])[0] or body.get("user_id")
+                or body.get("data", {}).get("created_by_id"))
 
     def stream_connect(self, query):
         payload = json.loads((query.get("json") or ["{}"])[0])
@@ -198,32 +210,38 @@ class StreamMixin:
         sock = self.connection
         sock.settimeout(None)
         connection_id = str(uuid.uuid4())
+        STREAM_CONNECTIONS[connection_id] = user_id
+        lock = SOCKET_LOCKS.setdefault(sock, threading.Lock())
         STREAM_SOCKETS.setdefault(user_id, set()).add(sock)
         unread = sum(stream_channel_payload(c)["read"][c["members"].index(user_id)]["unread_messages"]
                      for c in STREAM_CHANNELS.values() if user_id in c["members"])
         me = {**stream_user(user_id), "devices": [], "mutes": [], "channel_mutes": [], "total_unread_count": unread,
               "unread_channels": 0, "unread_count": unread, "unread_threads": 0, "online": True}
         health = {"type": "health.check", "connection_id": connection_id, "cid": "*", "me": me, "created_at": now()}
-        sock.sendall(ws_frame(json.dumps(health)))
+        with lock:
+            sock.sendall(ws_frame(json.dumps(health)))
         try:
             while True:
                 opcode, data = ws_read(sock)
                 if opcode == 0x8:
                     break
-                if opcode == 0x9:
-                    sock.sendall(bytes([0x8A, len(data)]) + data)
-                elif opcode == 0x1:
-                    sock.sendall(ws_frame(json.dumps({**health, "me": None, "created_at": now()})))
+                with lock:
+                    if opcode == 0x9:
+                        sock.sendall(bytes([0x8A, len(data)]) + data)
+                    elif opcode == 0x1:
+                        sock.sendall(ws_frame(json.dumps({**health, "me": None, "created_at": now()})))
         except (ConnectionError, OSError):
             pass
         finally:
             STREAM_SOCKETS.get(user_id, set()).discard(sock)
+            STREAM_CONNECTIONS.pop(connection_id, None)
+            SOCKET_LOCKS.pop(sock, None)
         self.close_connection = True
 
     def stream_route(self, method, path, query, body):
         parts = path.strip("/").split("/")
         user_id = self.stream_user_id(query, body)
-        if parts == ["channels"] and method == "POST":
+        if parts == ["channels"]:
             mine = [c for c in STREAM_CHANNELS.values() if user_id in c["members"]]
             mine.sort(key=lambda c: c["messages"][-1]["created_at"] if c["messages"] else c["created_at"], reverse=True)
             return {"channels": [stream_channel_payload(c, user_id) for c in mine], "duration": "0.1ms"}
@@ -293,14 +311,15 @@ class Handler(StreamMixin, BaseHTTPRequestHandler):
         self.send_json({"error": "not stubbed"}, 404)
 
     def is_stream(self, path):
-        return path.strip("/").split("/")[0] in ("connect", "channels", "devices", "users", "sync", "drafts",
+        return path.strip("/").split("/")[0] in ("api", "connect", "channels", "devices", "users", "sync", "drafts",
                                                   "threads", "reminders", "messages", "moderation")
 
     def stream_respond(self, method, path, raw):
         body = json.loads(raw or b"{}") if raw else {}
         response = self.stream_route(method, path, parse_qs(urlparse(self.path).query), body)
         if response is None:
-            return self.send_json({"code": 16, "message": f"stub: {method} {path} not handled"}, 404)
+            return self.send_json({"code": 16, "message": f"stub: {method} {path} not handled",
+                                   "StatusCode": 404, "duration": "0.1ms", "more_info": ""}, 404)
         self.send_json(response)
 
     def do_PATCH(self):
