@@ -112,11 +112,25 @@ def stream_find_or_create(channel_id, members, created_by):
         if channel_id is None:
             channel_id = next((c["id"] for c in STREAM_CHANNELS.values() if sorted(c["members"]) == sorted(members)),
                               "!members-" + uuid.uuid4().hex[:20])
-        if channel_id not in STREAM_CHANNELS:
+        created = channel_id not in STREAM_CHANNELS
+        if created:
             STREAM_CHANNELS[channel_id] = {"id": channel_id, "members": list(dict.fromkeys(members)),
                                            "created_by": created_by, "created_at": now(), "frozen": False,
                                            "messages": [], "read": {}}
-        return STREAM_CHANNELS[channel_id]
+        channel = STREAM_CHANNELS[channel_id]
+    if created:
+        stream_notify(channel, "notification.added_to_channel", skip=created_by)
+    return channel
+
+
+def stream_notify(channel, event_type, skip=None, **extra):
+    """`notification.*` events reach members whose client isn't watching the channel yet."""
+    for member in channel["members"]:
+        if member != skip:
+            payload = stream_channel_payload(channel, member)
+            ws_send(member, {"type": event_type, "cid": f"messaging:{channel['id']}", "channel_id": channel["id"],
+                             "channel_type": "messaging", "channel": payload["channel"], "member":
+                             payload.get("membership"), "created_at": now(), **stream_unread(member), **extra})
 
 
 def ws_frame(text):
@@ -183,6 +197,7 @@ def stream_add_message(channel, user_id, message):
         channel["read"][user_id] = msg["created_at"]
     stream_broadcast(channel, {"type": "message.new", "message": msg, "user": stream_user(user_id),
                                "watcher_count": 0})
+    stream_notify(channel, "notification.message_new", skip=user_id, message=msg)
     return msg
 
 
