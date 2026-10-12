@@ -292,6 +292,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             .delete_with(crate::domain::app_data::remove, |op| app_op(op,"Soft delete an owned document").response::<200,Json<Value>>()))
         .route("/username-availability/:username", get(crate::domain::app_data::username_available))
         .route("/opportunities/:id/interest", get(crate::domain::app_data::interest_status).put(crate::domain::app_data::set_interest))
+        .route("/feedback", post(crate::domain::feedback::submit))
         .route("/device-token", post(crate::domain::app_data::register_token))
         .route("/venue-email-threads", post(create_email_thread))
         .api_route(

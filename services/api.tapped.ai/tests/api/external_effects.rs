@@ -49,6 +49,58 @@ async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
 }
 
 #[tokio::test]
+async fn feedback_is_private_escaped_and_idempotent_per_authenticated_sender() {
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    let mut state = super::helpers::mock_state();
+    state.postgres = Some(pool.clone());
+    let user = tapped_api_rs::domain::firebase_auth::FirebaseUser {
+        uid: "feedback-user".into(),
+        email: Some("test@example.test".into()),
+    };
+    let id = uuid::Uuid::new_v4();
+    for _ in 0..2 {
+        let _ = tapped_api_rs::domain::feedback::submit(
+            axum::extract::State(state.clone()),
+            user.clone(),
+            axum::Json(tapped_api_rs::domain::feedback::Feedback {
+                id,
+                text: "<@everyone> migration test".into(),
+            }),
+        )
+        .await
+        .unwrap();
+    }
+    let rows: Vec<serde_json::Value> = sqlx::query_scalar(
+        "SELECT payload FROM founder_notification_outbox WHERE event_type='feedback'",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(rows.len(), 1);
+    assert!(
+        rows[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("&lt;@everyone&gt;")
+    );
+    assert!(
+        tapped_api_rs::domain::feedback::submit(
+            axum::extract::State(state),
+            user,
+            axum::Json(tapped_api_rs::domain::feedback::Feedback {
+                id,
+                text: " ".into()
+            })
+        )
+        .await
+        .is_err()
+    );
+    cleanup(pool, admin, name).await;
+}
+
+#[tokio::test]
 async fn identity_baseline_does_not_replay_history_and_lifecycle_events_are_atomic_and_unique() {
     let Some((pool, admin, name)) = database().await else {
         return;

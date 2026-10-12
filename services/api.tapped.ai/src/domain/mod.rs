@@ -3,6 +3,7 @@ pub mod app_functions;
 pub mod auth;
 pub mod controller;
 pub mod external_effects;
+pub mod feedback;
 pub mod firebase_auth;
 pub mod founder_notifications;
 pub mod health;
