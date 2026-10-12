@@ -160,10 +160,16 @@ def ws_read(sock):
     return first & 0x0F, payload
 
 
+def stream_unread(user_id):
+    counts = [stream_channel_payload(c)["read"][c["members"].index(user_id)]["unread_messages"]
+              for c in STREAM_CHANNELS.values() if user_id in c["members"]]
+    return {"total_unread_count": sum(counts), "unread_channels": sum(1 for n in counts if n)}
+
+
 def stream_broadcast(channel, event):
     for member in channel["members"]:
         ws_send(member, {**event, "cid": f"messaging:{channel['id']}", "channel_id": channel["id"],
-                         "channel_type": "messaging", "created_at": now()})
+                         "channel_type": "messaging", "created_at": now(), **stream_unread(member)})
 
 
 def stream_add_message(channel, user_id, message):
@@ -176,7 +182,7 @@ def stream_add_message(channel, user_id, message):
         channel["messages"].append(msg)
         channel["read"][user_id] = msg["created_at"]
     stream_broadcast(channel, {"type": "message.new", "message": msg, "user": stream_user(user_id),
-                               "watcher_count": 0, "total_unread_count": 0, "unread_channels": 0})
+                               "watcher_count": 0})
     return msg
 
 
@@ -213,8 +219,7 @@ class StreamMixin:
         STREAM_CONNECTIONS[connection_id] = user_id
         lock = SOCKET_LOCKS.setdefault(sock, threading.Lock())
         STREAM_SOCKETS.setdefault(user_id, set()).add(sock)
-        unread = sum(stream_channel_payload(c)["read"][c["members"].index(user_id)]["unread_messages"]
-                     for c in STREAM_CHANNELS.values() if user_id in c["members"])
+        unread = stream_unread(user_id)["total_unread_count"]
         me = {**stream_user(user_id), "devices": [], "mutes": [], "channel_mutes": [], "total_unread_count": unread,
               "unread_channels": 0, "unread_count": unread, "unread_threads": 0, "online": True}
         health = {"type": "health.check", "connection_id": connection_id, "cid": "*", "me": me, "created_at": now()}
@@ -228,7 +233,8 @@ class StreamMixin:
                 with lock:
                     if opcode == 0x9:
                         sock.sendall(bytes([0x8A, len(data)]) + data)
-                    elif opcode == 0x1:
+                    if opcode in (0x1, 0x9):
+                        # The SDK counts a health.check event (not a pong frame) as its keep-alive answer.
                         sock.sendall(ws_frame(json.dumps({**health, "me": None, "created_at": now()})))
         except (ConnectionError, OSError):
             pass
@@ -319,7 +325,8 @@ class Handler(StreamMixin, BaseHTTPRequestHandler):
         response = self.stream_route(method, path, parse_qs(urlparse(self.path).query), body)
         if response is None:
             return self.send_json({"code": 16, "message": f"stub: {method} {path} not handled",
-                                   "StatusCode": 404, "duration": "0.1ms", "more_info": ""}, 404)
+                                   "StatusCode": 404, "duration": "0.1ms", "more_info": "", "details": [],
+                                   "exception_fields": {}}, 404)
         self.send_json(response)
 
     def do_PATCH(self):
