@@ -201,6 +201,13 @@ impl UserModel {
             .and_then(|info| info.booking_email.as_deref())
     }
 
+    pub fn wants_direct_message_email(&self) -> bool {
+        !self.deleted
+            && !self.unclaimed
+            && !self.email.is_empty()
+            && self.email_notifications.direct_messages
+    }
+
     pub fn is_unclaimed(&self) -> bool {
         self.unclaimed
     }

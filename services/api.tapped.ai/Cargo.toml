@@ -51,6 +51,7 @@ sqlx = { version = "=0.8.6", default-features = false, features = [
     "migrate",
     "chrono",
     "json",
+    "uuid",
 ] }
 base64 = "=0.22.1"
 redis = { version = "=0.27.6", features = ["tokio-comp"] }

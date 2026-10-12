@@ -858,10 +858,35 @@ async fn save(
             text(&doc, "requesterId")
         };
         if !recipient.is_empty() && recipient != user.uid {
+            let activity_id = uuid::Uuid::new_v4().to_string();
+            let kind = if create {
+                "bookingRequest"
+            } else {
+                "bookingUpdate"
+            };
             sqlx::query("INSERT INTO activities(id,activity_type,from_user_id,to_user_id,booking_id,occurred_at,profile) VALUES($1,$2,$3,$4,$5,now(),$6)")
-                .bind(uuid::Uuid::new_v4().to_string()).bind(if create {"bookingRequest"} else {"bookingUpdate"})
+                .bind(&activity_id).bind(kind)
                 .bind(&user.uid).bind(recipient).bind(id).bind(json!({"status":doc["status"]})).execute(&mut *tx).await.map_err(db_error)?;
+            crate::domain::external_effects::record_activity(
+                &mut tx,
+                &activity_id,
+                recipient,
+                kind,
+                id,
+            )
+            .await
+            .map_err(db_error)?;
         }
+    }
+    if table == "users" {
+        crate::domain::external_effects::record_profile(&mut tx, &doc, create)
+            .await
+            .map_err(db_error)?;
+    }
+    if create && table == "bookings" {
+        crate::domain::external_effects::record_booking_emails(&mut tx, &doc)
+            .await
+            .map_err(db_error)?;
     }
     if table == "reviews" {
         let (uid, section) = if doc["type"] == "performer" {

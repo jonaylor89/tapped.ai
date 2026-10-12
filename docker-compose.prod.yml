@@ -112,6 +112,30 @@ services:
     depends_on:
       - api
 
+  # Optional until least-privilege credentials + templates are provisioned and baseline completes.
+  # No identity credentials are mounted into the serving API.
+  identity-worker:
+    profiles: [identity]
+    image: ${API_IMAGE}
+    command: [identity_worker]
+    restart: unless-stopped
+    mem_limit: 192m
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
+      IDENTITY_CREDENTIALS_FILE: /run/secrets/identity.json
+      MAIL_STORE_PATH: /data/tapped-mail.sqlite3
+      STREAM_KEY: ${STREAM_KEY}
+      STREAM_SECRET: ${STREAM_SECRET}
+      MAILCHIMP_API_KEY: ${MAILCHIMP_API_KEY:-}
+      MAILCHIMP_SERVER_PREFIX: ${MAILCHIMP_SERVER_PREFIX:-}
+      AUTH_EFFECTS_ENABLED: ${AUTH_EFFECTS_ENABLED:-0}
+    volumes:
+      - mail-data:/data
+      - /opt/tapped/identity/credentials.json:/run/secrets/identity.json:ro
+    depends_on:
+      - api
+
   # Resizes Firebase Storage images for img.tapped.ai; Cloudflare caches every variant at the edge.
   # The preset ladder is mirrored in apps/app.tapped.ai/src/lib/image-loader.ts and
   # com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift — change all three together.

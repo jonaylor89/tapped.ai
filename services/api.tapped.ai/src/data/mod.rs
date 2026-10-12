@@ -1,4 +1,5 @@
 pub mod database;
+pub mod google_identity;
 pub mod pg_database;
 pub mod pg_search;
 pub mod places;

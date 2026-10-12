@@ -526,6 +526,30 @@ async fn signed_backfill_registers_an_existing_email_thread() {
 }
 
 #[tokio::test]
+async fn stream_success_echoes_original_json_and_supports_attachment_only_messages() {
+    let (app, _, _) = test_app().await;
+    for venue in [true, false] {
+        let mut payload: serde_json::Value = serde_json::from_slice(&stream_payload()).unwrap();
+        payload["message"]["customData"] = serde_json::json!({"must":"survive"});
+        payload["message"]["text"] = serde_json::Value::Null;
+        if !venue {
+            payload["members"][1]["user"]["id"] = serde_json::json!("no-email-thread");
+        }
+        let body = serde_json::to_vec(&payload).unwrap();
+        let response = reqwest::Client::new()
+            .post(format!("{}/webhooks/stream/before-message", app.address))
+            .header("x-signature", sign("stream-secret", &body))
+            .body(body)
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        let response: serde_json::Value = response.json().await.unwrap();
+        assert_eq!(response["message"], payload["message"]);
+    }
+}
+
+#[tokio::test]
 async fn invalid_stream_signature_is_rejected() {
     let (app, store, _) = test_app().await;
     let response = app

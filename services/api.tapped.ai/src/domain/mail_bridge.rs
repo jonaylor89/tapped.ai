@@ -923,65 +923,109 @@ pub async fn stream_before_message(
     State(state): State<AppStateDyn>,
     headers: HeaderMap,
     body: Bytes,
-) -> impl IntoResponse {
+) -> axum::response::Response {
     let signature = headers
         .get("x-signature")
         .and_then(|value| value.to_str().ok())
         .unwrap_or_default();
     if !valid_signature(&state.mail.stream_webhook_secret, &body, signature) {
-        return (StatusCode::UNAUTHORIZED, "invalid signature");
+        return (StatusCode::UNAUTHORIZED, "invalid signature").into_response();
     }
-    let payload: StreamWebhook = match serde_json::from_slice(&body) {
-        Ok(payload) => payload,
-        Err(_) => return (StatusCode::BAD_REQUEST, "invalid payload"),
+    let original: serde_json::Value = match serde_json::from_slice(&body) {
+        Ok(value) => value,
+        Err(_) => return (StatusCode::BAD_REQUEST, "invalid payload").into_response(),
     };
+    let payload: StreamWebhook = match serde_json::from_value(original.clone()) {
+        Ok(value) => value,
+        Err(_) => return (StatusCode::BAD_REQUEST, "invalid payload").into_response(),
+    };
+    // Stream requires JSON containing the whole original message. Plain text success rejects chat.
+    let accepted = || Json(serde_json::json!({"message": original["message"]})).into_response();
     let Some(receiver) = payload
         .members
         .iter()
         .find(|member| member.user.id != payload.user.id)
     else {
-        return (StatusCode::BAD_REQUEST, "receiver not found");
+        return accepted();
     };
-    let Some(text) = payload.message.text.filter(|text| !text.trim().is_empty()) else {
-        return (StatusCode::BAD_REQUEST, "message text required");
-    };
+    let text = payload
+        .message
+        .text
+        .clone()
+        .filter(|text| !text.trim().is_empty())
+        .unwrap_or_else(|| "(attachment)".into());
     let thread = match state
         .mail
         .store
         .thread_for_stream(&payload.user.id, &receiver.user.id)
         .await
     {
-        Ok(Some(thread)) => thread,
-        Ok(None) => return (StatusCode::OK, "no email thread"),
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
+        Ok(thread) => thread,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error").into_response(),
     };
+    let attachments = payload
+        .message
+        .attachments
+        .into_iter()
+        .filter_map(|item| item.image_url)
+        .collect();
     let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
-    let email = QueuedEmail {
-        event_id: format!("stream:{}", payload.message.id),
-        thread_id: thread.id,
-        from: format!(
-            "{}@{}",
-            thread.performer_username, state.mail.booking_domain
-        ),
-        to: thread.recipients,
-        cc: vec![],
-        subject: thread.subject,
-        text_body: text,
-        html_body: None,
-        message_id,
-        in_reply_to: thread.latest_message_id.clone(),
-        references: thread.latest_message_id,
-        attachments: payload
-            .message
-            .attachments
-            .into_iter()
-            .filter_map(|item| item.image_url)
-            .collect(),
-        encoded_attachments: vec![],
+    let (email, venue_contact) = if let Some(thread) = thread {
+        (
+            QueuedEmail {
+                event_id: format!("stream:{}", payload.message.id),
+                thread_id: thread.id,
+                from: format!(
+                    "{}@{}",
+                    thread.performer_username, state.mail.booking_domain
+                ),
+                to: thread.recipients,
+                cc: vec![],
+                subject: thread.subject,
+                text_body: text,
+                html_body: None,
+                message_id,
+                in_reply_to: thread.latest_message_id.clone(),
+                references: thread.latest_message_id,
+                attachments,
+                encoded_attachments: vec![],
+            },
+            true,
+        )
+    } else {
+        let recipient = match state.database.get_user_by_id(&receiver.user.id).await {
+            Ok(user) if user.wants_direct_message_email() => user,
+            _ => return accepted(),
+        };
+        let name = state
+            .database
+            .get_user_by_id(&payload.user.id)
+            .await
+            .ok()
+            .map(|user| user.display_name().to_owned())
+            .unwrap_or_else(|| "someone".into());
+        (
+            QueuedEmail {
+                event_id: format!("stream-dm:{}:{}", payload.message.id, receiver.user.id),
+                thread_id: format!("dm:{}:{}", payload.user.id, receiver.user.id),
+                from: "no-reply@tapped.ai".into(),
+                to: vec![recipient.email],
+                cc: vec![],
+                subject: format!("new message from {name}"),
+                text_body: text,
+                html_body: None,
+                message_id,
+                in_reply_to: String::new(),
+                references: String::new(),
+                attachments,
+                encoded_attachments: vec![],
+            },
+            false,
+        )
     };
     match state.mail.store.enqueue_outbound(email).await {
         Ok(inserted) => {
-            if inserted {
+            if inserted && venue_contact {
                 notify_slack(
                     state.mail.slack_webhook_url.as_deref(),
                     "new venue contact email",
@@ -989,9 +1033,9 @@ pub async fn stream_before_message(
                 )
                 .await;
             }
-            (StatusCode::OK, "ok")
+            accepted()
         }
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "store error").into_response(),
     }
 }
 

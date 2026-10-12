@@ -2,7 +2,7 @@
 
 The goal is to delete **all custom and extension-managed Firebase Functions**, in every region/generation, without losing required behavior. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
 
-The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. No functions have been deleted in this implementation.
+The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. Production now has **57 Functions**: the three founder booking/application/onboarding triggers were deleted after live Rust delivery verification. The original inventory below remains a historical 60-function checklist.
 
 ## Founder bookings, applications and onboarding — implemented locally
 
@@ -15,7 +15,7 @@ The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records
 - The queue is not exposed through public/private collection APIs. Logs contain no message bodies or webhook credentials.
 - Validation: library tests, full API tests with a real isolated PostGIS DB, rollback/lease/retry/concurrency tests, and one explicitly labelled real Slack smoke message accepted by the existing webhook.
 - The existing Slack secret was staged privately in production `.env` with a root-only backup; no services were restarted. Compose passes it into Rust on the next rollout.
-- **Code is not pushed/deployed yet.** Do not delete `notifyFoundersOnBookings`, `notifyFoundersOnOpportunityInterest` or `notifyFoundersOnUserOnboarded` until live API-created actions reach Slack and queue delivery is verified.
+- **Deployed and verified** at `05b9311533f91c40f59ebe1aee7ca078476a6e1e` (Deploy API `38302412506`; Node/Rust/iOS/functions CI passed). Live API-created onboarding (two accounts), booking and application events reached Slack; repeat application produced no extra event. Synthetic accounts/rows were removed. The three corresponding legacy Functions were then deleted; no source Firestore documents were deleted.
 
 Queue operations (run only through a trusted administrative DB connection; do not publish payloads):
 
@@ -26,6 +26,26 @@ SELECT count(*) FROM founder_notification_outbox WHERE locked_until < now() AND 
 ```
 
 Delivered event keys are retained for deduplication. Payloads contain internal founder-notification data; include this table in private Postgres backups/retention policy, never client serving.
+
+## Second implementation (rollout pending)
+
+Rust now has a separate identity/provider worker, private generic outbox, Auth lifecycle ledger,
+per-device FCM jobs, booking email jobs, Stream profile/delete synchronization and stable-ID
+founder welcome DMs. It baselines existing Firebase Auth accounts without replaying old welcomes,
+confirms apparent deletions with an individual Auth lookup, and never reads/writes Firestore.
+Auth effects stay held until baseline/cutover is complete. Email templates were read once from the
+legacy template collection, preserved privately for Postgres provisioning, without changing source.
+An isolated principal with only `firebaseauth.users.get` and `cloudmessaging.messages.create` was
+provisioned; live checks confirmed Auth reads work and Firestore access is denied (403). Its private
+credential is mounted only in the optional identity worker, never the serving API.
+
+A Stream conformance gap was also fixed: success must return JSON with the entire original message,
+not a plain-text status. Attachment-only messages and claimed-user DM email preferences are supported.
+
+**Postmark blocker:** changing InboundHookUrl was rejected with HTTP 422: "You are not entitled to
+Inbound processing. To add inbound, upgrade to the next tier." No plan upgrade was made; the existing
+provider URL remains unchanged. Zero Functions requires an approved upgrade or alternative provider.
+The old inbound URL must remain a compatibility proxy in the meantime.
 
 ## Required remaining work
 
@@ -80,14 +100,14 @@ No blanket delete/uninstall command is supplied: some extension uninstall/cleanu
 | `getTopTracksByArtistId` | Rust Spotify lookup routes exist; verify live callers then delete legacy callable |
 | `inboundEmailWebhook` | Switch Postmark inbound provider URL/authentication to Rust and verify real replies; old URL currently requires compatibility proxy |
 | `notifyFoundersOnAppRemoved` | Legacy analytics removal signal; Android retired/native Firebase Analytics unused, confirm intentional retirement |
-| `notifyFoundersOnBookings` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnBookings` | **Deleted** after production Rust/outbox/Slack verification |
 | `notifyFoundersOnEmail` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
-| `notifyFoundersOnOpportunityInterest` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnOpportunityInterest` | **Deleted** after production Rust/outbox/Slack verification |
 | `notifyFoundersOnOrphanEmail` | Rust records orphan mail, but founder orphan alert/forwarding needs an explicit replacement |
 | `notifyFoundersOnSignUp` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
 | `notifyFoundersOnUserDelete` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
 | `notifyFoundersOnUserFeedbackSubmitted` | Recover missing handler behavior or replace founder feedback delivery via the supported feedback/support channel |
-| `notifyFoundersOnUserOnboarded` | Rust transactional founder outbox implemented/tested locally; deploy and verify live action delivery before deletion |
+| `notifyFoundersOnUserOnboarded` | **Deleted** after production Rust/outbox/Slack verification |
 | `notifyFoundersOnVenueContact` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
 | `notifyVenueOfInterestedOpportunities` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
 | `sendBookingRequestReceivedEmailOnBooking` | Preserve booking-request email recipients/templates/filters with durable Rust delivery before retiring |

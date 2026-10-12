@@ -240,10 +240,12 @@ before interaction, rather than minimizing reads by waiting for a sheet to open.
 ## Firebase Functions retirement
 
 Target: zero custom and extension-managed Functions while retaining Firebase Auth/email verification.
-The founder booking/application/onboarding notification gap is addressed by a local transactional
-Postgres outbox and retrying Rust worker; code rollout and live API-action validation are pending.
-A labelled real Slack smoke test passed, and production Slack configuration is staged privately.
-No functions or source Firestore data were deleted. Remaining Auth, email/push, provider, billing
+The founder booking/application/onboarding notification gap is addressed by a transactional
+Postgres outbox and retrying Rust worker, deployed at `05b9311533f9` through run `38302412506`.
+Live onboarding, booking and application alerts reached Slack; repeated application was deduplicated.
+Synthetic accounts/rows were cleaned up, then the three replaced founder triggers were deleted.
+57 Functions remain. No source Firestore data was deleted. Auth/provider/push/email replacements
+are being rolled out separately; Postmark rejected changing its inbound callback without a plan upgrade. Remaining Auth, email/push, provider, billing
 and extension dependencies are tracked in [FIREBASE_FUNCTIONS_RETIREMENT.md](FIREBASE_FUNCTIONS_RETIREMENT.md).
 
 ## Native distribution
