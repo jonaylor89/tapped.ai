@@ -2,7 +2,7 @@
 
 The goal is to delete **all custom and extension-managed Firebase Functions**, in every region/generation, without losing required behavior. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
 
-The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. Production now has **56 Functions**: the three founder booking/application/onboarding triggers were deleted after live Rust delivery verification. The original inventory below remains a historical 60-function checklist.
+The [live inventory](../services/firebase-functions/DEPLOYMENT_AUDIT.md) records **60 functions** (27 extension-managed) at 2026-10-12T17:15:23.312468+00:00. It is a snapshot, not evidence of traffic or replacement parity. Production now has **55 Functions**: the three founder booking/application/onboarding triggers and Stream callback were deleted after live Rust verification; `addUserToMailchimpOnCreated` was explicitly retired because Mailchimp is no longer used. The original inventory below remains a historical 60-function checklist.
 
 ## Founder bookings, applications and onboarding — implemented locally
 
@@ -52,16 +52,16 @@ The old inbound URL must remain a compatibility proxy in the meantime. That name
 - API and optional identity worker run `eb577af2bc74` (Deploy API `38311045804` succeeded); readiness checks are healthy. `5ceddc6055cc` also deployed successfully through `38310078030`.
 - Labelled founder mail: provider job → SQLite durable mail handoff → Postmark accepted, final mail state `sent`; synthetic fixture removed.
 - Founder FCM probe: provider identified an expired registration as `UNREGISTERED`; Rust removed that invalid token. **No current-device delivery proven**; obtain a fresh test token before retiring `sendToDevice`.
-- Mailchimp live read probes returned **403 `User Disabled`**, with the configured data center matching the existing key. No customer subscriptions were altered. Account reactivation/provider decision is needed; do not claim successful Mailchimp delivery.
+- **Mailchimp deliberately retired by user approval.** Deleted Gen1 `addUserToMailchimpOnCreated` in `us-central1`; removed its entrypoint, deployment allowlist entry, source, npm dependencies, Rust signup call and worker configuration. The prior 403 `User Disabled` is no longer a migration blocker. No Mailchimp account/audience/customer data or source Firestore documents were deleted. Remaining Auth/welcome/founder effects are unchanged; held Auth jobs are retained, not discarded.
 - Rust orphan handling now durably forwards to the founder and queues a Slack alert, instead of just storing the orphan. Stable keys prevent retry-created duplicate jobs. Local mail tests passed; positive live orphan forwarding/Slack retirement verification remains.
 - Authenticated `POST /app/v1/feedback` accepts `{id: UUID, text: string}`; server owns sender identity, escapes Slack mentions, rejects invalid text and deduplicates per sender/id. Private queue only; local real-PostGIS test passed. Live feedback retirement check remains.
-- Remaining billing/entitlement, managed-extension and reminder retirement gates below are **not complete**. 56 Functions still exist; no blanket deletion is approved or executed.
+- Remaining billing/entitlement, managed-extension and reminder retirement gates below are **not complete**. 55 Functions still exist; no blanket deletion is approved or executed.
 - Temporary isolated PostGIS container and tunnel were removed. Original Firestore data is unchanged.
 
 ## Required remaining work
 
 1. Deploy/verify the founder outbox above.
-2. Replace Auth side effects with a reliable account-lifecycle source that handles signup/deletion, including admin/provider-created accounts. Bootstrap/baseline existing identities to avoid replaying welcomes or Mailchimp subscriptions. Firebase login/verification must remain intact.
+2. Replace Auth side effects with a reliable account-lifecycle source that handles signup/deletion, including admin/provider-created accounts. Bootstrap/baseline existing identities to avoid replaying welcomes. Mailchimp is intentionally retired, not a replacement requirement. Firebase login/verification must remain intact.
 3. Verify/implement push delivery and booking email/reminder behavior. Token registration and stored activities are **not** proof of remote push or email delivery.
 4. Finish Stream profile/user/token lifecycle and direct Stream/Postmark provider routing. Postmark's unchanged inbound URL/plan is a real removal dependency, not a reason to keep a Function indefinitely; change the provider configuration/plan or choose a supported alternative before deleting its proxy.
 5. Resolve billing/entitlement/webhook behavior and missing-source custom functions. Retire genuinely obsolete features explicitly; do not infer that an active subscription/webhook is unused from source grep.
@@ -74,7 +74,7 @@ No blanket delete/uninstall command is supplied: some extension uninstall/cleanu
 
 | Function | Replacement / deletion gate |
 | --- | --- |
-| `addUserToMailchimpOnCreated` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `addUserToMailchimpOnCreated` | **Deleted** with explicit user approval; Mailchimp is no longer used and has no Rust replacement |
 | `createConnectedAccount` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
 | `createPaymentIntent` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
 | `createStreamUserOnUserCreated` | Replace/verify Stream profile synchronization from authoritative API profile changes, without Firestore |
@@ -115,8 +115,8 @@ No blanket delete/uninstall command is supplied: some extension uninstall/cleanu
 | `notifyFoundersOnEmail` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
 | `notifyFoundersOnOpportunityInterest` | **Deleted** after production Rust/outbox/Slack verification |
 | `notifyFoundersOnOrphanEmail` | Rust records orphan mail, but founder orphan alert/forwarding needs an explicit replacement |
-| `notifyFoundersOnSignUp` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
-| `notifyFoundersOnUserDelete` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `notifyFoundersOnSignUp` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email effects; do not confuse signup with profile onboarding |
+| `notifyFoundersOnUserDelete` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email effects; do not confuse signup with profile onboarding |
 | `notifyFoundersOnUserFeedbackSubmitted` | Recover missing handler behavior or replace founder feedback delivery via the supported feedback/support channel |
 | `notifyFoundersOnUserOnboarded` | **Deleted** after production Rust/outbox/Slack verification |
 | `notifyFoundersOnVenueContact` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
@@ -126,7 +126,7 @@ No blanket delete/uninstall command is supplied: some extension uninstall/cleanu
 | `sendEmailOnSubscriptionExpiration` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
 | `sendEmailOnSubscriptionPurchase` | Verify live billing/provider routing, existing subscriptions, customer/account cleanup and entitlement authority; recover missing source if needed |
 | `sendToDevice` | Verify/implement Rust FCM/APNs delivery from authoritative events; API token registration alone is not push delivery |
-| `sendWelcomeEmailOnUserCreated` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email/Mailchimp effects; do not confuse signup with profile onboarding |
+| `sendWelcomeEmailOnUserCreated` | Port reliable Firebase Auth lifecycle capture + deduplicated Slack/email effects; do not confuse signup with profile onboarding |
 | `setLatestContactRequest` | Rust venue outreach/mail persistence exists; verify founder delivery and provider routing before retiring Firestore contact workflow |
 | `spotifyAuthorizeCodeGrant` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |
 | `spotifyRedirect` | Verify/replace OAuth redirect, exchange and refresh routes for every supported client/provider; source-only grep is insufficient |

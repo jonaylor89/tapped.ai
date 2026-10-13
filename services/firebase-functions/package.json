@@ -15,10 +15,8 @@
   "main": "lib/index.js",
   "dependencies": {
     "@google-cloud/secret-manager": "5.0.1",
-    "@mailchimp/mailchimp_marketing": "3.0.80",
     "@sendgrid/inbound-mail-parser": "8.0.0",
     "@sendgrid/mail": "8.1.0",
-    "@types/mailchimp__mailchimp_marketing": "3.0.20",
     "cookie-parser": "1.4.6",
     "firebase-admin": "11.10.1",
     "firebase-functions": "5.0.1",
@@ -31,16 +29,16 @@
     "uuid": "9.0.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.12",
     "@types/cookie-parser": "1.4.7",
     "@types/mailparser": "3.4.4",
+    "@types/node": "22.15.30",
     "@types/react": "18.2.24",
     "@types/spotify-web-api-node": "5.0.11",
     "@types/uuid": "9.0.4",
     "firebase-functions-test": "0.2.3",
     "typescript": "5.9.3",
-    "@types/node": "22.15.30",
-    "vitest": "4.1.0",
-    "@biomejs/biome": "2.3.12"
+    "vitest": "4.1.0"
   },
   "private": true,
   "packageManager": "npm@10.9.2"

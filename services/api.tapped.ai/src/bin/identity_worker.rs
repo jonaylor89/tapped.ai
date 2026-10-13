@@ -27,8 +27,6 @@ async fn main() -> anyhow::Result<()> {
             .build()?,
         stream_key: std::env::var("STREAM_KEY")?,
         stream_secret: std::env::var("STREAM_SECRET")?,
-        mailchimp_key: std::env::var("MAILCHIMP_API_KEY").unwrap_or_default(),
-        mailchimp_region: std::env::var("MAILCHIMP_SERVER_PREFIX").unwrap_or_default(),
         auth_effects: std::env::var("AUTH_EFFECTS_ENABLED").as_deref() == Ok("1"),
     };
     let scan = async {

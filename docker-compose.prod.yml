@@ -127,8 +127,6 @@ services:
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
       STREAM_KEY: ${STREAM_KEY}
       STREAM_SECRET: ${STREAM_SECRET}
-      MAILCHIMP_API_KEY: ${MAILCHIMP_API_KEY:-}
-      MAILCHIMP_SERVER_PREFIX: ${MAILCHIMP_SERVER_PREFIX:-}
       AUTH_EFFECTS_ENABLED: ${AUTH_EFFECTS_ENABLED:-0}
     volumes:
       - mail-data:/data

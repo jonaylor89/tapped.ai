@@ -135,8 +135,6 @@ pub struct ProviderWorker {
     pub client: reqwest::Client,
     pub stream_key: String,
     pub stream_secret: String,
-    pub mailchimp_key: String,
-    pub mailchimp_region: String,
     pub auth_effects: bool,
 }
 impl ProviderWorker {
@@ -290,40 +288,6 @@ impl ProviderWorker {
         tx.commit().await?;
         Ok(())
     }
-    async fn mailchimp(&self, email: &str) -> Result<()> {
-        if email.is_empty() || email.contains("tapped.ai") {
-            return Ok(());
-        }
-        ensure!(
-            !self.mailchimp_key.is_empty()
-                && self.mailchimp_region.len() < 20
-                && self.mailchimp_region.starts_with("us")
-                && self
-                    .mailchimp_region
-                    .chars()
-                    .all(|c| c.is_ascii_alphanumeric()),
-            "Mailchimp configuration unavailable"
-        );
-        // POST preserves legacy behavior: existing/unsubscribed members are never re-subscribed.
-        let r = self
-            .client
-            .post(format!(
-                "https://{}.api.mailchimp.com/3.0/lists/adc6feff36/members",
-                self.mailchimp_region
-            ))
-            .basic_auth("apikey", Some(&self.mailchimp_key))
-            .json(&json!({"email_address":email,"status":"subscribed"}))
-            .send()
-            .await
-            .map_err(|_| anyhow!("Mailchimp network error"))?;
-        if r.status().is_success() {
-            return Ok(());
-        }
-        let status = r.status().as_u16();
-        let v: Value = r.json().await.unwrap_or_default();
-        ensure!(v["title"] == "Member Exists", "Mailchimp HTTP {status}");
-        Ok(())
-    }
     async fn send_mail(&self, id: &str, to: &str, template: &str) -> Result<()> {
         let row: Option<(String, String, Option<String>)> =
             sqlx::query_as("SELECT subject,text_body,html_body FROM email_templates WHERE name=$1")
@@ -374,7 +338,6 @@ impl ProviderWorker {
                     self.send_mail(&format!("welcome:{id}"), &a.email, "welcome")
                         .await?;
                 }
-                self.mailchimp(&a.email).await?;
             }
             "auth_delete" => {
                 let a: Account = serde_json::from_value(payload)?;

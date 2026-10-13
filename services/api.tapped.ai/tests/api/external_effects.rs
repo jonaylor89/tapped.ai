@@ -232,8 +232,6 @@ async fn mail_handoff_is_idempotent_and_failed_provider_jobs_remain_retryable() 
         client: reqwest::Client::new(),
         stream_key: String::new(),
         stream_secret: String::new(),
-        mailchimp_key: String::new(),
-        mailchimp_region: String::new(),
         auth_effects: false,
     };
     sqlx::query(

@@ -63,8 +63,6 @@ export const MAIL_INGRESS_SECRET = defineSecret("MAIL_INGRESS_SECRET");
 export const SLACK_WEBHOOK_URL = defineSecret("SLACK_WEBHOOK_URL");
 export const SPOTIFY_CLIENT_ID = defineSecret("SPOTIFY_CLIENT_ID");
 export const SPOTIFY_CLIENT_SECRET = defineSecret("SPOTIFY_CLIENT_SECRET");
-export const MAILCHIMP_API_KEY = defineSecret("MAILCHIMP_API_KEY");
-export const MAILCHIMP_SERVER_PREFIX = defineSecret("MAILCHIMP_SERVER_PREFIX");
 
 export const bookingBotUuid = "90dc0775-3a0d-4e92-8573-9c7aa6832d94";
 export const verifiedBotUuid = "1c0d9380-873c-493a-a3f8-1283d5408673";

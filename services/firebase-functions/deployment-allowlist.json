@@ -1,5 +1,4 @@
 [
-  "addUserToMailchimpOnCreated",
   "deleteStreamUser",
   "getArtistBySpotifyId",
   "getTopTracksByArtistId",

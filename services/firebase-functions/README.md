@@ -28,7 +28,8 @@ Read [DEPLOYMENT_AUDIT.md](DEPLOYMENT_AUDIT.md) **before deploying**. Many deplo
 - Legacy Firestore-dependent modules remain under `src/lib/` but are not exported. Do not reconnect them to production or add dual writes.
 - Postmark's `inboundEmailWebhook` preserves its existing provider URL and forwards to Rust with the Secret Manager ingress credential.
 - Stream's `streamBeforeMessageWebhook` forwards raw request bytes and `x-signature` to Rust for validation and processing. It does not read/write Firestore.
-- Auth side effects (welcome email, founder notifications, Mailchimp, Stream deletion) remain available without changing Firebase identity or email verification.
+- Auth side effects (welcome email, founder notifications, Stream deletion) remain available without changing Firebase identity or email verification.
+- Mailchimp is intentionally retired: its live Function, export, deployment allowlist entry, source and dependencies were removed. The deployment guard rejects `addUserToMailchimpOnCreated`; Rust no longer subscribes users.
 - Existing Spotify compatibility handlers are retained until provider/client routing is separately retired.
 - Firebase extensions are managed outside this source. Removing files/exports never undeploys anything.
 

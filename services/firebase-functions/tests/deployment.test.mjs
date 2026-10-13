@@ -54,6 +54,7 @@ test("deploys reject no names, retired writers, extensions and argument injectio
   for (const names of [
     [],
     ["onUserDeleted"],
+    ["addUserToMailchimpOnCreated"],
     ["createDefaultServicesOnUserCreated"],
     ["setLatestContactRequest"],
     ["ext-auth-chat-createStreamUser"],
