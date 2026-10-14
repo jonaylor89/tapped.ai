@@ -33,7 +33,7 @@ async fn database() -> Option<(PgPool, PgPool, String)> {
         .await
         .unwrap();
     let name = format!("mcp_{}", uuid::Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE DATABASE {name}"))
+    sqlx::query(sqlx::AssertSqlSafe(format!("CREATE DATABASE {name}")))
         .execute(&admin)
         .await
         .unwrap();
@@ -537,8 +537,10 @@ async fn performers_connect_with_firebase_and_read_their_account_through_mcp() {
     assert_eq!(status, 401);
 
     pool.close().await;
-    sqlx::query(&format!("DROP DATABASE {name} WITH (FORCE)"))
-        .execute(&admin)
-        .await
-        .unwrap();
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "DROP DATABASE {name} WITH (FORCE)"
+    )))
+    .execute(&admin)
+    .await
+    .unwrap();
 }

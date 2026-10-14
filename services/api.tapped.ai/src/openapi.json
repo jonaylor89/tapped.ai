@@ -20,7 +20,7 @@
         "summary": "API version",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -55,7 +55,7 @@
         "description": "The process is serving requests. Doesn't check dependencies.",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -90,7 +90,7 @@
         "description": "Postgres serving projections and search, Redis and the mail store all respond within 3s.",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -155,7 +155,7 @@
         },
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -172,7 +172,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -327,7 +327,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -344,7 +344,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -374,14 +374,14 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {}
+              "schema": true
             }
           },
           "required": true
         },
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -398,7 +398,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -562,7 +562,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -579,7 +579,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -618,14 +618,14 @@
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": {}
+              "schema": true
             }
           },
           "required": true
         },
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -642,7 +642,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -680,7 +680,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -697,7 +697,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -717,7 +717,7 @@
         "summary": "Mint a Stream chat token for the signed-in user",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -764,7 +764,7 @@
                 "null"
               ],
               "format": "uint32",
-              "minimum": 0.0
+              "minimum": 0
             },
             "style": "form"
           },
@@ -780,7 +780,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -841,7 +841,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -903,7 +903,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -917,7 +917,7 @@
             }
           },
           "200": {
-            "description": "",
+            "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
             "content": {
               "application/json": {
                 "schema": {
@@ -956,7 +956,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -973,7 +973,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1020,7 +1020,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1037,7 +1037,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1067,7 +1067,7 @@
         },
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1148,7 +1148,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1203,7 +1203,7 @@
         },
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1220,7 +1220,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1370,7 +1370,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1387,7 +1387,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1546,7 +1546,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1563,7 +1563,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1578,7 +1578,7 @@
         "summary": "Fresh public profile, confirmed history, count and latest review",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1647,7 +1647,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1708,7 +1708,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1722,7 +1722,7 @@
             }
           },
           "200": {
-            "description": "",
+            "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1756,7 +1756,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1773,7 +1773,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1802,7 +1802,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1819,7 +1819,7 @@
             "description": "",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": true
               }
             }
           }
@@ -1850,7 +1850,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1905,7 +1905,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1957,7 +1957,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2010,7 +2010,7 @@
         ],
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2041,12 +2041,12 @@
         ]
       }
     },
-    "/docs/": {
+    "/docs": {
       "get": {
         "description": "This documentation page.",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2082,7 +2082,7 @@
         "description": "This documentation page.",
         "responses": {
           "default": {
-            "description": "",
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2146,8 +2146,8 @@
             ]
           },
           "types": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
@@ -2157,10 +2157,6 @@
       "AppError": {
         "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
         "type": "object",
-        "required": [
-          "error",
-          "error_id"
-        ],
         "properties": {
           "error": {
             "description": "An error message.",
@@ -2174,25 +2170,26 @@
             "type": "string",
             "format": "uuid"
           }
-        }
+        },
+        "required": [
+          "error",
+          "error_id"
+        ]
       },
       "ArtistIdPath": {
         "type": "object",
-        "required": [
-          "artist_id"
-        ],
         "properties": {
           "artist_id": {
             "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "artist_id"
+        ]
       },
       "AutocompleteParams": {
         "type": "object",
-        "required": [
-          "query"
-        ],
         "properties": {
           "query": {
             "type": "string"
@@ -2210,16 +2207,13 @@
               "null"
             ]
           }
-        }
+        },
+        "required": [
+          "query"
+        ]
       },
       "AutocompletePrediction": {
         "type": "object",
-        "required": [
-          "fullText",
-          "placeId",
-          "primaryText",
-          "secondaryText"
-        ],
         "properties": {
           "fullText": {
             "type": "string"
@@ -2233,19 +2227,21 @@
           "secondaryText": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "placeId",
+          "fullText",
+          "primaryText",
+          "secondaryText"
+        ]
       },
       "Bookings_for_GuardedBooking": {
         "type": "object",
-        "required": [
-          "count",
-          "items"
-        ],
         "properties": {
           "count": {
             "type": "integer",
             "format": "uint",
-            "minimum": 0.0
+            "minimum": 0
           },
           "items": {
             "type": "array",
@@ -2253,25 +2249,25 @@
               "$ref": "#/components/schemas/GuardedBooking"
             }
           }
-        }
+        },
+        "required": [
+          "count",
+          "items"
+        ]
       },
       "CollectionPath": {
         "type": "object",
-        "required": [
-          "table"
-        ],
         "properties": {
           "table": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "table"
+        ]
       },
       "DocumentPath": {
         "type": "object",
-        "required": [
-          "id",
-          "table"
-        ],
         "properties": {
           "id": {
             "type": "string"
@@ -2279,28 +2275,26 @@
           "table": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "table",
+          "id"
+        ]
       },
       "GuardedBooking": {
         "type": "object",
-        "required": [
-          "description",
-          "endTime",
-          "id",
-          "performerId",
-          "rate",
-          "startTime",
-          "title"
-        ],
         "properties": {
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
           "bookerId": {
             "type": [
               "string",
               "null"
             ]
-          },
-          "description": {
-            "type": "string"
           },
           "endTime": {
             "type": "string"
@@ -2346,36 +2340,30 @@
           "startTime": {
             "type": "string"
           },
-          "title": {
-            "type": "string"
-          },
           "venueId": {
             "type": [
               "string",
               "null"
             ]
           }
-        }
+        },
+        "required": [
+          "id",
+          "title",
+          "description",
+          "performerId",
+          "rate",
+          "startTime",
+          "endTime"
+        ]
       },
       "GuardedPerformer": {
         "type": "object",
-        "required": [
-          "averageAttendance",
-          "averageTicketRange",
-          "bio",
-          "bookings",
-          "displayName",
-          "genres",
-          "id",
-          "reviews",
-          "socialFollowing",
-          "username"
-        ],
         "properties": {
           "averageAttendance": {
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "minimum": 0
           },
           "averageTicketRange": {
             "$ref": "#/components/schemas/TicketRange"
@@ -2435,17 +2423,22 @@
           "username": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "id",
+          "username",
+          "displayName",
+          "bio",
+          "socialFollowing",
+          "genres",
+          "averageTicketRange",
+          "averageAttendance",
+          "bookings",
+          "reviews"
+        ]
       },
       "GuardedReview": {
         "type": "object",
-        "required": [
-          "bookerId",
-          "id",
-          "performerId",
-          "rating",
-          "text"
-        ],
         "properties": {
           "bookerId": {
             "type": "string"
@@ -2469,20 +2462,17 @@
           "text": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "id",
+          "performerId",
+          "bookerId",
+          "rating",
+          "text"
+        ]
       },
       "GuardedVenue": {
         "type": "object",
-        "required": [
-          "bio",
-          "bookings",
-          "displayName",
-          "genres",
-          "id",
-          "reviews",
-          "topPerformerIds",
-          "username"
-        ],
         "properties": {
           "bio": {
             "type": "string"
@@ -2502,7 +2492,7 @@
               "null"
             ],
             "format": "uint32",
-            "minimum": 0.0
+            "minimum": 0
           },
           "displayName": {
             "type": "string"
@@ -2580,30 +2570,40 @@
           "username": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "id",
+          "username",
+          "displayName",
+          "bio",
+          "genres",
+          "topPerformerIds",
+          "bookings",
+          "reviews"
+        ]
       },
       "Health": {
         "type": "object",
-        "required": [
-          "status"
-        ],
         "properties": {
           "status": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "status"
+        ]
       },
       "LatLngPath": {
         "type": "object",
-        "required": [
-          "latlng"
-        ],
         "properties": {
           "latlng": {
             "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "latlng"
+        ]
       },
       "ListParams": {
         "type": "object",
@@ -2680,11 +2680,6 @@
       },
       "Location": {
         "type": "object",
-        "required": [
-          "lat",
-          "lng",
-          "placeId"
-        ],
         "properties": {
           "lat": {
             "type": "number",
@@ -2697,15 +2692,15 @@
           "placeId": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "placeId",
+          "lat",
+          "lng"
+        ]
       },
       "LocationResponse": {
         "type": "object",
-        "required": [
-          "genres",
-          "top_performers",
-          "venues"
-        ],
         "properties": {
           "genres": {
             "type": "object",
@@ -2726,24 +2721,22 @@
               "$ref": "#/components/schemas/GuardedVenue"
             }
           }
-        }
+        },
+        "required": [
+          "venues",
+          "top_performers",
+          "genres"
+        ]
       },
       "MapBundle": {
         "type": "object",
-        "required": [
-          "genres",
-          "performers",
-          "performersTruncated",
-          "venues",
-          "venuesTruncated"
-        ],
         "properties": {
           "genres": {
             "type": "object",
             "additionalProperties": {
               "type": "integer",
               "format": "uint",
-              "minimum": 0.0
+              "minimum": 0
             }
           },
           "performers": {
@@ -2761,16 +2754,17 @@
             "description": "A capped result cannot safely answer smaller viewports by client-side filtering.",
             "type": "boolean"
           }
-        }
+        },
+        "required": [
+          "venues",
+          "performers",
+          "genres",
+          "venuesTruncated",
+          "performersTruncated"
+        ]
       },
       "MapParams": {
         "type": "object",
-        "required": [
-          "neLat",
-          "neLng",
-          "swLat",
-          "swLng"
-        ],
         "properties": {
           "neLat": {
             "type": "number",
@@ -2789,17 +2783,20 @@
             "format": "double"
           }
         },
-        "additionalProperties": false
+        "additionalProperties": false,
+        "required": [
+          "swLat",
+          "swLng",
+          "neLat",
+          "neLng"
+        ]
       },
       "NotifyVenueOfInterestedOpportunities": {
         "type": "object",
-        "required": [
-          "opportunityIds"
-        ],
         "properties": {
           "note": {
-            "default": "",
-            "type": "string"
+            "type": "string",
+            "default": ""
           },
           "opportunityIds": {
             "type": "array",
@@ -2807,50 +2804,50 @@
               "type": "string"
             }
           }
-        }
+        },
+        "required": [
+          "opportunityIds"
+        ]
       },
       "NotifyVenueResponse": {
         "type": "object",
-        "required": [
-          "venues_notified"
-        ],
         "properties": {
           "venues_notified": {
             "type": "integer",
             "format": "uint",
-            "minimum": 0.0
+            "minimum": 0
           }
-        }
+        },
+        "required": [
+          "venues_notified"
+        ]
       },
       "OpportunityIdPath": {
         "type": "object",
-        "required": [
-          "opportunity_id"
-        ],
         "properties": {
           "opportunity_id": {
             "description": "The opportunity document ID.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "opportunity_id"
+        ]
       },
       "PerformerIdPath": {
         "type": "object",
-        "required": [
-          "id"
-        ],
         "properties": {
           "id": {
             "description": "The performer's user ID.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "id"
+        ]
       },
       "PhotoMetadata": {
         "type": "object",
-        "required": [
-          "name"
-        ],
         "properties": {
           "heightPx": {
             "type": [
@@ -2869,13 +2866,13 @@
             ],
             "format": "int64"
           }
-        }
+        },
+        "required": [
+          "name"
+        ]
       },
       "PhotoParams": {
         "type": "object",
-        "required": [
-          "name"
-        ],
         "properties": {
           "maxHeightPx": {
             "type": [
@@ -2883,12 +2880,15 @@
               "null"
             ],
             "format": "uint32",
-            "minimum": 0.0
+            "minimum": 0
           },
           "name": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "name"
+        ]
       },
       "PhotoResponse": {
         "type": "object",
@@ -2902,27 +2902,22 @@
         }
       },
       "PlaceDetails": {
-        "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\nDocuments written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`; those are refreshed from Google once and rewritten in this shape. `addressComponents`, `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
+        "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
         "type": "object",
-        "required": [
-          "lat",
-          "lng",
-          "placeId"
-        ],
         "properties": {
           "addressComponents": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "$ref": "#/components/schemas/AddressComponent"
             }
           },
           "geohash": {
-            "default": null,
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "default": null
           },
           "lat": {
             "type": "number",
@@ -2933,21 +2928,20 @@
             "format": "double"
           },
           "locality": {
-            "default": null,
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "default": null
           },
           "name": {
-            "default": null,
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "default": null
           },
           "photoMetadata": {
-            "default": null,
             "anyOf": [
               {
                 "$ref": "#/components/schemas/PhotoMetadata"
@@ -2955,11 +2949,12 @@
               {
                 "type": "null"
               }
-            ]
+            ],
+            "default": null
           },
           "photoNames": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
@@ -2973,19 +2968,24 @@
               "null"
             ]
           }
-        }
+        },
+        "required": [
+          "placeId",
+          "lat",
+          "lng"
+        ]
       },
       "PlaceIdPath": {
         "type": "object",
-        "required": [
-          "place_id"
-        ],
         "properties": {
           "place_id": {
             "description": "A Google place ID.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "place_id"
+        ]
       },
       "PlaceParams": {
         "type": "object",
@@ -3000,12 +3000,6 @@
       },
       "ProfileDetails": {
         "type": "object",
-        "required": [
-          "bookingCount",
-          "bookings",
-          "relatedUsers",
-          "user"
-        ],
         "properties": {
           "bookingCount": {
             "type": "integer",
@@ -3021,14 +3015,16 @@
             "items": true
           },
           "user": true
-        }
+        },
+        "required": [
+          "user",
+          "bookingCount",
+          "bookings",
+          "relatedUsers"
+        ]
       },
       "Readiness": {
         "type": "object",
-        "required": [
-          "checks",
-          "status"
-        ],
         "properties": {
           "checks": {
             "description": "Per-dependency result: `ok`, `error` or `timeout`.",
@@ -3041,14 +3037,14 @@
             "description": "`ok` when every dependency responded, otherwise `unavailable`.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "status",
+          "checks"
+        ]
       },
       "ReverseGeocodeParams": {
         "type": "object",
-        "required": [
-          "lat",
-          "lng"
-        ],
         "properties": {
           "lat": {
             "type": "number",
@@ -3058,7 +3054,11 @@
             "type": "number",
             "format": "double"
           }
-        }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ]
       },
       "ReverseGeocodeResponse": {
         "type": "object",
@@ -3073,16 +3073,11 @@
       },
       "Reviews_for_GuardedReview": {
         "type": "object",
-        "required": [
-          "count",
-          "items",
-          "rating"
-        ],
         "properties": {
           "count": {
             "type": "integer",
             "format": "uint",
-            "minimum": 0.0
+            "minimum": 0
           },
           "items": {
             "type": "array",
@@ -3094,144 +3089,149 @@
             "type": "number",
             "format": "double"
           }
-        }
+        },
+        "required": [
+          "count",
+          "rating",
+          "items"
+        ]
       },
       "SearchParams": {
         "type": "object",
         "properties": {
           "genres": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
           },
           "hitsPerPage": {
-            "default": null,
             "type": [
               "integer",
               "null"
             ],
             "format": "uint32",
-            "minimum": 0.0
+            "default": null,
+            "minimum": 0
           },
           "labels": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
           },
           "lat": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "lng": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "maxCapacity": {
-            "default": null,
             "type": [
               "integer",
               "null"
             ],
             "format": "uint32",
-            "minimum": 0.0
+            "default": null,
+            "minimum": 0
           },
           "minCapacity": {
-            "default": null,
             "type": [
               "integer",
               "null"
             ],
             "format": "uint32",
-            "minimum": 0.0
+            "default": null,
+            "minimum": 0
           },
           "neLat": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "neLng": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "occupations": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
           },
           "occupationsBlacklist": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
           },
           "q": {
-            "default": "",
-            "type": "string"
+            "type": "string",
+            "default": ""
           },
           "radius": {
-            "default": null,
             "type": [
               "integer",
               "null"
             ],
             "format": "uint64",
-            "minimum": 0.0
+            "default": null,
+            "minimum": 0
           },
           "startTime": {
-            "default": null,
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "default": null
           },
           "swLat": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "swLng": {
-            "default": null,
             "type": [
               "number",
               "null"
             ],
-            "format": "double"
+            "format": "double",
+            "default": null
           },
           "unclaimed": {
-            "default": null,
             "type": [
               "boolean",
               "null"
-            ]
+            ],
+            "default": null
           },
           "venueGenres": {
-            "default": [],
             "type": "array",
+            "default": [],
             "items": {
               "type": "string"
             }
@@ -3255,10 +3255,10 @@
         "type": "object",
         "properties": {
           "audiusFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "audiusHandle": {
             "type": [
@@ -3267,10 +3267,10 @@
             ]
           },
           "facebookFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "facebookHandle": {
             "type": [
@@ -3279,10 +3279,10 @@
             ]
           },
           "instagramFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "instagramHandle": {
             "type": [
@@ -3291,10 +3291,10 @@
             ]
           },
           "soundcloudFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "soundcloudHandle": {
             "type": [
@@ -3309,10 +3309,10 @@
             ]
           },
           "tiktokFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "tiktokHandle": {
             "type": [
@@ -3321,10 +3321,10 @@
             ]
           },
           "twitchFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "twitchHandle": {
             "type": [
@@ -3333,10 +3333,10 @@
             ]
           },
           "twitterFollowers": {
-            "default": 0,
             "type": "integer",
             "format": "uint32",
-            "minimum": 0.0
+            "default": 0,
+            "minimum": 0
           },
           "twitterHandle": {
             "type": [
@@ -3354,33 +3354,33 @@
       },
       "StreamUserTokenResponse": {
         "type": "object",
-        "required": [
-          "token"
-        ],
         "properties": {
           "token": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "token"
+        ]
       },
       "TicketRange": {
         "type": "object",
-        "required": [
-          "max",
-          "min"
-        ],
         "properties": {
           "max": {
             "type": "integer",
             "format": "uint64",
-            "minimum": 0.0
+            "minimum": 0
           },
           "min": {
             "type": "integer",
             "format": "uint64",
-            "minimum": 0.0
+            "minimum": 0
           }
-        }
+        },
+        "required": [
+          "min",
+          "max"
+        ]
       },
       "TopTracksParams": {
         "type": "object",
@@ -3396,38 +3396,38 @@
       },
       "UsernamePath": {
         "type": "object",
-        "required": [
-          "username"
-        ],
         "properties": {
           "username": {
             "description": "The user's username, without `@`.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "username"
+        ]
       },
       "UsernamePath2": {
         "type": "object",
-        "required": [
-          "username"
-        ],
         "properties": {
           "username": {
             "description": "The performer's username, without `@`.",
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "username"
+        ]
       },
       "Version": {
         "type": "object",
-        "required": [
-          "version"
-        ],
         "properties": {
           "version": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "version"
+        ]
       }
     }
   },

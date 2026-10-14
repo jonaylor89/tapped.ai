@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use axum::response::IntoResponse;
 use base64::{Engine, engine::general_purpose::STANDARD};
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use sha2::Sha256;
 use std::sync::{
     Arc, Mutex,

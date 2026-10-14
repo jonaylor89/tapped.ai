@@ -45,7 +45,7 @@ pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStat
 
     let approve = ApiRouter::new()
         .route(
-            "/oauth/authorization-requests/:id/approve",
+            "/oauth/authorization-requests/{id}/approve",
             post(oauth::approve),
         )
         .route_layer(middleware::from_fn_with_state(state, verify_firebase_token));
@@ -57,10 +57,10 @@ pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStat
         .route("/oauth/token", post(oauth::token))
         .route("/oauth/revoke", post(oauth::revoke))
         .route(
-            "/oauth/authorization-requests/:id",
+            "/oauth/authorization-requests/{id}",
             get(oauth::authorization_request),
         )
-        .route("/oauth/authorization-requests/:id/deny", post(oauth::deny))
+        .route("/oauth/authorization-requests/{id}/deny", post(oauth::deny))
         .layer(rate_limits.per_ip_layer());
 
     ApiRouter::new()

@@ -66,7 +66,7 @@ async fn server_span_joins_the_incoming_w3c_trace() {
     provider.force_flush().unwrap();
     let spans = exporter.get_finished_spans().unwrap();
     let span = server_span(&spans);
-    assert_eq!(span.name, "GET /app/v1/opportunities/:opportunity_id");
+    assert_eq!(span.name, "GET /app/v1/opportunities/{opportunity_id}");
     assert_eq!(
         span.span_context.trace_id(),
         TraceId::from_hex(TRACE_ID).unwrap()
@@ -79,7 +79,7 @@ async fn server_span_joins_the_incoming_w3c_trace() {
     assert_eq!(attribute(span, "request_id"), Some("ios-req-1".into()));
     assert_eq!(
         attribute(span, "http.route"),
-        Some("/app/v1/opportunities/:opportunity_id".into())
+        Some("/app/v1/opportunities/{opportunity_id}".into())
     );
     assert_eq!(attribute(span, "http.request.method"), Some("GET".into()));
     assert_eq!(

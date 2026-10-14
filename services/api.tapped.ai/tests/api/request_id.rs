@@ -108,7 +108,7 @@ async fn logs_request_id_route_status_and_latency() {
         .unwrap_or_else(|| panic!("no request log line in {lines:#?}"));
     assert_eq!(
         completed["matched_path"],
-        "/app/v1/opportunities/:opportunity_id"
+        "/app/v1/opportunities/{opportunity_id}"
     );
     assert_eq!(completed["method"], "GET");
     assert_eq!(completed["status"], 200);

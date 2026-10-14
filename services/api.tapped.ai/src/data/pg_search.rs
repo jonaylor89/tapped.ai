@@ -257,7 +257,7 @@ impl PostgresSearch {
         Self { pool }
     }
 }
-#[axum::async_trait]
+#[async_trait::async_trait]
 impl Search for PostgresSearch {
     async fn ping(&self) -> Result<()> {
         sqlx::query("SELECT id FROM api_users LIMIT 1")

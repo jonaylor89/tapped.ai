@@ -3,7 +3,7 @@ use crate::{
     domain::models::{booking::Booking, opportunity::Opportunity, review::Review, user::UserModel},
 };
 use anyhow::Result;
-use axum::async_trait;
+use async_trait::async_trait;
 use serde_json::{Value, json};
 
 #[derive(Debug, Clone, Default)]

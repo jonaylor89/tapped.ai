@@ -32,19 +32,19 @@ pub fn v1_routes(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter {
             }),
         )
         .api_route(
-            "/performer/:id",
+            "/performer/{id}",
             get_with(get_performer, |op| {
                 v1_op(op, "Get a performer by ID").response::<200, Json<GuardedPerformer>>()
             }),
         )
         .api_route(
-            "/performer/username/:username",
+            "/performer/username/{username}",
             get_with(get_performer_username, |op| {
                 v1_op(op, "Get a performer by username").response::<200, Json<GuardedPerformer>>()
             }),
         )
         .api_route(
-            "/location/:latlng",
+            "/location/{latlng}",
             get_with(get_location, |op| {
                 v1_op(op, "Venues, top performers and genre mix near a coordinate")
                     .description(

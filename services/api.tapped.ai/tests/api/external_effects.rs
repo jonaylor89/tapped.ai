@@ -27,7 +27,7 @@ async fn database() -> Option<(PgPool, PgPool, String)> {
         .await
         .unwrap();
     let name = format!("effects_{}", uuid::Uuid::new_v4().simple());
-    sqlx::query(&format!("CREATE DATABASE {name}"))
+    sqlx::query(sqlx::AssertSqlSafe(format!("CREATE DATABASE {name}")))
         .execute(&admin)
         .await
         .unwrap();
@@ -41,10 +41,12 @@ async fn database() -> Option<(PgPool, PgPool, String)> {
 }
 async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
     pool.close().await;
-    sqlx::query(&format!("DROP DATABASE {name} WITH (FORCE)"))
-        .execute(&admin)
-        .await
-        .unwrap();
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "DROP DATABASE {name} WITH (FORCE)"
+    )))
+    .execute(&admin)
+    .await
+    .unwrap();
     admin.close().await;
 }
 

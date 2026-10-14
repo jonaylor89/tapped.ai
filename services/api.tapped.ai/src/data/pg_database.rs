@@ -1,5 +1,5 @@
 use anyhow::{Result, anyhow};
-use axum::async_trait;
+use async_trait::async_trait;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use sqlx::PgPool;
@@ -22,14 +22,14 @@ impl PostgresDatabase {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-    async fn one<T: DeserializeOwned>(&self, sql: &str, key: &str) -> Result<T> {
+    async fn one<T: DeserializeOwned>(&self, sql: &'static str, key: &str) -> Result<T> {
         let value: Option<Value> = sqlx::query_scalar(sql)
             .bind(key)
             .fetch_optional(&self.pool)
             .await?;
         serde_json::from_value(value.ok_or_else(|| anyhow!("not found"))?).map_err(Into::into)
     }
-    async fn many<T: DeserializeOwned>(&self, sql: &str, key: &str) -> Result<Vec<T>> {
+    async fn many<T: DeserializeOwned>(&self, sql: &'static str, key: &str) -> Result<Vec<T>> {
         let values: Vec<Value> = sqlx::query_scalar(sql)
             .bind(key)
             .fetch_all(&self.pool)

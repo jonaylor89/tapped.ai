@@ -29,3 +29,22 @@ async fn version_returns_ok() {
     let body: serde_json::Value = response.json().await.unwrap();
     assert!(body.get("version").is_some());
 }
+
+#[tokio::test]
+async fn docs_are_served_with_and_without_a_trailing_slash() {
+    let app = spawn_app().await;
+    let docs = app
+        .api_client
+        .get(format!("{}/docs", app.address))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(docs.status(), 200);
+    let slash = app
+        .api_client
+        .get(format!("{}/docs/", app.address))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(slash.status(), 200);
+}

@@ -8,7 +8,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chrono::Utc;
-use hmac::{Hmac, Mac};
+use hmac::{Hmac, KeyInit, Mac};
 use mailparse::{MailHeaderMap, parse_mail};
 use rusqlite::{Connection, OptionalExtension, params};
 use serde::{Deserialize, Serialize};

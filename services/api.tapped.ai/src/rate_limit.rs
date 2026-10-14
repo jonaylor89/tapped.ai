@@ -46,16 +46,12 @@ impl Default for RateLimits {
 }
 
 impl RateLimits {
-    pub fn per_ip_layer(&self) -> GovernorLayer<ClientIp, StateInformationMiddleware> {
-        GovernorLayer {
-            config: self.per_ip.clone(),
-        }
+    pub fn per_ip_layer(&self) -> GovernorLayer<ClientIp, StateInformationMiddleware, Body> {
+        GovernorLayer::new(self.per_ip.clone()).error_handler(rate_limited)
     }
 
-    pub fn per_api_key_layer(&self) -> GovernorLayer<ApiKeyOrIp, StateInformationMiddleware> {
-        GovernorLayer {
-            config: self.per_api_key.clone(),
-        }
+    pub fn per_api_key_layer(&self) -> GovernorLayer<ApiKeyOrIp, StateInformationMiddleware, Body> {
+        GovernorLayer::new(self.per_api_key.clone()).error_handler(rate_limited)
     }
 
     /// Drops idle buckets so the limiter's memory doesn't grow with every client ever seen.
@@ -79,7 +75,6 @@ fn limiter<K: KeyExtractor>(key: K, replenish: Duration, burst: u32) -> Limiter<
             .use_headers()
             .period(replenish)
             .burst_size(burst)
-            .error_handler(rate_limited)
             .finish()
             .expect("rate limit period and burst are non-zero"),
     )

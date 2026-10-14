@@ -13,7 +13,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
-use sqlx::{PgPool, Postgres, Transaction};
+use sqlx::{AssertSqlSafe, PgPool, Postgres, Transaction};
 
 type ApiResult = Result<Json<Value>, AppError>;
 fn db_error(e: sqlx::Error) -> AppError {
@@ -160,11 +160,14 @@ fn safe_id(id: &str) -> Result<(), AppError> {
 pub async fn document(pool: &PgPool, table: &str, id: &str) -> Result<Option<Value>, AppError> {
     fields(table)?;
     safe_id(id)?;
-    sqlx::query_scalar(&format!("SELECT doc FROM api_{table} WHERE id=$1"))
-        .bind(id)
-        .fetch_optional(pool)
-        .await
-        .map_err(db_error)
+    // `table` is checked against the `fields` allowlist above.
+    sqlx::query_scalar(AssertSqlSafe(format!(
+        "SELECT doc FROM api_{table} WHERE id=$1"
+    )))
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+    .map_err(db_error)
 }
 async fn document_with_kind(
     pool: &PgPool,
@@ -484,7 +487,8 @@ async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>
         AND $9::text IS NOT NULL AND ($10::text IS NULL OR TRUE)
         {public_booking} {deleted} {mode}
         ORDER BY t.{time} DESC NULLS LAST,t.id DESC LIMIT $8");
-    let rows: Vec<Value> = sqlx::query_scalar(&sql)
+    // Only allowlisted table/column names are interpolated; every value is bound.
+    let rows: Vec<Value> = sqlx::query_scalar(AssertSqlSafe(sql))
         .bind(&p.user_id)
         .bind(&p.requester_id)
         .bind(&p.requestee_id)
@@ -681,11 +685,14 @@ async fn save(
         .await
         .map_err(db_error)?
     } else {
-        sqlx::query_scalar(&format!("SELECT doc FROM api_{table} WHERE id=$1"))
-            .bind(id)
-            .fetch_optional(&mut *tx)
-            .await
-            .map_err(db_error)?
+        // `table` was checked by `fields` at the top of `save`.
+        sqlx::query_scalar(AssertSqlSafe(format!(
+            "SELECT doc FROM api_{table} WHERE id=$1"
+        )))
+        .bind(id)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db_error)?
     };
     if create && old.is_some() {
         return Err(AppError::new("already exists").with_status(StatusCode::CONFLICT));
@@ -946,7 +953,8 @@ async fn persist(
             ""
         }
     );
-    let mut q = sqlx::query(&sql).bind(row);
+    // Column names come from the `fields` allowlist; every value is bound.
+    let mut q = sqlx::query(AssertSqlSafe(sql)).bind(row);
     if geo {
         q = q
             .bind(doc["location"]["lat"].as_f64())

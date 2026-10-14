@@ -1,6 +1,6 @@
 use crate::domain::models::user::UserModel;
 use anyhow::Result;
-use axum::async_trait;
+use async_trait::async_trait;
 
 #[derive(Debug, Clone, Default)]
 pub struct MockSearch;

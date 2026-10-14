@@ -4,7 +4,7 @@
 use std::time::{Duration, Instant};
 
 use anyhow::{Result, bail};
-use axum::async_trait;
+use async_trait::async_trait;
 use reqwest::StatusCode;
 use serde::Deserialize;
 use serde_json::Value;

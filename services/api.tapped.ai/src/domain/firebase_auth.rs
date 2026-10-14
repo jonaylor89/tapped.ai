@@ -1,5 +1,4 @@
 use axum::{
-    async_trait,
     extract::{FromRequestParts, Request, State},
     http::{HeaderMap, header::CACHE_CONTROL, request::Parts},
     middleware::Next,
@@ -266,7 +265,6 @@ async fn verified_firebase_user(
     })
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for FirebaseUser
 where
     S: Send + Sync,

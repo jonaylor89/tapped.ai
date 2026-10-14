@@ -74,7 +74,7 @@ pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
 
 pub struct Application {
     port: u16,
-    server: Serve<Router, Router>,
+    server: Serve<TcpListener, Router, Router>,
     founder_worker: Option<tokio::task::JoinHandle<()>>,
 }
 
@@ -215,7 +215,10 @@ impl Application {
     }
 }
 
-async fn run(listener: TcpListener, state: AppStateDyn) -> Result<Serve<Router, Router>> {
+async fn run(
+    listener: TcpListener,
+    state: AppStateDyn,
+) -> Result<Serve<TcpListener, Router, Router>> {
     let rate_limits = RateLimits::default();
     rate_limits.spawn_cleanup();
     let (app, _) = api_router(state, &rate_limits);
@@ -277,21 +280,21 @@ async fn handle_timeout(error: BoxError) -> AppError {
 
 /// The full app and its OpenAPI document, generated from the routes registered here.
 pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<OpenApi>) {
-    aide::r#gen::on_error(|error| {
+    aide::generate::on_error(|error| {
         tracing::error!("{error}");
     });
-    aide::r#gen::extract_schemas(true);
+    aide::generate::extract_schemas(true);
     let mut api = OpenApi::default();
 
     let app_v1_authenticated = ApiRouter::new()
-        .api_route("/search/:table", post_with(crate::domain::app_data::search_private, |op| app_op(op,"Search current records with participant privacy").response::<200,Json<Value>>()))
-        .api_route("/data/:table", get_with(crate::domain::app_data::list_private, |op| app_op(op,"List documents").response::<200,Json<Value>>())
+        .api_route("/search/{table}", post_with(crate::domain::app_data::search_private, |op| app_op(op,"Search current records with participant privacy").response::<200,Json<Value>>()))
+        .api_route("/data/{table}", get_with(crate::domain::app_data::list_private, |op| app_op(op,"List documents").response::<200,Json<Value>>())
             .post_with(crate::domain::app_data::create, |op| app_op(op,"Create an owned document").response::<200,Json<Value>>()))
-        .api_route("/data/:table/:id", get_with(crate::domain::app_data::get_private, |op| app_op(op,"Read a document").response::<200,Json<Value>>())
+        .api_route("/data/{table}/{id}", get_with(crate::domain::app_data::get_private, |op| app_op(op,"Read a document").response::<200,Json<Value>>())
             .put_with(crate::domain::app_data::update, |op| app_op(op,"Update an owned document").response::<200,Json<Value>>())
             .delete_with(crate::domain::app_data::remove, |op| app_op(op,"Soft delete an owned document").response::<200,Json<Value>>()))
-        .route("/username-availability/:username", get(crate::domain::app_data::username_available))
-        .route("/opportunities/:id/interest", get(crate::domain::app_data::interest_status).put(crate::domain::app_data::set_interest))
+        .route("/username-availability/{username}", get(crate::domain::app_data::username_available))
+        .route("/opportunities/{id}/interest", get(crate::domain::app_data::interest_status).put(crate::domain::app_data::set_interest))
         .route("/feedback", post(crate::domain::feedback::submit))
         .route("/device-token", post(crate::domain::app_data::register_token))
         .route("/venue-email-threads", post(create_email_thread))
@@ -327,7 +330,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             }),
         )
         .api_route(
-            "/spotify/artists/:artist_id",
+            "/spotify/artists/{artist_id}",
             get_with(get_spotify_artist, |op| {
                 app_op(op, "Spotify artist by ID")
                     .description("Spotify's artist object, cached for an hour.")
@@ -335,7 +338,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             }),
         )
         .api_route(
-            "/spotify/artists/:artist_id/top-tracks",
+            "/spotify/artists/{artist_id}/top-tracks",
             get_with(get_spotify_artist_top_tracks, |op| {
                 app_op(op, "Spotify top tracks for an artist")
                     .description("Spotify's `{ tracks }` response, cached for an hour.")
@@ -361,12 +364,12 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
     let app_v1_public = ApiRouter::new()
         .api_route("/public/map", get_with(crate::domain::public_map::get_map, |op| public_op(op,"Map venues, referenced public performers and genre summary in one query").response::<200,Json<crate::domain::public_map::MapBundle>>()))
-        .api_route("/public/search/:table", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
-        .api_route("/public/data/:table", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
-        .api_route("/public/data/:table/:id", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
-        .api_route("/public/users/:id/details", get_with(crate::domain::public_profile::get_details, |op| public_op(op,"Fresh public profile, confirmed history, count and latest review").response::<200,Json<crate::domain::public_profile::ProfileDetails>>()))
-        .route("/public/users/:id/booking-count", get(crate::domain::app_data::booking_count))
-        .route("/public/opportunities/:id/interests", get(crate::domain::app_data::interests))
+        .api_route("/public/search/{table}", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
+        .api_route("/public/data/{table}", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
+        .api_route("/public/data/{table}/{id}", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
+        .api_route("/public/users/{id}/details", get_with(crate::domain::public_profile::get_details, |op| public_op(op,"Fresh public profile, confirmed history, count and latest review").response::<200,Json<crate::domain::public_profile::ProfileDetails>>()))
+        .route("/public/users/{id}/booking-count", get(crate::domain::app_data::booking_count))
+        .route("/public/opportunities/{id}/interests", get(crate::domain::app_data::interests))
         .api_route(
             "/places/autocomplete",
             get_with(autocomplete_places, |op| {
@@ -375,13 +378,13 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             }),
         )
         .api_route(
-            "/places/:place_id",
+            "/places/{place_id}",
             get_with(get_place, |op| {
                 public_op(op, "Place details").response::<200, Json<PlaceDetails>>()
             }),
         )
         .api_route(
-            "/users/username/:username",
+            "/users/username/{username}",
             get_with(get_public_user_by_username, |op| {
                 public_op(op, "Public profile by username")
                     .description("The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")
@@ -389,7 +392,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             }),
         )
         .api_route(
-            "/opportunities/:opportunity_id",
+            "/opportunities/{opportunity_id}",
             get_with(get_public_opportunity, |op| {
                 public_op(op, "Public opportunity")
                     .description("The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")

@@ -518,11 +518,13 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
         ("users", "id", a.uid),
         ("users", "id", b.uid),
     ] {
-        sqlx::query(&format!("DELETE FROM {table} WHERE {column}=$1"))
-            .bind(value)
-            .execute(&pool)
-            .await
-            .unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DELETE FROM {table} WHERE {column}=$1"
+        )))
+        .bind(value)
+        .execute(&pool)
+        .await
+        .unwrap();
     }
     let _: Value = public;
 }

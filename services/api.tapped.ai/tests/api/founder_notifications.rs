@@ -43,7 +43,7 @@ impl TestDatabase {
             .await
             .unwrap();
         let name = format!("founders_{}", uuid::Uuid::new_v4().simple());
-        sqlx::query(&format!("CREATE DATABASE {name}"))
+        sqlx::query(sqlx::AssertSqlSafe(format!("CREATE DATABASE {name}")))
             .execute(&admin)
             .await
             .unwrap();
@@ -57,10 +57,13 @@ impl TestDatabase {
     }
     async fn cleanup(self) {
         self.pool.close().await;
-        sqlx::query(&format!("DROP DATABASE {} WITH (FORCE)", self.name))
-            .execute(&self.admin)
-            .await
-            .unwrap();
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DROP DATABASE {} WITH (FORCE)",
+            self.name
+        )))
+        .execute(&self.admin)
+        .await
+        .unwrap();
         self.admin.close().await;
     }
 }
