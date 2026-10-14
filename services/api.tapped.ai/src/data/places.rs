@@ -1,15 +1,15 @@
 use anyhow::{Result, bail};
 use async_trait::async_trait;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
+use utoipa::ToSchema;
 
 const PLACES_BASE_URL: &str = "https://places.googleapis.com/v1";
 const GEOCODE_URL: &str = "https://maps.googleapis.com/maps/api/geocode/json";
 const PLACE_DETAILS_FIELD_MASK: &str =
     "id,displayName,shortFormattedAddress,location,addressComponents,photos";
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AutocompletePrediction {
     pub place_id: String,
@@ -18,7 +18,7 @@ pub struct AutocompletePrediction {
     pub secondary_text: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AddressComponent {
     pub long_text: Option<String>,
@@ -27,7 +27,7 @@ pub struct AddressComponent {
     pub types: Vec<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoMetadata {
     pub name: String,
@@ -40,7 +40,7 @@ pub struct PhotoMetadata {
 /// Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;
 /// those are refreshed from Google once and rewritten in this shape. `addressComponents`,
 /// `photoMetadata` and `geohash` are kept for the legacy readers of the collection.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaceDetails {
     pub place_id: String,

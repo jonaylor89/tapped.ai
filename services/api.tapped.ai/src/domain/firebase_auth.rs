@@ -282,9 +282,6 @@ where
     }
 }
 
-// Auth is documented as a security requirement on each operation instead.
-impl aide::OperationInput for FirebaseUser {}
-
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -12,7 +12,6 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
 use crate::{
@@ -21,6 +20,7 @@ use crate::{
     errors::AppError,
     state::AppStateDyn,
 };
+use utoipa::{IntoParams, ToSchema};
 
 const AUTOCOMPLETE_TTL: Duration = Duration::from_secs(6 * 60 * 60);
 const PLACE_TTL: Duration = Duration::from_secs(24 * 60 * 60);
@@ -70,7 +70,8 @@ fn is_safe_path(value: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_' | '/'))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
 pub struct AutocompleteParams {
     pub(crate) query: String,
@@ -97,6 +98,14 @@ fn parse_types(types: Option<&str>) -> Option<Vec<String>> {
     valid.then_some(types)
 }
 
+#[utoipa::path(
+    get,
+    path = "/places/autocomplete",
+    tag = "public",
+    summary = "Autocomplete place names",
+    params(AutocompleteParams),
+    responses((status = 200, description = "Success", body = Vec<AutocompletePrediction>))
+)]
 pub async fn autocomplete_places(
     State(state): State<AppStateDyn>,
     Query(params): Query<AutocompleteParams>,
@@ -131,7 +140,8 @@ pub async fn autocomplete_places(
     Ok(Json(predictions))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct PlaceIdPath {
     /// A Google place ID.
     place_id: String,
@@ -141,12 +151,21 @@ fn place_not_found() -> AppError {
     AppError::not_found("place not found")
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
 pub struct PlaceParams {
     session_token: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/places/{place_id}",
+    tag = "public",
+    summary = "Place details",
+    params(PlaceIdPath, PlaceParams),
+    responses((status = 200, description = "Success", body = PlaceDetails))
+)]
 pub async fn get_place(
     State(state): State<AppStateDyn>,
     Path(PlaceIdPath { place_id }): Path<PlaceIdPath>,
@@ -218,19 +237,29 @@ pub(crate) async fn place_details(
     Ok(place)
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoParams {
     name: String,
     max_height_px: Option<u32>,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct PhotoResponse {
     photo_uri: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/places/photo",
+    tag = "app",
+    summary = "Resolve a Google place photo to a short-lived URL",
+    params(PhotoParams),
+    responses((status = 200, description = "Success", body = PhotoResponse)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn get_place_photo(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,
@@ -266,19 +295,29 @@ pub async fn get_place_photo(
     Ok(Json(photo))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ReverseGeocodeParams {
     pub lat: f64,
     pub lng: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ReverseGeocodeResponse {
     place_id: Option<String>,
 }
 
 /// Locality place ID for a coordinate. Coordinates are rounded to ~100m for caching.
+#[utoipa::path(
+    get,
+    path = "/places/reverse-geocode",
+    tag = "app",
+    summary = "Locality place for a coordinate",
+    params(ReverseGeocodeParams),
+    responses((status = 200, description = "Success", body = ReverseGeocodeResponse)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn reverse_geocode(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,
@@ -291,6 +330,16 @@ pub async fn reverse_geocode(
 
 /// Locality place details for a coordinate: `reverse-geocode` and `places/{placeId}` in one
 /// request, so the app makes a single round trip.
+#[utoipa::path(
+    get,
+    path = "/places/locality",
+    tag = "app",
+    summary = "Locality place details for a coordinate",
+    description = "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
+    params(ReverseGeocodeParams),
+    responses((status = 200, description = "Success", body = PlaceDetails)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn get_locality_place(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,

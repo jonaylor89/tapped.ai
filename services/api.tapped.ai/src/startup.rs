@@ -1,44 +1,24 @@
 use crate::{
-    data::places::{AutocompletePrediction, PlaceDetails},
     data::{
         pg_database::PostgresDatabase, pg_search::PostgresSearch, places::GooglePlaces,
         redis_places::RedisPlaceCache, spotify::SpotifyHttp,
     },
-    docs::{docs_routes, serve_docs},
+    docs::{ApiDoc, SharedDocs, docs_routes, serve_docs},
     domain::{
-        app_functions::{
-            NotifyVenueResponse, StreamUserTokenResponse, notify_venue_of_interested_opportunities,
-            stream_user_token,
-        },
         firebase_auth::verify_firebase_token,
         founder_notifications::{SlackWebhook, run_worker as run_founder_worker},
-        health::{Health, Readiness, Version, health, ready, version},
         mail_bridge::{
             MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_message,
             backfill_email_thread, create_email_thread, enqueue_service_email, inbound_email,
             postmark_inbound_email, stream_before_message,
         },
         mail_composer::OpenAiEmailComposer,
-        places::{
-            PhotoResponse, ReverseGeocodeResponse, autocomplete_places, get_locality_place,
-            get_place, get_place_photo, reverse_geocode,
-        },
-        public_docs::{get_public_opportunity, get_public_user_by_username},
-        spotify::{get_spotify_artist, get_spotify_artist_top_tracks},
     },
     errors::{AppError, json_error_bodies, panic_response},
     rate_limit::RateLimits,
     request_id::{RequestId, propagate_request_id},
     routes::v1_routes,
     state::AppStateDyn,
-};
-use aide::{
-    axum::{
-        ApiRouter,
-        routing::{get_with, post_with},
-    },
-    openapi::{OpenApi, SecurityScheme, Server, Tag},
-    transform::{TransformOpenApi, TransformOperation},
 };
 use axum::Router;
 use axum::serve::Serve;
@@ -68,6 +48,9 @@ use tower_http::{
 };
 use tracing::{Span, info_span};
 use tracing_opentelemetry::OpenTelemetrySpanExt;
+use utoipa::openapi::OpenApi;
+use utoipa::{Modify, OpenApi as _};
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 /// Upper bound for any request, including slow upstreams (LLM email composition, Places).
 pub const REQUEST_TIMEOUT: Duration = Duration::from_secs(90);
@@ -256,20 +239,6 @@ pub async fn shutdown_signal() {
     tracing::info!("shutdown signal received, draining in-flight requests");
 }
 
-fn app_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
-    op.tag("app")
-        .summary(summary)
-        .security_requirement("FirebaseAuth")
-}
-
-fn public_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
-    op.tag("public").summary(summary)
-}
-
-fn meta_op<'a>(op: TransformOperation<'a>, summary: &str) -> TransformOperation<'a> {
-    op.tag("meta").summary(summary)
-}
-
 async fn handle_timeout(error: BoxError) -> AppError {
     if error.is::<tower::timeout::error::Elapsed>() {
         AppError::new("request timed out").with_status(StatusCode::GATEWAY_TIMEOUT)
@@ -280,81 +249,38 @@ async fn handle_timeout(error: BoxError) -> AppError {
 
 /// The full app and its OpenAPI document, generated from the routes registered here.
 pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<OpenApi>) {
-    aide::generate::on_error(|error| {
-        tracing::error!("{error}");
-    });
-    aide::generate::extract_schemas(true);
-    let mut api = OpenApi::default();
+    use crate::domain::{
+        app_data, app_functions, health, places, public_docs, public_map, public_profile, spotify,
+    };
 
-    let app_v1_authenticated = ApiRouter::new()
-        .api_route("/search/{table}", post_with(crate::domain::app_data::search_private, |op| app_op(op,"Search current records with participant privacy").response::<200,Json<Value>>()))
-        .api_route("/data/{table}", get_with(crate::domain::app_data::list_private, |op| app_op(op,"List documents").response::<200,Json<Value>>())
-            .post_with(crate::domain::app_data::create, |op| app_op(op,"Create an owned document").response::<200,Json<Value>>()))
-        .api_route("/data/{table}/{id}", get_with(crate::domain::app_data::get_private, |op| app_op(op,"Read a document").response::<200,Json<Value>>())
-            .put_with(crate::domain::app_data::update, |op| app_op(op,"Update an owned document").response::<200,Json<Value>>())
-            .delete_with(crate::domain::app_data::remove, |op| app_op(op,"Soft delete an owned document").response::<200,Json<Value>>()))
-        .route("/username-availability/{username}", get(crate::domain::app_data::username_available))
-        .route("/opportunities/{id}/interest", get(crate::domain::app_data::interest_status).put(crate::domain::app_data::set_interest))
+    let app_v1_authenticated = OpenApiRouter::new()
+        .routes(routes!(app_data::search_private))
+        .routes(routes!(app_data::list_private, app_data::create))
+        .routes(routes!(
+            app_data::get_private,
+            app_data::update,
+            app_data::remove
+        ))
+        .route(
+            "/username-availability/{username}",
+            get(app_data::username_available),
+        )
+        .route(
+            "/opportunities/{id}/interest",
+            get(app_data::interest_status).put(app_data::set_interest),
+        )
         .route("/feedback", post(crate::domain::feedback::submit))
-        .route("/device-token", post(crate::domain::app_data::register_token))
+        .route("/device-token", post(app_data::register_token))
         .route("/venue-email-threads", post(create_email_thread))
-        .api_route(
-            "/stream-token",
-            post_with(stream_user_token, |op| {
-                app_op(op, "Mint a Stream chat token for the signed-in user")
-                    .response::<200, Json<StreamUserTokenResponse>>()
-            }),
-        )
-        .api_route(
-            "/places/photo",
-            get_with(get_place_photo, |op| {
-                app_op(op, "Resolve a Google place photo to a short-lived URL")
-                    .response::<200, Json<PhotoResponse>>()
-            }),
-        )
-        .api_route(
-            "/places/reverse-geocode",
-            get_with(reverse_geocode, |op| {
-                app_op(op, "Locality place for a coordinate")
-                    .response::<200, Json<ReverseGeocodeResponse>>()
-            }),
-        )
-        .api_route(
-            "/places/locality",
-            get_with(get_locality_place, |op| {
-                app_op(op, "Locality place details for a coordinate")
-                    .description(
-                        "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
-                    )
-                    .response::<200, Json<PlaceDetails>>()
-            }),
-        )
-        .api_route(
-            "/spotify/artists/{artist_id}",
-            get_with(get_spotify_artist, |op| {
-                app_op(op, "Spotify artist by ID")
-                    .description("Spotify's artist object, cached for an hour.")
-                    .response::<200, Json<serde_json::Value>>()
-            }),
-        )
-        .api_route(
-            "/spotify/artists/{artist_id}/top-tracks",
-            get_with(get_spotify_artist_top_tracks, |op| {
-                app_op(op, "Spotify top tracks for an artist")
-                    .description("Spotify's `{ tracks }` response, cached for an hour.")
-                    .response::<200, Json<serde_json::Value>>()
-            }),
-        )
-        .api_route(
-            "/opportunity-venue-notifications",
-            post_with(notify_venue_of_interested_opportunities, |op| {
-                app_op(
-                    op,
-                    "Email venues about opportunities the user is interested in",
-                )
-                .response::<200, Json<NotifyVenueResponse>>()
-            }),
-        )
+        .routes(routes!(app_functions::stream_user_token))
+        .routes(routes!(places::get_place_photo))
+        .routes(routes!(places::reverse_geocode))
+        .routes(routes!(places::get_locality_place))
+        .routes(routes!(spotify::get_spotify_artist))
+        .routes(routes!(spotify::get_spotify_artist_top_tracks))
+        .routes(routes!(
+            app_functions::notify_venue_of_interested_opportunities
+        ))
         .route_layer(middleware::from_fn_with_state(
             state.clone(),
             verify_firebase_token,
@@ -362,76 +288,43 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
 
     // Public: the web app has no signed-in user. Google spend is bounded by the Places quota caps
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
-    let app_v1_public = ApiRouter::new()
-        .api_route("/public/map", get_with(crate::domain::public_map::get_map, |op| public_op(op,"Map venues, referenced public performers and genre summary in one query").response::<200,Json<crate::domain::public_map::MapBundle>>()))
-        .api_route("/public/search/{table}", post_with(crate::domain::app_data::search_public, |op| public_op(op,"Search public profiles, confirmed bookings and opportunities").response::<200,Json<Value>>()))
-        .api_route("/public/data/{table}", get_with(crate::domain::app_data::list_public, |op| public_op(op,"List public documents").response::<200,Json<Value>>()))
-        .api_route("/public/data/{table}/{id}", get_with(crate::domain::app_data::get_public, |op| public_op(op,"Read a public document").response::<200,Json<Value>>()))
-        .api_route("/public/users/{id}/details", get_with(crate::domain::public_profile::get_details, |op| public_op(op,"Fresh public profile, confirmed history, count and latest review").response::<200,Json<crate::domain::public_profile::ProfileDetails>>()))
-        .route("/public/users/{id}/booking-count", get(crate::domain::app_data::booking_count))
-        .route("/public/opportunities/{id}/interests", get(crate::domain::app_data::interests))
-        .api_route(
-            "/places/autocomplete",
-            get_with(autocomplete_places, |op| {
-                public_op(op, "Autocomplete place names")
-                    .response::<200, Json<Vec<AutocompletePrediction>>>()
-            }),
+    let app_v1_public = OpenApiRouter::new()
+        .routes(routes!(public_map::get_map))
+        .routes(routes!(app_data::search_public))
+        .routes(routes!(app_data::list_public))
+        .routes(routes!(app_data::get_public))
+        .routes(routes!(public_profile::get_details))
+        .route(
+            "/public/users/{id}/booking-count",
+            get(app_data::booking_count),
         )
-        .api_route(
-            "/places/{place_id}",
-            get_with(get_place, |op| {
-                public_op(op, "Place details").response::<200, Json<PlaceDetails>>()
-            }),
+        .route(
+            "/public/opportunities/{id}/interests",
+            get(app_data::interests),
         )
-        .api_route(
-            "/users/username/{username}",
-            get_with(get_public_user_by_username, |op| {
-                public_op(op, "Public profile by username")
-                    .description("The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")
-                    .response::<200, Json<serde_json::Value>>()
-            }),
-        )
-        .api_route(
-            "/opportunities/{opportunity_id}",
-            get_with(get_public_opportunity, |op| {
-                public_op(op, "Public opportunity")
-                    .description("The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.")
-                    .response::<200, Json<serde_json::Value>>()
-            }),
-        )
+        .routes(routes!(places::autocomplete_places))
+        .routes(routes!(places::get_place))
+        .routes(routes!(public_docs::get_public_user_by_username))
+        .routes(routes!(public_docs::get_public_opportunity))
         .layer(rate_limits.per_ip_layer())
         .layer(public_get_cors());
 
-    let app = ApiRouter::new()
+    let (documented, mut api) = OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .routes(routes!(health::version))
+        .routes(routes!(health::health))
+        .routes(routes!(health::ready))
+        .nest("/app/v1", app_v1_authenticated.merge(app_v1_public))
+        .nest("/v1", v1_routes(state.clone(), rate_limits))
+        .split_for_parts();
+    SharedDocs.modify(&mut api);
+
+    let app = documented
         .route(
             "/swagger",
             get(|| async { Html(swagger_ui("/swagger/json")) }),
         )
         .route("/swagger/json", get(serve_docs))
         .route("/", get(root))
-        .api_route(
-            "/version",
-            get_with(version, |op| {
-                meta_op(op, "API version").response::<200, Json<Version>>()
-            }),
-        )
-        .api_route(
-            "/health",
-            get_with(health, |op| {
-                meta_op(op, "Liveness")
-                    .description("The process is serving requests. Doesn't check dependencies.")
-                    .response::<200, Json<Health>>()
-            }),
-        )
-        .api_route(
-            "/health/ready",
-            get_with(ready, |op| {
-                meta_op(op, "Readiness")
-                    .description("Postgres serving projections and search, Redis and the mail store all respond within 3s.")
-                    .response::<200, Json<Readiness>>()
-                    .response::<503, Json<Readiness>>()
-            }),
-        )
         .route(
             "/webhooks/stream/before-message",
             post(stream_before_message),
@@ -447,11 +340,8 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             "/internal/mail/backfill-message",
             post(backfill_email_message),
         )
-        .nest("/app/v1", app_v1_authenticated.merge(app_v1_public))
         .merge(crate::domain::mcp::router(state.clone(), rate_limits))
-        .nest_api_service("/v1", v1_routes(state.clone(), rate_limits))
-        .nest_api_service("/docs", docs_routes(state.clone()))
-        .finish_api_with(&mut api, api_docs);
+        .merge(docs_routes(&api));
 
     let api = Arc::new(api);
     // Layers run outermost-last: request ID -> trace -> catch panics -> JSON error bodies ->
@@ -535,60 +425,4 @@ fn public_get_cors() -> CorsLayer {
 
 async fn root() -> Json<Value> {
     json!({ "status": "ok" }).into()
-}
-
-fn api_docs(mut api: TransformOpenApi) -> TransformOpenApi {
-    let inner = api.inner_mut();
-    inner.info.version = env!("CARGO_PKG_VERSION").into();
-    inner.servers = vec![Server {
-        url: "https://api.tapped.ai".into(),
-        ..Default::default()
-    }];
-    api.title("Tapped API Docs")
-        .summary("the leading API for live music data including performers, venues, and events. High quality live music data and aggregates")
-        .description("Errors share one shape: `{ \"error\", \"error_id\", \"error_details\"? }`. Quote `error_id` when reporting a problem; it is logged server-side.")
-        .tag(Tag {
-            name: "v1".into(),
-            description: Some("Partner API, authenticated with a `tapped-api-key`.".into()),
-            ..Default::default()
-        })
-        .tag(Tag {
-            name: "app".into(),
-            description: Some("Used by the Tapped apps, authenticated with a Firebase ID token.".into()),
-            ..Default::default()
-        })
-        .tag(Tag {
-            name: "public".into(),
-            description: Some("Unauthenticated, rate limited per IP.".into()),
-            ..Default::default()
-        })
-        .tag(Tag {
-            name: "meta".into(),
-            description: Some("Version, liveness and readiness.".into()),
-            ..Default::default()
-        })
-        .security_scheme(
-            "ApiKey",
-            SecurityScheme::ApiKey {
-                location: aide::openapi::ApiKeyLocation::Header,
-                name: "tapped-api-key".into(),
-                description: Some("your API Key".into()),
-                extensions: Default::default(),
-            },
-        )
-        .security_scheme(
-            "FirebaseAuth",
-            SecurityScheme::Http {
-                scheme: "bearer".into(),
-                bearer_format: Some("JWT".into()),
-                description: Some("A Firebase Auth ID token for the tapped project.".into()),
-                extensions: Default::default(),
-            },
-        )
-        .default_response_with::<Json<AppError>, _>(|res| {
-            let mut example = AppError::new("some error happened");
-            // Fixed so the generated spec is reproducible.
-            example.error_id = uuid::Uuid::nil();
-            res.example(example)
-        })
 }

@@ -2,8 +2,14 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Tapped API Docs",
-    "summary": "the leading API for live music data including performers, venues, and events. High quality live music data and aggregates",
-    "description": "Errors share one shape: `{ \"error\", \"error_id\", \"error_details\"? }`. Quote `error_id` when reporting a problem; it is logged server-side.",
+    "description": "The leading API for live music data including performers, venues, and events. High quality live music data and aggregates.\n\nErrors share one shape: `{ \"error\", \"error_id\", \"error_details\"? }`. Quote `error_id` when reporting a problem; it is logged server-side.",
+    "contact": {
+      "name": "Johannes Naylor",
+      "email": "johannes@tapped.ai"
+    },
+    "license": {
+      "name": ""
+    },
     "version": "0.1.0"
   },
   "servers": [
@@ -18,7 +24,18 @@
           "meta"
         ],
         "summary": "API version",
+        "operationId": "version",
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Version"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -29,16 +46,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Version"
                 }
               }
             }
@@ -53,7 +60,18 @@
         ],
         "summary": "Liveness",
         "description": "The process is serving requests. Doesn't check dependencies.",
+        "operationId": "health",
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Health"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -64,16 +82,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Health"
                 }
               }
             }
@@ -88,7 +96,28 @@
         ],
         "summary": "Readiness",
         "description": "Postgres serving projections and search, Redis and the mail store all respond within 3s.",
+        "operationId": "ready",
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency is unavailable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Readiness"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -99,26 +128,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Readiness"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Readiness"
                 }
               }
             }
@@ -132,15 +141,15 @@
           "app"
         ],
         "summary": "Search current records with participant privacy",
+        "operationId": "search_private",
         "parameters": [
           {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -154,6 +163,14 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -165,14 +182,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -190,142 +199,116 @@
           "app"
         ],
         "summary": "List documents",
+        "operationId": "list_private",
         "parameters": [
           {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
-            "name": "after",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "ids",
-            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-            "schema": {
-              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int64"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "mode",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "referenceEventId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesteeId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesterId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "reviewType",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "userId",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesteeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceEventId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -337,14 +320,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -360,26 +335,34 @@
           "app"
         ],
         "summary": "Create an owned document",
+        "operationId": "create",
         "parameters": [
           {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": true
+              "schema": {}
             }
           },
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -391,14 +374,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -416,151 +391,124 @@
           "app"
         ],
         "summary": "Read a document",
+        "operationId": "get_private",
         "parameters": [
           {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "style": "simple"
-          },
-          {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
-            "name": "after",
+            "name": "id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
           },
           {
-            "in": "query",
-            "name": "ids",
-            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-            "schema": {
-              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int64"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "mode",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "referenceEventId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesteeId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesterId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "reviewType",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "userId",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesteeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceEventId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -572,14 +520,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -595,35 +535,42 @@
           "app"
         ],
         "summary": "Update an owned document",
+        "operationId": "update",
         "parameters": [
           {
+            "name": "table",
             "in": "path",
-            "name": "id",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
+            "name": "id",
             "in": "path",
-            "name": "table",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
           "content": {
             "application/json": {
-              "schema": true
+              "schema": {}
             }
           },
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -635,14 +582,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -658,27 +597,34 @@
           "app"
         ],
         "summary": "Soft delete an owned document",
+        "operationId": "remove",
         "parameters": [
           {
+            "name": "table",
             "in": "path",
-            "name": "id",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
+            "name": "id",
             "in": "path",
-            "name": "table",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -690,14 +636,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -715,7 +653,18 @@
           "app"
         ],
         "summary": "Mint a Stream chat token for the signed-in user",
+        "operationId": "stream_user_token",
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StreamUserTokenResponse"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -726,16 +675,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/StreamUserTokenResponse"
                 }
               }
             }
@@ -754,31 +693,38 @@
           "app"
         ],
         "summary": "Resolve a Google place photo to a short-lived URL",
+        "operationId": "get_place_photo",
         "parameters": [
           {
-            "in": "query",
-            "name": "maxHeightPx",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "uint32",
-              "minimum": 0
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "name",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "form"
+            }
+          },
+          {
+            "name": "maxHeightPx",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PhotoResponse"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -789,16 +735,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PhotoResponse"
                 }
               }
             }
@@ -817,29 +753,38 @@
           "app"
         ],
         "summary": "Locality place for a coordinate",
+        "operationId": "reverse_geocode",
         "parameters": [
           {
-            "in": "query",
             "name": "lat",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
           },
           {
-            "in": "query",
             "name": "lng",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReverseGeocodeResponse"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -850,16 +795,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ReverseGeocodeResponse"
                 }
               }
             }
@@ -879,29 +814,38 @@
         ],
         "summary": "Locality place details for a coordinate",
         "description": "`reverse-geocode` and `places/{placeId}` in one request; 404 when no locality contains the coordinate.",
+        "operationId": "get_locality_place",
         "parameters": [
           {
-            "in": "query",
             "name": "lat",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
           },
           {
-            "in": "query",
             "name": "lng",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceDetails"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -912,16 +856,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceDetails"
                 }
               }
             }
@@ -941,20 +875,27 @@
         ],
         "summary": "Spotify artist by ID",
         "description": "Spotify's artist object, cached for an hour.",
+        "operationId": "get_spotify_artist",
         "parameters": [
           {
-            "in": "path",
             "name": "artist_id",
+            "in": "path",
             "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
             "required": true,
             "schema": {
-              "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -966,14 +907,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -992,33 +925,36 @@
         ],
         "summary": "Spotify top tracks for an artist",
         "description": "Spotify's `{ tracks }` response, cached for an hour.",
+        "operationId": "get_spotify_artist_top_tracks",
         "parameters": [
           {
-            "in": "path",
             "name": "artist_id",
+            "in": "path",
             "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
             "required": true,
             "schema": {
-              "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
             "name": "market",
+            "in": "query",
             "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
+            "required": false,
             "schema": {
-              "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1030,14 +966,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1055,6 +983,7 @@
           "app"
         ],
         "summary": "Email venues about opportunities the user is interested in",
+        "operationId": "notify_venue_of_interested_opportunities",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1066,6 +995,16 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyVenueResponse"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1076,16 +1015,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/NotifyVenueResponse"
                 }
               }
             }
@@ -1104,49 +1033,56 @@
           "public"
         ],
         "summary": "Map venues, referenced public performers and genre summary in one query",
+        "operationId": "get_map",
         "parameters": [
           {
-            "in": "query",
-            "name": "neLat",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "format": "double"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "neLng",
-            "required": true,
-            "schema": {
-              "type": "number",
-              "format": "double"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "swLat",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
           },
           {
-            "in": "query",
             "name": "swLng",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "number",
               "format": "double"
-            },
-            "style": "form"
+            }
+          },
+          {
+            "name": "neLat",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
+          },
+          {
+            "name": "neLng",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "number",
+              "format": "double"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapBundle"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1157,16 +1093,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/MapBundle"
                 }
               }
             }
@@ -1180,15 +1106,15 @@
           "public"
         ],
         "summary": "Search public profiles, confirmed bookings and opportunities",
+        "operationId": "search_public",
         "parameters": [
           {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "requestBody": {
@@ -1202,6 +1128,14 @@
           "required": true
         },
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1213,14 +1147,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1233,142 +1159,116 @@
           "public"
         ],
         "summary": "List public documents",
+        "operationId": "list_public",
         "parameters": [
           {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
-            "name": "after",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "ids",
-            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-            "schema": {
-              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int64"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "mode",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "referenceEventId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesteeId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesterId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "reviewType",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "userId",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesteeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceEventId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1380,14 +1280,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1400,151 +1292,124 @@
           "public"
         ],
         "summary": "Read a public document",
+        "operationId": "get_public",
         "parameters": [
           {
-            "in": "path",
-            "name": "id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "style": "simple"
-          },
-          {
-            "in": "path",
             "name": "table",
+            "in": "path",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
-            "name": "after",
+            "name": "id",
+            "in": "path",
+            "required": true,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
           },
           {
-            "in": "query",
-            "name": "ids",
-            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-            "schema": {
-              "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "schema": {
-              "type": [
-                "integer",
-                "null"
-              ],
-              "format": "int64"
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "mode",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "order",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "referenceEventId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesteeId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "requesterId",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "reviewType",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
-            "name": "status",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "userId",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
+          },
+          {
+            "name": "ids",
+            "in": "query",
+            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesterId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "requesteeId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "referenceEventId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "reviewType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1556,14 +1421,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1576,7 +1433,29 @@
           "public"
         ],
         "summary": "Fresh public profile, confirmed history, count and latest review",
+        "operationId": "get_details",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "The user ID.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileDetails"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1587,16 +1466,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProfileDetails"
                 }
               }
             }
@@ -1610,42 +1479,48 @@
           "public"
         ],
         "summary": "Autocomplete place names",
+        "operationId": "autocomplete_places",
         "parameters": [
           {
-            "in": "query",
             "name": "query",
+            "in": "query",
             "required": true,
             "schema": {
               "type": "string"
-            },
-            "style": "form"
+            }
           },
           {
-            "in": "query",
-            "name": "sessionToken",
-            "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
-          },
-          {
-            "in": "query",
             "name": "types",
+            "in": "query",
             "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
+            "required": false,
             "schema": {
-              "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
+          },
+          {
+            "name": "sessionToken",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AutocompletePrediction"
+                  }
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1656,19 +1531,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/AutocompletePrediction"
-                  }
                 }
               }
             }
@@ -1682,31 +1544,37 @@
           "public"
         ],
         "summary": "Place details",
+        "operationId": "get_place",
         "parameters": [
           {
-            "in": "path",
             "name": "place_id",
+            "in": "path",
             "description": "A Google place ID.",
             "required": true,
             "schema": {
-              "description": "A Google place ID.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           },
           {
-            "in": "query",
             "name": "sessionToken",
+            "in": "query",
+            "required": false,
             "schema": {
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceDetails"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1717,16 +1585,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PlaceDetails"
                 }
               }
             }
@@ -1741,20 +1599,27 @@
         ],
         "summary": "Public profile by username",
         "description": "The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
+        "operationId": "get_public_user_by_username",
         "parameters": [
           {
-            "in": "path",
             "name": "username",
+            "in": "path",
             "description": "The user's username, without `@`.",
             "required": true,
             "schema": {
-              "description": "The user's username, without `@`.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1766,14 +1631,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1787,20 +1644,27 @@
         ],
         "summary": "Public opportunity",
         "description": "The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
+        "operationId": "get_public_opportunity",
         "parameters": [
           {
-            "in": "path",
             "name": "opportunity_id",
+            "in": "path",
             "description": "The opportunity document ID.",
             "required": true,
             "schema": {
-              "description": "The opportunity document ID.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1812,14 +1676,6 @@
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
                 }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": true
               }
             }
           }
@@ -1833,22 +1689,32 @@
         ],
         "summary": "Search performers",
         "description": "Full-text search over performer profiles. Cached for 60s.",
+        "operationId": "search_performers",
         "parameters": [
           {
-            "in": "query",
             "name": "query",
+            "in": "query",
             "description": "Free-text query matched against performer names, usernames and bios.",
+            "required": false,
             "schema": {
-              "description": "Free-text query matched against performer names, usernames and bios.",
-              "type": [
-                "string",
-                "null"
-              ]
-            },
-            "style": "form"
+              "type": "string"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/GuardedPerformer"
+                  }
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1859,19 +1725,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/GuardedPerformer"
-                  }
                 }
               }
             }
@@ -1890,20 +1743,29 @@
           "v1"
         ],
         "summary": "Get a performer by ID",
+        "operationId": "get_performer",
         "parameters": [
           {
-            "in": "path",
             "name": "id",
+            "in": "path",
             "description": "The performer's user ID.",
             "required": true,
             "schema": {
-              "description": "The performer's user ID.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardedPerformer"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1914,16 +1776,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GuardedPerformer"
                 }
               }
             }
@@ -1942,20 +1794,29 @@
           "v1"
         ],
         "summary": "Get a performer by username",
+        "operationId": "get_performer_username",
         "parameters": [
           {
-            "in": "path",
             "name": "username",
+            "in": "path",
             "description": "The performer's username, without `@`.",
             "required": true,
             "schema": {
-              "description": "The performer's username, without `@`.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuardedPerformer"
+                }
+              }
+            }
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -1966,16 +1827,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/GuardedPerformer"
                 }
               }
             }
@@ -1995,36 +1846,21 @@
         ],
         "summary": "Venues, top performers and genre mix near a coordinate",
         "description": "Searches a 100km radius. `genres` maps genre to its share of venues.",
+        "operationId": "get_location",
         "parameters": [
           {
-            "in": "path",
             "name": "latlng",
+            "in": "path",
             "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
             "required": true,
             "schema": {
-              "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
               "type": "string"
-            },
-            "style": "simple"
+            }
           }
         ],
         "responses": {
-          "default": {
-            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppError"
-                },
-                "example": {
-                  "error": "some error happened",
-                  "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
           "200": {
-            "description": "",
+            "description": "Success",
             "content": {
               "application/json": {
                 "schema": {
@@ -2032,19 +1868,7 @@
                 }
               }
             }
-          }
-        },
-        "security": [
-          {
-            "ApiKey": []
-          }
-        ]
-      }
-    },
-    "/docs": {
-      "get": {
-        "description": "This documentation page.",
-        "responses": {
+          },
           "default": {
             "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
             "content": {
@@ -2055,52 +1879,6 @@
                 "example": {
                   "error": "some error happened",
                   "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "HTML content",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "ApiKey": []
-          }
-        ]
-      }
-    },
-    "/docs/redoc": {
-      "get": {
-        "description": "This documentation page.",
-        "responses": {
-          "default": {
-            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AppError"
-                },
-                "example": {
-                  "error": "some error happened",
-                  "error_id": "00000000-0000-0000-0000-000000000000"
-                }
-              }
-            }
-          },
-          "200": {
-            "description": "HTML content",
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
                 }
               }
             }
@@ -2115,20 +1893,6 @@
     }
   },
   "components": {
-    "securitySchemes": {
-      "ApiKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "tapped-api-key",
-        "description": "your API Key"
-      },
-      "FirebaseAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "A Firebase Auth ID token for the tapped project."
-      }
-    },
     "schemas": {
       "AddressComponent": {
         "type": "object",
@@ -2147,7 +1911,6 @@
           },
           "types": {
             "type": "array",
-            "default": [],
             "items": {
               "type": "string"
             }
@@ -2155,70 +1918,40 @@
         }
       },
       "AppError": {
-        "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
         "type": "object",
-        "properties": {
-          "error": {
-            "description": "An error message.",
-            "type": "string"
-          },
-          "error_details": {
-            "description": "Optional Additional error details."
-          },
-          "error_id": {
-            "description": "A unique error ID, also written to the server logs.",
-            "type": "string",
-            "format": "uuid"
-          }
-        },
+        "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
         "required": [
           "error",
           "error_id"
-        ]
-      },
-      "ArtistIdPath": {
-        "type": "object",
+        ],
         "properties": {
-          "artist_id": {
-            "description": "A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "artist_id"
-        ]
-      },
-      "AutocompleteParams": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string"
+          "error": {
+            "type": "string",
+            "description": "An error message."
           },
-          "sessionToken": {
-            "type": [
-              "string",
-              "null"
-            ]
+          "error_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A unique error ID, also written to the server logs."
           },
-          "types": {
-            "description": "Comma-separated primary types, e.g. `locality` or `(cities)`.",
-            "type": [
-              "string",
-              "null"
-            ]
+          "error_details": {
+            "description": "Optional Additional error details."
           }
-        },
-        "required": [
-          "query"
-        ]
+        }
       },
       "AutocompletePrediction": {
         "type": "object",
+        "required": [
+          "placeId",
+          "fullText",
+          "primaryText",
+          "secondaryText"
+        ],
         "properties": {
-          "fullText": {
+          "placeId": {
             "type": "string"
           },
-          "placeId": {
+          "fullText": {
             "type": "string"
           },
           "primaryText": {
@@ -2227,203 +1960,102 @@
           "secondaryText": {
             "type": "string"
           }
-        },
-        "required": [
-          "placeId",
-          "fullText",
-          "primaryText",
-          "secondaryText"
-        ]
+        }
       },
-      "Bookings_for_GuardedBooking": {
+      "Bookings_GuardedBooking": {
         "type": "object",
+        "required": [
+          "count",
+          "items"
+        ],
         "properties": {
           "count": {
             "type": "integer",
-            "format": "uint",
             "minimum": 0
           },
           "items": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/GuardedBooking"
+              "type": "object",
+              "required": [
+                "id",
+                "title",
+                "description",
+                "performerId",
+                "rate",
+                "startTime",
+                "endTime"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "bookerId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "performerId": {
+                  "type": "string"
+                },
+                "rate": {
+                  "type": "number",
+                  "format": "double"
+                },
+                "location": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/Location"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "startTime": {
+                  "type": "string"
+                },
+                "endTime": {
+                  "type": "string"
+                },
+                "flierUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "eventUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "venueId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "referenceEventId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
             }
           }
-        },
-        "required": [
-          "count",
-          "items"
-        ]
-      },
-      "CollectionPath": {
-        "type": "object",
-        "properties": {
-          "table": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "table"
-        ]
-      },
-      "DocumentPath": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string"
-          },
-          "table": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "table",
-          "id"
-        ]
-      },
-      "GuardedBooking": {
-        "type": "object",
-        "properties": {
-          "title": {
-            "type": "string"
-          },
-          "description": {
-            "type": "string"
-          },
-          "bookerId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "endTime": {
-            "type": "string"
-          },
-          "eventUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "flierUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "id": {
-            "type": "string"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Location"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "performerId": {
-            "type": "string"
-          },
-          "rate": {
-            "type": "number",
-            "format": "double"
-          },
-          "referenceEventId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "startTime": {
-            "type": "string"
-          },
-          "venueId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        },
-        "required": [
-          "id",
-          "title",
-          "description",
-          "performerId",
-          "rate",
-          "startTime",
-          "endTime"
-        ]
+        }
       },
       "GuardedPerformer": {
         "type": "object",
-        "properties": {
-          "averageAttendance": {
-            "type": "integer",
-            "format": "uint32",
-            "minimum": 0
-          },
-          "averageTicketRange": {
-            "$ref": "#/components/schemas/TicketRange"
-          },
-          "bio": {
-            "type": "string"
-          },
-          "bookings": {
-            "$ref": "#/components/schemas/Bookings_for_GuardedBooking"
-          },
-          "displayName": {
-            "type": "string"
-          },
-          "genres": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          },
-          "id": {
-            "type": "string"
-          },
-          "location": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/Location"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "pressKitUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "profilePictureUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reviews": {
-            "$ref": "#/components/schemas/Reviews_for_GuardedReview"
-          },
-          "socialFollowing": {
-            "$ref": "#/components/schemas/SocialFollowing"
-          },
-          "spotifyId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "username": {
-            "type": "string"
-          }
-        },
         "required": [
           "id",
           "username",
@@ -2435,69 +2067,40 @@
           "averageAttendance",
           "bookings",
           "reviews"
-        ]
-      },
-      "GuardedReview": {
-        "type": "object",
+        ],
         "properties": {
-          "bookerId": {
-            "type": "string"
-          },
-          "bookingId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "id": {
             "type": "string"
           },
-          "performerId": {
+          "username": {
             "type": "string"
-          },
-          "rating": {
-            "type": "number",
-            "format": "double"
-          },
-          "text": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "performerId",
-          "bookerId",
-          "rating",
-          "text"
-        ]
-      },
-      "GuardedVenue": {
-        "type": "object",
-        "properties": {
-          "bio": {
-            "type": "string"
-          },
-          "bookingEmail": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "bookings": {
-            "$ref": "#/components/schemas/Bookings_for_GuardedBooking"
-          },
-          "capacity": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "uint32",
-            "minimum": 0
           },
           "displayName": {
             "type": "string"
           },
-          "frontOfHouse": {
+          "bio": {
+            "type": "string"
+          },
+          "profilePictureUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "location": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Location"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "socialFollowing": {
+            "$ref": "#/components/schemas/SocialFollowing"
+          },
+          "pressKitUrl": {
             "type": [
               "string",
               "null"
@@ -2509,23 +2112,61 @@
               "type": "string"
             }
           },
-          "id": {
-            "type": "string"
-          },
-          "idealPerformerProfile": {
+          "spotifyId": {
             "type": [
               "string",
               "null"
             ]
           },
-          "lights": {
+          "averageTicketRange": {
+            "$ref": "#/components/schemas/TicketRange"
+          },
+          "averageAttendance": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "bookings": {
+            "$ref": "#/components/schemas/Bookings_GuardedBooking"
+          },
+          "reviews": {
+            "$ref": "#/components/schemas/Reviews_GuardedReview"
+          }
+        }
+      },
+      "GuardedVenue": {
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "displayName",
+          "bio",
+          "genres",
+          "topPerformerIds",
+          "bookings",
+          "reviews"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "username": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "bio": {
+            "type": "string"
+          },
+          "profilePictureUrl": {
             "type": [
               "string",
               "null"
             ]
           },
           "location": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/Location"
               },
@@ -2534,13 +2175,27 @@
               }
             ]
           },
-          "microphones": {
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "bookingEmail": {
             "type": [
               "string",
               "null"
             ]
           },
-          "monitors": {
+          "capacity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "idealPerformerProfile": {
             "type": [
               "string",
               "null"
@@ -2552,14 +2207,29 @@
               "null"
             ]
           },
-          "profilePictureUrl": {
+          "frontOfHouse": {
             "type": [
               "string",
               "null"
             ]
           },
-          "reviews": {
-            "$ref": "#/components/schemas/Reviews_for_GuardedReview"
+          "monitors": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "microphones": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lights": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "topPerformerIds": {
             "type": "array",
@@ -2567,120 +2237,36 @@
               "type": "string"
             }
           },
-          "username": {
-            "type": "string"
+          "bookings": {
+            "$ref": "#/components/schemas/Bookings_GuardedBooking"
+          },
+          "reviews": {
+            "$ref": "#/components/schemas/Reviews_GuardedReview"
           }
-        },
-        "required": [
-          "id",
-          "username",
-          "displayName",
-          "bio",
-          "genres",
-          "topPerformerIds",
-          "bookings",
-          "reviews"
-        ]
+        }
       },
       "Health": {
         "type": "object",
-        "properties": {
-          "status": {
-            "type": "string"
-          }
-        },
         "required": [
           "status"
-        ]
-      },
-      "LatLngPath": {
-        "type": "object",
+        ],
         "properties": {
-          "latlng": {
-            "description": "`<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "latlng"
-        ]
-      },
-      "ListParams": {
-        "type": "object",
-        "properties": {
-          "after": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "ids": {
-            "description": "Explicit profile IDs only, comma-separated, at most 50 (no enumeration).",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "limit": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64"
-          },
-          "mode": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "order": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "referenceEventId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "requesteeId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "requesterId": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "reviewType": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "status": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "userId": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           }
         }
       },
       "Location": {
         "type": "object",
+        "required": [
+          "placeId",
+          "lat",
+          "lng"
+        ],
         "properties": {
+          "placeId": {
+            "type": "string"
+          },
           "lat": {
             "type": "number",
             "format": "double"
@@ -2688,25 +2274,21 @@
           "lng": {
             "type": "number",
             "format": "double"
-          },
-          "placeId": {
-            "type": "string"
           }
-        },
-        "required": [
-          "placeId",
-          "lat",
-          "lng"
-        ]
+        }
       },
       "LocationResponse": {
         "type": "object",
+        "required": [
+          "venues",
+          "top_performers",
+          "genres"
+        ],
         "properties": {
-          "genres": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "number",
-              "format": "double"
+          "venues": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GuardedVenue"
             }
           },
           "top_performers": {
@@ -2715,147 +2297,90 @@
               "$ref": "#/components/schemas/GuardedPerformer"
             }
           },
-          "venues": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GuardedVenue"
-            }
-          }
-        },
-        "required": [
-          "venues",
-          "top_performers",
-          "genres"
-        ]
-      },
-      "MapBundle": {
-        "type": "object",
-        "properties": {
           "genres": {
             "type": "object",
             "additionalProperties": {
-              "type": "integer",
-              "format": "uint",
-              "minimum": 0
+              "type": "number",
+              "format": "double"
+            },
+            "propertyNames": {
+              "type": "string"
             }
-          },
-          "performers": {
-            "type": "array",
-            "items": true
-          },
-          "performersTruncated": {
-            "type": "boolean"
-          },
-          "venues": {
-            "type": "array",
-            "items": true
-          },
-          "venuesTruncated": {
-            "description": "A capped result cannot safely answer smaller viewports by client-side filtering.",
-            "type": "boolean"
           }
-        },
+        }
+      },
+      "MapBundle": {
+        "type": "object",
         "required": [
           "venues",
           "performers",
           "genres",
           "venuesTruncated",
           "performersTruncated"
-        ]
-      },
-      "MapParams": {
-        "type": "object",
+        ],
         "properties": {
-          "neLat": {
-            "type": "number",
-            "format": "double"
+          "venues": {
+            "type": "array",
+            "items": {}
           },
-          "neLng": {
-            "type": "number",
-            "format": "double"
+          "performers": {
+            "type": "array",
+            "items": {}
           },
-          "swLat": {
-            "type": "number",
-            "format": "double"
+          "genres": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           },
-          "swLng": {
-            "type": "number",
-            "format": "double"
+          "venuesTruncated": {
+            "type": "boolean",
+            "description": "A capped result cannot safely answer smaller viewports by client-side filtering."
+          },
+          "performersTruncated": {
+            "type": "boolean"
           }
-        },
-        "additionalProperties": false,
-        "required": [
-          "swLat",
-          "swLng",
-          "neLat",
-          "neLng"
-        ]
+        }
       },
       "NotifyVenueOfInterestedOpportunities": {
         "type": "object",
+        "required": [
+          "opportunityIds"
+        ],
         "properties": {
-          "note": {
-            "type": "string",
-            "default": ""
-          },
           "opportunityIds": {
             "type": "array",
             "items": {
               "type": "string"
             }
+          },
+          "note": {
+            "type": "string"
           }
-        },
-        "required": [
-          "opportunityIds"
-        ]
+        }
       },
       "NotifyVenueResponse": {
         "type": "object",
+        "required": [
+          "venues_notified"
+        ],
         "properties": {
           "venues_notified": {
             "type": "integer",
-            "format": "uint",
             "minimum": 0
           }
-        },
-        "required": [
-          "venues_notified"
-        ]
-      },
-      "OpportunityIdPath": {
-        "type": "object",
-        "properties": {
-          "opportunity_id": {
-            "description": "The opportunity document ID.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "opportunity_id"
-        ]
-      },
-      "PerformerIdPath": {
-        "type": "object",
-        "properties": {
-          "id": {
-            "description": "The performer's user ID.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id"
-        ]
+        }
       },
       "PhotoMetadata": {
         "type": "object",
+        "required": [
+          "name"
+        ],
         "properties": {
-          "heightPx": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "int64"
-          },
           "name": {
             "type": "string"
           },
@@ -2865,30 +2390,15 @@
               "null"
             ],
             "format": "int64"
-          }
-        },
-        "required": [
-          "name"
-        ]
-      },
-      "PhotoParams": {
-        "type": "object",
-        "properties": {
-          "maxHeightPx": {
+          },
+          "heightPx": {
             "type": [
               "integer",
               "null"
             ],
-            "format": "uint32",
-            "minimum": 0
-          },
-          "name": {
-            "type": "string"
+            "format": "int64"
           }
-        },
-        "required": [
-          "name"
-        ]
+        }
       },
       "PhotoResponse": {
         "type": "object",
@@ -2902,22 +2412,28 @@
         }
       },
       "PlaceDetails": {
-        "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\n Documents written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\n those are refreshed from Google once and rewritten in this shape. `addressComponents`,\n `photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
         "type": "object",
+        "description": "A place as stored in the Firestore `googlePlacesCache` collection.\n\nDocuments written by the legacy Cloud Functions have no `name`, `locality` or `photoNames`;\nthose are refreshed from Google once and rewritten in this shape. `addressComponents`,\n`photoMetadata` and `geohash` are kept for the legacy readers of the collection.",
+        "required": [
+          "placeId",
+          "lat",
+          "lng"
+        ],
         "properties": {
-          "addressComponents": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "$ref": "#/components/schemas/AddressComponent"
-            }
+          "placeId": {
+            "type": "string"
           },
-          "geohash": {
+          "name": {
             "type": [
               "string",
               "null"
-            ],
-            "default": null
+            ]
+          },
+          "shortFormattedAddress": {
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "lat": {
             "type": "number",
@@ -2931,66 +2447,31 @@
             "type": [
               "string",
               "null"
-            ],
-            "default": null
+            ]
           },
-          "name": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "default": null
+          "photoNames": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "addressComponents": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AddressComponent"
+            }
           },
           "photoMetadata": {
-            "anyOf": [
+            "oneOf": [
               {
                 "$ref": "#/components/schemas/PhotoMetadata"
               },
               {
                 "type": "null"
               }
-            ],
-            "default": null
-          },
-          "photoNames": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            }
-          },
-          "placeId": {
-            "type": "string"
-          },
-          "shortFormattedAddress": {
-            "type": [
-              "string",
-              "null"
             ]
-          }
-        },
-        "required": [
-          "placeId",
-          "lat",
-          "lng"
-        ]
-      },
-      "PlaceIdPath": {
-        "type": "object",
-        "properties": {
-          "place_id": {
-            "description": "A Google place ID.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "place_id"
-        ]
-      },
-      "PlaceParams": {
-        "type": "object",
-        "properties": {
-          "sessionToken": {
+          },
+          "geohash": {
             "type": [
               "string",
               "null"
@@ -3000,65 +2481,51 @@
       },
       "ProfileDetails": {
         "type": "object",
+        "required": [
+          "user",
+          "bookingCount",
+          "bookings",
+          "relatedUsers"
+        ],
         "properties": {
+          "user": {},
           "bookingCount": {
             "type": "integer",
             "format": "int64"
           },
           "bookings": {
             "type": "array",
-            "items": true
+            "items": {}
           },
-          "latestReview": true,
+          "latestReview": {},
           "relatedUsers": {
             "type": "array",
-            "items": true
-          },
-          "user": true
-        },
-        "required": [
-          "user",
-          "bookingCount",
-          "bookings",
-          "relatedUsers"
-        ]
+            "items": {}
+          }
+        }
       },
       "Readiness": {
         "type": "object",
-        "properties": {
-          "checks": {
-            "description": "Per-dependency result: `ok`, `error` or `timeout`.",
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
-          },
-          "status": {
-            "description": "`ok` when every dependency responded, otherwise `unavailable`.",
-            "type": "string"
-          }
-        },
         "required": [
           "status",
           "checks"
-        ]
-      },
-      "ReverseGeocodeParams": {
-        "type": "object",
+        ],
         "properties": {
-          "lat": {
-            "type": "number",
-            "format": "double"
+          "status": {
+            "type": "string",
+            "description": "`ok` when every dependency responded, otherwise `unavailable`."
           },
-          "lng": {
-            "type": "number",
-            "format": "double"
+          "checks": {
+            "type": "object",
+            "description": "Per-dependency result: `ok`, `error` or `timeout`.",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
           }
-        },
-        "required": [
-          "lat",
-          "lng"
-        ]
+        }
       },
       "ReverseGeocodeResponse": {
         "type": "object",
@@ -3071,56 +2538,118 @@
           }
         }
       },
-      "Reviews_for_GuardedReview": {
+      "Reviews_GuardedReview": {
         "type": "object",
-        "properties": {
-          "count": {
-            "type": "integer",
-            "format": "uint",
-            "minimum": 0
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/GuardedReview"
-            }
-          },
-          "rating": {
-            "type": "number",
-            "format": "double"
-          }
-        },
         "required": [
           "count",
           "rating",
           "items"
-        ]
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rating": {
+            "type": "number",
+            "format": "double"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "performerId",
+                "bookerId",
+                "rating",
+                "text"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "performerId": {
+                  "type": "string"
+                },
+                "bookerId": {
+                  "type": "string"
+                },
+                "bookingId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "rating": {
+                  "type": "number",
+                  "format": "double"
+                },
+                "text": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
       },
       "SearchParams": {
         "type": "object",
         "properties": {
-          "genres": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            }
+          "q": {
+            "type": "string",
+            "default": ""
           },
           "hitsPerPage": {
             "type": [
               "integer",
               "null"
             ],
-            "format": "uint32",
+            "format": "int32",
             "default": null,
             "minimum": 0
           },
           "labels": {
             "type": "array",
-            "default": [],
             "items": {
               "type": "string"
-            }
+            },
+            "default": []
+          },
+          "genres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "occupations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "occupationsBlacklist": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "venueGenres": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "default": []
+          },
+          "unclaimed": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "default": null
           },
           "lat": {
             "type": [
@@ -3138,73 +2667,14 @@
             "format": "double",
             "default": null
           },
-          "maxCapacity": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "uint32",
-            "default": null,
-            "minimum": 0
-          },
-          "minCapacity": {
-            "type": [
-              "integer",
-              "null"
-            ],
-            "format": "uint32",
-            "default": null,
-            "minimum": 0
-          },
-          "neLat": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "default": null
-          },
-          "neLng": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "format": "double",
-            "default": null
-          },
-          "occupations": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            }
-          },
-          "occupationsBlacklist": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            }
-          },
-          "q": {
-            "type": "string",
-            "default": ""
-          },
           "radius": {
             "type": [
               "integer",
               "null"
             ],
-            "format": "uint64",
+            "format": "int64",
             "default": null,
             "minimum": 0
-          },
-          "startTime": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "default": null
           },
           "swLat": {
             "type": [
@@ -3222,66 +2692,69 @@
             "format": "double",
             "default": null
           },
-          "unclaimed": {
+          "neLat": {
             "type": [
-              "boolean",
+              "number",
               "null"
             ],
+            "format": "double",
             "default": null
           },
-          "venueGenres": {
-            "type": "array",
-            "default": [],
-            "items": {
-              "type": "string"
-            }
+          "neLng": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double",
+            "default": null
+          },
+          "minCapacity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "default": null,
+            "minimum": 0
+          },
+          "maxCapacity": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "default": null,
+            "minimum": 0
+          },
+          "startTime": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "default": null
           }
         },
         "additionalProperties": false
       },
-      "SearchParams2": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "description": "Free-text query matched against performer names, usernames and bios.",
-            "type": [
-              "string",
-              "null"
-            ]
-          }
-        }
-      },
       "SocialFollowing": {
         "type": "object",
         "properties": {
-          "audiusFollowers": {
-            "type": "integer",
-            "format": "uint32",
-            "default": 0,
-            "minimum": 0
-          },
-          "audiusHandle": {
+          "youtubeChannelId": {
             "type": [
               "string",
               "null"
             ]
           },
-          "facebookFollowers": {
-            "type": "integer",
-            "format": "uint32",
-            "default": 0,
-            "minimum": 0
-          },
-          "facebookHandle": {
+          "tiktokHandle": {
             "type": [
               "string",
               "null"
             ]
           },
-          "instagramFollowers": {
+          "tiktokFollowers": {
             "type": "integer",
-            "format": "uint32",
-            "default": 0,
+            "format": "int32",
             "minimum": 0
           },
           "instagramHandle": {
@@ -3290,52 +2763,9 @@
               "null"
             ]
           },
-          "soundcloudFollowers": {
+          "instagramFollowers": {
             "type": "integer",
-            "format": "uint32",
-            "default": 0,
-            "minimum": 0
-          },
-          "soundcloudHandle": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "spotifyUrl": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "tiktokFollowers": {
-            "type": "integer",
-            "format": "uint32",
-            "default": 0,
-            "minimum": 0
-          },
-          "tiktokHandle": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "twitchFollowers": {
-            "type": "integer",
-            "format": "uint32",
-            "default": 0,
-            "minimum": 0
-          },
-          "twitchHandle": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "twitterFollowers": {
-            "type": "integer",
-            "format": "uint32",
-            "default": 0,
+            "format": "int32",
             "minimum": 0
           },
           "twitterHandle": {
@@ -3344,90 +2774,117 @@
               "null"
             ]
           },
-          "youtubeChannelId": {
+          "twitterFollowers": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "facebookHandle": {
             "type": [
               "string",
               "null"
             ]
+          },
+          "facebookFollowers": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "spotifyUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "soundcloudHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "soundcloudFollowers": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "audiusHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "audiusFollowers": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "twitchHandle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "twitchFollowers": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
       "StreamUserTokenResponse": {
         "type": "object",
+        "required": [
+          "token"
+        ],
         "properties": {
           "token": {
             "type": "string"
           }
-        },
-        "required": [
-          "token"
-        ]
+        }
       },
       "TicketRange": {
         "type": "object",
-        "properties": {
-          "max": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          },
-          "min": {
-            "type": "integer",
-            "format": "uint64",
-            "minimum": 0
-          }
-        },
         "required": [
           "min",
           "max"
-        ]
-      },
-      "TopTracksParams": {
-        "type": "object",
+        ],
         "properties": {
-          "market": {
-            "description": "ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.",
-            "type": [
-              "string",
-              "null"
-            ]
+          "min": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "max": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
-      "UsernamePath": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "description": "The user's username, without `@`.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username"
-        ]
-      },
-      "UsernamePath2": {
-        "type": "object",
-        "properties": {
-          "username": {
-            "description": "The performer's username, without `@`.",
-            "type": "string"
-          }
-        },
-        "required": [
-          "username"
-        ]
-      },
       "Version": {
         "type": "object",
+        "required": [
+          "version"
+        ],
         "properties": {
           "version": {
             "type": "string"
           }
-        },
-        "required": [
-          "version"
-        ]
+        }
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "tapped-api-key",
+        "description": "your API Key"
+      },
+      "FirebaseAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "A Firebase Auth ID token for the tapped project."
       }
     }
   },

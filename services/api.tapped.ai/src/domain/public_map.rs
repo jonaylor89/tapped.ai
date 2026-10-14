@@ -5,17 +5,18 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
 use crate::{domain::public_docs::public_user, errors::AppError, state::AppStateDyn};
+use utoipa::{IntoParams, ToSchema};
 
 pub const MAX_MAP_VENUES: usize = 250;
 pub const MAX_MAP_PERFORMERS: usize = 1000;
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct MapParams {
     pub sw_lat: f64,
@@ -42,7 +43,7 @@ impl MapParams {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct MapBundle {
     pub venues: Vec<Value>,
@@ -137,6 +138,14 @@ pub async fn load_map(pool: &sqlx::PgPool, p: &MapParams) -> Result<MapBundle, A
     })
 }
 
+#[utoipa::path(
+    get,
+    path = "/public/map",
+    tag = "public",
+    summary = "Map venues, referenced public performers and genre summary in one query",
+    params(MapParams),
+    responses((status = 200, description = "Success", body = MapBundle))
+)]
 pub async fn get_map(State(state): State<AppStateDyn>, Query(p): Query<MapParams>) -> Response {
     let result =
         match p.validate() {

@@ -16,16 +16,18 @@ use axum::{
 use serde_json::{Map, Value};
 
 use crate::{errors::AppError, state::AppStateDyn};
-use schemars::JsonSchema;
 use serde::Deserialize;
+use utoipa::IntoParams;
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct UsernamePath {
     /// The user's username, without `@`.
     username: String,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct OpportunityIdPath {
     /// The opportunity document ID.
     opportunity_id: String,
@@ -155,6 +157,15 @@ fn with_cache_control(result: Result<Json<Value>, AppError>) -> Response {
     response
 }
 
+#[utoipa::path(
+    get,
+    path = "/users/username/{username}",
+    tag = "public",
+    summary = "Public profile by username",
+    description = "The user document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
+    params(UsernamePath),
+    responses((status = 200, description = "Success", body = serde_json::Value))
+)]
 pub async fn get_public_user_by_username(
     State(state): State<AppStateDyn>,
     Path(UsernamePath { username }): Path<UsernamePath>,
@@ -174,6 +185,15 @@ pub async fn get_public_user_by_username(
     )
 }
 
+#[utoipa::path(
+    get,
+    path = "/opportunities/{opportunity_id}",
+    tag = "public",
+    summary = "Public opportunity",
+    description = "The opportunity document with private fields removed. Edge-cacheable: `Cache-Control` allows 5 minutes for a 200 and 1 minute for a 404.",
+    params(OpportunityIdPath),
+    responses((status = 200, description = "Success", body = serde_json::Value))
+)]
 pub async fn get_public_opportunity(
     State(state): State<AppStateDyn>,
     Path(OpportunityIdPath { opportunity_id }): Path<OpportunityIdPath>,

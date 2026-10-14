@@ -5,21 +5,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aide = { version = "=0.15.1", features = [
-    "redoc",
-    "axum",
-    "axum-extra",
-    # Since 0.14, OpenAPI support for each axum extractor is a separate feature.
-    "axum-json",
-    "axum-query",
-    "axum-form",
-    "axum-matched-path",
-    "macros",
-] }
 anyhow = "=1.0.104"
 axum = { version = "=0.8.9", features = ["macros"] }
 axum-extra = "=0.10.3"
-axum-jsonschema = { version = "=0.9.1", features = ["aide"] }
 axum-swagger-ui = "=0.3.0"
 serde = { version = "=1.0.229", features = ["derive", "rc"] }
 serde_json = "=1.0.151"
@@ -39,7 +27,15 @@ tower-http = { version = "=0.7.1", features = ["catch-panic", "cors", "trace"] }
 tracing = "=0.1.44"
 tracing-subscriber = { version = "=0.3.23", features = ["env-filter"] }
 uuid = { version = "=1.26.1", features = ["serde", "v4"] }
-schemars = { version = "=0.9.0", features = ["uuid1"] }
+utoipa = { version = "=6.0.0", features = [
+    "axum_extras",
+    "chrono",
+    "uuid",
+    "preserve_order",
+    "preserve_path_order",
+] }
+utoipa-axum = "=0.3.0"
+utoipa-redoc = { version = "=7.0.0", features = ["axum"] }
 axum-macros = "=0.5.1"
 dotenvy = "=0.15.7"
 futures = "=0.3.34"

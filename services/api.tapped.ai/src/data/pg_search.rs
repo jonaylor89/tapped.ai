@@ -8,8 +8,9 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 
 use super::search::{Search, UserSearchOptions};
 use crate::domain::models::user::UserModel;
+use utoipa::ToSchema;
 
-#[derive(Debug, Clone, Default, Deserialize, Serialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct SearchParams {
     pub q: String,
@@ -29,7 +30,6 @@ pub struct SearchParams {
     pub ne_lng: Option<f64>,
     pub min_capacity: Option<u32>,
     pub max_capacity: Option<u32>,
-    #[schemars(with = "Option<String>")]
     pub start_time: Option<DateTime<Utc>>,
 }
 impl SearchParams {

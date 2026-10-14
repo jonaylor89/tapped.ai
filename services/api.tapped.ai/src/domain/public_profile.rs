@@ -10,11 +10,11 @@ use axum::{
     http::{HeaderValue, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 
-#[derive(Serialize, JsonSchema)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct ProfileDetails {
     pub user: Value,
@@ -41,6 +41,14 @@ fn public_review(mut doc: Value) -> Option<Value> {
     Some(doc)
 }
 
+#[utoipa::path(
+    get,
+    path = "/public/users/{id}/details",
+    tag = "public",
+    summary = "Fresh public profile, confirmed history, count and latest review",
+    params(("id" = String, Path, description = "The user ID.")),
+    responses((status = 200, description = "Success", body = ProfileDetails))
+)]
 pub async fn get_details(State(state): State<AppStateDyn>, Path(id): Path<String>) -> Response {
     let result = load(&state, &id).await;
     let mut response = result.map(Json).into_response();

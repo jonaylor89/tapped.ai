@@ -14,6 +14,7 @@ use axum::{
 use serde::Deserialize;
 use serde_json::{Value, json};
 use sqlx::{AssertSqlSafe, PgPool, Postgres, Transaction};
+use utoipa::IntoParams;
 
 type ApiResult = Result<Json<Value>, AppError>;
 fn db_error(e: sqlx::Error) -> AppError {
@@ -33,7 +34,8 @@ fn pool(state: &AppStateDyn) -> Result<&PgPool, AppError> {
         AppError::new("database unavailable").with_status(StatusCode::SERVICE_UNAVAILABLE)
     })
 }
-#[derive(Deserialize, schemars::JsonSchema)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct CollectionPath {
     pub table: String,
 }
@@ -49,7 +51,8 @@ impl From<String> for CollectionPath {
         Self { table }
     }
 }
-#[derive(Deserialize, schemars::JsonSchema)]
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct DocumentPath {
     pub table: String,
     pub id: String,
@@ -253,6 +256,14 @@ pub(crate) fn visible(table: &str, mut doc: Value, uid: Option<&str>) -> Option<
     }
     Some(doc)
 }
+#[utoipa::path(
+    get,
+    path = "/public/data/{table}/{id}",
+    tag = "public",
+    summary = "Read a public document",
+    params(DocumentPath, ListParams),
+    responses((status = 200, description = "Success", body = serde_json::Value))
+)]
 pub async fn get_public(
     State(state): State<AppStateDyn>,
     Path(DocumentPath { table, id }): Path<DocumentPath>,
@@ -273,6 +284,15 @@ pub async fn get_public(
     .ok_or_else(|| AppError::not_found("not found"))?;
     Ok(Json(doc))
 }
+#[utoipa::path(
+    get,
+    path = "/data/{table}/{id}",
+    tag = "app",
+    summary = "Read a document",
+    params(DocumentPath, ListParams),
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn get_private(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -292,7 +312,8 @@ pub async fn get_private(
     Ok(Json(doc))
 }
 
-#[derive(Default, Deserialize, schemars::JsonSchema)]
+#[derive(Default, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
 pub struct ListParams {
     pub user_id: Option<String>,
@@ -508,6 +529,14 @@ async fn list(state: &AppStateDyn, table: &str, p: ListParams, uid: Option<&str>
             .collect(),
     )))
 }
+#[utoipa::path(
+    get,
+    path = "/public/data/{table}",
+    tag = "public",
+    summary = "List public documents",
+    params(CollectionPath, ListParams),
+    responses((status = 200, description = "Success", body = serde_json::Value))
+)]
 pub async fn list_public(
     State(state): State<AppStateDyn>,
     Path(CollectionPath { table }): Path<CollectionPath>,
@@ -515,6 +544,15 @@ pub async fn list_public(
 ) -> ApiResult {
     list(&state, &table, p, None).await
 }
+#[utoipa::path(
+    get,
+    path = "/data/{table}",
+    tag = "app",
+    summary = "List documents",
+    params(CollectionPath, ListParams),
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn list_private(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -963,6 +1001,16 @@ async fn persist(
     q.execute(&mut **tx).await.map_err(db_error)?;
     Ok(())
 }
+#[utoipa::path(
+    post,
+    path = "/data/{table}",
+    tag = "app",
+    summary = "Create an owned document",
+    params(CollectionPath),
+    request_body = serde_json::Value,
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn create(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -972,6 +1020,16 @@ pub async fn create(
     let id = text(&input, "id").to_owned();
     save(&state, &user, &table, &id, input, true).await
 }
+#[utoipa::path(
+    put,
+    path = "/data/{table}/{id}",
+    tag = "app",
+    summary = "Update an owned document",
+    params(DocumentPath),
+    request_body = serde_json::Value,
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn update(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -980,6 +1038,15 @@ pub async fn update(
 ) -> ApiResult {
     save(&state, &user, &table, &id, input, false).await
 }
+#[utoipa::path(
+    delete,
+    path = "/data/{table}/{id}",
+    tag = "app",
+    summary = "Soft delete an owned document",
+    params(DocumentPath),
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn remove(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -1102,6 +1169,15 @@ async fn search_docs(
             .collect(),
     )))
 }
+#[utoipa::path(
+    post,
+    path = "/public/search/{table}",
+    tag = "public",
+    summary = "Search public profiles, confirmed bookings and opportunities",
+    params(CollectionPath),
+    request_body = crate::data::pg_search::SearchParams,
+    responses((status = 200, description = "Success", body = serde_json::Value))
+)]
 pub async fn search_public(
     State(state): State<AppStateDyn>,
     Path(CollectionPath { table }): Path<CollectionPath>,
@@ -1109,6 +1185,16 @@ pub async fn search_public(
 ) -> ApiResult {
     search_docs(&state, &table, p, None).await
 }
+#[utoipa::path(
+    post,
+    path = "/search/{table}",
+    tag = "app",
+    summary = "Search current records with participant privacy",
+    params(CollectionPath),
+    request_body = crate::data::pg_search::SearchParams,
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn search_private(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,

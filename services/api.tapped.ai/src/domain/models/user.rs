@@ -1,15 +1,15 @@
 use super::{booking::GuardedBooking, review::GuardedReview};
-use schemars::JsonSchema;
 // use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct TicketRange {
     min: u64,
     max: u64,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Location {
     place_id: String,
@@ -17,7 +17,7 @@ pub struct Location {
     lng: f64,
 }
 
-#[derive(Debug, Deserialize, Serialize, Default, Clone, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, Default, Clone, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct SocialFollowing {
     youtube_channel_id: Option<String>,
@@ -416,20 +416,20 @@ impl UserModel {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct Bookings<T> {
     count: usize,
     items: Vec<T>,
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct Reviews<T> {
     count: usize,
     rating: f64,
     items: Vec<T>,
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GuardedPerformer {
     id: String,
@@ -448,7 +448,7 @@ pub struct GuardedPerformer {
     reviews: Reviews<GuardedReview>,
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GuardedVenue {
     pub id: String,

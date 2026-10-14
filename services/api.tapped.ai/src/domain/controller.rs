@@ -12,31 +12,35 @@ use axum::{
     extract::{Path, Query, State},
 };
 use futures::future;
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
 use super::models::user::{GuardedPerformer, GuardedVenue};
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct SearchParams {
     /// Free-text query matched against performer names, usernames and bios.
     query: Option<String>,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct PerformerIdPath {
     /// The performer's user ID.
     id: String,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct UsernamePath {
     /// The performer's username, without `@`.
     username: String,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct LatLngPath {
     /// `<lat>,<lng>` in decimal degrees, e.g. `37.5407,-77.4360`.
     latlng: String,
@@ -116,6 +120,16 @@ async fn transform_venue(user: UserModel, state: &AppStateDyn) -> Result<Guarded
     Ok(guarded_venue)
 }
 
+#[utoipa::path(
+    get,
+    path = "/performer/search",
+    tag = "v1",
+    summary = "Search performers",
+    description = "Full-text search over performer profiles. Cached for 60s.",
+    params(SearchParams),
+    responses((status = 200, description = "Success", body = Vec<GuardedPerformer>)),
+    security(("ApiKey" = []))
+)]
 pub async fn search_performers(
     State(state): State<AppStateDyn>,
     Query(params): Query<SearchParams>,
@@ -148,6 +162,15 @@ pub async fn search_performers(
     )
 }
 
+#[utoipa::path(
+    get,
+    path = "/performer/username/{username}",
+    tag = "v1",
+    summary = "Get a performer by username",
+    params(UsernamePath),
+    responses((status = 200, description = "Success", body = GuardedPerformer)),
+    security(("ApiKey" = []))
+)]
 pub async fn get_performer_username(
     State(state): State<AppStateDyn>,
     Path(UsernamePath { username }): Path<UsernamePath>,
@@ -177,6 +200,15 @@ pub async fn get_performer_username(
     )
 }
 
+#[utoipa::path(
+    get,
+    path = "/performer/{id}",
+    tag = "v1",
+    summary = "Get a performer by ID",
+    params(PerformerIdPath),
+    responses((status = 200, description = "Success", body = GuardedPerformer)),
+    security(("ApiKey" = []))
+)]
 pub async fn get_performer(
     State(state): State<AppStateDyn>,
     Path(PerformerIdPath { id }): Path<PerformerIdPath>,
@@ -217,13 +249,23 @@ pub async fn get_performer(
     cached_response(&state, cache_key, &guarded_user, Duration::from_secs(300))
 }
 
-#[derive(Debug, Deserialize, Serialize, JsonSchema)]
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
 pub struct LocationResponse {
     pub venues: Vec<GuardedVenue>,
     pub top_performers: Vec<GuardedPerformer>,
     pub genres: HashMap<String, f64>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/location/{latlng}",
+    tag = "v1",
+    summary = "Venues, top performers and genre mix near a coordinate",
+    description = "Searches a 100km radius. `genres` maps genre to its share of venues.",
+    params(LatLngPath),
+    responses((status = 200, description = "Success", body = LocationResponse)),
+    security(("ApiKey" = []))
+)]
 pub async fn get_location(
     State(state): State<AppStateDyn>,
     Path(LatLngPath { latlng }): Path<LatLngPath>,

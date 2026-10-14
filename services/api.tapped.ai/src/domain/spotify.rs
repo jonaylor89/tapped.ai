@@ -7,11 +7,11 @@ use axum::{
     Json,
     extract::{Path, Query, State},
 };
-use schemars::JsonSchema;
 use serde::Deserialize;
 use serde_json::Value;
 
 use crate::{domain::firebase_auth::FirebaseUser, errors::AppError, state::AppStateDyn};
+use utoipa::IntoParams;
 
 const SPOTIFY_TTL: Duration = Duration::from_secs(60 * 60);
 
@@ -29,7 +29,8 @@ fn upstream_error(error: anyhow::Error) -> AppError {
     AppError::upstream("Spotify", error)
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Path)]
 pub struct ArtistIdPath {
     /// A Spotify artist ID (base62), e.g. `4Z8W4fKeB5YxbusRsdQVPb`.
     artist_id: String,
@@ -39,6 +40,16 @@ fn cached_or_none(state: &AppStateDyn, key: &str) -> Option<Value> {
     state.response_cache.get(key)
 }
 
+#[utoipa::path(
+    get,
+    path = "/spotify/artists/{artist_id}",
+    tag = "app",
+    summary = "Spotify artist by ID",
+    description = "Spotify's artist object, cached for an hour.",
+    params(ArtistIdPath),
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn get_spotify_artist(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,
@@ -66,12 +77,23 @@ pub async fn get_spotify_artist(
     Ok(Json(artist))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct TopTracksParams {
     /// ISO 3166-1 alpha-2 country code (e.g. `US`), or `from_token`.
     market: Option<String>,
 }
 
+#[utoipa::path(
+    get,
+    path = "/spotify/artists/{artist_id}/top-tracks",
+    tag = "app",
+    summary = "Spotify top tracks for an artist",
+    description = "Spotify's `{ tracks }` response, cached for an hour.",
+    params(ArtistIdPath, TopTracksParams),
+    responses((status = 200, description = "Success", body = serde_json::Value)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn get_spotify_artist_top_tracks(
     State(state): State<AppStateDyn>,
     _user: FirebaseUser,

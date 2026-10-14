@@ -1,6 +1,5 @@
 use axum::{Json, extract::State, http::StatusCode};
 use jsonwebtoken::{Algorithm, EncodingKey, Header};
-use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -15,13 +14,22 @@ use crate::{
     errors::AppError,
     state::AppStateDyn,
 };
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct StreamUserTokenResponse {
     pub token: String,
 }
 
 /// Generates a Stream user token for the authenticated Firebase account only.
+#[utoipa::path(
+    post,
+    path = "/stream-token",
+    tag = "app",
+    summary = "Mint a Stream chat token for the signed-in user",
+    responses((status = 200, description = "Success", body = StreamUserTokenResponse)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn stream_user_token(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
@@ -38,7 +46,7 @@ pub async fn stream_user_token(
     Ok(Json(StreamUserTokenResponse { token }))
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct NotifyVenueOfInterestedOpportunities {
     pub opportunity_ids: Vec<String>,
@@ -46,7 +54,7 @@ pub struct NotifyVenueOfInterestedOpportunities {
     pub note: String,
 }
 
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct NotifyVenueResponse {
     pub venues_notified: usize,
 }
@@ -57,6 +65,15 @@ struct VenueOpportunities {
 }
 
 /// Replaces the legacy callable. Firebase identity is deliberately the sole source of performer ID.
+#[utoipa::path(
+    post,
+    path = "/opportunity-venue-notifications",
+    tag = "app",
+    summary = "Email venues about opportunities the user is interested in",
+    request_body = NotifyVenueOfInterestedOpportunities,
+    responses((status = 200, description = "Success", body = NotifyVenueResponse)),
+    security(("FirebaseAuth" = []))
+)]
 pub async fn notify_venue_of_interested_opportunities(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,

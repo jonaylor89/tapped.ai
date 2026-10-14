@@ -5,9 +5,8 @@
 pub mod oauth;
 pub mod tools;
 
-use aide::axum::ApiRouter;
 use axum::{
-    Json,
+    Json, Router,
     body::Bytes,
     extract::State,
     http::{HeaderMap, HeaderName, Method, StatusCode, header},
@@ -26,7 +25,7 @@ use crate::{
 
 const PROTOCOL_VERSIONS: [&str; 3] = ["2025-11-25", "2025-06-18", "2025-03-26"];
 
-pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStateDyn> {
+pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> Router<AppStateDyn> {
     // Bearer tokens only, never cookies, so any origin may call these (e.g. browser-based clients).
     let cors = CorsLayer::new()
         .allow_origin(Any)
@@ -43,7 +42,7 @@ pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStat
             HeaderName::from_static("mcp-session-id"),
         ]);
 
-    let approve = ApiRouter::new()
+    let approve = Router::new()
         .route(
             "/oauth/authorization-requests/{id}/approve",
             post(oauth::approve),
@@ -51,7 +50,7 @@ pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStat
         .route_layer(middleware::from_fn_with_state(state, verify_firebase_token));
 
     // Unauthenticated endpoints that write rows are limited per IP.
-    let limited = ApiRouter::new()
+    let limited = Router::new()
         .route("/oauth/register", post(oauth::register))
         .route("/oauth/authorize", get(oauth::authorize))
         .route("/oauth/token", post(oauth::token))
@@ -63,7 +62,7 @@ pub fn router(state: AppStateDyn, rate_limits: &RateLimits) -> ApiRouter<AppStat
         .route("/oauth/authorization-requests/{id}/deny", post(oauth::deny))
         .layer(rate_limits.per_ip_layer());
 
-    ApiRouter::new()
+    Router::new()
         .route(
             "/.well-known/oauth-protected-resource",
             get(oauth::protected_resource_metadata),

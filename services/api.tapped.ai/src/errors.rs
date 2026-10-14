@@ -1,17 +1,16 @@
 use std::any::Any;
 
-use aide::OperationOutput;
 use axum::{
     http::{StatusCode, header},
     response::{IntoResponse, Response},
 };
-use schemars::JsonSchema;
 use serde::Serialize;
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 /// The error body every route returns: `{ "error", "error_id", "error_details"? }`.
-#[derive(Debug, Serialize, JsonSchema)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct AppError {
     /// An error message.
     pub error: String,
@@ -100,11 +99,6 @@ impl IntoResponse for AppError {
         *res.status_mut() = status;
         res
     }
-}
-
-// Documented once through `default_response_with` in `startup::api_docs`.
-impl OperationOutput for AppError {
-    type Inner = Self;
 }
 
 const MAX_PLAIN_ERROR_BODY: usize = 1_024;
