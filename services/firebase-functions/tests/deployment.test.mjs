@@ -8,7 +8,7 @@ import { deploymentArgs } from "../scripts/deploy.mjs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const allowlist = JSON.parse(read("../deployment-allowlist.json"));
 
-test("entrypoint exports exactly the four Auth transports, never legacy modules", () => {
+test("entrypoint exports exactly the two Auth transports, never legacy modules", () => {
   const source = ts.createSourceFile("index.ts", read("../src/index.ts"), ts.ScriptTarget.Latest, true);
   const exports = [];
   for (const statement of source.statements) {
@@ -32,7 +32,12 @@ test("compiled exports match the allowlist and expose no Firestore triggers", ()
     assert.deepEqual(Object.keys(handlers).sort(), allowlist);
     for (const [name, handler] of Object.entries(handlers)) {
       assert.ok(handler.__endpoint, name);
-      assert.match(handler.__endpoint.eventTrigger?.eventType ?? "", /firebase\.auth/, name);
+      assert.equal(
+        handler.__endpoint.eventTrigger?.eventType,
+        `providers/firebase.auth/eventTypes/user.${name === "onUserCreate" ? "create" : "delete"}`,
+        name,
+      );
+      assert.equal(handler.__endpoint.eventTrigger.retry, true, name);
       assert.equal(handler.__endpoint.httpsTrigger, undefined, name);
     }
   } finally {
@@ -44,10 +49,10 @@ test("compiled exports match the allowlist and expose no Firestore triggers", ()
 });
 
 test("selective Auth deploys confirm retry policy without allowing blanket deployment", () => {
-  const args = deploymentArgs(["notifyFoundersOnSignUp", "notifyFoundersOnSignUp", "deleteStreamUser"]);
+  const args = deploymentArgs(["onUserCreate", "onUserCreate", "onUserDelete"]);
   assert.equal(args[1], "firebase-tools@14.22.0");
   assert.ok(args.includes("in-the-loop-306520"));
-  assert.equal(args.at(-1), "functions:notifyFoundersOnSignUp,functions:deleteStreamUser");
+  assert.equal(args.at(-1), "functions:onUserCreate,functions:onUserDelete");
   assert.equal(args.includes("--force"), true);
 });
 
@@ -55,6 +60,10 @@ test("deploys reject no names, retired writers, extensions and argument injectio
   for (const names of [
     [],
     ["onUserDeleted"],
+    ["deleteStreamUser"],
+    ["notifyFoundersOnSignUp"],
+    ["notifyFoundersOnUserDelete"],
+    ["sendWelcomeEmailOnUserCreated"],
     ["inboundEmailWebhook"],
     ["streamBeforeMessageWebhook"],
     ["getArtistBySpotifyId"],

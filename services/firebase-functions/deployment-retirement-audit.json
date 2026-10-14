@@ -1,0 +1,84 @@
+{
+  "checked_at": "2026-10-14T17:00:57.049342+00:00",
+  "project": "in-the-loop-306520",
+  "scope": "fresh all-regions/generations Functions inventory; extension registry; checked-region scheduler/task queues; labelled live synthetic provider probes",
+  "function_count": 2,
+  "functions": [
+    {
+      "name": "onUserCreate",
+      "generation": 1,
+      "runtime": "nodejs22",
+      "status": "ACTIVE",
+      "event_type": "providers/firebase.auth/eventTypes/user.create",
+      "retry": true,
+      "business_logic": "Rust API only"
+    },
+    {
+      "name": "onUserDelete",
+      "generation": 1,
+      "runtime": "nodejs22",
+      "status": "ACTIVE",
+      "event_type": "providers/firebase.auth/eventTypes/user.delete",
+      "retry": true,
+      "business_logic": "Rust API only"
+    }
+  ],
+  "extension_count": 0,
+  "legacy_scheduler_count_us_central1": 0,
+  "task_queue_count_us_central1": 0,
+  "containers": {
+    "api": {
+      "image": "ghcr.io/jonaylor89/tapped-api:40f3513df01d22986a7e2f5c5b40dcf5a8579e58",
+      "running": true,
+      "auth_effects_enabled": false,
+      "booking_reminders_enabled": true
+    },
+    "mail-worker": {
+      "image": "ghcr.io/jonaylor89/tapped-api:40f3513df01d22986a7e2f5c5b40dcf5a8579e58",
+      "running": true,
+      "auth_effects_enabled": false,
+      "booking_reminders_enabled": false
+    },
+    "identity-worker": {
+      "image": "ghcr.io/jonaylor89/tapped-api:40f3513df01d22986a7e2f5c5b40dcf5a8579e58",
+      "running": true,
+      "auth_effects_enabled": true,
+      "booking_reminders_enabled": false
+    }
+  },
+  "auth_creation_precision_migration_applied": true,
+  "pending_auth_effects": 0,
+  "live_checks": {
+    "single_signup_effect": true,
+    "single_deletion_effect": true,
+    "stream_user_provisioned": true,
+    "stream_user_deletion_confirmed": true,
+    "stream_token_uid_bound": true,
+    "stream_old_token_connected_before_revoke": true,
+    "stream_old_token_rejected_as_revoked": true,
+    "stream_old_token_still_revoked_after_rust_profile_upsert": true,
+    "stream_fresh_token_connected_before_and_after_profile_upsert": true,
+    "deleted_identity_cannot_mint_stream_token": true,
+    "firebase_hosted_verification_link_and_code": true
+  },
+  "stripe": {
+    "obsolete_live_callbacks_removed": 2,
+    "obsolete_test_callbacks_found": 0,
+    "unrelated_revenuecat_live_and_test_callbacks_preserved": true,
+    "extension_key_secret_removed_with_extension": true,
+    "billing_objects_mutated": 0
+  },
+  "preserved": {
+    "storekit": true,
+    "source_firestore": true,
+    "historical_analytics_archives": true,
+    "billing_records": true
+  },
+  "postmark": "configuration explicitly deferred to owner; no Firebase HTTP bridge",
+  "cloudflare_mail_worker": "deleted; no DNS/mail-routing change was made",
+  "verification_limits": [
+    "Welcome/founder mail is filtered for internal synthetic identities; no claim of new live welcome-mail delivery.",
+    "Fresh physical-device FCM receipt and Spotify consent flow were not exercised.",
+    "Scheduler/task queue counts are scoped to us-central1."
+  ]
+}

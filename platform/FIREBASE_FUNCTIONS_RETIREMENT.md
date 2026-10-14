@@ -1,6 +1,32 @@
-# Target: only transport-only Firebase Auth hooks
+# Target: two transport-only Firebase Auth hooks
 
-The current user-approved target is to make **every non-Auth custom and extension-managed Firebase Function deletable**, in every region/generation, without losing required behavior. Retain the existing Auth hooks only as authenticated webhook transports to Rust; no welcome email, Slack, Stream, billing or application-data business logic may execute in them. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
+## Final production state — 2026-10-14
+
+Only **`onUserCreate` and `onUserDelete`** remain, both signed transports with retry enabled.
+The former four hooks, all other custom Functions and every managed extension are deleted.
+Rust owns the business logic and is deployed on Hetzner at `40f3513df01d22986a7e2f5c5b40dcf5a8579e58`
+(API, mail worker and identity worker). Auth effects and booking reminders are enabled; there were
+no held Auth jobs to release. Legacy cron jobs and all remaining Algolia/BigQuery extension task
+queues were removed. Source Firestore, original analytics archives and billing objects were preserved.
+
+Live synthetic tests with only the two new hooks proved exactly one signup/deletion job, Stream
+provisioning and confirmed deletion, refusal to mint tokens for deleted identities, and successful
+Firebase hosted verification. A revoked token was rejected by the real Stream WebSocket service
+both before and after a Rust-driven profile upsert; a fresh token connected in both cases. Gen1 Auth
+events truncate creation times to seconds while REST retains milliseconds: the shared precision fix
+and migration normalize private lifecycle keys without replay, retaining original event payloads.
+Use fresh UIDs; ambiguous same-second administrative UID reuse is not supported.
+
+Two obsolete live Stripe callbacks were removed (payments extension and an already-absent cover-art
+Cloud Run destination). Unrelated RevenueCat live/test callbacks remain. StoreKit purchases and
+paywalls are supported and unchanged; the earlier free-launch assumption is superseded.
+Postmark inbound configuration is left to the owner and must point directly to Rust. No application
+mail Worker remains deployed on Cloudflare; application runtime remains on Hetzner.
+
+See [the sanitized final audit](../services/firebase-functions/deployment-retirement-audit.json).
+The older counts, rollout gates and function checklist below are historical, not current blockers.
+
+The current user-approved target is to make **every non-Auth custom and extension-managed Firebase Function deletable**, in every region/generation, without losing required behavior. Retain `onUserCreate` and `onUserDelete` only as authenticated webhook transports to Rust; no welcome email, Slack, Stream, billing or application-data business logic may execute in them. Firebase **Auth and hosted email verification remain**. No migrated application-data Firestore fallback, sync or dual writes may be introduced. No source Firestore documents, billing accounts or analytics datasets are deleted by this plan.
 
 After user-approved BigQuery retirement, the all-regions production check on **2026-10-14** confirmed **40 Functions: 28 custom and 12 extension-managed** (down from 55). The user subsequently clarified that this is a **free launch with no billing/customer backfill**. Stripe/payment/subscription Functions are now retirement-only, not Rust replacement requirements. Historical provider objects observed by the audit remain untouched; do not delete/cancel customers, connected accounts or subscriptions as part of retiring Functions.
 
@@ -138,7 +164,7 @@ The `firestore_export` dataset still contains all six original tables/views. Met
 4. Finish Stream profile/user/token lifecycle and direct Stream/Postmark provider routing. Postmark's unchanged inbound URL/plan is a real removal dependency, not a reason to keep a Function indefinitely; change the provider configuration/plan or choose a supported alternative before deleting its proxy.
 5. Retire billing Functions/extensions for the explicitly free launch without backfill, canceling billing objects or reintroducing paid features. Disconnect their obsolete callbacks/resources deliberately; preserve unrelated provider routes and historical provider data.
 6. Retire extensions deliberately, including their Pub/Sub/Eventarc/scheduler resources, while preserving source documents and billing/analytics data.
-7. Delete bounded batches only after their gates below pass; refresh the all-regions Gen1/Gen2 inventory after each batch. Retain a minimal transport-only Auth package/CI for the four approved hooks; do not delete that deployment source wholesale.
+7. Delete bounded batches only after their gates below pass; refresh the all-regions Gen1/Gen2 inventory after each batch. Retain a minimal transport-only Auth package/CI for the two approved hooks; do not delete that deployment source wholesale.
 
 No blanket delete/uninstall command is supplied: some extension uninstall/cleanup paths can affect data, and the inventory alone does not establish safety.
 

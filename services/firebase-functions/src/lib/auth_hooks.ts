@@ -39,9 +39,6 @@ export async function forwardAuthEvent(kind: "signup" | "delete", user: UserReco
 }
 
 const hooks = functions.runWith({ secrets: [AUTH_WEBHOOK_SECRET], failurePolicy: true }).auth.user();
-// Keep existing deployed names. Duplicate forwarding is intentional and deduplicated by Rust
-// using account incarnation + kind, including reconciliation-worker capture of the same event.
-export const sendWelcomeEmailOnUserCreated = hooks.onCreate((user) => forwardAuthEvent("signup", user));
-export const notifyFoundersOnSignUp = hooks.onCreate((user) => forwardAuthEvent("signup", user));
-export const notifyFoundersOnUserDelete = hooks.onDelete((user) => forwardAuthEvent("delete", user));
-export const deleteStreamUser = hooks.onDelete((user) => forwardAuthEvent("delete", user));
+// One transport per lifecycle event. Rust deduplicates retries and worker reconciliation.
+export const onUserCreate = hooks.onCreate((user) => forwardAuthEvent("signup", user));
+export const onUserDelete = hooks.onDelete((user) => forwardAuthEvent("delete", user));

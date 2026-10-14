@@ -1,5 +1,25 @@
 # Live Firebase deployment audit
 
+## Final production state — 2026-10-14
+
+Production has exactly **two Gen1 Node.js 22 Functions**: `onUserCreate` and `onUserDelete`.
+Both are authenticated, retryable transports to Rust, with no business logic or HTTP/Firestore exports.
+The former four Auth transports and every other Function/managed extension are deleted. The Rust
+API, mail worker and identity worker run on Hetzner at `40f3513df01d22986a7e2f5c5b40dcf5a8579e58`.
+
+Real synthetic checks after retirement proved one signup/deletion job each, Stream provisioning and
+confirmed deletion, UID-bound token minting, actual WebSocket rejection of a revoked token before
+and after a Rust profile upsert, successful fresh-token connections, and refusal to mint for deleted
+identities. Firebase hosted verification links still work; a verification code was applied successfully.
+The SDK/REST timestamp precision mismatch discovered live is fixed and migrated without replay.
+
+Two obsolete live Stripe callbacks were removed: the retired payments extension and an already-
+absent cover-art Cloud Run service. Unrelated RevenueCat callbacks (live/test) and all billing objects
+were preserved. StoreKit remains unchanged. Postmark configuration is explicitly deferred to the owner;
+no mail Worker remains on Cloudflare. See `deployment-retirement-audit.json` for sanitized evidence.
+
+The sections below are historical snapshots and do not describe current deployment state.
+
 Checked **2026-10-12T17:15:23.312468+00:00**, project `in-the-loop-306520`, all regions: **60 deployed functions**, including **27 Firebase-managed extension functions**.
 
 This original table is a historical read-only inventory, not the current production state. On **2026-10-14**, user-approved retirement of three BigQuery extensions removed **15 Functions** and **16 task queues**; all six BigQuery archive tables/views and their metadata row counts were preserved. All-regions Functions inventory now lists **40 Functions**. See [the current retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md).
@@ -14,13 +34,13 @@ Important contrary evidence: `updateStreamUserOnUserUpdate` is `UNKNOWN` but has
 
 Supported-source inspection found no Functions SDK/callable/Cloud Functions URL in current app/package clients. Native Stream tokens, opportunity notifications and Spotify artist lookup route through authenticated Rust repositories. Native Spotify currently imports an artist link, not an OAuth connection; that does **not** prove the old OAuth provider callback can be removed. Request-builder tests cover only their named routes, not real delivery or external caller absence.
 
-**Free-launch client gap:** native `Dependencies.live()` still constructs `StoreKitPurchasesRepository`, and the paywall route still constructs `SubscriptionStoreView`; the web root still loads Stripe's pricing-table script. This conflicts with treating paid workflows as disconnected. Address supported client purchase/gating paths before billing retirement; preserve historical provider records.
+**Historical client audit, superseded by owner clarification:** StoreKit purchases/paywalls are supported and must remain. Native dependencies and `SubscriptionStoreView` were preserved; the web Stripe pricing-table script was removed. Stripe retirement does not disable StoreKit.
 
 No matching logs is **not** proof of no callers: retention, exclusions, sampling, external provider configuration and installed legacy clients remain separate checks. No production resource, provider object or source document was changed by this audit.
 
 ## Findings
 
-- **Current target is only four transport-only Firebase Auth hooks; all other Functions/extensions must be deletable.** See [the full retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md). Founder booking/application/onboarding alerts are required business behavior, not obsolete triggers: Rust outbox replacements were deployed and verified through live API actions, then those three Functions were deleted (40 remain after subsequent Stream callback, Mailchimp and BigQuery retirements). The table below is the original inventory snapshot, not the current function count. Other notification/Auth effects must also be accounted for.
+- **Current target is only two transport-only Firebase Auth hooks (`onUserCreate`, `onUserDelete`); all other Functions/extensions must be deletable.** See [the full retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md). Founder booking/application/onboarding alerts are required business behavior, not obsolete triggers: Rust outbox replacements were deployed and verified through live API actions, then those three Functions were deleted (40 remain after subsequent Stream callback, Mailchimp and BigQuery retirements). The table below is the original inventory snapshot, not the current function count. Other notification/Auth effects must also be accounted for.
 - Backend source and Firebase project/deployment configuration are independent of the retired mobile directory.
 - The entrypoint explicitly exports only the current allowlisted thin Auth transports and temporary HTTP compatibility endpoints. Legacy Firestore modules are preserved for reference, **not exported or approved for deployment**. Previously deleted triggers (including `onUserDeleted`, default-service and review-counter writers) cannot be recreated by the supported deployment command.
 - Both webhook compatibility handlers delegate to Rust; the Stream proxy forwards the original bytes/signature instead of accessing Firestore. These local changes have **not been deployed**.

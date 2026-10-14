@@ -1,6 +1,4 @@
 [
-  "deleteStreamUser",
-  "notifyFoundersOnSignUp",
-  "notifyFoundersOnUserDelete",
-  "sendWelcomeEmailOnUserCreated"
+  "onUserCreate",
+  "onUserDelete"
 ]
