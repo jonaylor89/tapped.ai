@@ -1,7 +1,7 @@
 const nextConfig = {
 	reactStrictMode: true,
 	images: {
-		// Firebase Storage images are resized by imgproxy (img.tapped.ai), not Vercel; see src/lib/image-loader.ts.
+		// media.tapped.ai and Firebase Storage images are resized by imgproxy (img.tapped.ai), not Vercel; see src/lib/image-loader.ts.
 		loader: "custom",
 		loaderFile: "./src/lib/image-loader.ts",
 		// Together these are the imgproxy `w<N>` preset ladder.
@@ -9,6 +9,10 @@ const nextConfig = {
 		deviceSizes: [640, 828, 1080, 1600],
 		dangerouslyAllowSVG: true,
 		remotePatterns: [
+			{
+				protocol: "https",
+				hostname: "media.tapped.ai",
+			},
 			{
 				protocol: "https",
 				hostname: "firebasestorage.googleapis.com",

@@ -7,6 +7,7 @@ scripts/*
 !scripts/export_migrated_firestore.ts
 !scripts/package.json
 !scripts/package-lock.json
+!scripts/migrate_storage_to_r2.py
 !scripts/helpers/
 scripts/helpers/*
 !scripts/helpers/database.ts

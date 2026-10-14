@@ -33,6 +33,11 @@ struct ImageProxyTests {
         #expect(preset(proxy.url(for: source, pixelWidth: 3000, pixelHeight: 2000)) == "w1600")
     }
 
+    @Test func proxiesR2Media() {
+        let media = URL(string: "https://media.tapped.ai/users/abc/avatar/278645fd506a9197c6712c78fcc9b20b.jpg")!
+        #expect(proxy.url(for: media, pixelWidth: 100, pixelHeight: 100).absoluteString.hasPrefix("https://img.tapped.ai/unsafe/sq128/"))
+    }
+
     @Test func leavesOtherURLsAlone() {
         let other = URL(string: "https://images.squarespace-cdn.com/a.jpg")!
         #expect(proxy.url(for: other, pixelWidth: 100, pixelHeight: 100) == other)

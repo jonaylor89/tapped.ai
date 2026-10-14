@@ -67,6 +67,11 @@ services:
       SPOTIFY_CLIENT_SECRET: ${SPOTIFY_CLIENT_SECRET}
       # Founder events are durable in Postgres; blank keeps delivery queued, not discarded.
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      # Presigned media uploads to the tapped-media R2 bucket; POST /app/v1/uploads answers 503 when unset.
+      # Use a token scoped to Object Read & Write on tapped-media only.
+      R2_ACCOUNT_ID: ${R2_ACCOUNT_ID:-}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID:-}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY:-}
     volumes:
       - mail-data:/data
     depends_on:
@@ -118,7 +123,7 @@ services:
     depends_on:
       - api
 
-  # Resizes Firebase Storage images for img.tapped.ai; Cloudflare caches every variant at the edge.
+  # Resizes media.tapped.ai (R2) and legacy Firebase Storage images for img.tapped.ai; Cloudflare caches every variant at the edge.
   # The preset ladder is mirrored in apps/app.tapped.ai/src/lib/image-loader.ts and
   # com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift — change all three together.
   imgproxy:
@@ -131,7 +136,7 @@ services:
       IMGPROXY_TTL: "31536000"
       IMGPROXY_MAX_SRC_RESOLUTION: "40"
       IMGPROXY_QUALITY: "80"
-      IMGPROXY_ALLOWED_SOURCES: "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/,https://storage.googleapis.com/in-the-loop-306520.appspot.com/"
+      IMGPROXY_ALLOWED_SOURCES: "https://media.tapped.ai/,https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/,https://storage.googleapis.com/in-the-loop-306520.appspot.com/"
       IMGPROXY_ONLY_PRESETS: "true"
       IMGPROXY_PRESETS: >-
         w64=resize:fit:64:0/format:webp,

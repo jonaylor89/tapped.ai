@@ -1,6 +1,6 @@
 import Foundation
 
-/// Rewrites Firebase Storage image URLs to resized variants served by imgproxy (`img.tapped.ai`).
+/// Rewrites media.tapped.ai (R2) and legacy Firebase Storage image URLs to resized variants served by imgproxy (`img.tapped.ai`).
 ///
 /// The preset ladders mirror `IMGPROXY_PRESETS` in `docker-compose.prod.yml` (and the web app's
 /// `src/lib/image-loader.ts`); a URL for a preset the server doesn't define fails to load.
@@ -21,6 +21,7 @@ public struct ImageProxy: Sendable, Hashable {
 
     /// Mirrors `IMGPROXY_ALLOWED_SOURCES`; anything else is returned untouched.
     static let proxiedSources = [
+        "https://media.tapped.ai/",
         "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/",
         "https://storage.googleapis.com/in-the-loop-306520.appspot.com/",
     ]
@@ -58,7 +59,7 @@ public struct ImageProxy: Sendable, Hashable {
         return Preset(kind: .width, pixels: widthPresets.first { $0 >= longest } ?? widthPresets.last!)
     }
 
-    /// Whether `source` is rewritten to imgproxy variants (proxy enabled and the image is in the bucket).
+    /// Whether `source` is rewritten to imgproxy variants (proxy enabled and the image is in a proxied bucket).
     public func proxies(_ source: URL) -> Bool {
         baseURL != nil && Self.proxiedSources.contains(where: source.absoluteString.hasPrefix)
     }
@@ -70,7 +71,7 @@ public struct ImageProxy: Sendable, Hashable {
     }
 
     /// The smallest variant that covers a `pixelWidth` × `pixelHeight` box, or `source` itself when the
-    /// proxy is disabled or the image isn't in the Firebase bucket.
+    /// proxy is disabled or the image isn't in a proxied bucket.
     public func url(for source: URL, pixelWidth: Int, pixelHeight: Int) -> URL {
         guard let preset = Self.preset(pixelWidth: pixelWidth, pixelHeight: pixelHeight) else { return source }
         return url(for: source, preset: preset)

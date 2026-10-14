@@ -326,6 +326,7 @@ mod tests {
             places: std::sync::Arc::new(crate::data::places::MockPlaces),
             spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
             postgres: None,
+            media: None,
         }
     }
 

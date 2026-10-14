@@ -3,7 +3,6 @@ import Foundation
 @preconcurrency import FirebaseCore
 @preconcurrency import FirebaseCrashlytics
 @preconcurrency import FirebaseMessaging
-@preconcurrency import FirebaseStorage
 @preconcurrency import GoogleSignIn
 
 /// All Firebase SDK entry points the app target needs, so `import Firebase*` never appears outside `TappedData`.
@@ -32,7 +31,7 @@ public enum FirebaseBootstrap {
 
     public static var isConfigured: Bool { FirebaseApp.app() != nil }
 
-    /// Debug builds launched with `FIREBASE_AUTH_EMULATOR_HOST` (and optionally `FIREBASE_STORAGE_EMULATOR_HOST`),
+    /// Debug builds launched with `FIREBASE_AUTH_EMULATOR_HOST`,
     /// as `host:port`, sign in against the local Firebase emulators instead of the production project.
     public static var usesEmulators: Bool {
         #if DEBUG
@@ -60,7 +59,6 @@ public enum FirebaseBootstrap {
         let options = FirebaseOptions(googleAppID: "1:000000000000:ios:0000000000000000", gcmSenderID: "000000000000")
         options.projectID = localProjectID
         options.apiKey = "AIzaSyDemoTappedLocalEmulatorKey0000000"
-        options.storageBucket = "\(localProjectID).appspot.com"
         options.bundleID = Bundle.main.bundleIdentifier ?? "com.intheloopstudio"
         return options
     }
@@ -73,9 +71,6 @@ public enum FirebaseBootstrap {
         Messaging.messaging().isAutoInitEnabled = false
         if let auth = emulatorAddress("FIREBASE_AUTH_EMULATOR_HOST") {
             Auth.auth().useEmulator(withHost: auth.host, port: auth.port)
-        }
-        if let storage = emulatorAddress("FIREBASE_STORAGE_EMULATOR_HOST") {
-            Storage.storage().useEmulator(withHost: storage.host, port: storage.port)
         }
         #endif
     }

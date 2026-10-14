@@ -88,7 +88,7 @@ public struct TappedConfig: Sendable, Hashable {
 public enum LaunchEnvironment {
     static let localStackKeys = [
         "TAPPED_API_URL", "TAPPED_IMAGE_PROXY_URL", "TAPPED_STREAM_API_KEY", "TAPPED_STREAM_BASE_URL",
-        "FIREBASE_AUTH_EMULATOR_HOST", "FIREBASE_STORAGE_EMULATOR_HOST",
+        "FIREBASE_AUTH_EMULATOR_HOST",
     ]
 
     public static var current: [String: String] {

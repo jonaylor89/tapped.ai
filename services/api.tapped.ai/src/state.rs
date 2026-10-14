@@ -78,4 +78,6 @@ pub struct AppStateDyn {
     pub spotify: Arc<dyn Spotify>,
     /// Required serving Postgres pool. `None` only in injected mock test states.
     pub postgres: Option<sqlx::PgPool>,
+    /// R2 media uploads; `None` answers `POST /app/v1/uploads` with 503.
+    pub media: Option<crate::domain::uploads::MediaUploads>,
 }

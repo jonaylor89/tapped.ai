@@ -22,3 +22,4 @@ pub mod public_map;
 pub mod public_profile;
 pub mod spotify;
 pub mod spotify_oauth;
+pub mod uploads;

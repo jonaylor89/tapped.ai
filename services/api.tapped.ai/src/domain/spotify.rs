@@ -156,6 +156,7 @@ mod tests {
             places: Arc::new(MockPlaces),
             spotify: Arc::new(MockSpotify),
             postgres: None,
+            media: None,
         }
     }
 

@@ -82,7 +82,7 @@ public struct Dependencies: Sendable {
                 baseURL: config.streamBaseURL,
                 tokenProvider: TappedAPIStreamTokenRepository(baseURL: config.tappedAPIURL).fetch
             ),
-            storage: FirebaseStorageRepository(),
+            storage: TappedAPIStorageRepository(baseURL: config.tappedAPIURL),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
             opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL),
             imageProxy: ImageProxy(baseURL: config.imageProxyURL),

@@ -142,6 +142,7 @@ impl Application {
             places: Arc::new(GooglePlaces::new(google_places_api_key)),
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
             postgres: Some(postgres),
+            media: crate::domain::uploads::MediaUploads::from_env(),
         };
 
         let founder_transport = state
@@ -302,6 +303,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             post(crate::domain::spotify_oauth::refresh),
         )
         .route("/device-token", post(app_data::register_token))
+        .route("/uploads", post(crate::domain::uploads::create))
         .route("/venue-email-threads", post(create_email_thread))
         .routes(routes!(app_functions::revoke_stream_user_tokens))
         .routes(routes!(app_functions::stream_user_token))

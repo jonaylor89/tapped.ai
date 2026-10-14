@@ -74,7 +74,6 @@ Debug builds read these launch environment variables (Xcode scheme or `SIMCTL_CH
 ```sh
 SIMCTL_CHILD_TAPPED_API_URL=http://localhost:8080 \
 SIMCTL_CHILD_FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
-SIMCTL_CHILD_FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199 \
 xcrun simctl launch <udid> com.intheloopstudio
 ```
 
@@ -82,8 +81,7 @@ xcrun simctl launch <udid> com.intheloopstudio
 start against production, so also persist the overrides (Debug builds read them from user defaults):
 
 ```sh
-for kv in TAPPED_API_URL=http://localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 \
-          FIREBASE_STORAGE_EMULATOR_HOST=localhost:9199; do
+for kv in TAPPED_API_URL=http://localhost:8080 FIREBASE_AUTH_EMULATOR_HOST=localhost:9099; do
   xcrun simctl spawn <udid> defaults write com.intheloopstudio "${kv%%=*}" "${kv#*=}"
 done
 ```
@@ -91,6 +89,10 @@ done
 Emulator runs configure Firebase with a fake `demo-tapped` app instead of the bundled
 `GoogleService-Info.plist`, use Remote Config's in-code defaults, and skip PostHog, OpenTelemetry,
 Crashlytics, FCM and Google Sign-In. Release builds ignore all of these variables.
+
+Image uploads go through the local API's `POST /app/v1/uploads`, which presigns R2 uploads. It answers 503
+unless the API has `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` (use a dev bucket via
+`R2_MEDIA_BUCKET` and `MEDIA_PUBLIC_BASE_URL`, never `tapped-media`).
 
 ## Not emulated
 
