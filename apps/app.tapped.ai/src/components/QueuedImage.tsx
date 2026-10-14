@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import imageLoader from "@/lib/image-loader";
 import { createImageQueue } from "@/lib/image-queue";
 
-// An off-DOM image owns the network slot even if its UI unmounts. Native image requests
-// can continue after DOM removal; releasing early would oversubscribe the proxy on a pan.
-const enqueue = createImageQueue(4, true);
+// Allow CDN-cached thumbnails to load broadly in parallel. An off-DOM image retains its
+// slot after unmount so panning does not grow the number of active requests without bound.
+const enqueue = createImageQueue(100, true);
 export default function QueuedImage({
 	src,
 	alt,

@@ -1,4 +1,4 @@
-// imgproxy has two workers. Avoid sending an entire map's cold thumbnails into its timeout queue.
+// Track active requests across viewport changes; callers choose their CDN loading concurrency.
 export function createImageQueue(concurrency = 4, retainActiveOnCancel = false) {
 	if (!Number.isInteger(concurrency) || concurrency < 1)
 		throw new Error("Invalid image concurrency");
