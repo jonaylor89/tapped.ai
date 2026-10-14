@@ -1,18 +1,11 @@
 /* eslint-disable indent */
+
+import { randomUUID as uuidv4 } from "node:crypto";
 import { CheerioCrawler, Sitemap } from "crawlee";
 import { configDotenv } from "dotenv";
-import { v4 as uuidv4 } from "uuid";
 import { getRouter } from "./routes.js";
 import type { EventData } from "./types.js";
-import {
-  buildDomainMap,
-  getAllScrapedLinks,
-  getUserByUsername,
-  getVenueUsernameChunk,
-  saveEventData,
-  setBestDaysOfWeek,
-  setVenueTopPerformers,
-} from "./utils/database.js";
+import { buildDomainMap, getAllScrapedLinks, getVenueUsernameChunk, saveEventData } from "./utils/database.js";
 import { getBaseDomain } from "./utils/parsing.js";
 
 configDotenv({
@@ -128,26 +121,7 @@ async function main({ dryRun }: { dryRun?: boolean }) {
     }
   }
 
-  for (const username of initVenueUsernames) {
-    if (dryRun) {
-      continue;
-    }
-
-    const venue = await getUserByUsername(username);
-    if (!venue) {
-      console.error(`[!] no venue found for ${username}`);
-      continue;
-    }
-
-    await setBestDaysOfWeek(venue.id);
-
-    await setVenueTopPerformers({
-      venueId: venue.id,
-      count: 5,
-    });
-  }
-
-  console.log(`[+] set best days of the week and top performers for ${initVenueUsernames} venues`);
+  // Venue rankings and booking-day distributions are SQL read models, not crawler writes.
 
   return;
 }

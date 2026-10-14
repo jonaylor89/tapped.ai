@@ -265,6 +265,14 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     };
 
     let app_v1_authenticated = OpenApiRouter::new()
+        .routes(routes!(crate::domain::commands::create_profile))
+        .routes(routes!(crate::domain::commands::update_profile))
+        .routes(routes!(crate::domain::commands::request_booking))
+        .routes(routes!(crate::domain::commands::edit_booking))
+        .routes(routes!(crate::domain::commands::accept_booking))
+        .routes(routes!(crate::domain::commands::cancel_booking))
+        .routes(routes!(crate::domain::commands::reschedule_booking))
+        .routes(routes!(crate::domain::commands::submit_review))
         .routes(routes!(app_data::search_private))
         .routes(routes!(app_data::list_private, app_data::create))
         .routes(routes!(
@@ -318,6 +326,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .routes(routes!(app_data::list_public))
         .routes(routes!(app_data::get_public))
         .routes(routes!(public_profile::get_details))
+        .routes(routes!(crate::domain::commands::profile_stats))
         .route(
             "/public/users/{id}/booking-count",
             get(app_data::booking_count),

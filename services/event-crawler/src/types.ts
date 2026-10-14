@@ -1,4 +1,5 @@
-import type { Timestamp } from "firebase-admin/firestore";
+/** API/Postgres timestamps, not Firestore objects. */
+type Timestamp = Date | string;
 
 export type Option<T> = T | null;
 

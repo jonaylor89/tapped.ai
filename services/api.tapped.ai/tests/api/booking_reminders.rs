@@ -3,6 +3,10 @@ use tapped_api_rs::domain::booking_reminders::{deliver_one, schedule};
 
 async fn fixture(pool: &sqlx::PgPool) {
     sqlx::query("INSERT INTO users(id,username,email) VALUES('requester','requester','requester@example.test'),('requestee','requestee','requestee@example.test')").execute(pool).await.unwrap();
+    sqlx::query("INSERT INTO accounts(auth_uid) VALUES('requester'),('requestee')")
+        .execute(pool)
+        .await
+        .unwrap();
     sqlx::query("INSERT INTO device_tokens(token,user_id) VALUES('token-a','requester'),('token-b','requestee')").execute(pool).await.unwrap();
     sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,start_time) VALUES('booking','requester','requestee','confirmed',now()+interval '8 days')").execute(pool).await.unwrap();
 }
@@ -31,7 +35,7 @@ async fn migration_baselines_only_future_offsets_without_replaying_historical_ef
         .await
         .unwrap();
     sqlx::query("INSERT INTO users(id,username,email,unclaimed,deleted) VALUES('a','a','a@example.test',false,false),('b','b','b@example.test',false,false),('unclaimed','unclaimed','unclaimed@example.test',true,false),('deleted','deleted','deleted@example.test',false,true)").execute(&pool).await.unwrap();
-    sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,start_time) VALUES('future','a','b','confirmed',now()+interval '8 days'),('near','a','unclaimed','confirmed',now()+interval '2 hours'),('past','a','b','confirmed',now()-interval '1 day'),('pending','a','b','pending',now()+interval '8 days'),('empty-requester','','b','confirmed',now()+interval '8 days'),('inactive','unclaimed','deleted','confirmed',now()+interval '8 days')").execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,start_time) VALUES('future','a','b','confirmed',now()+interval '8 days'),('near','a','unclaimed','confirmed',now()+interval '2 hours'),('past','a','b','confirmed',now()-interval '1 day'),('pending','a','b','pending',now()+interval '8 days'),('empty-requester',NULL,'b','confirmed',now()+interval '8 days'),('inactive','unclaimed','deleted','confirmed',now()+interval '8 days')").execute(&pool).await.unwrap();
     sqlx::raw_sql(include_str!(
         "../../migrations/20261018000000_booking_reminders.sql"
     ))

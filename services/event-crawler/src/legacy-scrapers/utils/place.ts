@@ -1,5 +1,4 @@
 import { encodeBase32 } from "geohashing";
-import fetch from "node-fetch";
 import { googlePlacesApiKey } from "../firebase";
 
 const geohashForLocation = ([lat, lng]: [number, number]) => {

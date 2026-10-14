@@ -37,6 +37,7 @@ pub async fn capture_account(
         tx.commit().await?;
         return Ok(());
     }
+    sqlx::query("INSERT INTO accounts(auth_uid) VALUES($1) ON CONFLICT(auth_uid) DO UPDATE SET disabled=false").bind(&account.local_id).execute(&mut *tx).await?;
     sqlx::query("INSERT INTO firebase_identities(uid,email,display_name,created_at_ms,scan_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(uid) DO UPDATE SET email=EXCLUDED.email,display_name=EXCLUDED.display_name,created_at_ms=EXCLUDED.created_at_ms,scan_id=EXCLUDED.scan_id,deleted=false")
         .bind(&account.local_id).bind(&account.email).bind(&account.display_name).bind(account.created_ms()).bind(scan).execute(&mut *tx).await?;
     if notify_new && old.is_none_or(|(created, deleted)| deleted || created != account.created_ms())
@@ -59,6 +60,14 @@ async fn capture_deleted_incarnation(pool: &PgPool, uid: &str, version: Option<i
     crate::domain::auth_lifecycle::lock_identity(&mut tx, uid).await?;
     let old:Option<(String,String,i64)>=sqlx::query_as("UPDATE firebase_identities SET deleted=true WHERE uid=$1 AND NOT deleted AND ($2::bigint IS NULL OR created_at_ms=$2) RETURNING email,display_name,created_at_ms").bind(uid).bind(version).fetch_optional(&mut *tx).await?;
     if let Some((email, name, created)) = old {
+        sqlx::query("UPDATE accounts SET disabled=true WHERE auth_uid=$1")
+            .bind(uid)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM profile_owners WHERE auth_uid=$1")
+            .bind(uid)
+            .execute(&mut *tx)
+            .await?;
         sqlx::query("DELETE FROM spotify_oauth_tokens WHERE user_id=$1")
             .bind(uid)
             .execute(&mut *tx)

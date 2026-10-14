@@ -26,8 +26,8 @@ async fn postgres_profile_details_hide_private_and_pending_bookings_and_deleted_
         sqlx::query("INSERT INTO bookings(id,requestee_id,requester_id,status,name,note,rate,start_time,end_time,occurred_at) VALUES($1,$2,$2,$3,'Show','Private note',100,now(),now(),now())").bind(format!("{uid}-{suffix}")).bind(&uid).bind(status).execute(&pool).await.unwrap();
     }
     for (suffix, age) in [("older", 60), ("latest", 0)] {
-        sqlx::query("INSERT INTO reviews(id,reviewee_id,review_type,booker_id,performer_id,booking_id,overall_rating,overall_review,occurred_at,profile) VALUES($1,$2,'performer',$5,$2,$3,4,'Public review',now()-make_interval(mins=>$4),'{\"email\":\"private@example.test\",\"performerRating\":{\"privateContact\":\"secret\"},\"_firestore_path\":\"private\"}'::jsonb)")
-            .bind(format!("{uid}-{suffix}")).bind(&uid).bind(format!("{uid}-confirmed")).bind(age).bind(&other)
+        sqlx::query("INSERT INTO reviews(id,reviewee_id,review_type,booker_id,performer_id,booking_id,overall_rating,overall_review,occurred_at,profile) VALUES($1,$2,'performer',$5,$2,NULLIF($3,''),4,'Public review',now()-make_interval(mins=>$4),'{\"email\":\"private@example.test\",\"performerRating\":{\"privateContact\":\"secret\"},\"_firestore_path\":\"private\"}'::jsonb)")
+            .bind(format!("{uid}-{suffix}")).bind(&uid).bind("").bind(age).bind(&other)
             .execute(&pool).await.unwrap();
     }
     let path = format!("{}/app/v1/public/users/{uid}/details", app.address);

@@ -1,0 +1,11 @@
+.jj
+.git
+**/node_modules
+**/target
+**/dist
+**/.next
+**/.env*
+**/*credentials*.json
+**/GoogleService-Info.plist
+**/archive
+**/package-lock.json

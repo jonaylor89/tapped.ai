@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { autocompleteCities } from "@/data/places";
-import type { BoundingBox, UserSearchOptions } from "@/data/typesense";
+import type { BoundingBox, UserSearchOptions } from "@/data/search";
 import type { UserModel } from "@/domain/types/user_model";
 import { QueryProvider } from "./query-provider";
 

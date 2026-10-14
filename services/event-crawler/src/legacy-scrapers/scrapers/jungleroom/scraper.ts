@@ -1,7 +1,7 @@
 import { configDotenv } from "dotenv";
 import puppeteer, { type Browser } from "puppeteer";
 import Sitemapper from "sitemapper";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID as uuidv4 } from "node:crypto";
 import type { ScrapedEventData } from "../../types";
 import { endScrapeRun, saveScrapeResult } from "../../utils/database";
 import { notifyOnScrapeFailure, notifyOnScrapeSuccess, notifyScapeStart } from "../../utils/notifications";

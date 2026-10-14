@@ -1,6 +1,5 @@
 use super::helpers::{mock_state, spawn_app, spawn_app_with_state};
 use serde_json::{Value, json};
-use tapped_api_rs::data::postgres::connect;
 
 #[tokio::test]
 async fn public_map_requires_valid_bounds_and_has_no_fallback_database() {
@@ -34,11 +33,9 @@ async fn public_map_requires_valid_bounds_and_has_no_fallback_database() {
 
 #[tokio::test]
 async fn postgres_map_bundles_only_referenced_public_profiles_and_bounds_results() {
-    let Ok(url) = std::env::var("DATABASE_URL") else {
-        eprintln!("DATABASE_URL unset; skipping map PostGIS test");
+    let Some((pool, admin, name)) = super::external_effects::database().await else {
         return;
     };
-    let pool = connect(&url).await.unwrap();
     let mut state = mock_state();
     state.postgres = Some(pool.clone());
     let app = spawn_app_with_state(state).await;
@@ -78,6 +75,11 @@ async fn postgres_map_bundles_only_referenced_public_profiles_and_bounds_results
     ] {
         sqlx::query("INSERT INTO users(id,username,email,artist_name,occupations,location,deleted,shadow_banned,profile) VALUES($1,$1,'private@example.test',$1,ARRAY[$2],ST_SetSRID(ST_MakePoint($3,55),4326)::geography,$4,$5,$6)")
             .bind(pid(name)).bind(occupation).bind(lon).bind(deleted).bind(banned).bind(profile).execute(&pool).await.unwrap();
+    }
+    // Rankings now derive from confirmed booking facts, not stale profile arrays.
+    for performer in ["artist", "gone", "banned"] {
+        sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,start_time) VALUES($1,$2,$3,\'confirmed\',now())")
+            .bind(pid(&format!("booking-{performer}"))).bind(pid("venue")).bind(pid(performer)).execute(&pool).await.unwrap();
     }
     let response = app
         .api_client
@@ -132,6 +134,7 @@ async fn postgres_map_bundles_only_referenced_public_profiles_and_bounds_results
         .bind(&prefix).execute(&pool).await.unwrap();
     sqlx::query("INSERT INTO users(id,username,artist_name,occupations,profile) SELECT $1||'p-'||i,$1||'p-'||i,'Performer',ARRAY['performer'],'{}'::jsonb FROM generate_series(1,1260) i")
         .bind(&prefix).execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,start_time) SELECT $1||\'dense-booking-\'||i||\'-\'||j,$1||\'dense-\'||i,$1||\'p-\'||(i*5+j),\'confirmed\',now() FROM generate_series(1,251) i CROSS JOIN generate_series(1,5) j").bind(&prefix).execute(&pool).await.unwrap();
     let response = app
         .api_client
         .get(format!(
@@ -154,9 +157,15 @@ async fn postgres_map_bundles_only_referenced_public_profiles_and_bounds_results
     .unwrap();
     assert!(index.contains("gist"));
     assert!(index.contains("geometry"));
+    sqlx::query("DELETE FROM bookings WHERE starts_with(id,$1)")
+        .bind(&prefix)
+        .execute(&pool)
+        .await
+        .unwrap();
     sqlx::query("DELETE FROM users WHERE starts_with(id,$1)")
         .bind(prefix)
         .execute(&pool)
         .await
         .unwrap();
+    super::external_effects::cleanup(pool, admin, name).await;
 }

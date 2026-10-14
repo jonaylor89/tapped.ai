@@ -204,7 +204,7 @@ pub async fn verify_firebase_token(
     mut req: Request,
     next: Next,
 ) -> Response {
-    let mut response = match verified_firebase_user(&state, req.headers()).await {
+    let mut response = match verified_active_user(&state, req.headers()).await {
         Ok(user) => {
             tracing::Span::current().record("user_id", user.uid.as_str());
             req.extensions_mut().insert(user);
@@ -218,6 +218,21 @@ pub async fn verify_firebase_token(
         axum::http::HeaderValue::from_static("no-store"),
     );
     response
+}
+
+async fn verified_active_user(
+    state: &AppStateDyn,
+    headers: &HeaderMap,
+) -> Result<FirebaseUser, AppError> {
+    let user = verified_firebase_user(state, headers).await?;
+    if let Some(pool) = state.postgres.as_ref() {
+        let disabled: bool = sqlx::query_scalar("INSERT INTO accounts(auth_uid,disabled) VALUES($1,coalesce((SELECT deleted FROM firebase_identities WHERE uid=$1),false)) ON CONFLICT(auth_uid) DO UPDATE SET auth_uid=accounts.auth_uid RETURNING disabled")
+            .bind(&user.uid).fetch_one(pool).await.map_err(|_|AppError::from_status(axum::http::StatusCode::SERVICE_UNAVAILABLE))?;
+        if disabled {
+            return Err(AppError::unauthorized("account deleted"));
+        }
+    }
+    Ok(user)
 }
 
 async fn verified_firebase_user(

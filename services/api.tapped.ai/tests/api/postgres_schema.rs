@@ -29,7 +29,7 @@ async fn migrations_create_a_geo_indexed_users_table() {
     .expect("insert user");
 
     let row = sqlx::query(
-        "SELECT profile -> 'performerInfo' ->> 'label' AS label, updated_at FROM users
+        "SELECT performer_label AS label, updated_at FROM users
          WHERE id = $1 AND ST_DWithin(location, ST_MakePoint(-77.03, 38.90)::geography, 5000)",
     )
     .bind(&id)

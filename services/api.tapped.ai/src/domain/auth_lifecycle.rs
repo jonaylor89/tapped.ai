@@ -60,6 +60,13 @@ pub async fn receive(pool: &PgPool, event: &LifecycleEvent) -> Result<(), sqlx::
         old.is_some_and(|(version, deleted)| version > created || (version == created && deleted));
     if !stale {
         let deleted = matches!(event.kind, LifecycleKind::Delete);
+        sqlx::query("INSERT INTO accounts(auth_uid,disabled) VALUES($1,$2) ON CONFLICT(auth_uid) DO UPDATE SET disabled=EXCLUDED.disabled").bind(&a.local_id).bind(deleted).execute(&mut *tx).await?;
+        if deleted {
+            sqlx::query("DELETE FROM profile_owners WHERE auth_uid=$1")
+                .bind(&a.local_id)
+                .execute(&mut *tx)
+                .await?;
+        }
         sqlx::query("INSERT INTO firebase_identities(uid,email,display_name,created_at_ms,scan_id,deleted) VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(uid) DO UPDATE SET email=EXCLUDED.email,display_name=EXCLUDED.display_name,created_at_ms=EXCLUDED.created_at_ms,deleted=EXCLUDED.deleted")
             .bind(&a.local_id).bind(&a.email).bind(&a.display_name).bind(created).bind(uuid::Uuid::new_v4()).bind(deleted).execute(&mut *tx).await?;
         if deleted {

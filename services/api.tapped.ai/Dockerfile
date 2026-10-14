@@ -24,6 +24,7 @@ RUN touch src/main.rs && cargo build --release
 # Step 2: Runtime Stage
 FROM debian:bookworm-slim
 LABEL io.tapped.datastore="postgres"
+LABEL io.tapped.schema_epoch="20261024010000"
 
 # Run as "app" user. The uid is fixed so the deploy can chown the mail volume and credentials.
 RUN useradd -u 10001 -ms /bin/bash app && mkdir /data && chown app:app /data

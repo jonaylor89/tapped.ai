@@ -23,14 +23,15 @@ public struct TappedAPIDatabaseRepository: DatabaseRepository {
         return try await client.read(["data", table], query: query) ?? []
     }
     private func save<T: Encodable>(_ table: String, id: String, value: T, create: Bool) async throws {
-        try await client.send(create ? ["data",table] : ["data",table,id], method: create ? "POST" : "PUT", value: value)
+        let path = create && ["bookings", "reviews"].contains(table) ? [table] : (create ? ["data",table] : ["data",table,id])
+        try await client.send(path, method: create ? "POST" : "PUT", value: value)
     }
     private func delete(_ table: String, _ id: String) async throws {
         _ = try await client.request(["data",table,id], method: "DELETE")
     }
     public func publishLatestAppVersion(_ currentUserId: String) async throws -> String {
         let version = AppVersion.current().firestoreValue
-        try await client.send(["data","users",currentUserId], method: "PUT", value: ["latestAppVersion":version])
+        try await client.send(["profiles",currentUserId], method: "PUT", value: ["latestAppVersion":version])
         return version
     }
     // Email enumeration is intentionally removed; Firebase Auth handles duplicate identities.
@@ -43,7 +44,18 @@ public struct TappedAPIDatabaseRepository: DatabaseRepository {
             "location","performerInfo","venueInfo","bookerInfo","socialFollowing","emailNotifications",
             "pushNotifications","latestAppVersion","timestamp","deleted","website","phoneNumber"]
         object = object.filter { allowed.contains($0.key) }
-        _ = try await client.request(create ? ["data","users"] : ["data","users",user.id],
+        // Statistics/rankings are read-only projections; never send them back as profile facts.
+        for (section, fields) in [
+            ("performerInfo", ["rating", "reviewCount", "bookingCount", "completedBookingCount", "category"]),
+            ("bookerInfo", ["rating", "reviewCount"]),
+            ("venueInfo", ["topPerformerIds", "bookingsByDayOfWeek"])
+        ] {
+            if var info = object[section] as? [String: Any] {
+                for field in fields { info.removeValue(forKey: field) }
+                object[section] = info
+            }
+        }
+        _ = try await client.request(create ? ["profiles"] : ["profiles",user.id],
                                      method: create ? "POST" : "PUT", body: JSONSerialization.data(withJSONObject: object))
     }
     public func createUser(_ user: UserModel) async throws { try await saveUser(user,create:true) }
@@ -81,7 +93,25 @@ public struct TappedAPIDatabaseRepository: DatabaseRepository {
         try await client.send(["data","activities",activity.id],method:"PUT",value:["markedRead":true])
     }
     public func createBooking(_ booking: Booking) async throws { try await save("bookings",id:booking.id,value:booking,create:true) }
-    public func updateBooking(_ booking: Booking) async throws { try await save("bookings",id:booking.id,value:booking,create:false) }
+    public func updateBooking(_ booking: Booking) async throws {
+        guard let current = try await getBookingById(booking.id) else { throw TappedAPIError.requestFailed(statusCode: 404) }
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        var object = try JSONSerialization.jsonObject(with: encoder.encode(booking)) as! [String: Any]
+        object.removeValue(forKey: "status")
+        let action: String?
+        if current.status == booking.status { action = nil }
+        else {
+            switch booking.status {
+            case .confirmed: action = "accept"
+            case .canceled: action = "cancel"
+            case .pending: throw TappedAPIError.requestFailed(statusCode: 400)
+            }
+        }
+        let path = ["bookings", booking.id] + (action.map { [$0] } ?? [])
+        _ = try await client.request(path, method: action == nil ? "PUT" : "POST",
+            body: JSONSerialization.data(withJSONObject: object))
+    }
     public func getBookingById(_ bookRequestId: String) async throws -> Booking? { try await get("bookings",bookRequestId) }
     public func getBookingsByEventId(_ eventId: String) async throws -> [Booking] {
         var results: [Booking] = []

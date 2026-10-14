@@ -3,6 +3,7 @@ pub mod app_functions;
 pub mod auth;
 pub mod auth_lifecycle;
 pub mod booking_reminders;
+pub mod commands;
 pub mod controller;
 pub mod external_effects;
 pub mod feedback;

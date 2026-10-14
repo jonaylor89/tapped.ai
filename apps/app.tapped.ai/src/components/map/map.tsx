@@ -13,7 +13,7 @@ import {
 } from "react-map-gl";
 import TappedBanner from "@/components/TappedBanner";
 import { prefetchPublicProfile } from "@/data/database";
-import type { BoundingBox } from "@/data/typesense";
+import type { BoundingBox } from "@/data/search";
 import { profileImage } from "@/domain/types/user_model";
 import { usePublicMap } from "@/hooks/use-public-map";
 import { venueSearchBounds } from "@/lib/map-bounds";

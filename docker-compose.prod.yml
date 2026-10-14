@@ -1,20 +1,4 @@
 services:
-  typesense:
-    image: typesense/typesense:0.25.2
-    restart: unless-stopped
-    # Memory budget for the 4 GB VPS: see platform/README.md before changing any limit.
-    mem_limit: 1g
-    mem_reservation: 512m
-    volumes:
-      - /opt/typesense/data:/data
-    command: "--data-dir /data --api-key=${TYPESENSE_API_KEY} --enable-cors"
-    healthcheck:
-      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8108 && echo -e 'GET /health HTTP/1.0\r\n\r\n' >&3 && timeout 2 cat <&3 | grep -q ok"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
   # Replacing Firestore; internal only (no tunnel route). Setup and backups: platform/README.md.
   postgres:
     image: postgis/postgis:17-3.5
@@ -64,10 +48,6 @@ services:
       SERVICE_VERSION: ${API_IMAGE}
       PORT: "3000"
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
-      TYPESENSE_HOST: typesense
-      TYPESENSE_PORT: "8108"
-      TYPESENSE_PROTOCOL: http
-      TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_API_KEY}
       # postgres://tapped:<POSTGRES_PASSWORD>@postgres:5432/tapped; Postgres is skipped when empty.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required for the Postgres-only API}
       REDIS_URL: redis://redis:6379/0
@@ -90,7 +70,7 @@ services:
     volumes:
       - mail-data:/data
     depends_on:
-      typesense:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -183,7 +163,6 @@ services:
       - ${CLOUDFLARE_TUNNEL_TOKEN}
     depends_on:
       - api
-      - typesense
       - imgproxy
 
 volumes:

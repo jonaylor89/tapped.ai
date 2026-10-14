@@ -1,4 +1,4 @@
-import type { BoundingBox } from "@/data/typesense";
+import type { BoundingBox } from "@/data/search";
 
 type MapBounds = {
 	getNorth(): number;

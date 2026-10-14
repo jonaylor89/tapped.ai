@@ -1,0 +1,22 @@
+{
+  "name": "@tapped/postgres-ingestion",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check src tests",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "pg": "8.13.1"
+  },
+  "devDependencies": {
+    "@types/pg": "8.11.10",
+    "@types/node": "20.10.7",
+    "typescript": "5.4.5",
+    "tsx": "4.21.0"
+  }
+}

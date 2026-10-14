@@ -1,58 +1,19 @@
-# Event Crawler - Unified Web Scraping System
+# Event crawler
 
-A production-ready event crawler built with Crawlee + CheerioCrawler + TypeScript that uses LLM-based parsing to extract event data from venue websites.
+Reads sanitized profiles and writes event facts/import provenance to Postgres through `@tapped/postgres-ingestion`. No Auth users, Firestore writes, client-maintained counters or application notifications. Supported legacy scrapers use the same transport.
 
-This system replaces the legacy individual venue scrapers with a unified, generalized approach that can adapt to different website structures automatically.
+From the monorepo root:
 
-## Features
-
-- **LLM-Powered Parsing**: Uses OpenAI to intelligently extract event data from any website structure
-- **Venue Management**: Automatically crawls configured venue websites and sitemaps
-- **Firebase Integration**: Stores events and creates bookings in Firestore
-- **Artist Creation**: Automatically creates artist profiles for performers
-- **Booking Generation**: Creates confirmed bookings for music events
-
-## Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Set up environment
-cp .env.local.example .env.local
-# Edit .env.local with your Firebase credentials and OpenAI API key
-
-# Build the project
-npm run build
-
-# Run in development mode
-npm run start:dev
-
-# Run in production mode
-npm run start:prod
+```sh
+corepack pnpm install --frozen-lockfile
+corepack pnpm --filter @tapped/postgres-ingestion build
+corepack pnpm --filter node-webcrawler build
+corepack pnpm --filter node-webcrawler typecheck
+corepack pnpm --filter node-webcrawler start:prod
+# Root build context, not this directory:
+docker build -f services/event-crawler/Dockerfile .
 ```
 
-## Configuration
+Configure a private-network `INGESTION_DATABASE_URL` for a dedicated member of `tapped_ingestion`, not the API/owner credential. Missing configuration fails closed. GCS uploads use mounted ADC (`GOOGLE_APPLICATION_CREDENTIALS`) with Storage-only permissions. Provider settings remain `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY` and optional `SLACK_WEBHOOK_URL`; never bake them into an image.
 
-Venue configurations are managed in `src/utils/database.ts` in the `getVenueUsernameChunk()` function. Each venue must have:
-
-1. A user document in Firestore with venue information
-2. An entry in the venue username list
-3. A valid website URL and sitemap
-
-## Architecture
-
-- **Crawlee**: Handles website crawling and sitemap parsing
-- **OpenAI**: Extracts structured event data from HTML content
-- **Firebase**: Stores events, bookings, and user data
-- **TypeScript**: Provides type safety throughout the system
-
-## Data Flow
-
-1. Load venue configurations from database
-2. Build domain map for venue websites
-3. Crawl venue sitemaps for event pages
-4. Use LLM to extract event data from each page
-5. Store events in `crawler` collection
-6. Create bookings for music events
-7. Generate artist profiles for new performers
+See [models, permissions, rollout and preservation](../../platform/POSTGRES_FIRST.md). Firestore migration files under `archive/firestore-migrations` are historical source, excluded from runtime builds and unsupported against the new schema. Do not run them on production or restore a dual-write path.

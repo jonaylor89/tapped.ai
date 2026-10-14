@@ -9,11 +9,9 @@
 #
 # Domains:
 #   https://api.tapped.ai      → Rust API (port 3000)
-#   https://search.tapped.ai   → Typesense 0.25.2 (port 8108)
 #
 # Connect via SSH:
 #   ssh root@46.225.133.198
 #
 # Health checks:
 #   curl https://api.tapped.ai/health
-#   curl https://search.tapped.ai/health

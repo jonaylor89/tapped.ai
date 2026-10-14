@@ -17,6 +17,7 @@ async function main() {
       // Here you can set options that are passed to the playwright .launch() function.
       launchOptions: {
         headless: true,
+        executablePath: process.env.CRAWLEE_BROWSER_EXECUTABLE_PATH,
       },
     },
 

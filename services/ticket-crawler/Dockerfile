@@ -1,50 +1,28 @@
-# Specify the base Docker image. You can read more about
-# the available images at https://crawlee.dev/docs/guides/docker-images
-# You can also use any other image from Docker Hub.
-FROM apify/actor-node:20 AS builder
+# Build with the monorepo root as context: docker build -f services/ticket-crawler/Dockerfile .
+FROM node:22.17.0-bookworm-slim AS builder
+WORKDIR /app
+RUN corepack enable && corepack prepare pnpm@10.27.0 --activate
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/postgres-ingestion/package.json packages/postgres-ingestion/package.json
+COPY services/ticket-crawler/package.json services/ticket-crawler/package.json
+RUN pnpm install --filter ticket-crawler... --frozen-lockfile --ignore-scripts
+COPY packages/postgres-ingestion/src packages/postgres-ingestion/src
+COPY packages/postgres-ingestion/tsconfig.json packages/postgres-ingestion/tsconfig.json
+COPY services/ticket-crawler/src services/ticket-crawler/src
+COPY services/ticket-crawler/tsconfig.json services/ticket-crawler/tsconfig.json
+RUN pnpm --filter @tapped/postgres-ingestion build && pnpm --filter ticket-crawler build
 
-# Copy just package.json and package-lock.json
-# to speed up the build using Docker layer cache.
-COPY package*.json ./
-
-# Install all dependencies. Don't audit to speed up the installation.
-RUN npm install --include=dev --audit=false
-
-# Next, copy the source files using the user set
-# in the base image.
-COPY . ./
-
-# Install all dependencies and build the project.
-# Don't audit to speed up the installation.
-RUN npm run build
-
-# Create final image
-FROM apify/actor-node:20
-
-# Copy only built JS files from builder image
-COPY --from=builder /usr/src/app/dist ./dist
-
-# Copy just package.json and package-lock.json
-# to speed up the build using Docker layer cache.
-COPY package*.json ./
-
-# Install NPM packages, skip optional and development dependencies to
-# keep the image small. Avoid logging too much and print the dependency
-# tree for debugging
-RUN npm --quiet set progress=false \
-    && npm install --omit=dev --omit=optional \
-    && echo "Installed NPM packages:" \
-    && (npm list --omit=dev --all || true) \
-    && echo "Node.js version:" \
-    && node --version \
-    && echo "NPM version:" \
-    && npm --version
-
-# Next, copy the remaining files and directories with the source code.
-# Since we do this after NPM install, quick build will be really fast
-# for most source file changes.
-COPY . ./
-
-
-# Run the image.
-CMD npm run start:prod --silent
+FROM node:22.17.0-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends chromium ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CRAWLEE_BROWSER_EXECUTABLE_PATH=/usr/bin/chromium
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/postgres-ingestion ./packages/postgres-ingestion
+COPY --from=builder /app/services/ticket-crawler/node_modules ./services/ticket-crawler/node_modules
+COPY --from=builder /app/services/ticket-crawler/dist ./services/ticket-crawler/dist
+COPY --from=builder /app/services/ticket-crawler/package.json ./services/ticket-crawler/package.json
+RUN chown node:node /app/services/ticket-crawler
+WORKDIR /app/services/ticket-crawler
+USER node
+CMD ["node", "dist/main.js"]

@@ -8,7 +8,7 @@ use reqwest::Client;
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(20);
 
-/// The shared client for ordinary API calls (Google, Spotify, Stream, Slack, Typesense).
+/// The shared client for ordinary API calls (Google, Spotify, Stream, Slack).
 pub fn client() -> Client {
     static CLIENT: OnceLock<Client> = OnceLock::new();
     CLIENT

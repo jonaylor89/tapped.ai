@@ -21,7 +21,7 @@ use crate::{
 };
 
 /// Generous enough for a phone behind carrier NAT opening the app (bursty) while stopping a
-/// single client from hammering Firestore, Typesense or Google.
+/// single client from hammering Postgres or Google.
 const PER_IP_REPLENISH: Duration = Duration::from_millis(100);
 const PER_IP_BURST: u32 = 100;
 /// API-key clients (including MCP tools that loop) get a steady 5 requests/s per key.

@@ -1,6 +1,6 @@
 # Tapped Infrastructure - Hetzner Cloud
 
-The Tapped API, Typesense search engine, and imgproxy image resizer are hosted on a Hetzner Cloud VPS behind Cloudflare Tunnel. The VPS has no publicly reachable TCP ports; administration uses Tailscale SSH.
+The Tapped API, Postgres database/search, and imgproxy image resizer are hosted on a Hetzner Cloud VPS behind Cloudflare Tunnel. The VPS has no publicly reachable TCP ports; administration uses Tailscale SSH.
 
 ## Server Details
 
@@ -14,7 +14,6 @@ The Tapped API, Typesense search engine, and imgproxy image resizer are hosted o
 | Service | Domain | Internal Port |
 |---------|--------|---------------|
 | API | `https://api.tapped.ai` | 3000 |
-| Typesense | `https://search.tapped.ai` | 8108 |
 | imgproxy | `https://img.tapped.ai` | 8080 |
 | Cloudflare Tunnel | — | Outbound-only connector |
 
@@ -35,7 +34,6 @@ cd /opt/tapped && docker compose ps
 ```bash
 docker compose logs -f           # all services
 docker compose logs -f api       # API only
-docker compose logs -f typesense # Typesense only
 docker compose logs -f cloudflared # Cloudflare Tunnel only
 ```
 
@@ -91,13 +89,12 @@ The VPS has 4 GB and no swap headroom to spare, so every long-running container 
 
 | Service | `mem_limit` | `mem_reservation` | Notes |
 |---------|-------------|-------------------|-------|
-| typesense | 1 GB | 512 MB | Holds the whole index in RAM; restarts reload it from `/opt/typesense/data`, so search is unavailable for a while after an OOM kill. |
 | postgres | 512 MB | 256 MB | `shared_buffers=128MB`, `max_connections=30`; the API pool uses at most 5. |
 | imgproxy | 768 MB | — | Two workers (`IMGPROXY_WORKERS`). |
 | api | 512 MB | 256 MB | The response cache is in-process. |
 | mail-worker | 256 MB | 64 MB | Holds one email's attachments at a time. |
 
-That leaves about 1 GB for the OS, Docker, cloudflared and the page cache. Before raising a limit, check what the containers actually use:
+That leaves about 2 GB for the OS, Docker, cloudflared and the page cache. Before raising a limit, check what the containers actually use:
 
 ```bash
 docker stats --no-stream
@@ -105,9 +102,7 @@ vmstat 1 5
 docker inspect --format '{{.Name}} OOMKilled={{.State.OOMKilled}} restarts={{.RestartCount}}' $(docker compose ps -q)
 ```
 
-If Typesense grows past its limit, grow the VPS rather than taking memory from the API.
-
-The deploy workflow only recreates `api` and `mail-worker`. Apply a changed Typesense limit by hand (`docker compose up -d typesense`), which restarts search.
+Search uses indexed Postgres facts, not a second runtime/index. See [Postgres-first rollout](POSTGRES_FIRST.md) for migration, crawler credentials and retirement of the old search container.
 
 ## API edge caching
 
@@ -125,7 +120,7 @@ A cached response keeps the `X-Request-Id` of the origin request that filled the
 The API logs JSON lines (bunyan format) to stdout. Every request gets an `X-Request-Id`: the client's if it sends a valid one (the iOS app sends a UUID per request), otherwise a generated UUID. The ID is echoed on the response, and error bodies also carry their own `error_id`.
 
 - **Per route:** one `[HTTP_REQUEST - EVENT] request completed` line per request, with `request_id`, `method`, `matched_path` (the route template, e.g. `/app/v1/places/:place_id`), `status`, `latency_ms` and `user_id`.
-- **Per dependency:** each downstream call is a span whose `[<NAME> - END]` line has `elapsed_milliseconds`, a `dependency` field (`firestore`, `typesense`, `openai`, `stream`, `google_places`, `spotify`, `slack`, `postmark`, `google_jwks`) and the parent request's `request_id`.
+- **Per dependency:** each downstream call is a span whose `[<NAME> - END]` line has `elapsed_milliseconds`, a `dependency` field (`postgres`, `openai`, `stream`, `google_places`, `spotify`, `slack`, `postmark`, `google_jwks`) and the parent request's `request_id`.
 
 For example, p50/p95 per route over the last hour:
 
@@ -152,7 +147,7 @@ The API and mail-worker can also export their spans to PostHog distributed traci
 Spans and attributes:
 
 - **Server span** per request, `service.name` `api.tapped.ai`, named `<METHOD> <route>` (e.g. `GET /app/v1/places/:place_id`), with `http.route`, `http.request.method`, `http.response.status_code`, `request_id` and `user_id`. 5xx responses set the span status to error. If the request has a W3C `traceparent` (and `tracestate`), the span joins that trace; otherwise it starts a new one.
-- **Client spans** for each downstream call, children of the request span, with `dependency`, `server.address` (or `db.system.name` for `firestore` and `typesense`; OpenAI also has `gen_ai.provider.name` and `gen_ai.operation.name`).
+- **Client spans** for each downstream call, children of the request span, with `dependency`, `server.address` (or `db.system.name` for database spans; OpenAI also has `gen_ai.provider.name` and `gen_ai.operation.name`).
 - The mail-worker's spans use `service.name` `mail-worker.tapped.ai`.
 
 Spans are sent in batches; on SIGTERM the API drains requests and then flushes the remaining spans before exiting, and the mail-worker flushes and exits.
@@ -230,20 +225,12 @@ docker compose exec postgres dropdb -U tapped restore_check
 
 ## Backup
 
-### Export Typesense data
-```bash
-# From your local machine
-scp -r root@46.225.133.198:/opt/typesense/data ./typesense-backup-$(date +%Y%m%d)
-```
+Postgres is authoritative. Keep historical secondary-index files in `/opt/typesense/data` until separately approved for deletion; they are not a serving dependency.
 
 ## Environment Variables
 
-Services that connect to Typesense and the API use these env vars:
+Web clients connect only to the Rust API:
 
 | Variable | Value |
 |----------|-------|
-| `TYPESENSE_HOST` | `search.tapped.ai` |
-| `TYPESENSE_PORT` | `443` |
-| `TYPESENSE_PROTOCOL` | `https` |
-| `TYPESENSE_SEARCH_API_KEY` | (stored in GCP Secret Manager: `typesense-api-key`) |
 | `NEXT_PUBLIC_TAPPED_API_URL` | `https://api.tapped.ai` (optional, the default) |

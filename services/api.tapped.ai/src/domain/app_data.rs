@@ -22,6 +22,16 @@ fn db_error(e: sqlx::Error) -> AppError {
         .is_some_and(|e| e.is_unique_violation())
     {
         AppError::new("already exists").with_status(StatusCode::CONFLICT)
+    } else if e.as_database_error().is_some_and(|e| {
+        e.is_foreign_key_violation()
+            || (e.is_check_violation()
+                && e.constraint().is_some_and(|c| {
+                    ["bookings_", "reviews_", "users_"]
+                        .iter()
+                        .any(|prefix| c.starts_with(prefix))
+                }))
+    }) {
+        AppError::bad_request("invalid relationship or field value")
     } else {
         AppError::internal("Postgres request", e)
     }
@@ -83,7 +93,6 @@ pub fn fields(table: &str) -> Result<&'static [(&'static str, &'static str)], Ap
             ("description", "description"),
             ("rate", "rate"),
             ("rateType", "rate_type"),
-            ("count", "count"),
             ("deleted", "deleted"),
         ],
         "bookings" => &[
@@ -147,7 +156,7 @@ pub fn fields(table: &str) -> Result<&'static [(&'static str, &'static str)], Ap
         _ => return Err(AppError::not_found("unknown collection")),
     })
 }
-fn safe_id(id: &str) -> Result<(), AppError> {
+pub(super) fn safe_id(id: &str) -> Result<(), AppError> {
     if id.is_empty()
         || id.len() > 128
         || !id
@@ -684,7 +693,7 @@ fn writable(
 
 /// Atomic replacement/patch through relational columns, with imported extension fields in profile.
 /// The advisory lock prevents concurrent first writes racing ownership checks.
-async fn save(
+pub(super) async fn save(
     state: &AppStateDyn,
     user: &FirebaseUser,
     table: &str,
@@ -697,6 +706,9 @@ async fn save(
     if !input.is_object() {
         return Err(AppError::bad_request("JSON object required"));
     }
+    if table == "services" {
+        input.as_object_mut().unwrap().remove("count");
+    }
     input["id"] = json!(id);
     if table == "reviews" {
         input["revieweeId"] = input[if input["type"] == "performer" {
@@ -707,6 +719,16 @@ async fn save(
         .clone();
     }
     let mut tx = pool(state)?.begin().await.map_err(db_error)?;
+    let disabled: bool = sqlx::query_scalar(
+        "SELECT coalesce((SELECT disabled FROM accounts WHERE auth_uid=$1 FOR SHARE),false)",
+    )
+    .bind(&user.uid)
+    .fetch_one(&mut *tx)
+    .await
+    .map_err(db_error)?;
+    if disabled {
+        return Err(forbidden());
+    }
     sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1,0))")
         .bind(format!("{table}:{id}"))
         .execute(&mut *tx)
@@ -732,6 +754,13 @@ async fn save(
         .await
         .map_err(db_error)?
     };
+    if create && table == "reviews" {
+        let occupied: bool = sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM reviews WHERE id=$1 AND review_type=$2 AND reviewee_id=$3)")
+            .bind(id).bind(text(&input,"type")).bind(text(&input,"revieweeId")).fetch_one(&mut *tx).await.map_err(db_error)?;
+        if occupied {
+            return Err(AppError::new("already exists").with_status(StatusCode::CONFLICT));
+        }
+    }
     if create && old.is_some() {
         return Err(AppError::new("already exists").with_status(StatusCode::CONFLICT));
     }
@@ -756,7 +785,16 @@ async fn save(
     if table == "users" {
         // Ratings and classification are server-owned even inside editable profile objects.
         for (section, keys) in [
-            ("performerInfo", &["rating", "reviewCount", "category"][..]),
+            (
+                "performerInfo",
+                &[
+                    "rating",
+                    "reviewCount",
+                    "bookingCount",
+                    "completedBookingCount",
+                    "category",
+                ][..],
+            ),
             ("bookerInfo", &["rating", "reviewCount"][..]),
             ("venueInfo", &["topPerformerIds", "bookingsByDayOfWeek"][..]),
         ] {
@@ -924,6 +962,12 @@ async fn save(
         }
     }
     if table == "users" {
+        sqlx::query("INSERT INTO accounts(auth_uid) VALUES($1) ON CONFLICT DO NOTHING")
+            .bind(&user.uid)
+            .execute(&mut *tx)
+            .await
+            .map_err(db_error)?;
+        sqlx::query("INSERT INTO profile_owners(profile_id,auth_uid) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT unclaimed) ON CONFLICT DO NOTHING").bind(id).bind(&user.uid).execute(&mut *tx).await.map_err(db_error)?;
         crate::domain::external_effects::record_profile(&mut tx, &doc, create)
             .await
             .map_err(db_error)?;
@@ -937,15 +981,6 @@ async fn save(
         crate::domain::external_effects::record_booking_emails(&mut tx, &doc)
             .await
             .map_err(db_error)?;
-    }
-    if table == "reviews" {
-        let (uid, section) = if doc["type"] == "performer" {
-            (text(&doc, "performerId"), "performerInfo")
-        } else {
-            (text(&doc, "bookerId"), "bookerInfo")
-        };
-        sqlx::query("UPDATE users SET profile=jsonb_set(profile,ARRAY[$2],(CASE WHEN jsonb_typeof(profile->$2)='object' THEN profile->$2 ELSE '{}'::jsonb END) || jsonb_build_object('reviewCount',(SELECT count(*) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3),'rating',(SELECT avg(overall_rating) FROM reviews WHERE (CASE WHEN $3='performer' THEN performer_id ELSE booker_id END)=$1 AND review_type=$3))) WHERE id=$1")
-            .bind(uid).bind(section).bind(text(&doc,"type")).execute(&mut *tx).await.map_err(db_error)?;
     }
     if create {
         founder_notifications::record_created(&mut tx, table, &doc, &user.uid)
@@ -961,14 +996,51 @@ async fn persist(
     mapping: &[(&str, &str)],
     doc: &Value,
 ) -> Result<(), AppError> {
-    let mut row = json!({"id":doc["id"],"profile":doc});
+    let mut extensions = doc.as_object().unwrap().clone();
+    for (key, _) in mapping {
+        extensions.remove(*key);
+    }
+    for key in ["id", "location"] {
+        extensions.remove(key);
+    }
+    if table == "services" {
+        extensions.remove("count");
+    }
+    let mut row = json!({"id":doc["id"],"profile":extensions});
     for (key, col) in mapping {
         row[*col] = doc[*key].clone();
     }
-    let columns = std::iter::once("id")
+    let mut columns = std::iter::once("id")
         .chain(mapping.iter().map(|(_, c)| *c))
         .chain(std::iter::once("profile"))
         .collect::<Vec<_>>();
+    if table == "users" {
+        let promoted = json!({
+            "performer_enabled": doc["performerInfo"].is_object(),
+            "performer_genres": doc["performerInfo"]["genres"].as_array().cloned().unwrap_or_default(),
+            "performer_label": doc["performerInfo"]["label"].as_str().unwrap_or(""),
+            "venue_enabled": doc["venueInfo"].is_object(),
+            "venue_genres": doc["venueInfo"]["genres"].as_array().cloned().unwrap_or_default(),
+            "venue_capacity": doc["venueInfo"]["capacity"],
+            "venue_type": doc["venueInfo"]["type"].as_str().unwrap_or(""),
+            "venue_website_url": doc["venueInfo"]["websiteUrl"],
+            "booker_enabled": doc["bookerInfo"].is_object()
+        });
+        for key in [
+            "performer_enabled",
+            "performer_genres",
+            "performer_label",
+            "venue_enabled",
+            "venue_genres",
+            "venue_capacity",
+            "venue_type",
+            "venue_website_url",
+            "booker_enabled",
+        ] {
+            row[key] = promoted[key].clone();
+            columns.push(key);
+        }
+    }
     let geo = matches!(table, "users" | "bookings" | "opportunities");
     let location = if geo { ",location" } else { "" };
     let geo_select = if geo {
@@ -1073,7 +1145,7 @@ pub async fn remove(
 pub async fn booking_count(State(state): State<AppStateDyn>, Path(id): Path<String>) -> ApiResult {
     safe_id(&id)?;
     let count: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM bookings WHERE requestee_id=$1 AND status='confirmed'",
+        "SELECT coalesce((SELECT confirmed_booking_count FROM profile_stats WHERE id=$1),0)",
     )
     .bind(id)
     .fetch_one(pool(&state)?)

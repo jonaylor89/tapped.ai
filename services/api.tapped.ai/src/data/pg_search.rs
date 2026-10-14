@@ -95,16 +95,35 @@ pub async fn documents(
     p.validate()?;
     let expression = match table {
         "users" => {
-            "lower(t.artist_name || ' ' || t.username || ' ' || t.bio || ' ' || coalesce(t.profile#>>'{performerInfo,label}','') || ' ' || coalesce(t.profile#>>'{venueInfo,type}',''))"
+            "lower(t.artist_name || ' ' || t.username || ' ' || t.bio || ' ' || t.performer_label || ' ' || t.venue_type)"
         }
         // Private booking notes must never influence public search results.
         "bookings" => "lower(t.name)",
         "opportunities" => "lower(t.title || ' ' || t.description)",
         _ => anyhow::bail!("unsupported search collection"),
     };
-    let mut q: QueryBuilder<Postgres> = QueryBuilder::new(format!(
-        "SELECT v.doc FROM {table} t JOIN api_{table} v USING(id) WHERE "
-    ));
+    let text = p.q.trim().to_lowercase();
+    let has_text = !text.is_empty() && text != "*";
+    // Rank bounded IDs before evaluating aggregate projections for those profiles.
+    let ascending = p.lat.is_some();
+    let mut q: QueryBuilder<Postgres> =
+        QueryBuilder::new("WITH selected AS MATERIALIZED (SELECT t.id, ");
+    if let (Some(lat), Some(lng)) = (p.lat, p.lng) {
+        q.push("t.location <-> ST_SetSRID(ST_MakePoint(")
+            .push_bind(lng)
+            .push(",")
+            .push_bind(lat)
+            .push("),4326)::geography");
+    } else if has_text {
+        q.push("word_similarity(")
+            .push_bind(text.clone())
+            .push(",")
+            .push(expression)
+            .push(")");
+    } else {
+        q.push("t.updated_at");
+    }
+    q.push(format!(" AS rank FROM {table} t WHERE "));
     match table {
         "users" => {
             q.push("NOT t.deleted AND NOT t.shadow_banned");
@@ -123,8 +142,6 @@ pub async fn documents(
             q.push(")");
         }
     }
-    let text = p.q.trim().to_lowercase();
-    let has_text = !text.is_empty() && text != "*";
     if has_text {
         let pattern = format!(
             "%{}%",
@@ -175,7 +192,7 @@ pub async fn documents(
     }
     if table == "users" {
         if !p.occupations.is_empty() {
-            q.push(" AND ARRAY(SELECT lower(o) FROM unnest(t.occupations) o) && ")
+            q.push(" AND normalized_search_terms(t.occupations) && ")
                 .push_bind(
                     p.occupations
                         .iter()
@@ -184,7 +201,7 @@ pub async fn documents(
                 );
         }
         if !p.occupations_blacklist.is_empty() {
-            q.push(" AND NOT (ARRAY(SELECT lower(o) FROM unnest(t.occupations) o) && ")
+            q.push(" AND NOT (normalized_search_terms(t.occupations) && ")
                 .push_bind(
                     p.occupations_blacklist
                         .iter()
@@ -194,22 +211,22 @@ pub async fn documents(
                 .push(")");
         }
         if !p.labels.is_empty() {
-            q.push(" AND t.profile#>>'{performerInfo,label}'=ANY(")
+            q.push(" AND t.performer_label=ANY(")
                 .push_bind(&p.labels)
                 .push(")");
         }
         for (path, values) in [
-            ("{performerInfo,genres}", &p.genres),
-            ("{venueInfo,genres}", &p.venue_genres),
+            ("performer_genres", &p.genres),
+            ("venue_genres", &p.venue_genres),
         ] {
             if !values.is_empty() {
-                q.push(format!(" AND ARRAY(SELECT jsonb_array_elements_text(CASE WHEN jsonb_typeof(t.profile#>'{path}')='array' THEN t.profile#>'{path}' ELSE '[]'::jsonb END)) && ")).push_bind(values);
+                q.push(format!(" AND t.{path} && ")).push_bind(values);
             }
         }
         if let Some(unclaimed) = p.unclaimed {
             q.push(" AND t.unclaimed=").push_bind(unclaimed);
         }
-        let capacity = "(CASE WHEN t.profile#>>'{venueInfo,capacity}' ~ '^[0-9]+(\\.[0-9]+)?$' THEN (t.profile#>>'{venueInfo,capacity}')::numeric END)";
+        let capacity = "t.venue_capacity";
         if let Some(min) = p.min_capacity {
             q.push(" AND ")
                 .push(capacity)
@@ -228,23 +245,10 @@ pub async fn documents(
     {
         q.push(" AND t.start_time>").push_bind(time);
     }
-    if let (Some(lat), Some(lng)) = (p.lat, p.lng) {
-        q.push(" ORDER BY t.location <-> ST_SetSRID(ST_MakePoint(")
-            .push_bind(lng)
-            .push(",")
-            .push_bind(lat)
-            .push("),4326)::geography,t.id");
-    } else if has_text {
-        q.push(" ORDER BY word_similarity(")
-            .push_bind(text)
-            .push(",")
-            .push(expression)
-            .push(") DESC,t.id");
-    } else {
-        q.push(" ORDER BY t.updated_at DESC,t.id");
-    }
-    q.push(" LIMIT ")
+    let direction = if ascending { "ASC" } else { "DESC" };
+    q.push(format!(" ORDER BY rank {direction},t.id LIMIT "))
         .push_bind(i64::from(p.hits_per_page.unwrap_or(20)));
+    q.push(format!(") SELECT v.doc FROM selected s JOIN api_{table} v ON v.id=s.id ORDER BY s.rank {direction},s.id"));
     Ok(q.build_query_scalar().fetch_all(pool).await?)
 }
 

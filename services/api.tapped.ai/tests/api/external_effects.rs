@@ -376,6 +376,10 @@ async fn push_events_are_per_device_and_transactional_without_replaying_imported
     .execute(&pool)
     .await
     .unwrap();
+    sqlx::query("INSERT INTO accounts(auth_uid) VALUES('artist') ON CONFLICT DO NOTHING")
+        .execute(&pool)
+        .await
+        .unwrap();
     sqlx::query("INSERT INTO device_tokens(token,user_id) VALUES('device-a','artist'),('device-b','artist')").execute(&pool).await.unwrap();
     let mut tx = pool.begin().await.unwrap();
     external_effects::record_activity(&mut tx, "activity", "artist", "bookingRequest", "booking")

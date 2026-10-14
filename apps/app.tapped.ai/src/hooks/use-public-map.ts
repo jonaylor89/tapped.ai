@@ -3,7 +3,7 @@
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { getCachedMapData, getMapData, type PublicMapBundle } from "@/data/public_map";
-import type { BoundingBox } from "@/data/typesense";
+import type { BoundingBox } from "@/data/search";
 import { speculativeNetworkAllowed } from "@/lib/intent-prefetch";
 import {
 	bufferedMapBounds,

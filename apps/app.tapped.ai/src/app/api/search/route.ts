@@ -5,7 +5,7 @@ import {
 	queryUsers,
 	queryVenuesInBoundedBox,
 	type UserSearchOptions,
-} from "@/data/typesense";
+} from "@/data/search";
 import type { UserModel } from "@/domain/types/user_model";
 
 const userCache = new LRUCache<string, UserModel[]>({

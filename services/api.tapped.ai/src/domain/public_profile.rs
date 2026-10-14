@@ -103,7 +103,7 @@ WITH subject AS MATERIALIZED (
 )
 SELECT jsonb_build_object(
   'user',s.doc,
-  'bookingCount',(SELECT count(*) FROM bookings WHERE requestee_id=$1 AND status='confirmed'),
+  'bookingCount',(SELECT confirmed_booking_count FROM profile_stats WHERE id=$1),
   'bookings',coalesce((SELECT jsonb_agg(doc) FROM history),'[]'::jsonb),
   'latestReview',(SELECT doc FROM latest),
   'relatedUsers',coalesce((SELECT jsonb_agg(doc) FROM related),'[]'::jsonb)

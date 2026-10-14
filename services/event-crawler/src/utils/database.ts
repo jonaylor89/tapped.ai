@@ -1,11 +1,6 @@
-import { Timestamp } from "firebase-admin/firestore";
-import type { Booking, EventData, UserModel } from "../types.js";
-import { db } from "./firebase.js";
+import { hasScrapedLink, profile, profileByUsername, saveEvent, scrapedLinks } from "@tapped/postgres-ingestion";
+import type { EventData, UserModel } from "../types.js";
 import { getBaseDomain } from "./parsing.js";
-
-const crawlerRef = db.collection("crawler");
-const usersRef = db.collection("users");
-const bookingsRef = db.collection("bookings");
 
 export function getVenueUsernameChunk(): string[] {
   const initVenueUsernames = [
@@ -2727,181 +2722,26 @@ export function getVenueUsernameChunk(): string[] {
 }
 
 export async function getUserById(userId: string): Promise<UserModel | null> {
-  const userSnap = await usersRef.doc(userId).get();
-
-  if (!userSnap.exists) {
-    return null;
+  return profile<UserModel>(userId);
+}
+export async function getUserByUsername(username: string): Promise<UserModel | null> {
+  return profileByUsername<UserModel>(username);
+}
+export const getAllScrapedLinks = scrapedLinks;
+export const hasLinkBeenScraped = hasScrapedLink;
+export async function saveEventData(encodedLink: string, event: EventData): Promise<void> {
+  await saveEvent("event-crawler", encodedLink, event.venue.id, { ...event, runId: event.crawlerInfo.runId });
+}
+export async function buildDomainMap(usernames: string[]): Promise<Record<string, { venue: UserModel; url: string }>> {
+  const result: Record<string, { venue: UserModel; url: string }> = {};
+  for (const username of usernames) {
+    const venue = await getUserByUsername(username);
+    if (!venue) throw new Error(`No venue found for ${username}`);
+    const website = venue.venueInfo?.websiteUrl?.trim();
+    if (!website) throw new Error(`No website for ${username}`);
+    const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error("Invalid venue website");
+    result[getBaseDomain(url.href)] = { venue, url: url.href };
   }
-
-  const user = userSnap.data() as UserModel;
-  return user;
-}
-
-export async function getUserByUsername(username: string) {
-  const userSnap = await usersRef.where("username", "==", username).get();
-
-  if (userSnap.docs.length === 0) {
-    // console.error(`[!!!] no user found for username`);
-    return null;
-  }
-
-  const user = userSnap.docs[0].data() as UserModel;
-  return user;
-}
-
-export async function getAllScrapedLinks(venueIds: string[]): Promise<string[]> {
-  const links = (
-    await Promise.all(
-      venueIds.map(async (venueId) => {
-        const venueSnap = await crawlerRef.where("venue.id", "==", venueId).get();
-        if (venueSnap.empty) {
-          return [];
-        }
-
-        const venueLinks = venueSnap.docs.map((doc) => doc.id);
-        return venueLinks;
-      }),
-    )
-  ).flat();
-
-  return links;
-}
-
-export async function hasLinkBeenScraped(link: string): Promise<boolean> {
-  const linkDoc = await crawlerRef.doc(link).get();
-  return linkDoc.exists;
-}
-
-export async function saveEventData(encodedLink: string, eventData: EventData): Promise<void> {
-  const startTime = new Date(eventData.startTime);
-  const endTime = new Date(eventData.endTime);
-  const timestamp = new Date(eventData.crawlerInfo.timestamp);
-
-  await crawlerRef.doc(encodedLink).set(
-    {
-      ...eventData,
-      startTime: Timestamp.fromDate(startTime),
-      endTime: Timestamp.fromDate(endTime),
-      crawlerInfo: {
-        ...eventData.crawlerInfo,
-        timestamp: Timestamp.fromDate(timestamp),
-      },
-    },
-    { merge: true },
-  );
-}
-
-export async function buildDomainMap(venueUsernames: string[]): Promise<
-  Record<
-    string,
-    {
-      venue: UserModel;
-      url: string;
-    }
-  >
-> {
-  const venues = await Promise.all(
-    venueUsernames.map(async (username) => {
-      const venueSnap = await usersRef.where("username", "==", username).get();
-      if (venueSnap.empty) {
-        throw new Error(`[!!!] no venue found for ${username}`);
-      }
-
-      const venueDoc = venueSnap.docs[0];
-      const venue = venueDoc.data() as UserModel;
-      return venue;
-    }),
-  );
-
-  const domains = venues.map((venue) => {
-    const rawWebsite = venue.venueInfo?.websiteUrl;
-    const website = rawWebsite?.trim().startsWith("http") ? rawWebsite : `https://${rawWebsite}`;
-    if (!website) {
-      throw new Error(`[!!!] no website found for ${venue.username}`);
-    }
-
-    const domainName = getBaseDomain(website);
-    return {
-      domainName,
-      venue,
-      url: website,
-    };
-  });
-
-  const domainMap: Record<string, { venue: UserModel; url: string }> = {};
-  for (const { domainName, venue, url } of domains) {
-    domainMap[domainName] = { venue, url };
-  }
-
-  return domainMap;
-}
-
-export async function groupByDayOfWeek(venueId: string) {
-  const bookingsSnap = await bookingsRef.where("requesterId", "==", venueId).where("status", "==", "confirmed").get();
-
-  const bookings = bookingsSnap.docs.map((doc) => doc.data() as Booking);
-  const bookingsByDayOfWeek = Array.from({ length: 7 }, () => 0);
-
-  for (const booking of bookings) {
-    const date = booking.startTime.toDate();
-    const dayOfWeek = date.getDay();
-    if (dayOfWeek in bookingsByDayOfWeek) {
-      bookingsByDayOfWeek[dayOfWeek] += 1;
-    } else {
-      bookingsByDayOfWeek[dayOfWeek] = 1;
-    }
-  }
-
-  return bookingsByDayOfWeek;
-}
-
-export async function setBestDaysOfWeek(venueId: string) {
-  const groups = await groupByDayOfWeek(venueId);
-  await usersRef.doc(venueId).set(
-    {
-      venueInfo: {
-        bookingsByDayOfWeek: groups,
-      },
-    },
-    { merge: true },
-  );
-}
-
-export async function getTopPerformersByVenueId(venueId: string, count: number = 5): Promise<string[]> {
-  const venueBookingsSnap = await bookingsRef.where("requesterId", "==", venueId).get();
-
-  const venueBookings = venueBookingsSnap.docs.map((doc) => doc.data());
-
-  const performerBookings: { [performerId: string]: number } = {};
-  for (const booking of venueBookings) {
-    const performerId = booking.requesteeId;
-    if (performerId in performerBookings) {
-      performerBookings[performerId] += 1;
-    } else {
-      performerBookings[performerId] = 1;
-    }
-  }
-
-  const topPerformers = Object.entries(performerBookings)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, count)
-    .map(([performerId]) => performerId);
-
-  return topPerformers;
-}
-
-export async function setVenueTopPerformers({ venueId, count = 5 }: { venueId: string; count?: number }) {
-  const performerIds = await getTopPerformersByVenueId(venueId, count);
-  // const performers = await Promise.all(
-  //   performerIds.map((id) => getUserById(id)),
-  // );
-  // console.log({ performers: performers.map((p) => p?.username) });
-  await usersRef.doc(venueId).set(
-    {
-      venueInfo: {
-        topPerformerIds: performerIds,
-      },
-    },
-    { merge: true },
-  );
+  return result;
 }

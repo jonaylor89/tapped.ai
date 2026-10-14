@@ -514,6 +514,8 @@ async fn postgres_serves_owned_records_and_public_projections_without_firestore(
         ("services", "user_id", a.uid.clone()),
         ("services", "user_id", b.uid.clone()),
         ("reviews", "id", review),
+        ("activities", "from_user_id", a.uid.clone()),
+        ("activities", "from_user_id", b.uid.clone()),
         ("bookings", "id", booking),
         ("users", "id", a.uid),
         ("users", "id", b.uid),
