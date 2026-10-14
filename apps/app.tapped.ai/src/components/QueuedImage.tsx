@@ -5,9 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import imageLoader from "@/lib/image-loader";
 import { createImageQueue } from "@/lib/image-queue";
 
-// Allow CDN-cached thumbnails to load broadly in parallel. An off-DOM image retains its
-// slot after unmount so panning does not grow the number of active requests without bound.
-const enqueue = createImageQueue(100, true);
+// No application concurrency cap for CDN-cached images; let the browser schedule requests.
+// Visibility gating below still avoids preloading off-screen thumbnails.
+const enqueue = createImageQueue(Number.POSITIVE_INFINITY, true);
 export default function QueuedImage({
 	src,
 	alt,

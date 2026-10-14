@@ -7,6 +7,28 @@ const { outputText } = ts.transpileModule(readFileSync(new URL("../src/lib/image
 });
 const { createImageQueue } = await import(`data:text/javascript;base64,${Buffer.from(outputText).toString("base64")}`);
 
+test("unlimited mode admits all thumbnails without waiting for an earlier image", () => {
+	const enqueue = createImageQueue(Number.POSITIVE_INFINITY, true);
+	const completions = [];
+	for (let i = 0; i < 1000; i++) {
+		enqueue((done) => { completions.push(done); });
+	}
+	assert.equal(completions.length, 1000);
+	for (const done of completions) {
+		done();
+		done();
+	}
+	let started = false;
+	enqueue((done) => { started = true; done(); });
+	assert.equal(started, true);
+});
+
+test("invalid image concurrency remains rejected", () => {
+	for (const concurrency of [0, -1, 1.5, Number.NaN, Number.NEGATIVE_INFINITY]) {
+		assert.throws(() => createImageQueue(concurrency), /Invalid image concurrency/);
+	}
+});
+
 test("250 cold map thumbnails admit no more than four requests at once", () => {
 	const enqueue = createImageQueue(4);
 	const completions = [];

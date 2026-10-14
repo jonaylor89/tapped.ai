@@ -1,6 +1,9 @@
 // Track active requests across viewport changes; callers choose their CDN loading concurrency.
 export function createImageQueue(concurrency = 4, retainActiveOnCancel = false) {
-	if (!Number.isInteger(concurrency) || concurrency < 1)
+	if (
+		concurrency !== Number.POSITIVE_INFINITY &&
+		(!Number.isInteger(concurrency) || concurrency < 1)
+	)
 		throw new Error("Invalid image concurrency");
 	type Job = {
 		start: (done: () => void) => void;
