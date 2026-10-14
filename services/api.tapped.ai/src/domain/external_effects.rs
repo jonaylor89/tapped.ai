@@ -15,31 +15,52 @@ pub async fn enqueue(
 }
 
 pub fn booking_email_recipients(booking: &Value, profiles: &[Value]) -> Vec<(String, String)> {
-    if booking["status"] != "pending"
-        || booking["addedByUser"] == true
-        || !booking["calendarEventId"].is_null()
-    {
+    // The deployed handlers check property presence, including explicit null/empty values.
+    if booking["status"] != "pending" || booking.get("calendarEventId").is_some() {
         return vec![];
     }
-    profiles
-        .iter()
-        .filter_map(|user| {
-            let email = user["email"].as_str().unwrap_or_default();
-            if email.is_empty()
-                || email.ends_with("@tapped.ai")
-                || user["unclaimed"] == true
-                || user["deleted"] == true
-            {
-                return None;
-            }
-            let template = if user["id"] == booking["requesterId"] {
-                "bookingRequestSent"
-            } else {
-                "bookingRequestReceived"
-            };
-            Some((email.to_owned(), template.into()))
-        })
-        .collect()
+    [
+        ("requesterId", "bookingRequestSent"),
+        ("requesteeId", "bookingRequestReceived"),
+    ]
+    .into_iter()
+    .filter_map(|(role, template)| {
+        let uid = booking[role].as_str().filter(|uid| !uid.is_empty())?;
+        let user = profiles.iter().find(|user| user["id"] == uid)?;
+        let email = user["email"].as_str().unwrap_or_default();
+        // Preserve the deployed asymmetry: sent checks booking.addedByUser; received
+        // checks requestee.addedByUser. Do not silently "fix" business behavior in a port.
+        let added = if role == "requesterId" {
+            &booking["addedByUser"]
+        } else {
+            &user["addedByUser"]
+        };
+        if email.is_empty()
+            || email.ends_with("@tapped.ai")
+            || user["unclaimed"] == true
+            || user["deleted"] == true
+            || added == &Value::Bool(true)
+        {
+            return None;
+        }
+        Some((email.to_owned(), template.into()))
+    })
+    .collect()
+}
+
+/// Called under the identity/profile lock. Auth-only email changes must propagate to Stream
+/// in the same transaction, without replaying profile-creation welcome messages.
+pub async fn update_identity_email(
+    tx: &mut Transaction<'_, Postgres>,
+    uid: &str,
+    email: &str,
+) -> Result<(), sqlx::Error> {
+    let changed:Option<String>=sqlx::query_scalar("UPDATE users SET email=$2 WHERE id=$1 AND NOT unclaimed AND NOT deleted AND email IS DISTINCT FROM $2 RETURNING id")
+        .bind(uid).bind(email).fetch_optional(&mut **tx).await?;
+    if changed.is_some() {
+        record_profile(tx, &json!({"id":uid}), false).await?;
+    }
+    Ok(())
 }
 
 pub async fn record_profile(
@@ -152,24 +173,73 @@ mod tests {
             json!({"id":"booker","email":"booker@example.test"}),
             json!({"id":"artist","email":"artist@example.test"}),
         ];
-        let mut booking = json!({"status":"pending","requesterId":"booker"});
-        assert_eq!(booking_email_recipients(&booking, &profiles).len(), 2);
-        for field in ["addedByUser", "calendarEventId"] {
-            booking[field] = json!(true);
+        let mut booking = json!({"status":"pending","requesterId":"booker","requesteeId":"artist"});
+        assert_eq!(
+            booking_email_recipients(&booking, &profiles),
+            vec![
+                ("booker@example.test".into(), "bookingRequestSent".into()),
+                (
+                    "artist@example.test".into(),
+                    "bookingRequestReceived".into()
+                )
+            ]
+        );
+        booking["addedByUser"] = json!(true);
+        assert_eq!(
+            booking_email_recipients(&booking, &profiles),
+            vec![(
+                "artist@example.test".into(),
+                "bookingRequestReceived".into()
+            )]
+        );
+        booking.as_object_mut().unwrap().remove("addedByUser");
+        for value in [json!(null), json!(""), json!("calendar-id")] {
+            booking["calendarEventId"] = value;
             assert!(booking_email_recipients(&booking, &profiles).is_empty());
-            booking.as_object_mut().unwrap().remove(field);
         }
+        booking.as_object_mut().unwrap().remove("calendarEventId");
         booking["status"] = json!("confirmed");
         assert!(booking_email_recipients(&booking, &profiles).is_empty());
         booking["status"] = json!("pending");
-        for user in [
+        for mut user in [
             json!({"email":"johannes@tapped.ai"}),
             json!({"email":""}),
             json!({"email":"venue@example.test","unclaimed":true}),
             json!({"email":"venue@example.test","deleted":true}),
         ] {
+            user["id"] = json!("booker");
             assert!(booking_email_recipients(&booking, &[user]).is_empty());
         }
+    }
+    #[test]
+    fn booking_mail_roles_are_bound_to_participants_even_for_self_bookings() {
+        let user = json!({"id":"same","email":"same@example.test"});
+        let booking = json!({"status":"pending","requesterId":"same","requesteeId":"same"});
+        assert_eq!(
+            booking_email_recipients(&booking, std::slice::from_ref(&user)).len(),
+            2
+        );
+        assert!(
+            booking_email_recipients(
+                &booking,
+                &[json!({"id":"other","email":"other@example.test"})]
+            )
+            .is_empty()
+        );
+        assert_eq!(
+            booking_email_recipients(
+                &booking,
+                &[json!({"id":"same","email":"same@example.test","addedByUser":true})]
+            ),
+            vec![("same@example.test".into(), "bookingRequestSent".into())]
+        );
+        assert_eq!(
+            booking_email_recipients(
+                &json!({"status":"pending","requesterId":null,"requesteeId":"same"}),
+                &[user]
+            ),
+            vec![("same@example.test".into(), "bookingRequestReceived".into())]
+        );
     }
     #[test]
     fn unsupported_activity_does_not_send_push() {

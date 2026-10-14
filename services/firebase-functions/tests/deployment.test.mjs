@@ -8,7 +8,7 @@ import { deploymentArgs } from "../scripts/deploy.mjs";
 const read = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 const allowlist = JSON.parse(read("../deployment-allowlist.json"));
 
-test("entrypoint exports exactly the approved HTTP/Auth handlers, never wildcard legacy modules", () => {
+test("entrypoint exports exactly the four Auth transports, never legacy modules", () => {
   const source = ts.createSourceFile("index.ts", read("../src/index.ts"), ts.ScriptTarget.Latest, true);
   const exports = [];
   for (const statement of source.statements) {
@@ -32,7 +32,8 @@ test("compiled exports match the allowlist and expose no Firestore triggers", ()
     assert.deepEqual(Object.keys(handlers).sort(), allowlist);
     for (const [name, handler] of Object.entries(handlers)) {
       assert.ok(handler.__endpoint, name);
-      assert.equal(handler.__endpoint.eventTrigger?.eventType.includes("firestore") ?? false, false, name);
+      assert.match(handler.__endpoint.eventTrigger?.eventType ?? "", /firebase\.auth/, name);
+      assert.equal(handler.__endpoint.httpsTrigger, undefined, name);
     }
   } finally {
     if (previous === undefined) delete process.env.FIREBASE_CONFIG;
@@ -43,10 +44,10 @@ test("compiled exports match the allowlist and expose no Firestore triggers", ()
 });
 
 test("selective deploys target the original project without force or blanket functions deployment", () => {
-  const args = deploymentArgs(["inboundEmailWebhook", "inboundEmailWebhook", "deleteStreamUser"]);
+  const args = deploymentArgs(["notifyFoundersOnSignUp", "notifyFoundersOnSignUp", "deleteStreamUser"]);
   assert.equal(args[1], "firebase-tools@14.22.0");
   assert.ok(args.includes("in-the-loop-306520"));
-  assert.equal(args.at(-1), "functions:inboundEmailWebhook,functions:deleteStreamUser");
+  assert.equal(args.at(-1), "functions:notifyFoundersOnSignUp,functions:deleteStreamUser");
   assert.equal(args.includes("--force"), false);
 });
 
@@ -54,10 +55,26 @@ test("deploys reject no names, retired writers, extensions and argument injectio
   for (const names of [
     [],
     ["onUserDeleted"],
+    ["inboundEmailWebhook"],
+    ["streamBeforeMessageWebhook"],
+    ["getArtistBySpotifyId"],
+    ["getTopTracksByArtistId"],
+    ["spotifyRedirect"],
+    ["spotifyAuthorizeCodeGrant"],
+    ["spotifyRefreshToken"],
     ["addUserToMailchimpOnCreated"],
     ["createDefaultServicesOnUserCreated"],
     ["setLatestContactRequest"],
     ["ext-auth-chat-createStreamUser"],
+    ["createConnectedAccount"],
+    ["createPaymentIntent"],
+    ["getAccountById"],
+    ["sendEmailOnSubscriptionPurchase"],
+    ["sendEmailOnSubscriptionExpiration"],
+    ["ext-firestore-stripe-payments-handleWebhookEvents"],
+    ["ext-firestore-bigquery-export-fsexportbigquery"],
+    ["ext-firestore-bigquery-export-73n7-syncBigQuery"],
+    ["ext-firestore-bigquery-export-d85k-fsimportexistingdocs"],
     ["*"],
     ["--force"],
     ["inboundEmailWebhook,users"],
@@ -73,6 +90,19 @@ test("functions configuration cannot deploy Firestore rules/indexes or depend on
   assert.equal(config.functions[0].codebase, "default");
   assert.equal(config.functions[0].runtime, "nodejs22");
   assert.equal(read("../package.json").includes("com.intheloopstudio"), false);
+});
+
+test("Auth hooks contain only signed API forwarding and retry on failure", () => {
+  const source = read("../src/lib/auth_hooks.ts");
+  assert.doesNotMatch(
+    source,
+    /usersRef|\.collection\(|firebase-admin\/firestore|StreamChat|slackNotification|sendEmail/,
+  );
+  assert.match(source, /failurePolicy: true/);
+  assert.match(source, /AUTH_WEBHOOK_SECRET/);
+  assert.match(source, /\/webhooks\/firebase\/auth/);
+  const entrypoint = read("../src/index.ts");
+  assert.doesNotMatch(entrypoint, /from "\.\/lib\/(signups|email_triggers|stream)"/);
 });
 
 test("active webhook bridge contains no Firestore reads, writes or imports", () => {

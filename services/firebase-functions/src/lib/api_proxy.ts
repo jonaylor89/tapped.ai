@@ -6,7 +6,7 @@ export async function proxyToRust(path: string, body: Uint8Array, headers: Recor
   try {
     const response = await fetch(`${baseUrl}${path}`, {
       method: "POST",
-      headers: { "content-type": "application/json", ...headers },
+      headers: { "content-type": "application/json", "user-agent": "Tapped-Auth-Transport/1.0", ...headers },
       body: new Uint8Array(body),
       signal: controller.signal,
       redirect: "error",

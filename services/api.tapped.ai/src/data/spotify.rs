@@ -6,7 +6,7 @@ use std::time::{Duration, Instant};
 use anyhow::{Result, bail};
 use async_trait::async_trait;
 use reqwest::StatusCode;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tokio::sync::Mutex;
 use tracing::instrument;
@@ -22,6 +22,34 @@ const TOKEN_EXPIRY_MARGIN: Duration = Duration::from_secs(60);
 pub trait Spotify: Send + Sync {
     async fn artist(&self, artist_id: &str) -> Result<Option<Value>>;
     async fn top_tracks(&self, artist_id: &str, market: Option<&str>) -> Result<Option<Value>>;
+    fn oauth_redirect_uri(&self) -> &str {
+        "https://api.tapped.ai/webhooks/spotify/callback"
+    }
+    fn authorize_url(&self, _state: &str, _challenge: &str) -> Result<String> {
+        bail!("Spotify OAuth not configured")
+    }
+    async fn exchange(
+        &self,
+        _code: &str,
+        _verifier: &str,
+        _redirect_uri: &str,
+    ) -> Result<OAuthToken> {
+        bail!("Spotify OAuth not configured")
+    }
+    async fn refresh(&self, _refresh_token: &str) -> Result<OAuthToken> {
+        bail!("Spotify OAuth not configured")
+    }
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct OAuthToken {
+    pub access_token: String,
+    #[serde(default)]
+    pub refresh_token: Option<String>,
+    pub expires_in: u64,
+    pub token_type: String,
+    #[serde(default)]
+    pub scope: String,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -93,6 +121,35 @@ impl SpotifyHttp {
         }
     }
 
+    async fn oauth_token(&self, form: &[(&str, &str)]) -> Result<OAuthToken> {
+        if self.client_id.is_empty() || self.client_secret.is_empty() {
+            bail!("Spotify OAuth not configured");
+        }
+        let response = self
+            .client
+            .post(&self.token_url)
+            .basic_auth(&self.client_id, Some(&self.client_secret))
+            .form(form)
+            .send()
+            .await
+            .map_err(|_| anyhow::anyhow!("Spotify OAuth network error"))?;
+        if !response.status().is_success() {
+            bail!("Spotify OAuth HTTP {}", response.status().as_u16());
+        }
+        let token: OAuthToken = response
+            .json()
+            .await
+            .map_err(|_| anyhow::anyhow!("invalid Spotify OAuth response"))?;
+        if token.access_token.is_empty()
+            || token.expires_in == 0
+            || token.expires_in > 86400
+            || !token.token_type.eq_ignore_ascii_case("bearer")
+        {
+            bail!("invalid Spotify OAuth grant");
+        }
+        Ok(token)
+    }
+
     async fn access_token(&self) -> Result<String> {
         if self.client_id.is_empty() || self.client_secret.is_empty() {
             bail!("SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET are not configured");
@@ -142,6 +199,38 @@ impl SpotifyHttp {
 
 #[async_trait]
 impl Spotify for SpotifyHttp {
+    fn authorize_url(&self, state: &str, challenge: &str) -> Result<String> {
+        if self.client_id.is_empty() || self.client_secret.is_empty() {
+            bail!("Spotify OAuth not configured");
+        }
+        let mut url = reqwest::Url::parse("https://accounts.spotify.com/authorize")?;
+        url.query_pairs_mut().extend_pairs([
+            ("client_id", self.client_id.as_str()),
+            ("response_type", "code"),
+            ("redirect_uri", self.oauth_redirect_uri()),
+            ("scope", "user-read-email"),
+            ("state", state),
+            ("code_challenge_method", "S256"),
+            ("code_challenge", challenge),
+        ]);
+        Ok(url.into())
+    }
+    async fn exchange(&self, code: &str, verifier: &str, redirect_uri: &str) -> Result<OAuthToken> {
+        self.oauth_token(&[
+            ("grant_type", "authorization_code"),
+            ("code", code),
+            ("code_verifier", verifier),
+            ("redirect_uri", redirect_uri),
+        ])
+        .await
+    }
+    async fn refresh(&self, refresh_token: &str) -> Result<OAuthToken> {
+        self.oauth_token(&[
+            ("grant_type", "refresh_token"),
+            ("refresh_token", refresh_token),
+        ])
+        .await
+    }
     #[instrument(skip(self), fields(dependency = "spotify", otel.kind = "client", server.address = "api.spotify.com"))]
     async fn artist(&self, artist_id: &str) -> Result<Option<Value>> {
         self.get(&format!("/artists/{artist_id}"), &[]).await

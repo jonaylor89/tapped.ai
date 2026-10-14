@@ -40,3 +40,17 @@ OAuth issuer and token audience) and
 `MCP_CONSENT_URL=https://app.tapped.ai/oauth/authorize`. For a local stack, point
 them at the local API and web app.
 
+
+
+## Identity/provider worker
+
+`identity_worker` uses transaction-scoped per-UID locks to serialize Stream signup,
+profile and deletion calls independently of Auth/API mutation locks. Configure a
+Postgres pool with at least two connections (the worker currently uses five): a
+provider-lock transaction stays open while current state is read through the pool.
+Contended/failed jobs remain retryable; provider/database delivery is not exactly-once.
+
+The default Stream endpoint is `https://chat.stream-io-api.com`. `STREAM_BASE_URL`
+is an optional trusted deployment/test override; never derive it from request input.
+Real retirement gates and rollout requirements are tracked in
+[`platform/FIREBASE_FUNCTIONS_RETIREMENT.md`](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md).

@@ -68,6 +68,8 @@ pub struct AppStateDyn {
     pub firebase_project_id: String,
     /// Accept unsigned Firebase Auth Emulator tokens (local stacks only, `demo-*` projects).
     pub firebase_auth_emulator: bool,
+    /// Dedicated ingress credential for the retained transport-only Firebase Auth hooks.
+    pub auth_webhook_secret: Option<String>,
     pub mail: MailBridge,
     pub response_cache: ResponseCache,
     /// Required production Redis cache; optional only in injected test states.

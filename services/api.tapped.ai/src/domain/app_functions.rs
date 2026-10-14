@@ -34,16 +34,48 @@ pub async fn stream_user_token(
     State(state): State<AppStateDyn>,
     user: FirebaseUser,
 ) -> Result<Json<StreamUserTokenResponse>, AppError> {
+    if let Some(pool) = state.postgres.as_ref() {
+        let deleted: bool = sqlx::query_scalar(
+            "SELECT EXISTS(SELECT 1 FROM firebase_identities WHERE uid=$1 AND deleted)",
+        )
+        .bind(&user.uid)
+        .fetch_one(pool)
+        .await
+        .map_err(|_| AppError::from_status(StatusCode::SERVICE_UNAVAILABLE))?;
+        if deleted {
+            return Err(AppError::unauthorized("account deleted"));
+        }
+    }
+    let now = chrono::Utc::now().timestamp();
     let token = jsonwebtoken::encode(
         &Header::new(Algorithm::HS256),
         &serde_json::json!({
             "user_id": user.uid,
-            "exp": chrono::Utc::now().timestamp() + 3_600,
+            "iat": now,
+            "exp": now + 3_600,
         }),
         &EncodingKey::from_secret(state.mail.stream_webhook_secret.as_bytes()),
     )
     .map_err(|error| AppError::internal("failed to sign Stream token", error))?;
     Ok(Json(StreamUserTokenResponse { token }))
+}
+
+/// Replaces the extension revocation callable. The UID always comes from Firebase Auth;
+/// acknowledge only after Stream accepted the revocation, not just a queued local mutation.
+#[utoipa::path(post,path = "/stream-token/revoke",tag = "app",summary = "Revoke previously issued Stream tokens",responses((status = 204, description = "Stream accepted revocation")),security(("FirebaseAuth" = [])))]
+pub async fn revoke_stream_user_tokens(
+    State(state): State<AppStateDyn>,
+    user: FirebaseUser,
+) -> Result<StatusCode, AppError> {
+    let before =
+        chrono::DateTime::from_timestamp(chrono::Utc::now().timestamp(), 0).expect("current time");
+    state
+        .mail
+        .stream
+        .revoke_tokens(&user.uid, before)
+        .await
+        .map_err(|_| AppError::from_status(StatusCode::BAD_GATEWAY))?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 #[derive(Debug, Deserialize, ToSchema)]
@@ -554,6 +586,7 @@ mod tests {
                 search: Arc::new(MockSearch),
                 firebase_project_id: "test".into(),
                 firebase_auth_emulator: false,
+                auth_webhook_secret: None,
                 response_cache: Default::default(),
                 place_cache: None,
                 places: std::sync::Arc::new(crate::data::places::MockPlaces),

@@ -21,7 +21,8 @@ Configure the API with:
 
 ```text
 FIREBASE_PROJECT_ID
-GOOGLE_APPLICATION_CREDENTIALS
+DATABASE_URL
+REDIS_URL
 STREAM_KEY
 STREAM_SECRET
 MAIL_INGRESS_SECRET       # random password used for Postmark inbound webhook Basic auth
@@ -33,6 +34,8 @@ TYPESENSE_PORT
 TYPESENSE_PROTOCOL
 TYPESENSE_SEARCH_API_KEY
 ```
+
+No Firebase administrative credential is mounted into the serving API. The optional identity worker has its own least-privilege credential; one-time administrative backfill uses local ADC separately.
 
 When the Postmark plan permits editing inbound webhooks, configure:
 
@@ -54,7 +57,8 @@ Required local variables are listed in `.env.example`-style form below:
 
 ```text
 FIREBASE_PROJECT_ID
-GOOGLE_APPLICATION_CREDENTIALS
+DATABASE_URL
+REDIS_URL
 STREAM_KEY
 STREAM_SECRET
 MAIL_INGRESS_SECRET
@@ -81,6 +85,14 @@ docker compose up --build
 ```
 
 No production DNS changes are required for this stack.
+
+## Offline HTTP-client checks
+
+```bash
+python3 -m unittest discover -s services/mail-gateway/tools -p 'test_*.py'
+```
+
+Administrative/smoke requests identify themselves with descriptive User-Agent headers; default Python requests from the production host were rejected by Cloudflare's browser-integrity policy. Authentication/signatures remain required. These offline checks do not establish real SMTP replies or end-to-end provider delivery.
 
 ## Manual Steps
 

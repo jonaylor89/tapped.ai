@@ -1,13 +1,7 @@
-// Only Auth side effects and HTTP compatibility endpoints are deployable.
-// Legacy Firestore modules remain as reference; never re-export them or use export *.
-export { sendWelcomeEmailOnUserCreated } from "./lib/email_triggers";
-export { notifyFoundersOnSignUp, notifyFoundersOnUserDelete } from "./lib/signups";
+// Firebase Auth transport only. All business effects execute in Rust.
 export {
-  getArtistBySpotifyId,
-  getTopTracksByArtistId,
-  spotifyAuthorizeCodeGrant,
-  spotifyRedirect,
-  spotifyRefreshToken,
-} from "./lib/spotify";
-export { deleteStreamUser } from "./lib/stream";
-export { inboundEmailWebhook, streamBeforeMessageWebhook } from "./lib/webhooks";
+  deleteStreamUser,
+  notifyFoundersOnSignUp,
+  notifyFoundersOnUserDelete,
+  sendWelcomeEmailOnUserCreated,
+} from "./lib/auth_hooks";

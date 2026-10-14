@@ -2,18 +2,32 @@
 
 Checked **2026-10-12T17:15:23.312468+00:00**, project `in-the-loop-306520`, all regions: **60 deployed functions**, including **27 Firebase-managed extension functions**.
 
-This is a read-only inventory, not a deployment or retirement operation. `ACTIVE` is provider state, not proof of current traffic; `UNKNOWN` is not proof a function is disabled. Paused schedulers may still have an active backing function.
+This original table is a historical read-only inventory, not the current production state. On **2026-10-14**, user-approved retirement of three BigQuery extensions removed **15 Functions** and **16 task queues**; all six BigQuery archive tables/views and their metadata row counts were preserved. All-regions Functions inventory now lists **40 Functions**. See [the current retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md).
+
+The original inventory itself is not a deployment or retirement operation. `ACTIVE` is provider state, not proof of current traffic; `UNKNOWN` is not proof a function is disabled. Paused schedulers may still have an active backing function.
+
+## Read-only usage follow-up — 2026-10-14T13:30:37Z
+
+[`deployment-usage-audit.json`](deployment-usage-audit.json) records a fresh all-regions inventory and a bounded 30-day log audit: **40 Functions (26 Gen1 / 14 Gen2; 28 custom / 12 managed)**, zero BigQuery Functions. All 14 Gen2 services were mapped; 9,570 matching log entries were returned below the 100,000-record cap. Raw logs/configuration remain private (0600); the committed artifact contains only names, states, timestamps and aggregate counts.
+
+Important contrary evidence: `updateStreamUserOnUserUpdate` is `UNKNOWN` but has **2,365 execution starts** (last 2026-10-10), and `transformLocationPayloadForSearch` has **10 execution starts** (last 2026-10-01). Neither is proven disabled/unused by its source status. Stripe's webhook has five execution starts (last 2026-10-11); its obsolete provider routing must still be disconnected deliberately. The scheduled-writes extension last started on 2026-10-10, consistent with the separately verified paused scheduler; 634 historical starts do not indicate current scheduling.
+
+Supported-source inspection found no Functions SDK/callable/Cloud Functions URL in current app/package clients. Native Stream tokens, opportunity notifications and Spotify artist lookup route through authenticated Rust repositories. Native Spotify currently imports an artist link, not an OAuth connection; that does **not** prove the old OAuth provider callback can be removed. Request-builder tests cover only their named routes, not real delivery or external caller absence.
+
+**Free-launch client gap:** native `Dependencies.live()` still constructs `StoreKitPurchasesRepository`, and the paywall route still constructs `SubscriptionStoreView`; the web root still loads Stripe's pricing-table script. This conflicts with treating paid workflows as disconnected. Address supported client purchase/gating paths before billing retirement; preserve historical provider records.
+
+No matching logs is **not** proof of no callers: retention, exclusions, sampling, external provider configuration and installed legacy clients remain separate checks. No production resource, provider object or source document was changed by this audit.
 
 ## Findings
 
-- **Target is zero Firebase Functions, including extensions—not retaining Auth/compatibility handlers permanently.** See [the full retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md). Founder booking/application/onboarding alerts are required business behavior, not obsolete triggers: Rust outbox replacements were deployed and verified through live API actions, then those three Functions were deleted (55 remain after subsequent Stream callback and approved Mailchimp retirement). The table below is the original inventory snapshot, not the current function count. Other notification/Auth effects must also be accounted for.
+- **Current target is only four transport-only Firebase Auth hooks; all other Functions/extensions must be deletable.** See [the full retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md). Founder booking/application/onboarding alerts are required business behavior, not obsolete triggers: Rust outbox replacements were deployed and verified through live API actions, then those three Functions were deleted (40 remain after subsequent Stream callback, Mailchimp and BigQuery retirements). The table below is the original inventory snapshot, not the current function count. Other notification/Auth effects must also be accounted for.
 - Backend source and Firebase project/deployment configuration are independent of the retired mobile directory.
-- The entrypoint explicitly exports only the 11 allowlisted Auth side effects and HTTP compatibility endpoints. Legacy Firestore modules are preserved for reference, **not exported or approved for deployment**. Previously deleted triggers (including `onUserDeleted`, default-service and review-counter writers) cannot be recreated by the supported deployment command.
+- The entrypoint explicitly exports only the current allowlisted thin Auth transports and temporary HTTP compatibility endpoints. Legacy Firestore modules are preserved for reference, **not exported or approved for deployment**. Previously deleted triggers (including `onUserDeleted`, default-service and review-counter writers) cannot be recreated by the supported deployment command.
 - Both webhook compatibility handlers delegate to Rust; the Stream proxy forwards the original bytes/signature instead of accessing Firestore. These local changes have **not been deployed**.
 - **8 custom functions are deployed but absent from the repository source**: `createConnectedAccount`, `createPaymentIntent`, `getAccountById`, `notifyFoundersOnUserFeedbackSubmitted`, `notifyVenueOfInterestedOpportunities`, `sendEmailOnSubscriptionExpiration`, `sendEmailOnSubscriptionPurchase`, `transformLocationPayloadForSearch`. Moving the existing source does not recover them. Recover deployed build source if maintenance is needed, or confirm provider routing/usage before retiring them.
-- Remaining Firestore triggers and extension writers are still deployed. In particular, Stripe's Auth-triggered customer creation, Stripe's HTTP webhook, scheduled writes and BigQuery extensions need a separate retirement audit. Client deny-all rules do not stop Admin SDK writers.
+- Remaining Firestore triggers and extension writers are still deployed. In particular, Stripe's Auth-triggered customer creation, Stripe's HTTP webhook and scheduled writes need a separate retirement audit. BigQuery extensions were subsequently retired with explicit user approval; billing is retirement-only for the free launch. Client deny-all rules do not stop Admin SDK writers.
 - Firebase-managed extensions are controlled through Firebase/Google Cloud, not this package. Removing mobile code or removing an export does **not** undeploy them.
-- No production functions, extensions, provider URLs, schedulers, credentials or Firestore data were changed in this cleanup.
+- The original source cleanup changed no production resources. Subsequent explicitly approved retirements are recorded above; no source Firestore, billing or analytics data was deleted.
 
 ## Approved Mailchimp retirement
 

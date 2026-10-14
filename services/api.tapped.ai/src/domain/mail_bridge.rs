@@ -151,6 +151,13 @@ pub trait MailStore: Send + Sync {
 #[async_trait]
 pub trait StreamGateway: Send + Sync {
     async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()>;
+    async fn revoke_tokens(
+        &self,
+        _uid: &str,
+        _before: chrono::DateTime<Utc>,
+    ) -> anyhow::Result<()> {
+        anyhow::bail!("Stream token revocation not configured")
+    }
 }
 
 #[derive(Clone)]
@@ -793,6 +800,11 @@ pub struct StreamHttpGateway {
 }
 
 impl StreamHttpGateway {
+    /// Trusted local/provider-test endpoint override; never derived from a client request.
+    pub fn with_base_url(mut self, base_url: String) -> Self {
+        self.base_url = base_url;
+        self
+    }
     pub fn new(api_key: String, secret: &str) -> anyhow::Result<Self> {
         let server_token = jsonwebtoken::encode(
             &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
@@ -812,6 +824,19 @@ impl StreamHttpGateway {
 
 #[async_trait]
 impl StreamGateway for StreamHttpGateway {
+    #[tracing::instrument(skip_all, fields(dependency = "stream", otel.kind = "client", server.address = "chat.stream-io-api.com"))]
+    async fn revoke_tokens(&self, uid: &str, before: chrono::DateTime<Utc>) -> anyhow::Result<()> {
+        let response=self.client.patch(format!("{}/users",self.base_url))
+            .query(&[("api_key",&self.api_key)]).header("Authorization",&self.server_token).header("Stream-Auth-Type","jwt")
+            .json(&serde_json::json!({"users":[{"id":uid,"set":{"revoke_tokens_issued_before":before.to_rfc3339()}}]}))
+            .send().await.map_err(|_|anyhow::anyhow!("Stream revocation network error"))?;
+        anyhow::ensure!(
+            response.status().is_success(),
+            "Stream revocation HTTP {}",
+            response.status().as_u16()
+        );
+        Ok(())
+    }
     #[tracing::instrument(skip_all, fields(dependency = "stream", otel.kind = "client", server.address = "chat.stream-io-api.com"))]
     async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
         let query = self.client.post(format!("{}/channels/messaging/query", self.base_url))
@@ -1074,12 +1099,13 @@ fn mailbox_username(address: &str) -> &str {
         .split('>')
         .next()
         .unwrap_or_default();
-    mailbox
+    let local = mailbox
         .split('@')
         .next()
         .unwrap_or_default()
         .trim()
-        .trim_matches('<')
+        .trim_matches('<');
+    local.strip_prefix("reply+").unwrap_or(local)
 }
 
 async fn record_orphan_and_notify(

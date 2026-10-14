@@ -27,6 +27,8 @@ async fn main() -> anyhow::Result<()> {
             .build()?,
         stream_key: std::env::var("STREAM_KEY")?,
         stream_secret: std::env::var("STREAM_SECRET")?,
+        stream_base_url: std::env::var("STREAM_BASE_URL")
+            .unwrap_or_else(|_| "https://chat.stream-io-api.com".into()),
         auth_effects: std::env::var("AUTH_EFFECTS_ENABLED").as_deref() == Ok("1"),
     };
     let scan = async {

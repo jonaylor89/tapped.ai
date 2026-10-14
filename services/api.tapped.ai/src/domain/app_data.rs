@@ -928,6 +928,11 @@ async fn save(
             .await
             .map_err(db_error)?;
     }
+    if table == "bookings" {
+        crate::domain::booking_reminders::schedule(&mut tx, id)
+            .await
+            .map_err(db_error)?;
+    }
     if create && table == "bookings" {
         crate::domain::external_effects::record_booking_emails(&mut tx, &doc)
             .await

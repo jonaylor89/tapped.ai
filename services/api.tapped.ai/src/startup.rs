@@ -59,6 +59,7 @@ pub struct Application {
     port: u16,
     server: Serve<TcpListener, Router, Router>,
     founder_worker: Option<tokio::task::JoinHandle<()>>,
+    reminder_worker: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Application {
@@ -134,6 +135,7 @@ impl Application {
             search: Arc::new(PostgresSearch::new(postgres.clone())),
             firebase_project_id: project_id,
             firebase_auth_emulator,
+            auth_webhook_secret: std::env::var("AUTH_WEBHOOK_SECRET").ok(),
             mail,
             response_cache: Default::default(),
             place_cache: Some(place_cache),
@@ -151,7 +153,10 @@ impl Application {
             .transpose()
             .map_err(|error| color_eyre::eyre::eyre!("{error}"))?;
         let founder_pool = state.postgres.clone().expect("production Postgres pool");
+        let reminder_pool = founder_pool.clone();
         let server = run(listener, state).await?;
+        let reminder_worker = (std::env::var("BOOKING_REMINDERS_ENABLED").as_deref() == Ok("1"))
+            .then(|| tokio::spawn(crate::domain::booking_reminders::run(reminder_pool)));
         let founder_worker = founder_transport.map(|transport| {
             tracing::info!("Postgres founder notification worker enabled");
             tokio::spawn(run_founder_worker(founder_pool, transport))
@@ -165,6 +170,7 @@ impl Application {
             port,
             server,
             founder_worker,
+            reminder_worker,
         })
     }
 
@@ -179,6 +185,7 @@ impl Application {
             port,
             server,
             founder_worker: None,
+            reminder_worker: None,
         })
     }
 
@@ -191,6 +198,10 @@ impl Application {
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
         let result = self.server.with_graceful_shutdown(shutdown_signal()).await;
         if let Some(worker) = self.founder_worker {
+            worker.abort();
+            let _ = worker.await;
+        }
+        if let Some(worker) = self.reminder_worker {
             worker.abort();
             let _ = worker.await;
         }
@@ -270,8 +281,21 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             get(app_data::interest_status).put(app_data::set_interest),
         )
         .route("/feedback", post(crate::domain::feedback::submit))
+        .route(
+            "/spotify/oauth/authorize",
+            post(crate::domain::spotify_oauth::authorize),
+        )
+        .route(
+            "/spotify/oauth/exchange",
+            post(crate::domain::spotify_oauth::exchange),
+        )
+        .route(
+            "/spotify/oauth/refresh",
+            post(crate::domain::spotify_oauth::refresh),
+        )
         .route("/device-token", post(app_data::register_token))
         .route("/venue-email-threads", post(create_email_thread))
+        .routes(routes!(app_functions::revoke_stream_user_tokens))
         .routes(routes!(app_functions::stream_user_token))
         .routes(routes!(places::get_place_photo))
         .routes(routes!(places::reverse_geocode))
@@ -328,6 +352,14 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .route(
             "/webhooks/stream/before-message",
             post(stream_before_message),
+        )
+        .route(
+            "/webhooks/firebase/auth",
+            post(crate::domain::auth_lifecycle::webhook),
+        )
+        .route(
+            "/webhooks/spotify/callback",
+            get(crate::domain::spotify_oauth::callback),
         )
         .route("/internal/mail/inbound", post(inbound_email))
         .route("/webhooks/postmark/inbound", post(postmark_inbound_email))

@@ -15,7 +15,7 @@ exports.skipReverseDns = function skipReverseDns(next) {
 exports.acceptRecipient = function acceptRecipient(next, connection, params) {
   const domain = (process.env.BOOKING_EMAIL_DOMAIN || "booking.tapped.ai").toLowerCase();
   const address = params[0];
-  if (address.host.toLowerCase() !== domain || !/^[a-z0-9][a-z0-9._-]{0,63}$/i.test(address.user)) {
+  if (address.host.toLowerCase() !== domain || !/^(reply\+)?[a-z0-9][a-z0-9._-]{0,63}$/i.test(address.user)) {
     return next(DENY, "Recipient rejected");
   }
   return next(OK);

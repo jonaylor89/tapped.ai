@@ -129,6 +129,9 @@ jobs:
           # (created by earlier root images). Firebase admin credentials are no longer mounted.
           docker compose run --rm --no-deps --interactive=false --user root --entrypoint chown api -R 10001:10001 /data
           docker compose up -d --no-deps api mail-worker
+          if docker inspect tapped-identity-worker-1 >/dev/null 2>&1; then
+            docker compose --profile identity up -d --no-deps identity-worker
+          fi
 
           echo "Waiting for api to be ready..."
           for i in $(seq 1 24); do

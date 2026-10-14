@@ -647,6 +647,39 @@
         ]
       }
     },
+    "/app/v1/stream-token/revoke": {
+      "post": {
+        "tags": [
+          "app"
+        ],
+        "summary": "Revoke previously issued Stream tokens",
+        "operationId": "revoke_stream_user_tokens",
+        "responses": {
+          "204": {
+            "description": "Stream accepted revocation"
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
     "/app/v1/stream-token": {
       "post": {
         "tags": [

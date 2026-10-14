@@ -29,6 +29,13 @@ fn safe_header(value: &str) -> String {
     value.replace(['\r', '\n'], " ")
 }
 
+fn reply_address(email: &QueuedEmail) -> Option<String> {
+    let (username, domain) = email.from.split_once('@')?;
+    let booking_domain =
+        std::env::var("BOOKING_EMAIL_DOMAIN").unwrap_or_else(|_| "booking.tapped.ai".into());
+    (domain == booking_domain).then(|| format!("reply+{username}@{domain}"))
+}
+
 const DOWNLOAD_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
 
 async fn download_attachments(email: &QueuedEmail) -> anyhow::Result<Vec<EncodedAttachment>> {
@@ -69,6 +76,9 @@ async fn render_email(email: &QueuedEmail) -> anyhow::Result<Vec<u8>> {
         safe_header(&email.subject),
         safe_header(&email.message_id),
     );
+    if let Some(reply_to) = reply_address(email) {
+        message.push_str(&format!("Reply-To: {}\r\n", safe_header(&reply_to)));
+    }
     if !email.in_reply_to.is_empty() {
         message.push_str(&format!(
             "In-Reply-To: {}\r\n",
@@ -196,6 +206,8 @@ struct PostmarkAttachment {
 #[serde(rename_all = "PascalCase")]
 struct PostmarkEmail {
     from: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reply_to: Option<String>,
     to: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     cc: String,
@@ -242,6 +254,7 @@ pub async fn submit_postmark(
         .collect();
     let payload = PostmarkEmail {
         from: email.from.clone(),
+        reply_to: reply_address(email),
         to: email.to.join(","),
         cc: email.cc.join(","),
         subject: email.subject.clone(),

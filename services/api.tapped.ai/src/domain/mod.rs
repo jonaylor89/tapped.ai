@@ -1,6 +1,8 @@
 pub mod app_data;
 pub mod app_functions;
 pub mod auth;
+pub mod auth_lifecycle;
+pub mod booking_reminders;
 pub mod controller;
 pub mod external_effects;
 pub mod feedback;
@@ -18,3 +20,4 @@ pub mod public_docs;
 pub mod public_map;
 pub mod public_profile;
 pub mod spotify;
+pub mod spotify_oauth;

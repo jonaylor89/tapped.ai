@@ -20,7 +20,7 @@ The lockfile was regenerated from the old resolved dependency versions, removing
 
 ## Production boundaries
 
-**This package is transitional. The target is to remove every Firebase Function**, including Auth hooks and managed extensions, once required behavior/provider routing is replaced. Firebase Auth/email verification itself remains. Track the [all-functions retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md); do not delete business notifications merely because they listened to Firestore.
+**This package is transitional. The current target is to remove every non-Auth Firebase Function and all managed extensions**, once required behavior/provider routing is replaced. Retain only transport-only Firebase Auth hooks calling authenticated Rust webhooks. Firebase Auth/email verification itself remains. Track the [all-functions retirement plan](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md); do not delete business notifications merely because they listened to Firestore.
 
 Read [DEPLOYMENT_AUDIT.md](DEPLOYMENT_AUDIT.md) **before deploying**. Many deployed functions/extensions are not maintained by the current entrypoint, and some deployed custom handlers have no source here.
 
@@ -28,7 +28,9 @@ Read [DEPLOYMENT_AUDIT.md](DEPLOYMENT_AUDIT.md) **before deploying**. Many deplo
 - Legacy Firestore-dependent modules remain under `src/lib/` but are not exported. Do not reconnect them to production or add dual writes.
 - Postmark's `inboundEmailWebhook` preserves its existing provider URL and forwards to Rust with the Secret Manager ingress credential.
 - Stream's `streamBeforeMessageWebhook` forwards raw request bytes and `x-signature` to Rust for validation and processing. It does not read/write Firestore.
-- Auth side effects (welcome email, founder notifications, Stream deletion) remain available without changing Firebase identity or email verification.
+- The four maintained Auth exports now use `src/lib/auth_hooks.ts` and forward signed lifecycle snapshots to `POST /webhooks/firebase/auth`; Firebase retries failed requests. All business effects execute through the durable Rust provider outbox. Provision the dedicated `AUTH_WEBHOOK_SECRET` in Secret Manager and the API before selective rollout; reconcile held jobs before enabling Rust Auth effects. This local change is not itself a production deployment.
+- BigQuery is intentionally retired with user approval: all three export extension instances, 15 Functions and 16 task queues were removed. Historical datasets/tables/views remain untouched; no Rust exporter or analytics backfill is required.
+- The application launches free: Stripe/payment/subscription Functions and extensions are retirement-only. Do not backfill billing customers, deploy new paid handlers or delete/cancel historical provider objects.
 - Mailchimp is intentionally retired: its live Function, export, deployment allowlist entry, source and dependencies were removed. The deployment guard rejects `addUserToMailchimpOnCreated`; Rust no longer subscribes users.
 - Existing Spotify compatibility handlers are retained until provider/client routing is separately retired.
 - Firebase extensions are managed outside this source. Removing files/exports never undeploys anything.

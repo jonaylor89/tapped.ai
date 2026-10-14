@@ -16,7 +16,7 @@ use tapped_api_rs::{
     },
 };
 
-async fn database() -> Option<(PgPool, PgPool, String)> {
+pub(super) async fn database() -> Option<(PgPool, PgPool, String)> {
     let Ok(url) = std::env::var("DATABASE_URL") else {
         return None;
     };
@@ -39,7 +39,7 @@ async fn database() -> Option<(PgPool, PgPool, String)> {
     MIGRATOR.run(&pool).await.unwrap();
     Some((pool, admin, name))
 }
-async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
+pub(super) async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
     pool.close().await;
     sqlx::query(sqlx::AssertSqlSafe(format!(
         "DROP DATABASE {name} WITH (FORCE)"
@@ -48,6 +48,130 @@ async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
     .await
     .unwrap();
     admin.close().await;
+}
+
+#[tokio::test]
+async fn auth_webhooks_are_signed_durable_concurrent_and_safe_for_out_of_order_incarnations() {
+    use hmac::{Hmac, KeyInit, Mac};
+    use sha2::Sha256;
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    let secret = "isolated-test-auth-webhook-secret-32-chars";
+    let mut state = super::helpers::mock_state();
+    state.postgres = Some(pool.clone());
+    state.auth_webhook_secret = Some(secret.into());
+    let app = super::helpers::spawn_app_with_state(state).await;
+    let url = format!("{}/webhooks/firebase/auth", app.address);
+    let now = chrono::Utc::now().timestamp_millis() - 1000;
+    let account = json!({"localId":"hook-user","email":"hook@example.test","displayName":"Hook","createdAt":now.to_string()});
+    let signup = serde_json::to_vec(&json!({"kind":"signup","account":account})).unwrap();
+    let timestamp = chrono::Utc::now().timestamp().to_string();
+    let sign = |body: &[u8]| {
+        let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(timestamp.as_bytes());
+        mac.update(b".");
+        mac.update(body);
+        hex::encode(mac.finalize().into_bytes())
+    };
+    assert_eq!(
+        app.api_client
+            .post(&url)
+            .body(signup.clone())
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    assert_eq!(
+        app.api_client
+            .post(&url)
+            .header("x-tapped-timestamp", &timestamp)
+            .header("x-tapped-signature", sign(&signup))
+            .body("{}")
+            .send()
+            .await
+            .unwrap()
+            .status(),
+        401
+    );
+    let send = |body: Vec<u8>| {
+        app.api_client
+            .post(&url)
+            .header("x-tapped-timestamp", &timestamp)
+            .header("x-tapped-signature", sign(&body))
+            .body(body)
+            .send()
+    };
+    let (a, b) = tokio::join!(send(signup.clone()), send(signup.clone()));
+    assert_eq!(a.unwrap().status(), 204);
+    assert_eq!(b.unwrap().status(), 204);
+    // The scanner captures the same creation; it must not create a second job.
+    let parsed: Account = serde_json::from_value(account.clone()).unwrap();
+    capture_account(&pool, &parsed, uuid::Uuid::new_v4(), true)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO users(id,username,email) VALUES('hook-user','hook-user','hook@example.test')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO services(id,user_id,title) VALUES('hook-service','hook-user','Set')")
+        .execute(&pool)
+        .await
+        .unwrap();
+    let delete = serde_json::to_vec(&json!({"kind":"delete","account":account})).unwrap();
+    assert_eq!(send(delete.clone()).await.unwrap().status(), 204);
+    assert_eq!(send(delete.clone()).await.unwrap().status(), 204);
+    assert_eq!(send(signup.clone()).await.unwrap().status(), 204);
+    // A stale scan must not resurrect a deleted incarnation.
+    capture_account(&pool, &parsed, uuid::Uuid::new_v4(), true)
+        .await
+        .unwrap();
+    assert!(
+        sqlx::query_scalar::<_, bool>(
+            "SELECT deleted FROM firebase_identities WHERE uid='hook-user'"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap()
+    );
+    assert!(
+        sqlx::query_scalar::<_, bool>("SELECT deleted FROM services WHERE id='hook-service'")
+            .fetch_one(&pool)
+            .await
+            .unwrap()
+    );
+    let mut newer = account;
+    newer["createdAt"] = json!((now + 1).to_string());
+    let recreate = serde_json::to_vec(&json!({"kind":"signup","account":newer})).unwrap();
+    assert_eq!(send(recreate).await.unwrap().status(), 204);
+    assert_eq!(send(delete).await.unwrap().status(), 204);
+    let identity: (i64, bool) = sqlx::query_as(
+        "SELECT created_at_ms,deleted FROM firebase_identities WHERE uid='hook-user'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(identity, (now + 1, false));
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM external_effect_outbox")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        3
+    );
+    let invalid = serde_json::to_vec(
+        &json!({"kind":"signup","account":{"localId":"invalid","createdAt":"0"}}),
+    )
+    .unwrap();
+    assert_eq!(send(invalid).await.unwrap().status(), 400);
+    // Database failures cannot be acknowledged as delivered.
+    pool.close().await;
+    assert_eq!(send(signup).await.unwrap().status(), 503);
+    cleanup(pool, admin, name).await;
 }
 
 #[tokio::test]
@@ -234,6 +358,7 @@ async fn mail_handoff_is_idempotent_and_failed_provider_jobs_remain_retryable() 
         client: reqwest::Client::new(),
         stream_key: String::new(),
         stream_secret: String::new(),
+        stream_base_url: "https://chat.stream-io-api.com".into(),
         auth_effects: false,
     };
     sqlx::query(

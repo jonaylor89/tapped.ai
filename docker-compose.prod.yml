@@ -75,6 +75,10 @@ services:
       STREAM_SECRET: ${STREAM_SECRET}
       MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}
       MAIL_API_SECRET: ${MAIL_API_SECRET}
+      # Auth hooks sign callbacks; all provider business logic lives in Rust.
+      AUTH_WEBHOOK_SECRET: ${AUTH_WEBHOOK_SECRET:-}
+      # Enable after pending legacy reminder reconciliation; keep old scheduler paused.
+      BOOKING_REMINDERS_ENABLED: ${BOOKING_REMINDERS_ENABLED:-0}
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
       BOOKING_EMAIL_DOMAIN: ${BOOKING_EMAIL_DOMAIN:-booking.tapped.ai}
       OPENAI_API_KEY: ${OPENAI_API_KEY}

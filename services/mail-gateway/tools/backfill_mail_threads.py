@@ -50,6 +50,7 @@ def request_json(url: str, token: str, payload=None, headers=None):
         data=body,
         headers={
             "Authorization": f"Bearer {token}",
+            "User-Agent": "Tapped-Mail-Backfill/1.0",
             "content-type": "application/json",
             **(headers or {}),
         },
@@ -78,6 +79,7 @@ def send_record(api_url: str, secret: str, endpoint: str, record: dict) -> None:
         data=body,
         headers={
             "content-type": "application/json",
+            "User-Agent": "Tapped-Mail-Backfill/1.0",
             "x-tapped-timestamp": timestamp,
             "x-tapped-signature": signature,
         },

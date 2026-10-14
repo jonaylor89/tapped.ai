@@ -1,0 +1,479 @@
+{
+  "checked_at": "2026-10-14T13:30:37.328715+00:00",
+  "window_start": "2026-09-14T13:30:37.328715+00:00",
+  "window_end_exclusive": "2026-10-14T13:30:37.328715+00:00",
+  "functions": 40,
+  "generations": {
+    "GEN_2": 14,
+    "GEN_1": 26
+  },
+  "log_entries": 9570,
+  "record_limit": 100000,
+  "limit_reached": false,
+  "unmapped_gen2": [],
+  "functions_usage": [
+    {
+      "name": "createConnectedAccount",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "createPaymentIntent",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "createStreamUserOnUserCreated",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 2,
+        "execution_started": 1
+      },
+      "first_log": "2026-09-24T13:40:57.991827590Z",
+      "last_log": "2026-09-24T13:40:58.742233636Z",
+      "last_execution_started": "2026-09-24T13:40:57.991827590Z"
+    },
+    {
+      "name": "deleteStreamUser",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 67,
+        "execution_started": 28,
+        "error_entries": 11
+      },
+      "first_log": "2026-10-10T23:03:04.478920501Z",
+      "last_log": "2026-10-12T21:31:34.070195811Z",
+      "last_execution_started": "2026-10-12T21:31:33.769841966Z"
+    },
+    {
+      "name": "ext-auth-chat-createStreamUser",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 88,
+        "execution_started": 22
+      },
+      "first_log": "2026-09-24T13:26:19.783146557Z",
+      "last_log": "2026-10-12T21:30:26.882182303Z",
+      "last_execution_started": "2026-10-12T21:30:26.574053086Z"
+    },
+    {
+      "name": "ext-auth-chat-deleteStreamUser",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 123,
+        "execution_started": 28,
+        "error_entries": 22
+      },
+      "first_log": "2026-10-10T23:03:02.538461284Z",
+      "last_log": "2026-10-12T21:31:32.998484616Z",
+      "last_execution_started": "2026-10-12T21:31:32.712262243Z"
+    },
+    {
+      "name": "ext-auth-chat-getStreamUserToken",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 93,
+        "execution_started": 31
+      },
+      "first_log": "2026-09-24T13:40:54.956180856Z",
+      "last_log": "2026-10-01T01:23:32.168780437Z",
+      "last_execution_started": "2026-10-01T01:23:31.815905192Z"
+    },
+    {
+      "name": "ext-auth-chat-revokeStreamUserToken",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "ext-firestore-schedule-writes-deliverWrites",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 1902,
+        "execution_started": 634
+      },
+      "first_log": "2026-09-14T14:00:19.010994952Z",
+      "last_log": "2026-10-10T22:00:23.271601084Z",
+      "last_execution_started": "2026-10-10T22:00:22.459056115Z"
+    },
+    {
+      "name": "ext-firestore-send-email-processQueue",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createCheckoutSession",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createCustomer",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 44,
+        "execution_started": 22
+      },
+      "first_log": "2026-09-24T13:26:20.062216696Z",
+      "last_log": "2026-10-12T21:30:26.815470877Z",
+      "last_execution_started": "2026-10-12T21:30:26.784195346Z"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-createPortalLink",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "ext-firestore-stripe-payments-handleWebhookEvents",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 20,
+        "error_entries": 5,
+        "execution_started": 5
+      },
+      "first_log": "2026-09-18T22:09:47.842902361Z",
+      "last_log": "2026-10-11T22:09:24.440922019Z",
+      "last_execution_started": "2026-10-11T22:09:23.343972777Z"
+    },
+    {
+      "name": "ext-firestore-stripe-payments-onCustomerDataDeleted",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "ext-firestore-stripe-payments-onUserDeleted",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 56,
+        "execution_started": 28
+      },
+      "first_log": "2026-10-10T23:03:02.532260177Z",
+      "last_log": "2026-10-12T21:31:33.531069786Z",
+      "last_execution_started": "2026-10-12T21:31:33.468329603Z"
+    },
+    {
+      "name": "getAccountById",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "getArtistBySpotifyId",
+      "generation": "GEN_2",
+      "service": "getartistbyspotifyid",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "getTopTracksByArtistId",
+      "generation": "GEN_2",
+      "service": "gettoptracksbyartistid",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "inboundEmailWebhook",
+      "generation": "GEN_2",
+      "service": "inboundemailwebhook",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 27,
+        "http_requests": 3,
+        "http_status_200": 2,
+        "http_status_401": 1
+      },
+      "first_log": "2026-09-28T12:53:56.954085Z",
+      "last_log": "2026-10-12T21:04:06.032810Z",
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyFoundersOnAppRemoved",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyFoundersOnEmail",
+      "generation": "GEN_2",
+      "service": "notifyfoundersonemail",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyFoundersOnOrphanEmail",
+      "generation": "GEN_2",
+      "service": "notifyfoundersonorphanemail",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyFoundersOnSignUp",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 50,
+        "execution_started": 22
+      },
+      "first_log": "2026-09-24T13:26:24.220963994Z",
+      "last_log": "2026-10-12T21:30:28.133132927Z",
+      "last_execution_started": "2026-10-12T21:30:28.059169440Z"
+    },
+    {
+      "name": "notifyFoundersOnUserDelete",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 62,
+        "execution_started": 28
+      },
+      "first_log": "2026-10-10T23:03:06.168742831Z",
+      "last_log": "2026-10-12T21:31:35.009676414Z",
+      "last_execution_started": "2026-10-12T21:31:34.941381936Z"
+    },
+    {
+      "name": "notifyFoundersOnUserFeedbackSubmitted",
+      "generation": "GEN_2",
+      "service": "notifyfoundersonuserfeedbacksubmitted",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyFoundersOnVenueContact",
+      "generation": "GEN_2",
+      "service": "notifyfoundersonvenuecontact",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "notifyVenueOfInterestedOpportunities",
+      "generation": "GEN_2",
+      "service": "notifyvenueofinterestedopportunities",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendBookingRequestReceivedEmailOnBooking",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendBookingRequestSentEmailOnBooking",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendEmailOnSubscriptionExpiration",
+      "generation": "GEN_2",
+      "service": "sendemailonsubscriptionexpiration",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendEmailOnSubscriptionPurchase",
+      "generation": "GEN_2",
+      "service": "sendemailonsubscriptionpurchase",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendToDevice",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "UNKNOWN",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "sendWelcomeEmailOnUserCreated",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 66,
+        "execution_started": 22
+      },
+      "first_log": "2026-09-24T13:26:24.417730140Z",
+      "last_log": "2026-10-12T21:30:31.155822225Z",
+      "last_execution_started": "2026-10-12T21:30:31.035343651Z"
+    },
+    {
+      "name": "setLatestContactRequest",
+      "generation": "GEN_2",
+      "service": "setlatestcontactrequest",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "spotifyAuthorizeCodeGrant",
+      "generation": "GEN_2",
+      "service": "spotifyauthorizecodegrant",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "spotifyRedirect",
+      "generation": "GEN_2",
+      "service": "spotifyredirect",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "spotifyRefreshToken",
+      "generation": "GEN_2",
+      "service": "spotifyrefreshtoken",
+      "state": "ACTIVE",
+      "counts": {},
+      "first_log": null,
+      "last_log": null,
+      "last_execution_started": null
+    },
+    {
+      "name": "transformLocationPayloadForSearch",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "ACTIVE",
+      "counts": {
+        "log_entries": 30,
+        "execution_started": 10
+      },
+      "first_log": "2026-09-24T13:40:58.376332470Z",
+      "last_log": "2026-10-01T11:16:28.282535471Z",
+      "last_execution_started": "2026-10-01T11:16:28.202904582Z"
+    },
+    {
+      "name": "updateStreamUserOnUserUpdate",
+      "generation": "GEN_1",
+      "service": "",
+      "state": "UNKNOWN",
+      "counts": {
+        "log_entries": 6940,
+        "execution_started": 2365
+      },
+      "first_log": "2026-09-24T13:40:57.105995102Z",
+      "last_log": "2026-10-10T13:14:45.793710Z",
+      "last_execution_started": "2026-10-10T13:14:29.774985177Z"
+    }
+  ],
+  "limitations": [
+    "Absence of retained matching logs is not proof of no calls, disabled endpoints or provider disconnection.",
+    "Execution-start counts and HTTP request logs do not prove successful business effects.",
+    "Log retention/exclusions/sampling and external callers require separate verification."
+  ],
+  "project": "in-the-loop-306520",
+  "regions": [
+    "us-central1"
+  ],
+  "duplicate_basenames": [],
+  "custom": 28,
+  "managed": 12,
+  "bigquery": 0
+}

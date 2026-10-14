@@ -149,6 +149,7 @@ mod tests {
             search: Arc::new(MockSearch),
             firebase_project_id: "test-project".into(),
             firebase_auth_emulator: false,
+            auth_webhook_secret: None,
             mail: crate::domain::mail_bridge::MailBridge::disabled(),
             response_cache: Default::default(),
             place_cache: None,

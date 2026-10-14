@@ -5,8 +5,8 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run build && vitest run && node --test tests/*.test.mjs",
     "test:watch": "vitest",
-    "lint": "biome check src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts scripts tests",
-    "lint:fix": "biome check --write src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts scripts tests",
+    "lint": "biome check src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
+    "lint:fix": "biome check --write src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
     "deploy": "node scripts/deploy.mjs"
   },
   "engines": {

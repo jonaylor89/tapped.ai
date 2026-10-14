@@ -23,12 +23,20 @@ pub async fn capture_account(
         "invalid identity UID"
     );
     let mut tx = pool.begin().await?;
+    crate::domain::auth_lifecycle::lock_identity(&mut tx, &account.local_id).await?;
     let old: Option<(i64, bool)> = sqlx::query_as(
         "SELECT created_at_ms,deleted FROM firebase_identities WHERE uid=$1 FOR UPDATE",
     )
     .bind(&account.local_id)
     .fetch_optional(&mut *tx)
     .await?;
+    // A scan may have read an account before its deletion hook arrived.
+    if old.is_some_and(|(version, deleted)| {
+        version > account.created_ms() || (deleted && version == account.created_ms())
+    }) {
+        tx.commit().await?;
+        return Ok(());
+    }
     sqlx::query("INSERT INTO firebase_identities(uid,email,display_name,created_at_ms,scan_id) VALUES($1,$2,$3,$4,$5) ON CONFLICT(uid) DO UPDATE SET email=EXCLUDED.email,display_name=EXCLUDED.display_name,created_at_ms=EXCLUDED.created_at_ms,scan_id=EXCLUDED.scan_id,deleted=false")
         .bind(&account.local_id).bind(&account.email).bind(&account.display_name).bind(account.created_ms()).bind(scan).execute(&mut *tx).await?;
     if notify_new && old.is_none_or(|(created, deleted)| deleted || created != account.created_ms())
@@ -37,21 +45,28 @@ pub async fn capture_account(
         external_effects::enqueue(&mut tx, &id, "auth_signup", serde_json::to_value(account)?)
             .await?;
     }
-    sqlx::query(
-        "UPDATE users SET email=$2 WHERE id=$1 AND NOT unclaimed AND email IS DISTINCT FROM $2",
-    )
-    .bind(&account.local_id)
-    .bind(&account.email)
-    .execute(&mut *tx)
-    .await?;
+    external_effects::update_identity_email(&mut tx, &account.local_id, &account.email).await?;
     tx.commit().await?;
     Ok(())
 }
 
 pub async fn capture_deleted(pool: &PgPool, uid: &str) -> Result<()> {
+    capture_deleted_incarnation(pool, uid, None).await
+}
+
+async fn capture_deleted_incarnation(pool: &PgPool, uid: &str, version: Option<i64>) -> Result<()> {
     let mut tx = pool.begin().await?;
-    let old:Option<(String,String,i64)>=sqlx::query_as("UPDATE firebase_identities SET deleted=true WHERE uid=$1 AND NOT deleted RETURNING email,display_name,created_at_ms").bind(uid).fetch_optional(&mut *tx).await?;
+    crate::domain::auth_lifecycle::lock_identity(&mut tx, uid).await?;
+    let old:Option<(String,String,i64)>=sqlx::query_as("UPDATE firebase_identities SET deleted=true WHERE uid=$1 AND NOT deleted AND ($2::bigint IS NULL OR created_at_ms=$2) RETURNING email,display_name,created_at_ms").bind(uid).bind(version).fetch_optional(&mut *tx).await?;
     if let Some((email, name, created)) = old {
+        sqlx::query("DELETE FROM spotify_oauth_tokens WHERE user_id=$1")
+            .bind(uid)
+            .execute(&mut *tx)
+            .await?;
+        sqlx::query("DELETE FROM spotify_oauth_states WHERE user_id=$1")
+            .bind(uid)
+            .execute(&mut *tx)
+            .await?;
         sqlx::query("UPDATE users SET deleted=true WHERE id=$1")
             .bind(uid)
             .execute(&mut *tx)
@@ -114,14 +129,15 @@ async fn scan_locked(pool: &PgPool, google: &GoogleIdentity) -> Result<usize> {
         cursor = page.next_page_token;
     }
     // Do not infer deletion from a partial scan or changing pagination. Confirm unseen UIDs.
-    let missing: Vec<String> =
-        sqlx::query_scalar("SELECT uid FROM firebase_identities WHERE scan_id<>$1 AND NOT deleted")
-            .bind(scan)
-            .fetch_all(pool)
-            .await?;
-    for uid in missing {
+    let missing: Vec<(String, i64)> = sqlx::query_as(
+        "SELECT uid,created_at_ms FROM firebase_identities WHERE scan_id<>$1 AND NOT deleted",
+    )
+    .bind(scan)
+    .fetch_all(pool)
+    .await?;
+    for (uid, version) in missing {
         if !google.exists(&uid).await? {
-            capture_deleted(pool, &uid).await?;
+            capture_deleted_incarnation(pool, &uid, Some(version)).await?;
         }
     }
     sqlx::query("UPDATE firebase_identity_sync SET baseline_completed_at=COALESCE(baseline_completed_at,now()),completed_scan_at=now()").execute(pool).await?;
@@ -135,6 +151,8 @@ pub struct ProviderWorker {
     pub client: reqwest::Client,
     pub stream_key: String,
     pub stream_secret: String,
+    /// Trusted deployment/test endpoint, never derived from an application request.
+    pub stream_base_url: String,
     pub auth_effects: bool,
 }
 impl ProviderWorker {
@@ -152,7 +170,10 @@ impl ProviderWorker {
         .map_err(|_| anyhow!("Stream signing failed"))?;
         Ok(self
             .client
-            .request(method, format!("https://chat.stream-io-api.com{path}"))
+            .request(
+                method,
+                format!("{}{path}", self.stream_base_url.trim_end_matches('/')),
+            )
             .query(&[("api_key", &self.stream_key)])
             .header("Stream-Auth-Type", "jwt")
             .bearer_auth(token))
@@ -237,17 +258,45 @@ impl ProviderWorker {
         let mut url = reqwest::Url::parse("https://chat.stream-io-api.com/users/")?;
         url.path_segments_mut()
             .map_err(|_| anyhow!("invalid Stream path"))?
+            .pop_if_empty()
             .push(uid);
         let r = self
             .stream_request(reqwest::Method::DELETE, url.path())?
             .send()
             .await
             .map_err(|_| anyhow!("Stream network error"))?;
-        ensure!(
-            r.status().is_success() || r.status().as_u16() == 404,
-            "Stream delete HTTP {}",
-            r.status().as_u16()
-        );
+        if r.status() == reqwest::StatusCode::NOT_FOUND {
+            // Routing 404s are not proof of deletion. Confirm absence (or a real tombstone)
+            // through the canonical, authenticated query-users endpoint before acknowledging.
+            let snapshot: Value = self
+                .stream_request(reqwest::Method::GET, "/users")?
+                .query(&[(
+                    "payload",
+                    json!({"filter_conditions":{"id":uid},"sort":[],"presence":false,"limit":1})
+                        .to_string(),
+                )])
+                .send()
+                .await?
+                .error_for_status()?
+                .json()
+                .await?;
+            let users = snapshot["users"]
+                .as_array()
+                .ok_or_else(|| anyhow!("invalid Stream absence response"))?;
+            ensure!(
+                users.iter().all(|user| user["id"].as_str() == Some(uid)
+                    && user["deleted_at"]
+                        .as_str()
+                        .is_some_and(|value| chrono::DateTime::parse_from_rfc3339(value).is_ok())),
+                "Stream deletion not confirmed"
+            );
+        } else {
+            ensure!(
+                r.status().is_success(),
+                "Stream delete HTTP {}",
+                r.status().as_u16()
+            );
+        }
         Ok(())
     }
     async fn slack_auth(&self, id: &str, kind: &str, a: &Account) -> Result<()> {
@@ -317,6 +366,32 @@ impl ProviderWorker {
         Ok(())
     }
     pub async fn deliver(&self, id: &str, kind: &str, payload: Value) -> Result<()> {
+        // Separate from mutation locks: slow provider requests must not block Auth capture/API
+        // profile edits. Serialize provider writes themselves and read current state after locking.
+        let uid = match kind {
+            "auth_signup" | "auth_delete" => payload["localId"].as_str(),
+            "stream_profile" => payload["uid"].as_str(),
+            _ => None,
+        };
+        if let Some(uid) = uid {
+            let mut guard = self.pool.begin().await?;
+            let locked: bool = sqlx::query_scalar(
+                "SELECT pg_try_advisory_xact_lock(hashtextextended($1,920041758))",
+            )
+            .bind(uid)
+            .fetch_one(&mut *guard)
+            .await?;
+            ensure!(locked, "Stream identity delivery already in progress");
+            let result = self.deliver_locked(id, kind, payload).await;
+            // Transaction-scoped locks also release on cancellation/panic, without a leaked
+            // session lock returning to the pool. A failed lock/commit leaves the job retryable.
+            guard.commit().await?;
+            result
+        } else {
+            self.deliver_locked(id, kind, payload).await
+        }
+    }
+    async fn deliver_locked(&self, id: &str, kind: &str, payload: Value) -> Result<()> {
         match kind {
             "auth_signup" => {
                 let a: Account = serde_json::from_value(payload)?;

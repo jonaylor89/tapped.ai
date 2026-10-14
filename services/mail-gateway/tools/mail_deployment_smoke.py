@@ -29,7 +29,7 @@ def request_json(url: str, payload: dict, headers: dict[str, str] | None = None)
     request = urllib.request.Request(
         url,
         data=json.dumps(payload, separators=(",", ":")).encode(),
-        headers={"content-type": "application/json", **(headers or {})},
+        headers={"content-type": "application/json", "User-Agent": "Tapped-Mail-Deployment-Smoke/1.0", **(headers or {})},
         method="POST",
     )
     with urllib.request.urlopen(request, timeout=30) as response:
