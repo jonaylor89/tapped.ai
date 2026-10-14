@@ -344,22 +344,23 @@ async fn performers_connect_with_firebase_and_read_their_account_through_mcp() {
         json!({"jsonrpc":"2.0","id":2,"method":"tools/list"}),
     )
     .await;
-    let names: Vec<&str> = list["result"]["tools"]
+    let mut names: Vec<&str> = list["result"]["tools"]
         .as_array()
         .unwrap()
         .iter()
         .map(|tool| tool["name"].as_str().unwrap())
         .collect();
+    names.sort_unstable();
     assert_eq!(
         names,
         [
-            "search",
+            "get_booking",
+            "get_opportunity",
             "get_profile",
             "list_my_bookings",
-            "get_booking",
             "list_opportunities",
+            "search",
             "search_opportunities",
-            "get_opportunity"
         ]
     );
     assert!(

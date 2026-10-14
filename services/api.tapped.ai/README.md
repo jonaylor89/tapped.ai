@@ -7,8 +7,9 @@ check out our [webapp](https://app.tapped.ai) and [api docs](https://api.tapped.
 
 ## MCP server
 
-`POST /mcp` is a remote [MCP](https://modelcontextprotocol.io) server (Streamable
-HTTP, stateless, JSON responses) that lets performers use their Tapped account from
+`/mcp` is a remote [MCP](https://modelcontextprotocol.io) server (Streamable HTTP,
+stateless, served by the official [`rmcp`](https://crates.io/crates/rmcp) SDK) that lets
+performers use their Tapped account from
 Claude or any MCP client. Connect with the URL `https://api.tapped.ai/mcp` (a custom
 connector in Claude, or `claude mcp add --transport http tapped https://api.tapped.ai/mcp`).
 
