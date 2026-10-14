@@ -55,12 +55,22 @@ docker build -f services/ticket-crawler/Dockerfile .
 
 Old Firestore migration scripts are historical, non-runtime source under `services/event-crawler/archive/firestore-migrations`; do not run them against production. Existing source Firestore/provider archives are not deleted or replayed.
 
-## Production rollout (not yet executed for this change)
+## Production rollout
+
+Deployed 2026-10-14: API/identity/mail image `f0a96e4bed95f2bff27a67c5d66f7907d35fe8e1` (workflow `38624411904`), website revision `7b6574bd2ecafe75f0e2ff279d4daec9a0c35c3f` via local `vercel deploy --target production`, and native iOS release archive uploaded successfully to App Store Connect (Apple processing pending at upload completion). The native upload is not an App Store public release.
+
+Production backup restored and both migrations rehearsed against all imported data before rollout. Private archives contain 118,104 original profiles and 14,629 invalid-record snapshots; all 12,927 reviews remain, with 118 legacy duplicates excluded from read models. All constraints validate. Fresh synthetic Auth/signup/profile/Stream revocation/hosted-verification/deletion checks passed; zero pending external effects. Public normalized search/statistics and API readiness passed.
+
+Typesense container, search tunnel ingress/DNS and obsolete environment entries were removed. Historical index files remain. No application code was deployed to Cloudflare; Postmark and StoreKit were untouched.
+
+**Owner deployment scope is iOS, website and API only. Neither event nor ticket crawler was run or scheduled.** Image preparation is not execution. The unused crawler runtime configuration/credentials were moved to private backup; its Postgres login and Storage service account are disabled. Future crawler execution requires new owner approval. The 157,120 processed-URL baseline records derive only from existing Postgres booking provenance; no sites were crawled, no original booking IDs were rewritten, and no notifications were replayed.
+
+Historical rollout procedure (crawler execution is NOT approved):
 
 1. Back up Postgres and test restore. Pause crawler producers and identity worker; keep writes quiescent while applying `20261024000000` and `20261024010000`. These migrations preserve source/provenance and do not replay historical effects. Do not rerun the old Firestore import after canonical cutover.
 2. Deploy the matching Rust image and restart the identity worker, then check readiness, counts, normalized filters, visibility and disabled-account behavior. Do not roll an old identity worker back across this boundary without reconciling account state.
-3. Provision restricted crawler credentials/Storage ADC, deploy rebuilt crawler images, and resume producers. Verify a retry/correction against a disposable fixture before normal scheduling.
+3. Only after separate owner approval: provision restricted crawler credentials/Storage ADC and validate producer deduplication before executing any job. Do not resume/start either crawler as part of the app/website/API deployment.
 4. Apply updated Compose. Explicitly stop/remove the old Typesense container and remove its tunnel ingress/DNS route in the infrastructure configuration. Preserve `/opt/typesense/data`, source Firestore and analytics/billing archives. Removing the service from Compose alone does not stop an orphaned running container. No blanket `--remove-orphans` or volume deletion.
 5. Remove obsolete Typesense environment entries after their consumers are confirmed absent. Never print credentials. Postmark remains owner-managed and is untouched.
 
-Local validation is not a production rollout or live-provider verification.
+Private recovery checkpoints remain under `/root/postgres-first-backup/`. App Store Connect processing/TestFlight availability and App Store publication must be verified separately; successful upload alone does not establish them.
