@@ -123,3 +123,28 @@ async fn idle_pending_expiry_uses_its_partial_index_not_confirmed_history() {
     assert!(!plan.to_string().contains("Seq Scan"));
     cleanup(pool, admin, name).await;
 }
+
+#[tokio::test]
+async fn booker_reviews_expose_booker_info_for_requesters_without_a_booker_section() {
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    sqlx::query("INSERT INTO users(id,username,profile) VALUES('venue','venue','{\"venueInfo\":{}}'),('unreviewed','unreviewed','{\"bookerInfo\":null}')")
+        .execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO reviews(id,review_type,reviewee_id,overall_rating) VALUES('review','booker','venue',4)")
+        .execute(&pool).await.unwrap();
+    let docs: Vec<(String, Value)> =
+        sqlx::query_as("SELECT id,doc->'bookerInfo' FROM api_users ORDER BY id")
+            .fetch_all(&pool)
+            .await
+            .unwrap();
+    assert_eq!(docs[0].0, "unreviewed");
+    assert!(
+        docs[0].1.is_null(),
+        "no booker reviews keeps bookerInfo absent"
+    );
+    assert_eq!(docs[1].0, "venue");
+    assert_eq!(docs[1].1["reviewCount"], 1);
+    assert_eq!(docs[1].1["rating"].as_f64(), Some(4.0));
+    cleanup(pool, admin, name).await;
+}

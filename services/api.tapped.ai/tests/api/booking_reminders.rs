@@ -85,6 +85,16 @@ async fn confirmation_schedules_all_offsets_once_and_parallel_delivery_is_atomic
     );
     assert_eq!(
         sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM activities WHERE activity_type='bookingReminder' AND from_user_id=CASE to_user_id WHEN 'requester' THEN 'requestee' ELSE 'requester' END"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap(),
+        6,
+        "every reminder names the other booking party as its sender"
+    );
+    assert_eq!(
+        sqlx::query_scalar::<_, i64>(
             "SELECT count(*) FROM external_effect_outbox WHERE kind='push'"
         )
         .fetch_one(&pool)
@@ -275,5 +285,34 @@ async fn failed_push_enqueue_rolls_back_the_activity_and_reminder_completion() {
         .unwrap();
     assert!(deliver_one(&pool).await.unwrap());
     assert_eq!(pending(&pool).await, 5);
+    cleanup(pool, admin, name).await;
+}
+
+#[tokio::test]
+async fn sender_migration_backfills_reminders_from_the_other_booking_party() {
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    fixture(&pool).await;
+    sqlx::query("INSERT INTO activities(id,activity_type,to_user_id,booking_id,occurred_at) VALUES('to-requester','bookingReminder','requester','booking',now()),('to-requestee','bookingReminder','requestee','booking',now())").execute(&pool).await.unwrap();
+    sqlx::raw_sql(include_str!(
+        "../../migrations/20261026000000_booking_reminder_sender.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let senders: Vec<(String, String)> = sqlx::query_as(
+        "SELECT id,from_user_id FROM activities WHERE activity_type='bookingReminder' ORDER BY id",
+    )
+    .fetch_all(&pool)
+    .await
+    .unwrap();
+    assert_eq!(
+        senders,
+        [
+            ("to-requestee".into(), "requester".into()),
+            ("to-requester".into(), "requestee".into())
+        ]
+    );
     cleanup(pool, admin, name).await;
 }

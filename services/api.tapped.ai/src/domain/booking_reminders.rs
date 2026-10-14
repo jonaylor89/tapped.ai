@@ -50,7 +50,8 @@ pub async fn deliver_one(pool: &PgPool) -> Result<bool, sqlx::Error> {
     if reminder.get::<bool, _>("valid") {
         let uid: String = reminder.get("user_id");
         let activity_id = format!("booking-reminder:{id}");
-        sqlx::query("INSERT INTO activities(id,activity_type,to_user_id,booking_id,occurred_at) VALUES($1,'bookingReminder',$2,$3,now()) ON CONFLICT(id) DO NOTHING")
+        // Clients require a sender on booking activities; a reminder comes from the other party.
+        sqlx::query("INSERT INTO activities(id,activity_type,from_user_id,to_user_id,booking_id,occurred_at) SELECT $1,'bookingReminder',CASE WHEN b.requester_id=$2 THEN b.requestee_id ELSE b.requester_id END,$2,b.id,now() FROM bookings b WHERE b.id=$3 ON CONFLICT(id) DO NOTHING")
             .bind(&activity_id).bind(&uid).bind(&booking_id).execute(&mut *tx).await?;
         crate::domain::external_effects::record_activity(
             &mut tx,
