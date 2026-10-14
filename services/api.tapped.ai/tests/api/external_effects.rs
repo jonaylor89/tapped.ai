@@ -51,6 +51,83 @@ pub(super) async fn cleanup(pool: PgPool, admin: PgPool, name: String) {
 }
 
 #[tokio::test]
+async fn auth_sdk_seconds_and_rest_milliseconds_share_lifecycle_keys_and_delete_baselines() {
+    use tapped_api_rs::domain::auth_lifecycle::{LifecycleEvent, LifecycleKind, receive};
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    for (uid, hook_first) in [("hook-first", true), ("scan-first", false)] {
+        let raw = Account {
+            local_id: uid.into(),
+            email: "smoke@tapped.ai".into(),
+            display_name: "Smoke".into(),
+            created_at: "1237".into(),
+        };
+        let mut hook = raw.clone();
+        hook.created_at = "1000".into();
+        if hook_first {
+            receive(
+                &pool,
+                &LifecycleEvent {
+                    kind: LifecycleKind::Signup,
+                    account: hook.clone(),
+                },
+            )
+            .await
+            .unwrap();
+        }
+        capture_account(&pool, &raw, uuid::Uuid::new_v4(), true)
+            .await
+            .unwrap();
+        receive(
+            &pool,
+            &LifecycleEvent {
+                kind: LifecycleKind::Signup,
+                account: hook.clone(),
+            },
+        )
+        .await
+        .unwrap();
+        let count: i64 = sqlx::query_scalar("SELECT count(*) FROM external_effect_outbox WHERE kind='auth_signup' AND payload->>'localId'=$1").bind(uid).fetch_one(&pool).await.unwrap();
+        assert_eq!(count, 1);
+        receive(
+            &pool,
+            &LifecycleEvent {
+                kind: LifecycleKind::Delete,
+                account: hook,
+            },
+        )
+        .await
+        .unwrap();
+        capture_account(&pool, &raw, uuid::Uuid::new_v4(), true)
+            .await
+            .unwrap();
+        let deleted: bool =
+            sqlx::query_scalar("SELECT deleted FROM firebase_identities WHERE uid=$1")
+                .bind(uid)
+                .fetch_one(&pool)
+                .await
+                .unwrap();
+        assert!(deleted);
+    }
+    // Execute the exact production migration against a populated legacy ledger/key.
+    sqlx::query("INSERT INTO firebase_identities(uid,email,display_name,created_at_ms,scan_id) VALUES('legacy','','',2345,$1)").bind(uuid::Uuid::new_v4()).execute(&pool).await.unwrap();
+    sqlx::query("INSERT INTO external_effect_outbox(id,kind,payload,delivered_at) VALUES('auth-signup:legacy:2345','auth_signup','{\"localId\":\"legacy\",\"createdAt\":\"2345\"}',now())").execute(&pool).await.unwrap();
+    sqlx::raw_sql(include_str!(
+        "../../migrations/20261023000000_auth_creation_precision.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
+    let preserved: (String, bool, String) = sqlx::query_as("SELECT id,delivered_at IS NOT NULL,payload->>'createdAt' FROM external_effect_outbox WHERE payload->>'localId'='legacy'").fetch_one(&pool).await.unwrap();
+    assert_eq!(
+        preserved,
+        ("auth-signup:legacy:2000".into(), true, "2345".into())
+    );
+    cleanup(pool, admin, name).await;
+}
+
+#[tokio::test]
 async fn auth_webhooks_are_signed_durable_concurrent_and_safe_for_out_of_order_incarnations() {
     use hmac::{Hmac, KeyInit, Mac};
     use sha2::Sha256;
@@ -145,7 +222,7 @@ async fn auth_webhooks_are_signed_durable_concurrent_and_safe_for_out_of_order_i
             .unwrap()
     );
     let mut newer = account;
-    newer["createdAt"] = json!((now + 1).to_string());
+    newer["createdAt"] = json!((now + 1000).to_string());
     let recreate = serde_json::to_vec(&json!({"kind":"signup","account":newer})).unwrap();
     assert_eq!(send(recreate).await.unwrap().status(), 204);
     assert_eq!(send(delete).await.unwrap().status(), 204);
@@ -155,7 +232,7 @@ async fn auth_webhooks_are_signed_durable_concurrent_and_safe_for_out_of_order_i
     .fetch_one(&pool)
     .await
     .unwrap();
-    assert_eq!(identity, (now + 1, false));
+    assert_eq!(identity, ((now / 1000 + 1) * 1000, false));
     assert_eq!(
         sqlx::query_scalar::<_, i64>("SELECT count(*) FROM external_effect_outbox")
             .fetch_one(&pool)

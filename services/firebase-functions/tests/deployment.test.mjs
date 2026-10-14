@@ -43,12 +43,12 @@ test("compiled exports match the allowlist and expose no Firestore triggers", ()
   }
 });
 
-test("selective deploys target the original project without force or blanket functions deployment", () => {
+test("selective Auth deploys confirm retry policy without allowing blanket deployment", () => {
   const args = deploymentArgs(["notifyFoundersOnSignUp", "notifyFoundersOnSignUp", "deleteStreamUser"]);
   assert.equal(args[1], "firebase-tools@14.22.0");
   assert.ok(args.includes("in-the-loop-306520"));
   assert.equal(args.at(-1), "functions:notifyFoundersOnSignUp,functions:deleteStreamUser");
-  assert.equal(args.includes("--force"), false);
+  assert.equal(args.includes("--force"), true);
 });
 
 test("deploys reject no names, retired writers, extensions and argument injection", () => {

@@ -128,6 +128,10 @@ jobs:
           # The image runs as the unprivileged `app` user (uid 10001). Give it the mail volume
           # (created by earlier root images). Firebase admin credentials are no longer mounted.
           docker compose run --rm --no-deps --interactive=false --user root --entrypoint chown api -R 10001:10001 /data
+          # Prevent an older identity worker writing incompatible lifecycle keys during migrations.
+          if docker inspect tapped-identity-worker-1 >/dev/null 2>&1; then
+            docker compose --profile identity stop identity-worker
+          fi
           docker compose up -d --no-deps api mail-worker
           if docker inspect tapped-identity-worker-1 >/dev/null 2>&1; then
             docker compose --profile identity up -d --no-deps identity-worker

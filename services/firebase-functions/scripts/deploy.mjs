@@ -19,6 +19,9 @@ export function deploymentArgs(names) {
     "in-the-loop-306520",
     "--config",
     "firebase.json",
+    // Firebase requires confirmation to enable retry policies. The allowlist contains
+    // only the four existing Auth transports; blanket/HTTP/extension deploys stay blocked.
+    "--force",
     "--only",
     [...new Set(names)].map((name) => `functions:${name}`).join(","),
   ];

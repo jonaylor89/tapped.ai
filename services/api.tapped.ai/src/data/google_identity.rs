@@ -21,7 +21,9 @@ pub struct Account {
 }
 impl Account {
     pub fn created_ms(&self) -> i64 {
-        self.created_at.parse().unwrap_or_default()
+        // Gen1 Auth events carry whole-second creation times; REST snapshots retain
+        // milliseconds. Use their common precision so both sources share one lifecycle key.
+        self.created_at.parse::<i64>().unwrap_or_default() / 1000 * 1000
     }
 }
 #[derive(Deserialize)]
@@ -187,7 +189,7 @@ mod tests {
             json!({"localId":"user","createdAt":"1234","passwordHash":"not-retained"}),
         )
         .unwrap();
-        assert_eq!(a.created_ms(), 1234);
+        assert_eq!(a.created_ms(), 1000);
         assert!(a.email.is_empty());
         assert!(
             serde_json::to_value(a)
