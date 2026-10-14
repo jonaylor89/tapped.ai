@@ -21,6 +21,7 @@ mod postgres_serving;
 pub mod public_docs;
 mod public_map;
 mod public_profile;
+mod read_model_performance;
 mod request_id;
 pub mod root;
 mod spotify_oauth;

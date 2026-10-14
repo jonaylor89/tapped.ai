@@ -12,6 +12,17 @@ use crate::{
     },
 };
 
+// Select by the existing normalized unique index before building JSON/statistics.
+// Never filter an aggregate profile projection by doc->>'username': that evaluates every profile.
+pub const USERNAME_LOOKUP_SQL: &str = r#"
+WITH selected AS MATERIALIZED (
+    SELECT id FROM users
+    WHERE lower(btrim(username))=lower(btrim($1))
+      AND length(btrim(username))>0 AND NOT deleted
+)
+SELECT v.doc FROM selected s JOIN api_users v USING(id)
+"#;
+
 /// The only production repository for migrated documents. Never falls back to Firestore.
 #[derive(Clone)]
 pub struct PostgresDatabase {
@@ -62,7 +73,7 @@ impl Database for PostgresDatabase {
         .await
     }
     async fn get_user_by_username(&self, username: &str) -> Result<UserModel> {
-        self.one("SELECT doc FROM api_users WHERE lower(doc->>'username')=lower($1) AND NOT (doc->>'deleted')::boolean",username).await
+        self.one(USERNAME_LOOKUP_SQL, username).await
     }
     async fn get_opportunity_by_id(&self, id: &str) -> Result<Opportunity> {
         self.one(
@@ -87,12 +98,10 @@ impl Database for PostgresDatabase {
         self.many("SELECT v.doc FROM api_reviews v JOIN reviews r USING(id,review_type,reviewee_id) WHERE r.reviewee_id=$1 AND r.review_type='booker' ORDER BY r.occurred_at DESC NULLS LAST,r.id DESC",id).await
     }
     async fn get_user_doc_by_username(&self, username: &str) -> Result<Option<Value>> {
-        Ok(
-            sqlx::query_scalar("SELECT doc FROM api_users WHERE lower(doc->>'username')=lower($1)")
-                .bind(username)
-                .fetch_optional(&self.pool)
-                .await?,
-        )
+        Ok(sqlx::query_scalar(USERNAME_LOOKUP_SQL)
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?)
     }
     async fn get_opportunity_doc(&self, id: &str) -> Result<Option<Value>> {
         Ok(

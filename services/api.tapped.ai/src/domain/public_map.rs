@@ -61,7 +61,7 @@ const MAP_SQL: &str = r#"
 WITH candidates AS MATERIALIZED (
     SELECT id, updated_at FROM users
     WHERE NOT deleted AND NOT shadow_banned AND location IS NOT NULL
-      AND EXISTS (SELECT 1 FROM unnest(occupations) o WHERE lower(o)='venue')
+      AND normalized_search_terms(occupations) @> ARRAY['venue']::text[]
       AND (($2::float8 <= $4::float8 AND location::geometry && ST_MakeEnvelope($2,$1,$4,$3,4326))
         OR ($2::float8 > $4::float8 AND
           (location::geometry && ST_MakeEnvelope($2,$1,180,$3,4326)
