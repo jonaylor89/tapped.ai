@@ -1099,13 +1099,12 @@ fn mailbox_username(address: &str) -> &str {
         .split('>')
         .next()
         .unwrap_or_default();
-    let local = mailbox
+    mailbox
         .split('@')
         .next()
         .unwrap_or_default()
         .trim()
-        .trim_matches('<');
-    local.strip_prefix("reply+").unwrap_or(local)
+        .trim_matches('<')
 }
 
 async fn record_orphan_and_notify(

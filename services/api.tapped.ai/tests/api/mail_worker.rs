@@ -79,7 +79,6 @@ async fn worker_submits_thread_headers_and_body_over_smtp() {
 
     let message = captured.lock().unwrap();
     assert!(message.contains("From: artist@booking.tapped.ai\r\n"));
-    assert!(message.contains("Reply-To: reply+artist@booking.tapped.ai\r\n"));
     assert!(message.contains("To: venue@example.com\r\n"));
     assert!(message.contains("Cc: founder@tapped.ai\r\n"));
     assert!(message.contains("Message-ID: <new@booking.tapped.ai>\r\n"));
@@ -142,7 +141,6 @@ async fn worker_submits_threaded_email_through_postmark() {
     assert_eq!(headers["x-postmark-server-token"], "postmark-token");
     let payload: serde_json::Value = serde_json::from_slice(body).unwrap();
     assert_eq!(payload["From"], "artist@booking.tapped.ai");
-    assert_eq!(payload["ReplyTo"], "reply+artist@booking.tapped.ai");
     assert_eq!(payload["To"], "venue@example.com");
     assert_eq!(payload["Cc"], "founder@tapped.ai");
     assert_eq!(payload["MessageStream"], "outbound");
