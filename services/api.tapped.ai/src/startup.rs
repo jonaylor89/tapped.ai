@@ -445,6 +445,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             post(backfill_email_message),
         )
         .nest("/app/v1", app_v1_authenticated.merge(app_v1_public))
+        .merge(crate::domain::mcp::router(state.clone(), rate_limits))
         .nest_api_service("/v1", v1_routes(state.clone(), rate_limits))
         .nest_api_service("/docs", docs_routes(state.clone()))
         .finish_api_with(&mut api, api_docs);

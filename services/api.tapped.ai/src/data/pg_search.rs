@@ -9,7 +9,7 @@ use sqlx::{PgPool, Postgres, QueryBuilder};
 use super::search::{Search, UserSearchOptions};
 use crate::domain::models::user::UserModel;
 
-#[derive(Debug, Default, Deserialize, Serialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, Default, Deserialize, Serialize, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase", default, deny_unknown_fields)]
 pub struct SearchParams {
     pub q: String,

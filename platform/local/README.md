@@ -52,6 +52,21 @@ them in the emulator UI and run `firebase emulators:export emulator-seed --proje
 cd apps/app.tapped.ai && NEXT_PUBLIC_TAPPED_API_URL=http://localhost:8080 pnpm dev
 ```
 
+## MCP server
+
+The API serves the MCP server at `http://localhost:8080/mcp` when started with
+`MCP_ISSUER=http://localhost:8080` and `MCP_CONSENT_URL=http://localhost:3000/oauth/authorize`.
+Run the web app against the Auth emulator so the consent page can sign in:
+
+```sh
+cd apps/app.tapped.ai && NEXT_PUBLIC_TAPPED_API_URL=http://localhost:8080 \
+  NEXT_PUBLIC_FIREBASE_API_KEY=demo-key NEXT_PUBLIC_FIREBASE_PROJECT_ID=demo-tapped \
+  NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=localhost NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=localhost:9099 pnpm dev
+claude mcp add --transport http tapped-local http://localhost:8080/mcp   # then /mcp → Authenticate
+```
+
+Sign in on the consent page as a seeded account (e.g. `alice@example.test` / `local-password`).
+
 ## iOS
 
 Debug builds read these launch environment variables (Xcode scheme or `SIMCTL_CHILD_*` for `simctl launch`):

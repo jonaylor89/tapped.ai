@@ -6,6 +6,7 @@ pub mod health_check;
 pub mod helpers;
 pub mod mail_bridge;
 pub mod mail_worker;
+mod mcp;
 pub mod openapi;
 pub mod otel;
 pub mod performers;

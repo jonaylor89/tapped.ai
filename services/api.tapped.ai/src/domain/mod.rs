@@ -11,6 +11,7 @@ pub mod identity_worker;
 pub mod mail_bridge;
 pub mod mail_composer;
 pub mod mail_worker;
+pub mod mcp;
 pub mod models;
 pub mod places;
 pub mod public_docs;

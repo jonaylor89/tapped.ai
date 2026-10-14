@@ -73,10 +73,10 @@ fn is_safe_path(value: &str) -> bool {
 #[derive(Debug, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct AutocompleteParams {
-    query: String,
+    pub(crate) query: String,
     /// Comma-separated primary types, e.g. `locality` or `(cities)`.
-    types: Option<String>,
-    session_token: Option<String>,
+    pub(crate) types: Option<String>,
+    pub(crate) session_token: Option<String>,
 }
 
 fn parse_types(types: Option<&str>) -> Option<Vec<String>> {
@@ -158,7 +158,7 @@ pub async fn get_place(
 }
 
 /// Process cache, then Firestore `googlePlacesCache`, then Google.
-async fn place_details(
+pub(crate) async fn place_details(
     state: &AppStateDyn,
     place_id: &str,
     session_token: Option<&str>,

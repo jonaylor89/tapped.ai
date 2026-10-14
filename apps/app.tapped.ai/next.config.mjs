@@ -44,6 +44,19 @@ const nextConfig = {
 			},
 		],
 	},
+	async headers() {
+		// The MCP sign-in/consent page must never be framed (clickjacking an "Allow" click).
+		return [
+			{
+				source: "/oauth/:path*",
+				headers: [
+					{ key: "X-Frame-Options", value: "DENY" },
+					{ key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+					{ key: "Referrer-Policy", value: "no-referrer" },
+				],
+			},
+		];
+	},
 	async rewrites() {
 		return [
 			{
