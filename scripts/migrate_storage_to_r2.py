@@ -329,20 +329,26 @@ UPDATE opportunities t SET flier_url = m.new_url FROM m
  WHERE m.table_name = 'opportunities' AND m.column_name = 'flier_url' AND t.id::text = m.row_id AND t.flier_url = m.old_url;
 UPDATE users t SET profile_picture = m.new_url FROM m
  WHERE m.table_name = 'users' AND m.column_name = 'profile_picture' AND t.id::text = m.row_id AND t.profile_picture = m.old_url;
--- JSON documents: new URLs contain nothing JSON escapes, so a textual replace keeps them valid.
+-- JSON documents: new URLs contain nothing JSON escapes, so a textual replace keeps them valid. A
+-- NULL new URL replaces the whole JSON string with JSON null (replace() itself would return NULL).
+CREATE FUNCTION pg_temp.swap_url(doc jsonb, old_url text, new_url text) RETURNS jsonb LANGUAGE sql AS $f$
+  SELECT CASE WHEN new_url IS NULL
+    THEN replace(doc::text, to_jsonb(old_url)::text, 'null')::jsonb
+    ELSE replace(doc::text, old_url, new_url)::jsonb END
+$f$;
 DO $$
 DECLARE r record;
 BEGIN
   FOR r IN SELECT DISTINCT old_url, new_url FROM m WHERE table_name = 'users' AND column_name = 'profile' LOOP
-    UPDATE users SET profile = replace(profile::text, r.old_url, r.new_url)::jsonb
+    UPDATE users SET profile = pg_temp.swap_url(profile, r.old_url, r.new_url)
      WHERE strpos(profile::text, r.old_url) > 0;
   END LOOP;
   FOR r IN SELECT DISTINCT old_url, new_url FROM m WHERE table_name = 'legacy_profile_archive' LOOP
-    UPDATE legacy_profile_archive SET profile = replace(profile::text, r.old_url, r.new_url)::jsonb
+    UPDATE legacy_profile_archive SET profile = pg_temp.swap_url(profile, r.old_url, r.new_url)
      WHERE strpos(profile::text, r.old_url) > 0;
   END LOOP;
   FOR r IN SELECT DISTINCT old_url, new_url FROM m WHERE table_name = 'legacy_invalid_records' LOOP
-    UPDATE legacy_invalid_records SET original_record = replace(original_record::text, r.old_url, r.new_url)::jsonb
+    UPDATE legacy_invalid_records SET original_record = pg_temp.swap_url(original_record, r.old_url, r.new_url)
      WHERE strpos(original_record::text, r.old_url) > 0;
   END LOOP;
 END $$;

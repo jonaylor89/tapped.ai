@@ -8,6 +8,16 @@ Cloudflare account. Started 2026-10-14.
 | `tapped-media` | Public at `https://media.tapped.ai`; CORS `GET`/`HEAD`/`PUT` from `tapped.ai`, `app.tapped.ai` | Everything a live row references |
 | `tapped-media-archive` | Private | `legacy/{original key}`: objects no live row references |
 
+## Status
+
+- 2026-10-15: all 57,628 objects copied and verified (40,721 public, 15,478 archived). Postgres
+  rewritten in one transaction: 162,714 booking fliers, 6,316 profile pictures, 17 opportunity
+  fliers and 15 press kits now point at `media.tapped.ai`; 31,079 booking fliers, 4 profile pictures
+  and 1 press kit that were not media (HTML bot walls, error pages, empty files) or the overwritten
+  placeholder are NULL. Backup: `/opt/backups/postgres/pre-r2-rewrite-20261015T1047.dump`.
+  imgproxy recreated with `media.tapped.ai` allowed.
+- Firebase Storage is still intact and read by the App Store build. Not deleted.
+
 ## Layout
 
 ```
@@ -25,6 +35,10 @@ media is one `users/{uid}/` delete.
 `bookings/` and `booking/` were single objects that a crawler bug (`convertToSignedUrl` naming files
 with `url.split("/").pop()`) overwrote with every flier whose URL ended in `/`; 2,712 bookings showed
 whichever flier came last. They are archived and those bookings' `flier_url` is set to NULL.
+
+Crawled "fliers" also include HTML bot walls, error pages, JSON/XML errors and empty files, often named
+`*.jpg`. Objects are classified by their bytes only; anything that is not an image, video, audio or PDF
+is archived and its reference set to NULL (`not-media`).
 
 ## Uploads
 
