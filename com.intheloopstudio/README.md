@@ -69,6 +69,51 @@ xcrun simctl install booted <DerivedData>/Build/Products/Debug-iphonesimulator/T
 SIMCTL_CHILD_TAPPED_MOCK=1 SIMCTL_CHILD_TAPPED_MOCK_SIGNED_IN=1 SIMCTL_CHILD_TAPPED_MOCK_PREMIUM=1 xcrun simctl launch booted com.intheloopstudio
 ```
 
+## Xcode Cloud releases + PostHog symbols
+
+Keep releases in Xcode Cloud using `com.intheloopstudio/Tapped.xcodeproj`, scheme **Runner**, and a Release
+archive action. The root [`ci_scripts/ci_post_xcodebuild.sh`](../ci_scripts/ci_post_xcodebuild.sh) uploads
+that action's own `CI_ARCHIVE_PATH/dSYMs` to PostHog project **75329**. It skips non-archive and failed actions;
+a successful archive fails the post-build step if credentials, symbols, installation or upload fail.
+No separate GitHub release workflow, App Store Connect API key or signing `.p8` is needed for this integration.
+Xcode Cloud continues to handle signing, build numbers and TestFlight distribution as configured in its workflow.
+
+In the release workflow's **Environment → Environment Variables**, add **`POSTHOG_CLI_API_KEY`** and mark it
+**Secret**. Use a PostHog personal API key with **Error tracking: Write** and **Organization: Read** scopes and
+access to project 75329, not the public project ingestion key. Never commit it or paste it into chat.
+
+The hook installs native PostHog CLI **0.18.10** with pinned SHA-256 checksums (Apple Silicon and Intel);
+it needs neither Node nor Homebrew. It checks the app/dSYM UUIDs and reads the app ID, version and build from
+the **archive's** `Info.plist`, not from the repository's version or a separate build. It uploads all dSYMs in
+the archive, including widget/framework symbols, without bundling source code.
+
+After the first Cloud archive:
+
+1. Check the post-Xcodebuild log for `Uploading PostHog symbols` and a successful CLI result.
+2. Confirm the symbol sets appear in [PostHog](https://us.posthog.com/project/75329) under error tracking.
+3. Confirm TestFlight processing succeeds separately. Upload success alone does not verify Apple processing
+   or crash symbolication. A post-build failure is not proof that no distribution occurred; check App Store
+   Connect before retrying a release.
+
+For upload-only recovery, obtain the **original shipped** `.xcarchive` from the build artifacts and run
+`posthog-cli` **0.18.10** locally. Set `POSTHOG_CLI_HOST=https://us.posthog.com`,
+`POSTHOG_CLI_PROJECT_ID=75329` and `POSTHOG_CLI_API_KEY`, then run:
+
+```bash
+posthog-cli dsym upload --directory /path/to/Tapped.xcarchive/dSYMs --main-dsym Tapped.app.dSYM \
+  --release-name com.intheloopstudio --release-version <app-version> --build <build-number>
+```
+
+Use the version/build from that archive's `Info.plist` (`ApplicationProperties`). Never use symbols from a
+fresh build to repair a shipped build: UUIDs must match. Manually archived builds can also be symbolicated,
+but require a separate upload from **their own** `.xcarchive/dSYMs` directory.
+
+Hook regression tests (no credentials or network needed):
+
+```bash
+python3 -m unittest discover -s ci_scripts/tests -v  # from the repository root
+```
+
 ## Mock mode
 
 `Dependencies.resolve()` picks `.mock` when any of these hold: env `TAPPED_MOCK=1`, the `TAPPED_MOCK` Swift
