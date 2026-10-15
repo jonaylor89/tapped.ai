@@ -1,11 +1,10 @@
 import Foundation
 @preconcurrency import FirebaseAuth
 @preconcurrency import FirebaseCore
-@preconcurrency import FirebaseCrashlytics
-@preconcurrency import FirebaseMessaging
 @preconcurrency import GoogleSignIn
 
 /// All Firebase SDK entry points the app target needs, so `import Firebase*` never appears outside `TappedData`.
+/// Firebase is used for Auth only; push is direct APNs and error reporting is PostHog.
 public enum FirebaseBootstrap {
     /// True when a real `GoogleService-Info.plist` (not the placeholder) is bundled.
     public static func hasConfiguration(in bundle: Bundle = .main) -> Bool {
@@ -53,8 +52,8 @@ public enum FirebaseBootstrap {
 
     static let localProjectID = "demo-tapped"
 
-    /// A fake `demo-*` app, so no SDK (Remote Config, Crashlytics, FCM, Installations) can reach the
-    /// production project bundled in `GoogleService-Info.plist`.
+    /// A fake `demo-*` app, so Firebase can never reach the production project bundled in
+    /// `GoogleService-Info.plist`.
     static var localOptions: FirebaseOptions {
         let options = FirebaseOptions(googleAppID: "1:000000000000:ios:0000000000000000", gcmSenderID: "000000000000")
         options.projectID = localProjectID
@@ -67,8 +66,6 @@ public enum FirebaseBootstrap {
     private static func configureLocal() {
         #if DEBUG
         FirebaseApp.configure(options: localOptions)
-        Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(false)
-        Messaging.messaging().isAutoInitEnabled = false
         if let auth = emulatorAddress("FIREBASE_AUTH_EMULATOR_HOST") {
             Auth.auth().useEmulator(withHost: auth.host, port: auth.port)
         }
@@ -79,19 +76,5 @@ public enum FirebaseBootstrap {
     @MainActor
     public static func handle(url: URL) -> Bool {
         GIDSignIn.sharedInstance.handle(url)
-    }
-
-    public static func setAPNSToken(_ deviceToken: Data) {
-        guard isConfigured, !usesEmulators else { return }
-        Messaging.messaging().apnsToken = deviceToken
-    }
-
-    public static func fcmToken() async throws -> String {
-        try await Messaging.messaging().token()
-    }
-
-    public static func record(error: any Error) {
-        guard isConfigured, !usesEmulators else { return }
-        Crashlytics.crashlytics().record(error: error)
     }
 }

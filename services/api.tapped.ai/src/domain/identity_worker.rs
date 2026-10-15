@@ -1,6 +1,9 @@
 //! Firebase Auth lifecycle capture is identity-only, never a Firestore synchronization worker.
 use crate::{
-    data::google_identity::{Account, GoogleIdentity},
+    data::{
+        apns::Apns,
+        google_identity::{Account, GoogleIdentity},
+    },
     domain::{
         external_effects,
         founder_notifications::{self, FounderMessage},
@@ -163,6 +166,8 @@ pub struct ProviderWorker {
     /// Trusted deployment/test endpoint, never derived from an application request.
     pub stream_base_url: String,
     pub auth_effects: bool,
+    /// Unset until the APNs key is provisioned; APNs pushes stay queued for retry meanwhile.
+    pub apns: Option<Apns>,
 }
 impl ProviderWorker {
     fn stream_request(
@@ -472,7 +477,19 @@ impl ProviderWorker {
             }
             "push" => {
                 let active:bool=sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM device_tokens t JOIN users u ON u.id=t.user_id WHERE t.token=$1 AND t.user_id=$2 AND NOT u.deleted)").bind(payload["token"].as_str()).bind(payload["uid"].as_str()).fetch_one(&self.pool).await?;
-                if active && !self.google.push(&payload).await? {
+                let delivered = !active
+                    || match payload["provider"].as_str() {
+                        Some("apns") => {
+                            let apns = self
+                                .apns
+                                .as_ref()
+                                .ok_or_else(|| anyhow!("APNs not configured"))?;
+                            apns.push(&payload).await?
+                        }
+                        // Effects queued before the APNs cutover carry no provider.
+                        _ => self.google.push(&payload).await?,
+                    };
+                if !delivered {
                     sqlx::query("DELETE FROM device_tokens WHERE token=$1 AND user_id=$2")
                         .bind(payload["token"].as_str())
                         .bind(payload["uid"].as_str())

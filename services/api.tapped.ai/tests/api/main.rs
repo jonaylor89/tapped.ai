@@ -1,3 +1,4 @@
+mod apns_push;
 pub mod auth;
 mod booking_emails;
 mod booking_reminders;

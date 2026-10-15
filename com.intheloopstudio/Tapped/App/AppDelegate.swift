@@ -29,12 +29,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
-        FirebaseBootstrap.setAPNSToken(deviceToken)
+        APNsDeviceToken.set(deviceToken)
         AppEnvironment.inbound.apnsTokenRegistered()
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: any Error) {
-        FirebaseBootstrap.record(error: error)
+        ErrorReporting.record(error: error)
     }
 
     nonisolated func userNotificationCenter(

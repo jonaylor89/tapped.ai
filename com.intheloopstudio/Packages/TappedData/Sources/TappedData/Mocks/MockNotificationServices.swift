@@ -2,7 +2,7 @@ import Foundation
 
 /// Records permission prompts, saved tokens and badge updates so tests can assert on them.
 public actor MockNotificationRepository: NotificationRepository {
-    public static let sampleToken = "mock-fcm-token"
+    public static let sampleToken = "mock-apns-token"
 
     private let grantsPermission: Bool
     /// Explicit (prompting) requests.

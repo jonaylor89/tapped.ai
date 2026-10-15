@@ -74,7 +74,7 @@ final class ChannelViewModel {
             }
         } catch is CancellationError {
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             phase = .failed
         }
     }
@@ -124,7 +124,7 @@ final class ChannelViewModel {
             try await chat.sendMessage(text, conversationId: conversationId)
             sentCount += 1
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             draft = text
         }
     }

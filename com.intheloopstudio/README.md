@@ -35,9 +35,11 @@ Other config lives in `Info.plist` and is read by `TappedConfig` (`TappedData/Se
 | `TappedAPIURL` | optional; Tapped API base URL used by authenticated app requests, including venue outreach and Stream tokens (default `https://api.tapped.ai`) |
 | `TappedStreamAPIKey` | optional; Stream Chat **public** app key. The user token comes from the authenticated Tapped API, never from the app bundle |
 
-Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; configure the `ios_*` keys in the Firebase console):
+Launch gates come from `GET /app/v1/public/app-config` (`TappedAPIRemoteConfigRepository`; cached per API host for the
+next launch, 3 s fetch timeout). Edit the single Postgres `app_config` row, e.g.
+`UPDATE app_config SET down_for_maintenance = true;` — clients pick it up within ~30 s (`Cache-Control: max-age=30`).
 
-| Key | Type / default | Effect |
+| Column | Type / default | Effect |
 | --- | --- | --- |
 | `down_for_maintenance` | bool / `false` | `MaintenanceView` gate |
 | `booking_fee` | number | fee shown on booking forms |
@@ -141,7 +143,8 @@ Dependency direction: `Tapped → TappedUI, TappedData → TappedDomain`. `Tappe
 and `Router`. `AppSession.run()` drives
 `ContentView`: `splash → maintenance | updateRequired | signedOut (AuthFlowView) | confirmEmail | onboarding
 (OnboardingView) | premiumRequired (final onboarding step) | signedIn (ShellView)`. Entering `signedIn` publishes `latestAppVersion`, requests push permission
-and registers the FCM token through the authenticated Rust API. Current session profiles refresh centrally every 30 seconds; edits update the session immediately without discarding unsaved drafts.
+and registers the raw APNs device token (with its `development`/`production` environment) through the authenticated Rust API;
+the identity worker delivers straight to APNs. Current session profiles refresh centrally every 30 seconds; edits update the session immediately without discarding unsaved drafts.
 
 Links: `TappedApp.onOpenURL` (universal links on the associated domains + the `com.intheloopstudio://` scheme) and
 notification taps (`AppDelegate` → `NotificationPayload`, using the `url` payload key) feed `InboundLinks`, which
@@ -209,8 +212,9 @@ clustering), glass top chrome (avatar · search capsule · messages, venues/gigs
   `tappedGlass(_:in:interactive:)`; forms/settings use native `Form`/inset-grouped lists; system font + SF Symbols;
   accent (`TappedColors.accent`, `#0086CC`) as tint/outline, not fills. Use `TappedSpacing`/`TappedRadius`/
   `GlassRadius`/`GlassMetrics`/`GlassMotion` tokens instead of literals.
-- **SDKs**: Firebase (Auth, Remote Config, Crashlytics, Messaging), GoogleSignIn, PostHog, Rive,
-  Stream Chat (messaging session). No Firestore/Functions serving SDK or Typesense; application data, functions and search use Rust API clients. Not used: Firebase Analytics, Stripe, RevenueCat, Mapbox, Lottie, Google Maps SDK.
+- **SDKs**: Firebase (Auth only), GoogleSignIn, PostHog (analytics + error tracking: crash autocapture and
+  `ErrorReporting.record(error:)` non-fatals), Rive,
+  Stream Chat (messaging session). No Firestore/Functions serving SDK or Typesense; application data, functions and search use Rust API clients. Not used: Firebase Analytics, Remote Config, Crashlytics, Messaging (FCM), Stripe, RevenueCat, Mapbox, Lottie, Google Maps SDK.
 - **Pinning**: `.package(url:…, exact: "x.y.z")` only. After changing a dependency, resolve in Xcode (or
   `xcodebuild -resolvePackageDependencies`) and commit
   `Tapped.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`. CI resolves with
@@ -269,7 +273,7 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 | Profile | Profile (hero, stats, socials, reviews, services, bookings; **message** via `MessageUserButton` → `ChatRepository.createDirectConversation` → `streamChannel`), settings / edit profile (delete account behind `.reauthenticationSheet`), share profile (QR), tasks, activity (unread badge on the Discover avatar), image viewer | `profile`, `settings`, `shareProfile`, `tasks`, `activities`, `image` | #22 |
 | Bookings | Bookings list (upcoming/past, sent/received), booking detail + accept/decline/cancel, create booking, confirmation, add past booking, booking history map, request to perform (+ add collaborators) and confirmation, services list / detail / create-edit | `bookings`, `booking`, `createBooking`, `bookingConfirmation`, `addPastBooking`, `bookingHistory`, `requestToPerform`, `requestToPerformConfirmation`, `addCollaborators`, `serviceSelection`, `service`, `createService` | #20 |
 | Search & opportunities | Search (performers/venues, recents), advanced search, location form, gig search (venue fit), opportunity detail + apply, opportunities list, feed, interested users, reviews (new reviews carry the most recent confirmed booking id between the two users) | `search`, `advancedSearch`, `locationForm`, `gigSearch`, `opportunity`, `opportunities`, `opportunityFeed`, `interestedUsers`, `reviews` | #23 |
-| Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), FCM token, Remote Config gates (maintenance, update required/available), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
+| Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), APNs token, API app-config gates (maintenance, update required/available), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
 | Premium, messaging, admin | StoreKit 2 final onboarding activation (`PaywallView`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
 
 `Route.discovery` pops to the root (Discover is the shell root).

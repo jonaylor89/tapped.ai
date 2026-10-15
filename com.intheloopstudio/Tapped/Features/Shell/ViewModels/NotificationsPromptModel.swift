@@ -66,7 +66,7 @@ final class NotificationsPromptModel {
                 try await notifications.saveDeviceToken(userId: userId)
             }
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
         }
     }
 

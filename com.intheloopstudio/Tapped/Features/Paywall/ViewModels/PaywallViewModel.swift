@@ -83,7 +83,7 @@ final class PaywallViewModel {
             if selectedProductId == nil { selectedProductId = products.first?.id }
             phase = products.isEmpty && !isPremium ? .failed(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again")) : .ready
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             phase = isPremium ? .ready : .failed(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again"))
         }
     }
@@ -117,7 +117,7 @@ final class PaywallViewModel {
                 await analytics.track("premium_purchase_cancelled")
             }
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             errorCount += 1
             notice = ErrorCopy.action("complete the purchase", hint: "check your App Store account or try restoring purchases")
         }
@@ -137,7 +137,7 @@ final class PaywallViewModel {
                 notice = "no purchases to restore"
             }
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             errorCount += 1
             notice = ErrorCopy.action("restore purchases")
         }

@@ -10,6 +10,8 @@ public struct PostHogAnalytics: AnalyticsRepository {
         let config = PostHogConfig(apiKey: apiKey, host: host)
         config.captureScreenViews = false
         config.captureApplicationLifecycleEvents = true
+        // Replaces Crashlytics: fatal crashes are sent as `$exception` events on the next launch.
+        config.errorTrackingConfig.autoCapture = true
         PostHogSDK.shared.setup(config)
     }
 

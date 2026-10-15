@@ -56,8 +56,9 @@ public struct TappedAPIDataClient: Sendable {
         _ = try await request(path, method: method, body: encoder.encode(value))
     }
 
-    public func registerDeviceToken(_ token: String, platform: String) async throws {
-        try await send(["device-token"], method: "POST", value: ["token": token, "platform": platform])
+    public func registerAPNsDeviceToken(_ token: String, platform: String, environment: String) async throws {
+        try await send(["device-token"], method: "POST",
+                       value: ["token": token, "platform": platform, "provider": "apns", "environment": environment])
     }
 }
 

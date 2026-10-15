@@ -38,11 +38,18 @@ struct TappedAPIDataClientTests {
     }
     @Test func deviceTokensAreOnlySentToTheAuthenticatedAPI() async throws {
         StubAPIDataProtocol.respond("{}")
-        try await client().registerDeviceToken("device-test",platform:"ios")
+        try await client().registerAPNsDeviceToken("a1b2",platform:"ios",environment:"development")
         let request = try #require(StubAPIDataProtocol.lastRequest)
         #expect(request.url?.path == "/app/v1/device-token")
         #expect(request.httpMethod == "POST")
         #expect(request.value(forHTTPHeaderField:"Authorization") == "Bearer identity-test")
+        let body = try #require(request.httpBody)
+        let object = try #require(JSONSerialization.jsonObject(with: body) as? [String: String])
+        #expect(object == ["token":"a1b2","platform":"ios","provider":"apns","environment":"development"])
+    }
+    @Test func apnsDeviceTokensAreHexEncoded() {
+        APNsDeviceToken.set(Data([0x00, 0xab, 0x10, 0xff]))
+        #expect(APNsDeviceToken.value == "00ab10ff")
     }
     @Test func missingIdentityFailsBeforeNetwork() async {
         let client = TappedAPIDataClient(baseURL:URL(string:"https://api.example.test")!,idToken:{ nil })

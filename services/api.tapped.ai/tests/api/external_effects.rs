@@ -441,6 +441,7 @@ async fn mail_handoff_is_idempotent_and_failed_provider_jobs_remain_retryable() 
         stream_secret: String::new(),
         stream_base_url: "https://chat.stream-io-api.com".into(),
         auth_effects: false,
+        apns: None,
     };
     sqlx::query(
         "INSERT INTO email_templates(name,subject,text_body) VALUES('test','Test','Hello')",

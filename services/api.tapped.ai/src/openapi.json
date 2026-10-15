@@ -1503,6 +1503,42 @@
         }
       }
     },
+    "/app/v1/public/app-config": {
+      "get": {
+        "tags": [
+          "public"
+        ],
+        "summary": "Client launch configuration",
+        "description": "Maintenance and app-version gates, read by the iOS app before sign-in.",
+        "operationId": "get_app_config",
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfig"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/app/v1/public/search/{table}": {
       "post": {
         "tags": [
@@ -2359,6 +2395,37 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "AppConfig": {
+        "type": "object",
+        "required": [
+          "downForMaintenance",
+          "bookingFee",
+          "iosMinimumAppVersion",
+          "iosLatestAppVersion",
+          "premiumWaitlistEnabled"
+        ],
+        "properties": {
+          "downForMaintenance": {
+            "type": "boolean",
+            "description": "Blocks the app behind the maintenance screen."
+          },
+          "bookingFee": {
+            "type": "number",
+            "format": "double"
+          },
+          "iosMinimumAppVersion": {
+            "type": "string",
+            "description": "Semver; older iOS builds must update. Empty disables the gate."
+          },
+          "iosLatestAppVersion": {
+            "type": "string",
+            "description": "Semver; older iOS builds see a dismissible update prompt. Empty disables it."
+          },
+          "premiumWaitlistEnabled": {
+            "type": "boolean"
           }
         }
       },

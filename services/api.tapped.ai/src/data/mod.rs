@@ -1,3 +1,4 @@
+pub mod apns;
 pub mod database;
 pub mod google_identity;
 pub mod pg_database;

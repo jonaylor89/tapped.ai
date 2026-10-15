@@ -1,17 +1,42 @@
 import Foundation
-@preconcurrency import FirebaseMessaging
+import Synchronization
 import UIKit
 import UserNotifications
 
-/// `lib/data/prod/cloud_messaging_impl.dart`.
+/// The APNs device token from `didRegisterForRemoteNotificationsWithDeviceToken`, held until the session uploads it.
+public enum APNsDeviceToken {
+    private static let current = Mutex<String?>(nil)
+
+    public static func set(_ deviceToken: Data) {
+        let hex = deviceToken.map { String(format: "%02x", $0) }.joined()
+        current.withLock { $0 = hex }
+    }
+
+    public static var value: String? { current.withLock { $0 } }
+}
+
+/// Permission, APNs registration and badge plumbing. The Rust identity worker delivers straight to APNs.
 /// Stream Chat `addDevice` is owned by the messaging session (session 6).
-public struct FirebaseNotificationRepository: NotificationRepository {
-    /// Flutter writes `Platform.operatingSystem`.
+public struct APNsNotificationRepository: NotificationRepository {
     static let platform = "ios"
+    /// Matches the `aps-environment` entitlement: Debug signs with development, Release with production.
+    static var environment: String {
+        #if DEBUG
+        "development"
+        #else
+        "production"
+        #endif
+    }
 
     private let client: TappedAPIDataClient
-    public init(baseURL: URL = URL(string:"https://api.tapped.ai")!) {
+    private let deviceToken: @Sendable () -> String?
+
+    public init(
+        baseURL: URL = URL(string: "https://api.tapped.ai")!,
+        deviceToken: @escaping @Sendable () -> String? = { APNsDeviceToken.value }
+    ) {
         client = TappedAPIDataClient(baseURL: baseURL)
+        self.deviceToken = deviceToken
     }
 
     public func requestAuthorization() async throws -> Bool {
@@ -36,11 +61,11 @@ public struct FirebaseNotificationRepository: NotificationRepository {
     }
 
     public func saveDeviceToken(userId: String) async throws {
-        guard !FirebaseBootstrap.usesEmulators else { return }
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else { return }
-        let token = try await Messaging.messaging().token()
-        try await client.registerDeviceToken(token,platform:Self.platform)
+        // APNs may not have answered yet; `InboundLinks.apnsRegistrations` triggers the retry when it does.
+        guard let token = deviceToken() else { return }
+        try await client.registerAPNsDeviceToken(token, platform: Self.platform, environment: Self.environment)
     }
 
     public func setBadgeCount(_ count: Int) async {

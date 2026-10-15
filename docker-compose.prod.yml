@@ -117,9 +117,15 @@ services:
       STREAM_KEY: ${STREAM_KEY}
       STREAM_SECRET: ${STREAM_SECRET}
       AUTH_EFFECTS_ENABLED: ${AUTH_EFFECTS_ENABLED:-0}
+      # Direct APNs for iOS builds without FirebaseMessaging. Unset = APNs pushes stay queued.
+      APNS_KEY_FILE: ${APNS_KEY_FILE:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_TOPIC: ${APNS_TOPIC:-com.intheloopstudio}
     volumes:
       - mail-data:/data
       - /opt/tapped/identity/credentials.json:/run/secrets/identity.json:ro
+      - /opt/tapped/apns:/run/secrets/apns:ro
     depends_on:
       - api
 

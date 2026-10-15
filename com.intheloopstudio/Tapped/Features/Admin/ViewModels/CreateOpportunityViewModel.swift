@@ -156,7 +156,7 @@ final class CreateOpportunityViewModel {
         } catch let error as ValidationError {
             errorMessage = error.message
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             errorMessage = "error creating opportunity"
         }
         return nil

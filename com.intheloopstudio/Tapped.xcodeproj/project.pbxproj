@@ -1429,7 +1429,6 @@
 				2530953B252A359B1578A647 /* Resources */,
 				1527EA70A1CC5AD92A6F9DAE /* Frameworks */,
 				CB76C0359B1817992D6698A0 /* Embed Foundation Extensions */,
-				BA4B08F00A4BDBB35E770D27 /* Upload Crashlytics dSYMs */,
 			);
 			buildRules = (
 			);
@@ -1514,33 +1513,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		BA4B08F00A4BDBB35E770D27 /* Upload Crashlytics dSYMs */ = {
-			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
-				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
-				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
-				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
-			);
-			name = "Upload Crashlytics dSYMs";
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "# Release only; skipped when Firebase isn't configured (placeholder plist).\n[ \"${CONFIGURATION}\" = \"Release\" ] || exit 0\ngrep -q PLACEHOLDER \"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/GoogleService-Info.plist\" && exit 0\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		195EFF9B53F536512F181C7E /* Sources */ = {

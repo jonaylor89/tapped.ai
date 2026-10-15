@@ -10,7 +10,7 @@ import UIKit
 @MainActor
 final class InboundLinks {
     private(set) var pending: DeepLink?
-    /// Bumped whenever APNs hands us a device token, so the session can (re)save the FCM token.
+    /// Bumped whenever APNs hands us a device token, so the session can (re)save it with the API.
     private(set) var apnsRegistrations = 0
 
     private let openExternal: @MainActor (URL) -> Void
@@ -85,7 +85,7 @@ struct DeepLinkResolver {
                 return Resolution(route: .shareProfile(userId: currentUser.id, user: currentUser))
             }
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             return Resolution()
         }
     }

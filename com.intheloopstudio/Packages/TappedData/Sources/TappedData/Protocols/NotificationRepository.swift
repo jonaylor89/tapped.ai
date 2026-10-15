@@ -8,7 +8,7 @@ public enum NotificationAuthorizationStatus: Sendable, Equatable {
     case authorized
 }
 
-/// `lib/data/notification_repository.dart` + the APNs / badge plumbing Flutter got from `firebase_messaging`.
+/// `lib/data/notification_repository.dart` + the APNs / badge plumbing.
 public protocol NotificationRepository: Sendable {
     /// Shows the system alert/badge/sound prompt (also upgrades provisional) and registers with APNs.
     /// Only call after an explicit user action. Returns whether alerts are allowed.
@@ -18,7 +18,7 @@ public protocol NotificationRepository: Sendable {
     @discardableResult
     func requestProvisionalAuthorization() async throws -> Bool
     func authorizationStatus() async -> NotificationAuthorizationStatus
-    /// Writes the FCM token to `device_tokens/{userId}/tokens/{token}` (`{token, platform}`), same as Flutter.
+    /// Registers the APNs device token (and its environment) with the authenticated Rust API.
     func saveDeviceToken(userId: String) async throws
     func setBadgeCount(_ count: Int) async
 }

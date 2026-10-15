@@ -1,6 +1,6 @@
 use std::time::Duration;
 use tapped_api_rs::{
-    data::{google_identity::GoogleIdentity, postgres},
+    data::{apns::Apns, google_identity::GoogleIdentity, postgres},
     domain::{
         identity_worker::{ProviderWorker, scan_identities},
         mail_bridge::SqliteMailStore,
@@ -15,6 +15,15 @@ async fn main() -> anyhow::Result<()> {
         &std::env::var("IDENTITY_CREDENTIALS_FILE")?,
         &std::env::var("FIREBASE_PROJECT_ID")?,
     )?;
+    let apns = match std::env::var("APNS_KEY_FILE") {
+        Ok(file) if !file.is_empty() => Some(Apns::new(
+            &file,
+            &std::env::var("APNS_KEY_ID")?,
+            &std::env::var("APNS_TEAM_ID")?,
+            &std::env::var("APNS_TOPIC").unwrap_or_else(|_| "com.intheloopstudio".into()),
+        )?),
+        _ => None,
+    };
     let scanner_pool = pool.clone();
     let scanner_google = google.clone();
     let worker = ProviderWorker {
@@ -30,6 +39,7 @@ async fn main() -> anyhow::Result<()> {
         stream_base_url: std::env::var("STREAM_BASE_URL")
             .unwrap_or_else(|_| "https://chat.stream-io-api.com".into()),
         auth_effects: std::env::var("AUTH_EFFECTS_ENABLED").as_deref() == Ok("1"),
+        apns,
     };
     let scan = async {
         loop {

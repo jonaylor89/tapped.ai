@@ -133,7 +133,7 @@ final class GigNightCoordinator {
                 do {
                     try await liveActivities.start(gig, phase: phase)
                 } catch {
-                    FirebaseBootstrap.record(error: error)
+                    ErrorReporting.record(error: error)
                 }
             case let .update(gig, phase):
                 await liveActivities.update(gig, phase: phase)

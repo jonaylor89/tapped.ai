@@ -52,5 +52,13 @@ Contended/failed jobs remain retryable; provider/database delivery is not exactl
 
 The default Stream endpoint is `https://chat.stream-io-api.com`. `STREAM_BASE_URL`
 is an optional trusted deployment/test override; never derive it from request input.
+
+Push goes per device token: `device_tokens.provider='apns'` rows (current iOS builds)
+are sent directly to APNs, `'fcm'` rows (builds before the APNs cutover) still go through
+FCM until those builds age out. APNs uses token auth: put the App Store Connect `.p8`
+key in `/opt/tapped/apns/` on the host and set `APNS_KEY_FILE=/run/secrets/apns/<file>.p8`,
+`APNS_KEY_ID` and `APNS_TEAM_ID` (`APNS_TOPIC` defaults to `com.intheloopstudio`). The worker
+runs as uid 10001, so the directory and key must be owned by it (`chown -R 10001:10001`, dir `0500`, key `0400`). Without
+a key, APNs pushes stay queued in the outbox and retry. 410/`BadDeviceToken` prunes the token.
 Real retirement gates and rollout requirements are tracked in
 [`platform/FIREBASE_FUNCTIONS_RETIREMENT.md`](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md).

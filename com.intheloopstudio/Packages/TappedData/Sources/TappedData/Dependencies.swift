@@ -75,8 +75,8 @@ public struct Dependencies: Sendable {
             places: TappedAPIPlacesRepository(baseURL: config.tappedAPIURL),
             purchases: StoreKitPurchasesRepository(productIds: config.premiumProductIds),
             analytics: PostHogAnalytics(),
-            remoteConfig: FirebaseRemoteConfigRepository(),
-            notifications: FirebaseNotificationRepository(baseURL: config.tappedAPIURL),
+            remoteConfig: TappedAPIRemoteConfigRepository(baseURL: config.tappedAPIURL),
+            notifications: APNsNotificationRepository(baseURL: config.tappedAPIURL),
             chat: StreamChatRepository(
                 apiKey: config.streamAPIKey,
                 baseURL: config.streamBaseURL,

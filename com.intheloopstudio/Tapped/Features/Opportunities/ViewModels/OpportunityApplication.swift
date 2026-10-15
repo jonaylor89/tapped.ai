@@ -33,7 +33,7 @@ struct OpportunityApplication: Sendable {
         return .applied
     }
 
-    /// Retries the venue notification on a short backoff, then reports the final failure to Crashlytics.
+    /// Retries the venue notification on a short backoff, then reports the final failure to error tracking.
     static func notifyVenue(
         _ opportunityNotifications: any OpportunityNotificationRepository,
         opportunityIds: [String],
@@ -46,7 +46,7 @@ struct OpportunityApplication: Sendable {
                 return
             } catch {
                 guard attempt < maxAttempts else {
-                    FirebaseBootstrap.record(error: error)
+                    ErrorReporting.record(error: error)
                     return
                 }
                 try? await Task.sleep(for: .milliseconds(500 * attempt))

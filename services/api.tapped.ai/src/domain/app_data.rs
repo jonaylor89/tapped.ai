@@ -1289,8 +1289,23 @@ pub async fn register_token(
     if token.is_empty() || token.len() > 4096 {
         return Err(AppError::bad_request("invalid token"));
     }
-    sqlx::query("INSERT INTO device_tokens(token,user_id,platform) VALUES($1,$2,$3) ON CONFLICT(token) DO UPDATE SET user_id=EXCLUDED.user_id,platform=EXCLUDED.platform")
-      .bind(token).bind(user.uid).bind(text(&input,"platform")).execute(pool(&state)?).await.map_err(db_error)?;
+    // Builds before the APNs cutover send FCM tokens without a provider.
+    let (provider, environment) = match text(&input, "provider") {
+        "" | "fcm" => ("fcm", None),
+        "apns" => {
+            let environment = text(&input, "environment");
+            let hex = token.len().is_multiple_of(2)
+                && (64..=200).contains(&token.len())
+                && token.bytes().all(|b| b.is_ascii_hexdigit());
+            if !hex || !["development", "production"].contains(&environment) {
+                return Err(AppError::bad_request("invalid APNs token"));
+            }
+            ("apns", Some(environment))
+        }
+        _ => return Err(AppError::bad_request("invalid provider")),
+    };
+    sqlx::query("INSERT INTO device_tokens(token,user_id,platform,provider,apns_environment) VALUES($1,$2,$3,$4,$5) ON CONFLICT(token) DO UPDATE SET user_id=EXCLUDED.user_id,platform=EXCLUDED.platform,provider=EXCLUDED.provider,apns_environment=EXCLUDED.apns_environment")
+      .bind(token).bind(user.uid).bind(text(&input,"platform")).bind(provider).bind(environment).execute(pool(&state)?).await.map_err(db_error)?;
     Ok(Json(json!({"ok":true})))
 }
 

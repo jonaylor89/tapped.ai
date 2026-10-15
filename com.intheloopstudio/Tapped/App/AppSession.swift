@@ -66,7 +66,7 @@ final class AppSession {
 
     /// Runs for the lifetime of the scene (`ContentView.task`).
     ///
-    /// The cached Remote Config decides the maintenance / minimum-version gates, while auth, custom claims and the
+    /// The cached app config (Rust `app-config`) decides the maintenance / minimum-version gates, while auth, custom claims and the
     /// user doc load concurrently. The network fetch runs in the background and can still close a gate.
     func run() async {
         guard !started else { return }
@@ -149,13 +149,13 @@ final class AppSession {
         availableUpdate = nil
     }
 
-    /// APNs can deliver the device token after sign-in; FCM needs it before `token()` succeeds.
+    /// APNs can deliver the device token after sign-in; re-register it once it arrives.
     func saveDeviceTokenIfSignedIn() async {
         guard let userId = currentUser?.id else { return }
         do {
             try await dependencies.notifications.saveDeviceToken(userId: userId)
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
         }
     }
 
@@ -223,7 +223,7 @@ final class AppSession {
         do {
             user = try await userDoc
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
         }
         LaunchSignposts.end(.userDoc)
         guard await mayChangePhase() else { return }
@@ -272,14 +272,14 @@ final class AppSession {
             do {
                 _ = try await dependencies.database.publishLatestAppVersion(user.id)
             } catch {
-                FirebaseBootstrap.record(error: error)
+                ErrorReporting.record(error: error)
             }
             do {
                 // Quiet provisional delivery only; the system prompt waits for `NotificationsPromptCard`.
                 try await dependencies.notifications.requestProvisionalAuthorization()
                 try await dependencies.notifications.saveDeviceToken(userId: user.id)
             } catch {
-                FirebaseBootstrap.record(error: error)
+                ErrorReporting.record(error: error)
             }
         }
     }

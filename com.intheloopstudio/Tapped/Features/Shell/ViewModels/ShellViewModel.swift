@@ -32,7 +32,7 @@ final class ShellViewModel {
             try await chat.connectUser(currentUser)
             isChatConnected = true
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             return
         }
         for await count in chat.unreadCountUpdates() {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// `lib/data/remote_config_repository.dart`
+/// Launch gates served by the Rust API (formerly Firebase Remote Config, `lib/data/remote_config_repository.dart`).
 public protocol RemoteConfigRepository: Sendable {
     /// Activates the config fetched on a previous launch (or the defaults) without touching the network.
     @discardableResult

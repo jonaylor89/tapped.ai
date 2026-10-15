@@ -324,6 +324,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
     // and the per-IP limit, and the user/opportunity documents have private fields removed.
     let app_v1_public = OpenApiRouter::new()
         .routes(routes!(public_map::get_map))
+        .routes(routes!(crate::domain::app_config::get_app_config))
         .routes(routes!(app_data::search_public))
         .routes(routes!(app_data::list_public))
         .routes(routes!(app_data::get_public))

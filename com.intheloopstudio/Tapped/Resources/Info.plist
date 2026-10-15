@@ -39,8 +39,6 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
-	<key>FirebaseAppDelegateProxyEnabled</key>
-	<true/>
 	<key>GIDClientID</key>
 	<string>269420857313-3eku1pig1svbojpqgknaj79hm3kjrqgk.apps.googleusercontent.com</string>
 	<key>ITSAppUsesNonExemptEncryption</key>

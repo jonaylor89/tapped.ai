@@ -149,17 +149,18 @@ pub async fn record_activity(
     if email.is_none_or(|email| email.ends_with("@tapped.ai")) {
         return Ok(());
     }
-    let tokens: Vec<String> =
-        sqlx::query_scalar("SELECT token FROM device_tokens WHERE user_id=$1")
-            .bind(uid)
-            .fetch_all(&mut **tx)
-            .await?;
-    for token in tokens {
+    let tokens: Vec<(String, String, Option<String>)> = sqlx::query_as(
+        "SELECT token,provider,apns_environment FROM device_tokens WHERE user_id=$1",
+    )
+    .bind(uid)
+    .fetch_all(&mut **tx)
+    .await?;
+    for (token, provider, environment) in tokens {
         let key = format!(
             "push:{id}:{}",
             hex::encode(Sha256::digest(token.as_bytes()))
         );
-        enqueue(tx,&key,"push",json!({"token":token,"uid":uid,"title":title,"body":body,"activityId":id,"bookingId":booking})).await?;
+        enqueue(tx,&key,"push",json!({"token":token,"provider":provider,"environment":environment,"uid":uid,"title":title,"body":body,"activityId":id,"bookingId":booking})).await?;
     }
     Ok(())
 }

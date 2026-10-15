@@ -169,6 +169,7 @@ fn worker(pool: sqlx::PgPool, url: String, temp: &std::path::Path) -> ProviderWo
         stream_secret: "test-stream-secret".into(),
         stream_base_url: url,
         auth_effects: true,
+        apns: None,
     }
 }
 async fn fixture(pool: &sqlx::PgPool) {

@@ -31,7 +31,7 @@ struct MessageUserButton: View {
             let conversationId = try await dependencies.chat.createDirectConversation(with: userId)
             router.push(.streamChannel(channelId: conversationId))
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             failed = true
         }
     }

@@ -4,8 +4,8 @@ import Testing
 
 @Suite("Remote Config")
 struct RemoteConfigRepositoryTests {
-    @Test func launchFetchIsBoundedWellUnderFirebasesDefault() {
-        #expect(FirebaseRemoteConfigRepository.fetchTimeout <= 5)
+    @Test func launchFetchIsBoundedWellUnderTheSplashBudget() {
+        #expect(TappedAPIRemoteConfigRepository.fetchTimeout <= 5)
     }
 
     @Test func mockServesTheCacheUntilTheFetchActivates() async throws {

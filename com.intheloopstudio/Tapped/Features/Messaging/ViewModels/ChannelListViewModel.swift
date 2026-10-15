@@ -33,7 +33,7 @@ final class ChannelListViewModel {
             }
         } catch is CancellationError {
         } catch {
-            FirebaseBootstrap.record(error: error)
+            ErrorReporting.record(error: error)
             phase = .failed
         }
     }
