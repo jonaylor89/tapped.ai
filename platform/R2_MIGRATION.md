@@ -21,6 +21,8 @@ Cloudflare account. Started 2026-10-14.
   object unchanged since its copy and every R2 target matching size and MD5; deletes pinned to the
   object generation). Log: `retired.jsonl` in the work directory. The empty default bucket remains.
   Firebase sources removed from the imgproxy, web and iOS allowlists.
+- 2026-10-15: two legacy press kits that were audio/video (a WAV and a 267 MB MP4) were archived and
+  their `performerInfo.pressKitUrl` set to NULL (`press-kit-audio-video` in `storage_migration_map`).
 - Incident, same day: a delta `copy` with the post-rewrite (empty) refs export re-targeted live media
   to the archive and removed 1,008 public keys for ~15 minutes. All were restored byte-identical from
   the archive copies and checked; no cached 404s remained. `copy` now never re-targets from refs,
@@ -57,6 +59,17 @@ URL. The signature covers `content-type`, `content-length` and `x-amz-content-sh
 other bytes (`XAmzContentSHA256Mismatch`). The API needs `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and
 `R2_SECRET_ACCESS_KEY` for a token limited to Object Read & Write on `tapped-media`; without them the
 endpoint answers 503.
+
+| `kind` | Key | Accepted `contentType` | Max |
+| --- | --- | --- | --- |
+| `avatar` | `users/{uid}/avatar/` | JPEG, PNG, WebP, HEIC | 15 MB |
+| `opportunityFlier` | `opportunities/{id}/flier/` (caller must own an existing opportunity) | JPEG, PNG, WebP, HEIC | 15 MB |
+| `pressKit` | `users/{uid}/press-kits/` | PDF, `text/plain`, JPEG, PNG, WebP, HEIC; never audio, video, PPTX, HTML or SVG | 50 MB |
+
+Uploads can't create HTML or SVG press kits. As a backstop, a zone Transform Rule
+(`http_response_headers_transform`) sets `Content-Security-Policy: sandbox` on any
+`media.tapped.ai/users/*/press-kits/*.html|.svg`, and `X-Content-Type-Options: nosniff` on all press kits.
+PDFs are deliberately not sandboxed, because Chrome blocks its PDF viewer in sandboxed documents.
 
 Cloudflare caches 404s on `media.tapped.ai`, so never hand out a URL before its `PUT` succeeded.
 

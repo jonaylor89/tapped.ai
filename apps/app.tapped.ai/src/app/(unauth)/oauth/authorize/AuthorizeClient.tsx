@@ -18,7 +18,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { tappedApiUrl } from "@/data/tapped_api";
-import { app } from "@/utils/firebase";
+import { app } from "./firebase";
 
 // Local stack only (platform/local): sign in against the Firebase Auth emulator.
 const emulatorHost = process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST;

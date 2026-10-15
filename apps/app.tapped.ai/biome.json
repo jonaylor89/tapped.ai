@@ -47,6 +47,17 @@
 			},
 			"style": {
 				"recommended": true,
+				"noRestrictedImports": {
+					"level": "error",
+					"options": {
+						"patterns": [
+							{
+								"group": ["firebase", "firebase/*", "@firebase/*"],
+								"message": "The site has no sign-in. Firebase Auth is only for the MCP OAuth consent page (src/app/(unauth)/oauth/authorize)."
+							}
+						]
+					}
+				},
 				"noDefaultExport": "off",
 				"noImplicitBoolean": "off",
 				"noNonNullAssertion": "warn",
@@ -116,6 +127,16 @@
 		}
 	},
 	"overrides": [
+		{
+			"includes": ["src/app/(unauth)/oauth/authorize/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noRestrictedImports": "off"
+					}
+				}
+			}
+		},
 		{
 			"includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
 			"linter": {

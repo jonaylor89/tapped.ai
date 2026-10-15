@@ -14,7 +14,8 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
 
 const UPLOAD_TTL_SECONDS: u32 = 600;
-const MAX_UPLOAD_BYTES: u64 = 15 * 1024 * 1024;
+const MAX_IMAGE_BYTES: u64 = 15 * 1024 * 1024;
+const MAX_PRESS_KIT_BYTES: u64 = 50 * 1024 * 1024;
 
 /// R2 credentials and the public base URL of the media bucket (`https://media.tapped.ai`).
 #[derive(Clone)]
@@ -46,6 +47,43 @@ impl MediaUploads {
 pub enum UploadKind {
     Avatar,
     OpportunityFlier,
+    PressKit,
+}
+
+impl UploadKind {
+    /// The key extension for an accepted content type, or `None` when this kind doesn't allow it.
+    /// Press kits are documents (PDF or plain text) or raster images; never audio, video, PPTX, HTML or SVG.
+    fn extension(&self, content_type: &str) -> Option<&'static str> {
+        let image = match content_type {
+            "image/jpeg" => Some("jpg"),
+            "image/png" => Some("png"),
+            "image/webp" => Some("webp"),
+            "image/heic" => Some("heic"),
+            _ => None,
+        };
+        match self {
+            Self::Avatar | Self::OpportunityFlier => image,
+            Self::PressKit => image.or(match content_type {
+                "application/pdf" => Some("pdf"),
+                "text/plain" => Some("txt"),
+                _ => None,
+            }),
+        }
+    }
+
+    fn allowed(&self) -> &'static str {
+        match self {
+            Self::Avatar | Self::OpportunityFlier => "a JPEG, PNG, WebP or HEIC image",
+            Self::PressKit => "a PDF, plain text file or JPEG, PNG, WebP or HEIC image",
+        }
+    }
+
+    fn max_bytes(&self) -> u64 {
+        match self {
+            Self::Avatar | Self::OpportunityFlier => MAX_IMAGE_BYTES,
+            Self::PressKit => MAX_PRESS_KIT_BYTES,
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -80,9 +118,10 @@ pub async fn create(
     let media = state.media.as_ref().ok_or_else(|| {
         AppError::new("uploads unavailable").with_status(StatusCode::SERVICE_UNAVAILABLE)
     })?;
-    let ext = extension(&request.content_type).ok_or_else(|| {
-        AppError::bad_request("contentType must be a JPEG, PNG, WebP or HEIC image")
-    })?;
+    let kind = &request.kind;
+    let ext = kind
+        .extension(&request.content_type)
+        .ok_or_else(|| AppError::bad_request(format!("contentType must be {}", kind.allowed())))?;
     if request.sha256.len() != 64
         || !request
             .sha256
@@ -93,12 +132,16 @@ pub async fn create(
             "sha256 must be 64 lowercase hex digits",
         ));
     }
-    if request.size == 0 || request.size > MAX_UPLOAD_BYTES {
-        return Err(AppError::bad_request("size must be 1 byte to 15 MB"));
+    if request.size == 0 || request.size > kind.max_bytes() {
+        return Err(AppError::bad_request(format!(
+            "size must be 1 byte to {} MB",
+            kind.max_bytes() / (1024 * 1024)
+        )));
     }
     let name = format!("{}.{ext}", &request.sha256[..32]);
     let key = match request.kind {
         UploadKind::Avatar => format!("users/{}/avatar/{name}", user.uid),
+        UploadKind::PressKit => format!("users/{}/press-kits/{name}", user.uid),
         UploadKind::OpportunityFlier => {
             let id = request
                 .opportunity_id
@@ -129,16 +172,6 @@ pub async fn create(
         request.size,
         Utc::now(),
     )))
-}
-
-fn extension(content_type: &str) -> Option<&'static str> {
-    match content_type {
-        "image/jpeg" => Some("jpg"),
-        "image/png" => Some("png"),
-        "image/webp" => Some("webp"),
-        "image/heic" => Some("heic"),
-        _ => None,
-    }
 }
 
 fn is_safe_id(id: &str) -> bool {
@@ -302,6 +335,29 @@ mod tests {
         ));
     }
 
+    #[test]
+    fn press_kits_take_documents_and_images_but_not_audio_or_video() {
+        let kit = UploadKind::PressKit;
+        assert_eq!(kit.extension("application/pdf"), Some("pdf"));
+        assert_eq!(kit.extension("text/plain"), Some("txt"));
+        assert_eq!(kit.extension("image/png"), Some("png"));
+        assert_eq!(UploadKind::Avatar.extension("image/svg+xml"), None);
+        for rejected in [
+            "audio/wav",
+            "audio/x-wav",
+            "audio/mpeg",
+            "video/mp4",
+            "video/quicktime",
+            "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+            "text/html",
+            "image/svg+xml",
+        ] {
+            assert_eq!(kit.extension(rejected), None, "{rejected}");
+        }
+        assert_eq!(kit.max_bytes(), 50 * 1024 * 1024);
+        assert_eq!(UploadKind::Avatar.max_bytes(), 15 * 1024 * 1024);
+    }
+
     fn media() -> MediaUploads {
         MediaUploads {
             account_id: "acct".into(),
@@ -339,7 +395,8 @@ mod tests {
         assert!(is_safe_id("6c7ef95c-4ad9-44e5-af5a-a832d6c8790d"));
         assert!(!is_safe_id("../users"));
         assert!(!is_safe_id(""));
-        assert_eq!(extension("image/jpeg"), Some("jpg"));
-        assert_eq!(extension("text/html"), None);
+        assert_eq!(UploadKind::Avatar.extension("image/jpeg"), Some("jpg"));
+        assert_eq!(UploadKind::Avatar.extension("text/html"), None);
+        assert_eq!(UploadKind::Avatar.extension("application/pdf"), None);
     }
 }

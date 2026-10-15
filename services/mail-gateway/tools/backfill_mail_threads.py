@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -63,10 +64,16 @@ def request_json(url: str, token: str, payload=None, headers=None):
 
 def performer_username(project_id: str, token: str, performer_id: str) -> str | None:
     encoded = urllib.parse.quote(performer_id, safe="")
-    document = request_json(
-        f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users/{encoded}",
-        token,
-    )
+    try:
+        document = request_json(
+            f"https://firestore.googleapis.com/v1/projects/{project_id}/databases/(default)/documents/users/{encoded}",
+            token,
+        )
+    except urllib.error.HTTPError as error:
+        # The Firestore users collection is archived; threads without an embedded username are skipped.
+        if error.code == 404:
+            return None
+        raise
     return decode(document.get("fields", {}).get("username", {}))
 
 
@@ -131,10 +138,16 @@ def main() -> None:
             continue
         created_at = int(datetime.fromisoformat(document["createTime"].replace("Z", "+00:00")).timestamp())
         performer_id, venue_id = path[-5], path[-3]
-        messages_by_thread.setdefault((performer_id, venue_id), []).append({
+        thread_messages = messages_by_thread.setdefault((performer_id, venue_id), [])
+        # Inbound webhooks were sometimes stored more than once; keep the earliest delivery.
+        duplicate = next((message for message in thread_messages if message["message_id"] == identifier), None)
+        if duplicate:
+            duplicate["created_at"] = min(duplicate["created_at"], created_at)
+            continue
+        thread_messages.append({
             "thread_id": f"{performer_id}:{venue_id}",
             "message_id": identifier,
-            "direction": "outbound",
+            "direction": "inbound" if fields.get("MessageStream") == "inbound" else "outbound",
             "from": fields["From"],
             "to": recipients,
             "subject": fields.get("Subject") or "",
@@ -143,7 +156,8 @@ def main() -> None:
             "created_at": created_at,
         })
 
-    stats = {"mode": "apply" if apply else "dry-run", "scanned": 0, "eligible": 0, "skipped": 0, "threads_written": 0, "messages_eligible": 0, "messages_written": 0}
+    stats = {"mode": "apply" if apply else "dry-run", "scanned": 0, "eligible": 0, "skipped": 0, "threads_written": 0, "messages_eligible": 0, "messages_inbound": 0, "messages_written": 0, "messages_without_thread": 0}
+    imported_threads = set()
 
     for result in results:
         document = result.get("document")
@@ -176,8 +190,10 @@ def main() -> None:
             "latest_message_id": latest_message_id,
         }
         stats["eligible"] += 1
+        imported_threads.add((performer_id, venue_id))
         thread_messages = messages_by_thread.get((performer_id, venue_id), [])
         stats["messages_eligible"] += len(thread_messages)
+        stats["messages_inbound"] += sum(message["direction"] == "inbound" for message in thread_messages)
         if apply:
             send_record(api_url, secret, "backfill-thread", thread)
             stats["threads_written"] += 1
@@ -185,6 +201,9 @@ def main() -> None:
                 send_record(api_url, secret, "backfill-message", message)
                 stats["messages_written"] += 1
 
+    stats["messages_without_thread"] = sum(
+        len(messages) for key, messages in messages_by_thread.items() if key not in imported_threads
+    )
     print(json.dumps(stats, sort_keys=True))
 
 
