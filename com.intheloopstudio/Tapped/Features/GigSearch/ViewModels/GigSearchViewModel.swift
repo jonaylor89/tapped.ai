@@ -14,12 +14,10 @@ final class GigSearchViewModel {
 
     enum SearchOutcome: Equatable {
         case results
-        case needsPremium
         case invalid(String)
     }
 
     let currentUser: UserModel
-    var isPremium: Bool
 
     var place: PlaceData?
     var genres: Set<Genre>
@@ -36,9 +34,8 @@ final class GigSearchViewModel {
     private let places: any PlacesRepository
     private let analytics: any AnalyticsRepository
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
+    init(dependencies: Dependencies, currentUser: UserModel) {
         self.currentUser = currentUser
-        self.isPremium = isPremium
         search = dependencies.search
         places = dependencies.places
         analytics = dependencies.analytics
@@ -63,7 +60,6 @@ final class GigSearchViewModel {
     }
 
     func searchVenues() async -> SearchOutcome {
-        guard isPremium else { return .needsPremium }
         guard !genres.isEmpty else { return .invalid("please select at least one genre") }
         guard let place else { return .invalid("please select a city") }
         isSearching = true

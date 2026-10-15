@@ -31,21 +31,6 @@ struct PremiumWaitlistScreen: View {
     }
 }
 
-/// `Route.paywall` resolves here: the waitlist while the Remote Config gate is on, otherwise `paywall`.
-struct PaywallGate<Paywall: View>: View {
-    @Environment(AppSession.self) private var session: AppSession?
-    @Environment(\.dependencies) private var dependencies
-    @ViewBuilder let paywall: () -> Paywall
-
-    var body: some View {
-        if let session, session.premiumWaitlistEnabled, let userId = session.currentUser?.id {
-            PremiumWaitlistScreen(dependencies: dependencies, userId: userId)
-        } else {
-            paywall()
-        }
-    }
-}
-
 #Preview {
     NavigationStack { PremiumWaitlistScreen(dependencies: .mock(signedIn: true), userId: "performer-nova") }
 }

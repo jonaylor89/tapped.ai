@@ -11,14 +11,12 @@ struct DiscoverViewModelTests {
     static let elsewhere = GeoBounds(swLatitude: 40.0, swLongitude: -74.1, neLatitude: 40.1, neLongitude: -74.0)
 
     func makeModel(
-        isPremium: Bool = false,
         claims: [CustomClaim] = [],
         dependencies: Dependencies? = nil
     ) -> DiscoverViewModel {
         DiscoverViewModel(
-            dependencies: dependencies ?? .mock(signedIn: true, isPremium: isPremium),
+            dependencies: dependencies ?? .mock(signedIn: true),
             currentUser: Samples.performer,
-            isPremium: isPremium,
             claims: claims,
             now: { Samples.referenceDate }
         )
@@ -38,7 +36,6 @@ struct DiscoverViewModelTests {
         let model = DiscoverViewModel(
             dependencies: .mock(signedIn: true),
             currentUser: Samples.performer,
-            isPremium: false,
             defersStart: true,
             now: { Samples.referenceDate }
         )
@@ -69,21 +66,6 @@ struct DiscoverViewModelTests {
         let week = Samples.referenceDate.addingTimeInterval(7 * 24 * 60 * 60)
         #expect(model.paidGigsThisWeek.allSatisfy { $0.isPaid && $0.startTime >= Samples.referenceDate && $0.startTime < week })
         #expect(Set(model.goodFitVenues.map(\.id)) == ["venue-canal", "venue-balliceaux"])
-    }
-
-    @Test func quotaLineOnlyWhenFreeApplicationsAreUsedUp() async throws {
-        let database = MockDatabaseRepository(defaultOpportunityQuota: 0)
-        var dependencies = Dependencies.mock(signedIn: true)
-        dependencies.database = database
-        let model = makeModel(dependencies: dependencies)
-        await model.mapRegionChanged(to: Self.rvaBounds)
-        #expect(model.quotaMessage == nil)
-        let observer = Task { await model.observeQuota() }
-        defer { observer.cancel() }
-        for _ in 0..<200 where model.quotaMessage == nil { try await Task.sleep(for: .milliseconds(10)) }
-        let paid = model.opportunityHits.count(where: \.isPaid)
-        #expect(model.quotaMessage == "you've used today's 3 free applications — \(paid) more paid \(paid == 1 ? "gig" : "gigs") nearby")
-        #expect(makeModel(isPremium: true).quotaMessage == nil)
     }
 
     @Test func firstRegionChangeSearchesVenues() async {
@@ -136,13 +118,13 @@ struct DiscoverViewModelTests {
         #expect(zip(counts, counts.dropFirst()).allSatisfy { $0.count >= $1.count })
     }
 
-    @Test func filtersArePremiumGated() async {
+    @Test func filtersDoNotAddASecondSubscriptionGate() async {
         let free = makeModel()
         await free.mapRegionChanged(to: Self.rvaBounds)
-        #expect(await free.applyFilters(genres: [.jazz], capacity: 0...1000) == false)
-        #expect(free.genreFilters.isEmpty)
+        #expect(await free.applyFilters(genres: [.jazz], capacity: 0...1000))
+        #expect(free.genreFilters == [.jazz])
 
-        let premium = makeModel(isPremium: true)
+        let premium = makeModel()
         await premium.mapRegionChanged(to: Self.rvaBounds)
         #expect(await premium.applyFilters(genres: [.jazz], capacity: 0...1000))
         #expect(premium.genreFilterLabel == "1 genre")

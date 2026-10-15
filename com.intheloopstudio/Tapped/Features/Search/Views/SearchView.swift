@@ -7,7 +7,6 @@ import TappedUI
 struct SearchView: View {
     @State private var model: SearchViewModel
     @Environment(Router.self) private var router
-    @Environment(AppSession.self) private var session: AppSession?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(dependencies: Dependencies, currentUser: UserModel, recents: RecentSearches = RecentSearches(), initialQuery: String = "") {
@@ -81,7 +80,7 @@ struct SearchView: View {
         }
         Section("explore") {
             exploreRow("gig feed", systemImage: "rectangle.stack.fill", route: .opportunityFeed)
-            exploreRow("find venues", systemImage: "map.fill", route: .gigSearch, isPremiumOnly: true)
+            exploreRow("find venues", systemImage: "map.fill", route: .gigSearch)
             exploreRow("advanced search", systemImage: "slider.horizontal.3", route: .advancedSearch)
         }
         if !model.nearbyOpportunities.isEmpty {
@@ -105,9 +104,8 @@ struct SearchView: View {
         }
     }
 
-    private func exploreRow(_ title: String, systemImage: String, route: Route, isPremiumOnly: Bool = false) -> some View {
-        let isLocked = isPremiumOnly && session?.isPremium != true
-        return Button {
+    private func exploreRow(_ title: String, systemImage: String, route: Route) -> some View {
+        Button {
             router.push(route)
         } label: {
             let layout = dynamicTypeSize.isAccessibilitySize
@@ -117,10 +115,8 @@ struct SearchView: View {
                 SwiftUI.Label(title, systemImage: systemImage)
                     .foregroundStyle(.primary)
                 if !dynamicTypeSize.isAccessibilitySize { Spacer(minLength: TappedSpacing.sm) }
-                if isLocked { PremiumBadge() }
             }
         }
-        .accessibilityHint(isLocked ? "premium feature" : "")
     }
 
     @ViewBuilder

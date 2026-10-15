@@ -16,7 +16,7 @@ enum NotificationCategories {
 
     static let applyOpensAppKey = "notifications.applyOpensApp"
 
-    /// `applyOpensApp` once the performer is out of free applications, so **Apply** foregrounds to the paywall.
+    /// Can foreground Apply when interaction is needed; access is checked by the shared subscription boundary.
     static func make(applyOpensApp: Bool) -> Set<UNNotificationCategory> {
         let apply = UNNotificationAction(
             identifier: Action.apply.rawValue,

@@ -48,11 +48,8 @@ enum DiscoverModal: String, Identifiable {
 final class DiscoverViewModel {
     static let defaultSpanDegrees = 0.12
     static let capacityLimit = 1000.0
-    /// Free applications granted per day (`credits/{uid}.opportunityQuota` reset).
-    static let dailyFreeApplications = 3
 
     let currentUser: UserModel
-    var isPremium: Bool
     let claims: [CustomClaim]
 
     private(set) var overlay: MapOverlay
@@ -68,8 +65,6 @@ final class DiscoverViewModel {
     private(set) var contactedVenuesCount = 1
     private(set) var confirmedBookingsCount = 0
     private(set) var searchedBounds: GeoBounds?
-    /// `nil` for premium users (unlimited applications).
-    private(set) var remainingFreeApplications: Int?
 
     var sheetProgress: CGFloat = 0
     var sheetTop: CGFloat = 0
@@ -89,14 +84,12 @@ final class DiscoverViewModel {
     init(
         dependencies: Dependencies,
         currentUser: UserModel,
-        isPremium: Bool,
         claims: [CustomClaim] = [],
         defersStart: Bool = false,
         now: @escaping () -> Date = { .now }
     ) {
         self.currentUser = currentUser
         self.defersStart = defersStart
-        self.isPremium = isPremium
         self.claims = claims
         self.now = now
         overlay = Self.defaultOverlay(for: currentUser, claims: claims)
@@ -143,21 +136,6 @@ final class DiscoverViewModel {
         confirmedBookingsCount = (await requesteeBookings?.count ?? 0) + (await requesterBookings?.count ?? 0)
     }
 
-    /// Keeps `remainingFreeApplications` current (applying elsewhere spends quota) until cancelled.
-    func observeQuota() async {
-        guard !isPremium else {
-            remainingFreeApplications = nil
-            return
-        }
-        do {
-            for try await quota in database.getUserOpportunityQuotaObserver(currentUser.id) {
-                remainingFreeApplications = isPremium ? nil : quota
-            }
-        } catch {
-            remainingFreeApplications = nil
-        }
-    }
-
     // MARK: Map
 
     func mapRegionChanged(to bounds: GeoBounds) async {
@@ -189,12 +167,9 @@ final class DiscoverViewModel {
         Task { await analytics.track("discover_seek_home") }
     }
 
-    // MARK: Filters (premium-gated like Flutter)
-
-    /// Returns `false` when the user must see the paywall instead.
+    // MARK: Filters
     @discardableResult
     func applyFilters(genres: [Genre], capacity: ClosedRange<Double>) async -> Bool {
-        guard isPremium else { return false }
         genreFilters = genres
         capacityRange = capacity
         if let bounds = visibleBounds ?? searchedBounds { await runSearch(in: bounds) }
@@ -255,14 +230,6 @@ final class DiscoverViewModel {
     func venueName(for opportunity: Opportunity) -> String? {
         let venueId = opportunity.venueId ?? opportunity.userId
         return venueHits.first { $0.id == venueId }?.displayName
-    }
-
-    /// Shown once the free daily applications are spent.
-    var quotaMessage: String? {
-        guard !isPremium, isPerformerFirst, remainingFreeApplications == 0 else { return nil }
-        let paid = opportunityHits.count(where: \.isPaid)
-        let more = paid > 0 ? " — \(paid) more paid \(paid == 1 ? "gig" : "gigs") nearby" : ""
-        return "you've used today's \(Self.dailyFreeApplications) free applications\(more)"
     }
 
     var genreFilterLabel: String? {

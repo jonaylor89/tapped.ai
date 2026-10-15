@@ -7,19 +7,17 @@ import TappedUI
 struct OpportunityFeedView: View {
     static let swipeThreshold: CGFloat = 120
 
-    private let isPremium: Bool
     @State private var model: OpportunityFeedViewModel
     @State private var offset: CGSize = .zero
     @State private var isAnimatingOut = false
     @Environment(Router.self) private var router
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
-        self.isPremium = isPremium
-        _model = State(initialValue: OpportunityFeedViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium))
+    init(dependencies: Dependencies, currentUser: UserModel) {
+        _model = State(initialValue: OpportunityFeedViewModel(dependencies: dependencies, currentUser: currentUser))
     }
 
     var body: some View {
-        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+        screen
     }
 
     @ViewBuilder private var screen: some View {
@@ -37,15 +35,6 @@ struct OpportunityFeedView: View {
         .background(TappedColors.background)
         .navigationTitle("gig feed")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            if let quota = model.remainingQuota {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Text(ApplicationQuota.caption(remaining: quota) ?? "")
-                        .font(TappedTypography.label)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
         .sensoryFeedback(.success, trigger: model.appliedCount)
         .task { await model.load() }
         .onChange(of: model.current != nil) { _, hasCard in if hasCard { LaunchSignposts.mark(.firstFeedCard) } }
@@ -142,12 +131,9 @@ struct OpportunityFeedView: View {
             offset = action == .dismiss ? CGSize(width: 0, height: 900) : CGSize(width: direction * 600, height: offset.height + 40)
         }
         try? await Task.sleep(for: .milliseconds(220))
-        let outcome = await model.perform(action)
+        await model.perform(action)
         offset = .zero
         isAnimatingOut = false
-        if outcome == .needsPremium {
-            router.push(.paywall)
-        }
     }
 
     private var caughtUp: some View {
@@ -254,7 +240,7 @@ struct FeedCard: View {
 
 #Preview("feed") {
     NavigationStack {
-        OpportunityFeedView(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false)
+        OpportunityFeedView(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
     }
     .environment(Router())
 }

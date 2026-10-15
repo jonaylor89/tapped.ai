@@ -1,167 +1,214 @@
-import StoreKit
 import SwiftUI
 import TappedData
+import TappedDomain
 import TappedUI
 
-/// StoreKit `SubscriptionStoreView` with tapped marketing on top. Works pushed or in a `.medium`/`.large` sheet
-/// and scales with Dynamic Type (StoreKit lays out the plan picker, price and subscribe button).
+/// The final onboarding step. Prices come from StoreKit; only verified entitlement unlocks the shell.
 struct PaywallView: View {
     @State private var model: PaywallViewModel
-    @Environment(Router.self) private var router
-    /// `SubscriptionStoreView` shows a bare "Subscription Unavailable" when the storefront returns no products;
-    /// keep the marketing and give the user a next step instead.
-    @State private var storeUnavailable = false
-    @State private var storeCheck = 0
+    @State private var account: SettingsViewModel
+    @State private var confirmsDelete = false
+    @State private var reauthenticates = false
+    @Environment(AppSession.self) private var session: AppSession?
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    let user: UserModel
 
-    init(dependencies: Dependencies) {
+    init(dependencies: Dependencies, user: UserModel) {
+        self.user = user
         _model = State(initialValue: PaywallViewModel(dependencies: dependencies))
+        _account = State(initialValue: SettingsViewModel(dependencies: dependencies, currentUser: user))
     }
 
     var body: some View {
-        Group {
-            if model.isPremium {
-                ScrollView {
-                    VStack(spacing: TappedSpacing.xxl) {
-                        PaywallHero()
-                        GlassEmptyState(
-                            "you're already premium",
-                            message: "every feature is unlocked. go book that tour.",
-                            systemImage: "crown.fill"
-                        )
+        ScrollView {
+            VStack(alignment: .leading, spacing: TappedSpacing.xl) {
+                OnboardingProgress(step: OnboardingViewModel.stepCount, count: OnboardingViewModel.stepCount)
+                hero
+                VStack(alignment: .leading, spacing: TappedSpacing.lg) {
+                    ForEach(PaywallViewModel.features, id: \.self) { feature in
+                        HStack(alignment: .top, spacing: TappedSpacing.md) {
+                            Image(systemName: feature.systemImage)
+                                .font(.title3)
+                                .foregroundStyle(TappedColors.accentText)
+                                .frame(width: 28)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: TappedSpacing.xs) {
+                                Text(feature.title).font(TappedTypography.label)
+                                Text(feature.detail).font(TappedTypography.bodySm).foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
-                .scrollBounceBehavior(.basedOnSize)
-            } else if storeUnavailable {
-                unavailable
-            } else {
-                store
+                plans
+                purchaseControls
+                accountLinks
+            }
+            .padding(GlassMetrics.edgeInset)
+            .frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(TappedColors.background.ignoresSafeArea())
+        .navigationTitle("step \(OnboardingViewModel.stepCount) of \(OnboardingViewModel.stepCount)")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden()
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu("account", systemImage: "ellipsis") {
+                    Button("sign out", systemImage: "rectangle.portrait.and.arrow.right") {
+                        Task { await session?.signOut() }
+                    }
+                    Button("delete account", systemImage: "trash", role: .destructive) { confirmsDelete = true }
+                }
+                .disabled(model.isBusy || account.isDeleting)
             }
         }
-        .background(TappedColors.background.ignoresSafeArea())
-        .navigationTitle(Route.paywall.title)
-        .navigationBarTitleDisplayMode(.inline)
+        .alert("delete your account?", isPresented: $confirmsDelete) {
+            Button("delete account", role: .destructive) { reauthenticates = true }
+            Button("keep account", role: .cancel) {}
+        } message: {
+            Text("this permanently deletes your profile. deleting your account does not cancel an App Store subscription.")
+        }
+        .reauthenticationSheet(isPresented: $reauthenticates, reason: "delete your account") {
+            Task { _ = await account.deleteAccount() }
+        }
+        .alert("something went wrong", isPresented: Binding(get: { account.errorMessage != nil }, set: { if !$0 { account.errorMessage = nil } })) {
+            Button("ok", role: .cancel) {}
+        } message: { Text(account.errorMessage ?? "") }
         .alert(model.notice ?? "", isPresented: Binding(get: { model.notice != nil }, set: { if !$0 { model.notice = nil } })) {
-            Button("OK", role: .cancel) {}
+            Button("ok", role: .cancel) {}
         }
         .sensoryFeedback(.success, trigger: model.successCount)
         .sensoryFeedback(.error, trigger: model.errorCount)
-        .animation(GlassMotion.ease, value: model.isPremium)
         .task { await model.load() }
         .task { await model.observeEntitlements() }
-        .task(id: storeCheck) {
-            let available = (try? await Product.products(for: model.productIds)) ?? []
-            storeUnavailable = available.isEmpty
+        .onChange(of: model.isPremium, initial: true) { _, premium in
+            if premium { Task { await session?.refreshPremiumAccess() } }
         }
     }
 
-    private var unavailable: some View {
-        ScrollView {
-            VStack(spacing: TappedSpacing.xl) {
-                PaywallMarketing()
-                ErrorView(ErrorCopy.load("premium plans", hint: "check your connection or App Store sign-in and try again")) {
-                    storeCheck += 1
-                }
-                Button("Restore Purchases") {
-                    Task { try? await AppStore.sync() }
-                }
-                .font(TappedTypography.label)
-                HStack(spacing: TappedSpacing.lg) {
-                    Link("Terms of Service", destination: PaywallViewModel.termsURL)
-                    Link("Privacy Policy", destination: PaywallViewModel.privacyURL)
-                }
-                .font(TappedTypography.caption)
-                .foregroundStyle(TappedColors.accentText)
-            }
-            .padding(.bottom, TappedSpacing.xxl)
-        }
-        .scrollBounceBehavior(.basedOnSize)
-    }
-
-    private var store: some View {
-        SubscriptionStoreView(productIDs: model.productIds) {
-            PaywallMarketing()
-        }
-        .subscriptionStoreControlStyle(.picker)
-        .subscriptionStoreButtonLabel(.multiline)
-        .storeButton(.visible, for: .restorePurchases)
-        .storeButton(.hidden, for: .cancellation)
-        .subscriptionStorePolicyDestination(url: PaywallViewModel.termsURL, for: .termsOfService)
-        .subscriptionStorePolicyDestination(url: PaywallViewModel.privacyURL, for: .privacyPolicy)
-        .subscriptionStorePolicyForegroundStyle(TappedColors.accentText)
-        .tint(TappedColors.accent)
-        .containerBackground(TappedColors.background, for: .subscriptionStore)
-        .onInAppPurchaseCompletion { _, result in
-            if case .success(.success) = result {
-                await model.storeCompleted(purchased: true)
-            } else if case .failure = result {
-                model.notice = ErrorCopy.action("complete the purchase", hint: "you weren't charged. try again")
-                await model.storeCompleted(purchased: false)
-            }
-        }
-        .onChange(of: model.isPremium) { _, isPremium in
-            if isPremium, router.path.last == .paywall { router.pop() }
-        }
-    }
-}
-
-/// Marketing content above StoreKit's plan picker.
-private struct PaywallMarketing: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: TappedSpacing.xl) {
-            PaywallHero()
-            VStack(spacing: TappedSpacing.md) {
-                ForEach(PaywallViewModel.features, id: \.self) { feature in
-                    GlassFeatureRow(feature.title, detail: feature.detail, systemImage: feature.systemImage)
-                }
-            }
-            .padding(.horizontal, GlassMetrics.edgeInset)
-        }
-        .padding(.bottom, TappedSpacing.lg)
-    }
-}
-
-/// Rive logo animation over an accent gradient + headline (Flutter shows `splash.gif` full-bleed).
-private struct PaywallHero: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var body: some View {
+    private var hero: some View {
         VStack(alignment: .leading, spacing: TappedSpacing.md) {
-            if !dynamicTypeSize.isAccessibilitySize {
-                RiveView(.loadingLogo)
-                    .frame(height: 140)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityHidden(true)
-            }
-            Text("tapped premium")
+            Text("your profile is ready")
                 .font(TappedTypography.label)
-                .textCase(.uppercase)
                 .foregroundStyle(TappedColors.accentText)
-            Text("create a world tour from your iphone")
+            Text("your next stage\nstarts here.")
                 .font(TappedTypography.headingLg)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
+            Text("choose tapped premium to start finding gigs, connecting with venues, and building your next tour.")
+                .font(TappedTypography.bodySm)
+                .foregroundStyle(.secondary)
+            Text("one subscription. everything included.")
+                .font(TappedTypography.label)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, GlassMetrics.edgeInset)
-        .padding(.top, TappedSpacing.lg)
-        .background(alignment: .top) {
-            LinearGradient(colors: [TappedColors.accent.opacity(0.35), .clear], startPoint: .top, endPoint: .bottom)
-                .frame(height: 280)
-                .ignoresSafeArea(edges: .top)
+    }
+
+    @ViewBuilder private var plans: some View {
+        switch model.phase {
+        case .loading:
+            ProgressView("loading plans…").frame(maxWidth: .infinity)
+        case let .failed(message):
+            ErrorView(message) { Task { await model.load() } }
+        case .ready:
+            VStack(spacing: TappedSpacing.sm) {
+                ForEach(model.products) { product in
+                    Button {
+                        model.selectedProductId = product.id
+                    } label: {
+                        let layout = dynamicTypeSize.isAccessibilitySize
+                            ? AnyLayout(VStackLayout(alignment: .leading, spacing: TappedSpacing.sm))
+                            : AnyLayout(HStackLayout(spacing: TappedSpacing.md))
+                        layout {
+                            Image(systemName: model.selectedProduct?.id == product.id ? "checkmark.circle.fill" : "circle")
+                                .foregroundStyle(TappedColors.accentText)
+                                .accessibilityHidden(true)
+                            Text(PaywallViewModel.planTitle(product)).font(TappedTypography.label)
+                            if !dynamicTypeSize.isAccessibilitySize { Spacer() }
+                            Text(price(product)).font(TappedTypography.label)
+                        }
+                        .foregroundStyle(.primary)
+                        .padding(TappedSpacing.lg)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: TappedRadius.md))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: TappedRadius.md)
+                                .strokeBorder(model.selectedProduct?.id == product.id ? TappedColors.accent : .clear, lineWidth: 2)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(model.selectedProduct?.id == product.id ? [.isSelected] : [])
+                    .disabled(model.isBusy)
+                }
+            }
         }
+    }
+
+    private var purchaseControls: some View {
+        VStack(spacing: TappedSpacing.md) {
+            if let product = model.selectedProduct {
+                Text("\(price(product)), billed \(PaywallViewModel.planTitle(product)). auto-renews until cancelled. cancel anytime in App Store settings.")
+                    .font(TappedTypography.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Button {
+                Task { await model.purchase() }
+            } label: {
+                Group {
+                    if model.isPurchasing { ProgressView() } else { Text(model.ctaTitle) }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .disabled(model.selectedProduct == nil || model.isBusy || model.phase != .ready)
+            .accessibilityIdentifier("activate-premium")
+            Text("a subscription is required to use tapped. your profile is saved if you decide to come back later.")
+                .font(TappedTypography.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Button {
+                Task { await model.restore() }
+            } label: {
+                if model.isRestoring { ProgressView() } else { Text("already subscribed? restore purchases") }
+            }
+            .disabled(model.isBusy)
+            .font(TappedTypography.label)
+        }
+    }
+
+    private var accountLinks: some View {
+        VStack(spacing: TappedSpacing.md) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: TappedSpacing.lg) { legalLinks }
+                VStack(spacing: TappedSpacing.md) { legalLinks }
+            }
+            Text("by subscribing, you agree to the terms of service and privacy policy.")
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+            Link("manage App Store subscriptions", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
+            Link("need help? contact support", destination: URL(string: "mailto:support@tapped.ai")!)
+        }
+        .font(TappedTypography.caption)
+        .tint(TappedColors.accentText)
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder private var legalLinks: some View {
+        Link("terms of service", destination: PaywallViewModel.termsURL)
+        Link("privacy policy", destination: PaywallViewModel.privacyURL)
+    }
+
+    private func price(_ product: PremiumProduct) -> String {
+        guard let period = product.period else { return product.displayPrice }
+        return "\(product.displayPrice) / \(period.rawValue)"
     }
 }
 
-#Preview("free") {
+#Preview("activation") {
     NavigationStack {
-        PaywallView(dependencies: .mock(signedIn: true))
+        PaywallView(dependencies: .mock(signedIn: true), user: Samples.performer)
     }
-    .environment(Router())
-}
-
-#Preview("premium") {
-    NavigationStack {
-        PaywallView(dependencies: .mock(signedIn: true, isPremium: true))
-    }
-    .environment(Router())
 }

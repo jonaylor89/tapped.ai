@@ -2,7 +2,7 @@ import SwiftUI
 import TappedData
 import TappedUI
 
-/// Three-step onboarding after sign up (`lib/ui/onboarding/onboarding_view.dart`): name → genres → location. Forms per step; floating glass chrome for progress and the back / skip / continue controls.
+/// Profile setup leads into premium activation, the fourth and final onboarding step.
 struct OnboardingView: View {
     @Environment(AppSession.self) private var session: AppSession?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -44,7 +44,7 @@ struct OnboardingView: View {
         }
         if dynamicTypeSize.isAccessibilitySize, model.step.isSkippable {
             ToolbarItem(placement: .topBarTrailing) {
-                Button(model.step.isLast ? "skip for now" : "skip", action: skip)
+                Button(model.step.isLastProfileStep ? "skip for now" : "skip", action: skip)
                     .disabled(model.isSubmitting)
             }
         }
@@ -66,7 +66,7 @@ struct OnboardingView: View {
                 HStack(spacing: TappedSpacing.md) {
                     if model.step.isSkippable, !dynamicTypeSize.isAccessibilitySize {
                         Button(action: skip) {
-                            Text(model.step.isLast ? "skip for now" : "skip").frame(maxWidth: .infinity)
+                            Text(model.step.isLastProfileStep ? "skip for now" : "skip").frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.glass)
                         .disabled(model.isSubmitting)
@@ -76,7 +76,7 @@ struct OnboardingView: View {
                             if model.isSubmitting {
                                 ProgressView()
                             } else {
-                                Text(model.step.isLast ? "let's go" : "continue")
+                                Text("continue")
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -86,8 +86,8 @@ struct OnboardingView: View {
                 }
                 .controlSize(.large)
             }
-            if model.step.isLast {
-                Text("by tapping let's go you agree to the [eula](\(OnboardingViewModel.eulaURL.absoluteString)) and [privacy policy](\(OnboardingViewModel.privacyURL.absoluteString)).")
+            if model.step.isLastProfileStep {
+                Text("next: choose your premium plan. your profile will be saved.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -101,7 +101,7 @@ struct OnboardingView: View {
     }
 
     private func primaryAction() {
-        guard model.step.isLast else {
+        guard model.step.isLastProfileStep else {
             model.next()
             return
         }
@@ -122,7 +122,7 @@ struct OnboardingView: View {
 }
 
 /// One segment per step, filled up to the current step.
-private struct OnboardingProgress: View {
+struct OnboardingProgress: View {
     let step: Int
     let count: Int
 

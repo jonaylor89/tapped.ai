@@ -23,35 +23,21 @@ final class OpportunityViewModel {
     private(set) var phase: Phase
     private(set) var isApplied = false
     private(set) var isDisliked = false
-    private(set) var remainingQuota: Int?
     private(set) var isApplying = false
     private(set) var errorMessage: String?
 
     private let database: any DatabaseRepository
     private var application: OpportunityApplication
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, claims: [CustomClaim], opportunityId: String, opportunity: Opportunity?) {
+    init(dependencies: Dependencies, currentUser: UserModel, claims: [CustomClaim], opportunityId: String, opportunity: Opportunity?) {
         self.opportunityId = opportunityId
         self.currentUser = currentUser
         self.claims = claims
         self.opportunity = opportunity
         phase = opportunity == nil ? .loading : .loaded
         database = dependencies.database
-        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
+        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id)
     }
-
-    var isPremium: Bool {
-        get { application.isPremium }
-        set {
-            application.isPremium = newValue
-            if newValue { remainingQuota = nil }
-        }
-    }
-    /// Free applications left today; `nil` for premium (unlimited) or before loading.
-    var remainingFreeApplications: Int? { remainingQuota }
-    /// Out of free applications: the primary action becomes "apply with premium" and opens the paywall.
-    var needsPremiumToApply: Bool { remainingQuota == 0 && !isApplied }
-    var quotaCaption: String? { isApplied ? nil : ApplicationQuota.caption(remaining: remainingQuota) }
 
     var canSeeApplicants: Bool { opportunity?.userId == currentUser.id || claims.contains(.admin) }
     var canApply: Bool { opportunity.map { $0.userId != currentUser.id } ?? false }
@@ -75,7 +61,6 @@ final class OpportunityViewModel {
         booker = loadedBooker?.id == venue?.id ? nil : loadedBooker
         let hasApplied = (try? await applied) ?? false
         isApplied = isApplied || hasApplied
-        remainingQuota = await application.remainingQuota()
     }
 
     func apply(comment: String) async -> OpportunityApplication.Outcome? {
@@ -86,7 +71,6 @@ final class OpportunityViewModel {
             let outcome = try await application.apply(to: [opportunity], comment: comment.trimmingCharacters(in: .whitespacesAndNewlines))
             if outcome == .applied {
                 isApplied = true
-                remainingQuota = remainingQuota.map { max($0 - 1, 0) }
             }
             return outcome
         } catch {
@@ -110,20 +94,3 @@ final class OpportunityViewModel {
     }
 }
 
-/// Copy for the free-application quota. Always "n of 3 … today", never a bare "3 left".
-enum ApplicationQuota {
-    /// Free applications granted per day (`credits/{uid}.opportunityQuota` reset).
-    static let dailyFree = 3
-
-    /// "2 of 3 free applications left today"; `nil` for premium (unlimited).
-    static func caption(remaining: Int?) -> String? {
-        guard let remaining else { return nil }
-        let left = max(remaining, 0)
-        let total = max(dailyFree, left)
-        if left == 0 { return "you've used all \(total) free applications today" }
-        return "\(left) of \(total) free \(total == 1 ? "application" : "applications") left today"
-    }
-
-    static let premiumCaption = "premium · unlimited applications"
-    static let applyWithPremium = "apply with premium"
-}

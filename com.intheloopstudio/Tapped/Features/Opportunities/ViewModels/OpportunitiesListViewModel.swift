@@ -11,7 +11,6 @@ final class OpportunitiesListViewModel {
     let opportunities: [Opportunity]
     private(set) var appliedIds: Set<String> = []
     private(set) var venueNames: [String: String] = [:]
-    private(set) var remainingQuota: Int?
     private(set) var isApplying = false
     private(set) var errorMessage: String?
     var isSelecting = false {
@@ -23,20 +22,13 @@ final class OpportunitiesListViewModel {
     private var application: OpportunityApplication
     private let currentUser: UserModel
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, opportunities: [Opportunity]) {
+    init(dependencies: Dependencies, currentUser: UserModel, opportunities: [Opportunity]) {
         self.opportunities = opportunities.sorted { $0.startTime < $1.startTime }
         self.currentUser = currentUser
         database = dependencies.database
-        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
+        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id)
     }
 
-    var isPremium: Bool {
-        get { application.isPremium }
-        set {
-            application.isPremium = newValue
-            if newValue { remainingQuota = nil }
-        }
-    }
     var selectable: [Opportunity] { opportunities.filter { !appliedIds.contains($0.id) && $0.userId != currentUser.id } }
     var allSelected: Bool { !selectable.isEmpty && selectedIds.count == selectable.count }
     var selectedOpportunities: [Opportunity] { opportunities.filter { selectedIds.contains($0.id) } }
@@ -60,7 +52,6 @@ final class OpportunitiesListViewModel {
                 venueNames[venueId] = user.displayName
             }
         }
-        remainingQuota = await application.remainingQuota()
     }
 
     func venueName(for opportunity: Opportunity) -> String? {
@@ -85,7 +76,6 @@ final class OpportunitiesListViewModel {
             let outcome = try await application.apply(to: targets, comment: "")
             if outcome == .applied {
                 appliedIds.formUnion(targets.map(\.id))
-                remainingQuota = remainingQuota.map { max($0 - targets.count, 0) }
                 isSelecting = false
             }
             return outcome

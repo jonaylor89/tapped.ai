@@ -3,22 +3,20 @@ import TappedData
 import TappedDomain
 import TappedUI
 
-/// Port of `gig_search_view.dart` / `venue_filter_form.dart`. Search is premium-only (→ paywall).
+/// Port of `gig_search_view.dart` / `venue_filter_form.dart`. Subscription access is handled by AppSession.
 struct GigSearchView: View {
-    private let isPremium: Bool
     @State private var model: GigSearchViewModel
     @State private var showsResults: Bool
     @State private var validationMessage: String?
     @Environment(Router.self) private var router
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, model: GigSearchViewModel? = nil, showsResults: Bool = false) {
-        self.isPremium = isPremium
-        _model = State(initialValue: model ?? GigSearchViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium))
+    init(dependencies: Dependencies, currentUser: UserModel, model: GigSearchViewModel? = nil, showsResults: Bool = false) {
+        _model = State(initialValue: model ?? GigSearchViewModel(dependencies: dependencies, currentUser: currentUser))
         _showsResults = State(initialValue: showsResults)
     }
 
     var body: some View {
-        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+        screen
     }
 
     @ViewBuilder private var screen: some View {
@@ -60,15 +58,15 @@ struct GigSearchView: View {
                     if model.isSearching {
                         ProgressView()
                     } else {
-                        Image(systemName: model.isPremium ? "magnifyingglass" : "lock.fill")
+                        Image(systemName: "magnifyingglass")
                     }
-                    Text(model.isPremium ? "search venues" : "unlock search")
+                    Text("search venues")
                 }
                 .font(TappedTypography.headingXs)
                 .frame(maxWidth: .infinity, minHeight: 36)
             }
             .buttonStyle(.glassProminent)
-            .disabled(model.isPremium && !model.canSearch || model.isSearching)
+            .disabled(!model.canSearch || model.isSearching)
             .tappedFloatingInset()
             .padding(.bottom, TappedSpacing.sm)
         }
@@ -89,7 +87,6 @@ struct GigSearchView: View {
     private func search() async {
         switch await model.searchVenues() {
         case .results: showsResults = true
-        case .needsPremium: router.push(.paywall)
         case let .invalid(message): validationMessage = message
         }
     }
@@ -173,23 +170,23 @@ struct GigSearchResultsView: View {
 #Preview("form") {
     let dependencies = Dependencies.mock(signedIn: true, isPremium: true)
     NavigationStack {
-        GigSearchView(dependencies: dependencies, currentUser: Samples.performer, isPremium: true)
+        GigSearchView(dependencies: dependencies, currentUser: Samples.performer)
             .tappedRouteDestinations()
     }
     .environment(\.dependencies, dependencies)
     .environment(Router())
 }
 
-#Preview("locked") {
+#Preview("search form") {
     NavigationStack {
-        GigSearchView(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false)
+        GigSearchView(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
     }
     .environment(\.dependencies, .mock(signedIn: true))
     .environment(Router())
 }
 
 #Preview("results") {
-    let model = GigSearchViewModel(dependencies: .mock(signedIn: true, isPremium: true), currentUser: Samples.performer, isPremium: true)
+    let model = GigSearchViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
     NavigationStack {
         GigSearchResultsView(model: model)
     }

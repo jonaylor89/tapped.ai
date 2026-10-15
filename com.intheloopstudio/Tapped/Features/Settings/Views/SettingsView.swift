@@ -300,7 +300,7 @@ struct SettingsView: View {
 
     private var moreSection: some View {
         Section {
-            Button("tapped premium", systemImage: "sparkles") { router.push(.paywall) }
+            Link("manage subscription", destination: URL(string: "https://apps.apple.com/account/subscriptions")!)
             Link(destination: URL(string: "https://instagram.com/tappedai")!) {
                 SwiftUI.Label("follow us on instagram", systemImage: "camera.fill")
             }

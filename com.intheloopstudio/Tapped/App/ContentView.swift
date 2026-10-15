@@ -30,12 +30,16 @@ struct ContentView: View {
                 case let .onboarding(uid):
                     OnboardingView(dependencies: dependencies, initialStep: session.launchOptions.onboardingStep)
                         .id(uid)
+                case let .premiumRequired(user):
+                    NavigationStack {
+                        PaywallView(dependencies: dependencies, user: user)
+                    }
+                    .id(user.id)
                 case let .signedIn(user):
                     if session.availableUpdate == nil {
                         ShellView(
                             currentUser: user,
                             dependencies: dependencies,
-                            isPremium: session.isPremium,
                             claims: session.claims,
                             launchOptions: session.launchOptions
                         )
@@ -50,7 +54,10 @@ struct ContentView: View {
         .task { await session.run() }
         .onChange(of: scenePhase, initial: true) { _, phase in
             guard phase == .active else { return }
-            Task { await dependencies.notifications.setBadgeCount(0) }
+            Task {
+                await session.refreshPremiumAccess()
+                await dependencies.notifications.setBadgeCount(0)
+            }
         }
         .onChange(of: inbound?.apnsRegistrations) {
             Task { await session.saveDeviceTokenIfSignedIn() }

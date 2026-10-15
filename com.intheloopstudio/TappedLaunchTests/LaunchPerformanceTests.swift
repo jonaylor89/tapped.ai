@@ -2,10 +2,12 @@ import XCTest
 
 /// Cold launch to the signed-in shell in mock mode (no network), so regressions in launch work show up in CI.
 final class LaunchPerformanceTests: XCTestCase {
+    @MainActor
     private func mockApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["TAPPED_MOCK"] = "1"
         app.launchEnvironment["TAPPED_MOCK_SIGNED_IN"] = "1"
+        app.launchEnvironment["TAPPED_MOCK_PREMIUM"] = "1"
         return app
     }
 

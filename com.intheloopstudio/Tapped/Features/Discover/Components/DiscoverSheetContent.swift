@@ -32,16 +32,6 @@ struct DiscoverSheetContent: View {
                     .buttonStyle(.plain)
                 }
             }
-            if let quota = model.quotaMessage {
-                Section {
-                    Button { router.push(.paywall) } label: {
-                        Label(quota, systemImage: "bolt.fill")
-                            .font(TappedTypography.bodySm.weight(.semibold))
-                            .foregroundStyle(TappedColors.warning)
-                    }
-                }
-                .listRowBackground(TappedColors.background)
-            }
             if model.isPerformerFirst {
                 paidGigsThisWeek
                 venuesThatFit
@@ -62,7 +52,7 @@ struct DiscoverSheetContent: View {
             if model.overlay == .venues {
                 plainSection { SheetGenreChips(counts: model.genreCounts) }
             }
-            plainSection { SheetTopPerformers(performers: model.featuredPerformers, isPremium: model.isPremium, push: router.push) }
+            plainSection { SheetTopPerformers(performers: model.featuredPerformers, push: router.push) }
             plainSection { SheetFeaturedGigs(opportunities: model.featuredOpportunities, push: router.push) }
         }
         .listStyle(.insetGrouped)

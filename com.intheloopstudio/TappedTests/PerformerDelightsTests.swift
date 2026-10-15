@@ -12,7 +12,7 @@ struct PerformerDelightsTests {
     let now = Samples.referenceDate
 
     private func router(_ database: MockDatabaseRepository, confirmed: @escaping @MainActor (Booking) async -> Void = { _ in }) -> NotificationActionRouter {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.database = database
         return NotificationActionRouter(dependencies: dependencies, now: { now }, onBookingConfirmed: confirmed)
     }
@@ -72,11 +72,11 @@ struct PerformerDelightsTests {
         #expect(try await database.isUserAppliedForOpportunity(opportunityId: opportunityId, userId: Samples.performer.id))
     }
 
-    @Test func applyWithoutQuotaNeedsThePaywall() async throws {
+    @Test func subscriberCanApplyWithoutLegacyQuota() async throws {
         let database = MockDatabaseRepository(defaultOpportunityQuota: 0)
         let opportunityId = try #require(Samples.opportunities.first { $0.endTime > .now }?.id)
         let outcome = await router(database).handle(response("APPLY", category: NotificationCategories.newGig, ["opportunityId": opportunityId]))
-        #expect(outcome == .needsPremium(opportunityId: opportunityId))
+        #expect(outcome == .applied(opportunityId: opportunityId))
     }
 
     @Test func plainTapsAndMismatchedPayloadsAreNotActions() async {
@@ -119,7 +119,7 @@ struct PerformerDelightsTests {
     }
 
     @Test func cardRendersToAnImage() async {
-        let model = ShareProfileViewModel(dependencies: .mock(signedIn: true), userId: Samples.performer.id, user: Samples.performer) { _ in nil }
+        let model = ShareProfileViewModel(dependencies: .mock(signedIn: true, isPremium: true), userId: Samples.performer.id, user: Samples.performer) { _ in nil }
         await model.load()
         #expect(model.qrCode != nil)
         #expect(model.cardImage != nil)
@@ -139,7 +139,7 @@ struct PerformerDelightsTests {
         var opened: [URL] = []
         let date = Date.now
         let coordinator = GigNightCoordinator(
-            dependencies: .mock(signedIn: true),
+            dependencies: .mock(signedIn: true, isPremium: true),
             liveActivities: activities,
             store: WidgetSnapshotStore(defaults: defaults),
             openURL: { opened.append($0) },
@@ -169,7 +169,7 @@ struct PerformerDelightsTests {
         var reloads = 0
         let store = WidgetSnapshotStore(defaults: defaults)
         let coordinator = GigNightCoordinator(
-            dependencies: .mock(signedIn: true),
+            dependencies: .mock(signedIn: true, isPremium: true),
             liveActivities: MockLiveActivityRepository(),
             store: store,
             reloadWidgets: { reloads += 1 },
@@ -190,7 +190,7 @@ struct PerformerDelightsTests {
         var reloads = 0
         var date = Samples.referenceDate
         let coordinator = GigNightCoordinator(
-            dependencies: .mock(signedIn: true),
+            dependencies: .mock(signedIn: true, isPremium: true),
             liveActivities: MockLiveActivityRepository(),
             store: WidgetSnapshotStore(defaults: defaults),
             reloadWidgets: { reloads += 1 },

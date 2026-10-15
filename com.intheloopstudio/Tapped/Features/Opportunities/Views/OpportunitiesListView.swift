@@ -5,17 +5,15 @@ import TappedUI
 
 /// Port of `opportunities_results_view.dart`: tiles with applied state; "select" enables batch apply.
 struct OpportunitiesListView: View {
-    private let isPremium: Bool
     @State private var model: OpportunitiesListViewModel
     @Environment(Router.self) private var router
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, opportunities: [Opportunity]) {
-        self.isPremium = isPremium
-        _model = State(initialValue: OpportunitiesListViewModel(dependencies: dependencies, currentUser: currentUser, isPremium: isPremium, opportunities: opportunities))
+    init(dependencies: Dependencies, currentUser: UserModel, opportunities: [Opportunity]) {
+        _model = State(initialValue: OpportunitiesListViewModel(dependencies: dependencies, currentUser: currentUser, opportunities: opportunities))
     }
 
     var body: some View {
-        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+        screen
     }
 
     @ViewBuilder private var screen: some View {
@@ -26,10 +24,6 @@ struct OpportunitiesListView: View {
                 }
             } header: {
                 if model.isSelecting { Text("select gigs to apply in one go") }
-            } footer: {
-                if let quota = model.remainingQuota, !model.opportunities.isEmpty {
-                    Text(ApplicationQuota.caption(remaining: quota) ?? "")
-                }
             }
         }
         .listStyle(.insetGrouped)
@@ -60,12 +54,12 @@ struct OpportunitiesListView: View {
             if model.isSelecting && !model.selectedIds.isEmpty {
                 Button {
                     Task {
-                        if await model.applySelected() == .needsPremium { router.push(.paywall) }
+                        _ = await model.applySelected()
                     }
                 } label: {
                     HStack(spacing: TappedSpacing.sm) {
                         if model.isApplying { ProgressView() }
-                        Text(Self.applyTitle(count: model.selectedIds.count, quota: model.remainingQuota))
+                        Text(Self.applyTitle(count: model.selectedIds.count))
                     }
                     .font(TappedTypography.headingXs)
                     .frame(maxWidth: .infinity, minHeight: 36)
@@ -85,8 +79,7 @@ struct OpportunitiesListView: View {
         .task { await model.load() }
     }
 
-    static func applyTitle(count: Int, quota: Int?) -> String {
-        if let quota, quota < count { return "apply to \(count) with premium" }
+    static func applyTitle(count: Int) -> String {
         return "apply to \(count) \(count == 1 ? "gig" : "gigs")"
     }
 
@@ -120,7 +113,7 @@ struct OpportunitiesListView: View {
 
 #Preview {
     NavigationStack {
-        OpportunitiesListView(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, opportunities: Samples.opportunities)
+        OpportunitiesListView(dependencies: .mock(signedIn: true), currentUser: Samples.performer, opportunities: Samples.opportunities)
     }
     .environment(Router())
 }

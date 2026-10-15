@@ -43,7 +43,7 @@ Remote Config keys (fetched by `FirebaseRemoteConfigRepository`; configure the `
 | `booking_fee` | number | fee shown on booking forms |
 | `ios_minimum_app_version` | string / `""` | semver; installed version below it → blocking `UpdateRequiredView`. Empty/unparseable = off |
 | `ios_latest_app_version` | string / `""` | semver; installed version below it → dismissible "update available" alert (update now / later / ignore this version) |
-| `premium_waitlist_enabled` | bool / `false` | legacy/mock configuration; live premium waitlist is disabled during the API cutover |
+| `premium_waitlist_enabled` | bool / `false` | legacy configuration; never replaces the required premium activation step |
 
 ## Build / test / run
 
@@ -64,7 +64,7 @@ Run from Xcode with the **`Tapped Mock`** scheme (sets `TAPPED_MOCK=1`), or from
 
 ```bash
 xcrun simctl install booted <DerivedData>/Build/Products/Debug-iphonesimulator/Tapped.app
-SIMCTL_CHILD_TAPPED_MOCK=1 SIMCTL_CHILD_TAPPED_MOCK_SIGNED_IN=1 xcrun simctl launch booted com.intheloopstudio
+SIMCTL_CHILD_TAPPED_MOCK=1 SIMCTL_CHILD_TAPPED_MOCK_SIGNED_IN=1 SIMCTL_CHILD_TAPPED_MOCK_PREMIUM=1 xcrun simctl launch booted com.intheloopstudio
 ```
 
 ## Mock mode
@@ -78,7 +78,7 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | Var | Values | Effect |
 | --- | --- | --- |
 | `TAPPED_MOCK_SIGNED_IN` | `1` | start signed in as `Samples.performer` |
-| `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active |
+| `TAPPED_MOCK_PREMIUM` | `1` | premium entitlement active; required to reach the shell in signed-in mocks |
 | `TAPPED_MOCK_SCREEN` | `splash` \| `login` \| `signup` \| `forgot` | pin the signed-out screen |
 | `TAPPED_MOCK_DETENT` | `collapsed` \| `medium` \| `large` | initial Discover sheet detent |
 | `TAPPED_MOCK_TAB` | `gigs` \| `bookings` \| `messages` \| `profile` \| `search` | initial tab in the map sheet (non-Gigs tabs open at `large`) |
@@ -89,7 +89,7 @@ Extra launch env vars (mock mode only), used for screenshots and UI tests:
 | `TAPPED_MOCK_ONBOARDING_STEP` | `name` \| `genres` \| `location` | open onboarding on a step with sample answers |
 | `TAPPED_MOCK_MAINTENANCE` | `1` | Remote Config `down_for_maintenance` |
 | `TAPPED_MOCK_MIN_VERSION` / `TAPPED_MOCK_LATEST_VERSION` | e.g. `99.0.0` | force the update-required gate / update-available alert |
-| `TAPPED_MOCK_WAITLIST` | `1` | Remote Config `premium_waitlist_enabled` (`Route.paywall` → waitlist) |
+| `TAPPED_MOCK_WAITLIST` | `1` | legacy Remote Config flag; cannot replace premium activation |
 | `TAPPED_MOCK_SHEET` | `reauth` | present the re-authentication sheet |
 | `TAPPED_MOCK_LINK` | a URL | deliver a deep link at launch (cold start) |
 | `TAPPED_MOCK_GIG_NIGHT` | `upcoming` \| `onstage` \| `review` | add a confirmed booking tonight and start the Gig Night Live Activity in that phase |
@@ -140,7 +140,7 @@ Dependency direction: `Tapped → TappedUI, TappedData → TappedDomain`. `Tappe
 `TappedApp` resolves `Dependencies` once and injects it with `.environment(\.dependencies, …)` alongside `AppSession`
 and `Router`. `AppSession.run()` drives
 `ContentView`: `splash → maintenance | updateRequired | signedOut (AuthFlowView) | confirmEmail | onboarding
-(OnboardingView) | signedIn (ShellView)`. Entering `signedIn` publishes `latestAppVersion`, requests push permission
+(OnboardingView) | premiumRequired (final onboarding step) | signedIn (ShellView)`. Entering `signedIn` publishes `latestAppVersion`, requests push permission
 and registers the FCM token through the authenticated Rust API. Current session profiles refresh centrally every 30 seconds; edits update the session immediately without discarding unsaved drafts.
 
 Links: `TappedApp.onOpenURL` (universal links on the associated domains + the `com.intheloopstudio://` scheme) and
@@ -156,13 +156,42 @@ linked providers (password / apple / google).
 `ShellView` is a `NavigationStack(path: $router.path)` whose root is `DiscoverView`; profile and messages are pushed
 from Discover's top chrome.
 
+### Premium-only onboarding
+
+Profile setup asks for name → genres → location (steps 1–3 of 4). The first step discloses that a
+subscription is required. Continuing or skipping location saves the profile through the Rust API, then
+`AppSession` presents premium activation as step 4. Cancelling checkout, pending approval, an unavailable
+storefront, or relaunching cannot discard the saved profile or unlock the app. Existing subscribers skip
+activation; existing non-subscribers and expired/revoked subscriptions return to this same gate.
+
+Only verified `PurchasesRepository` entitlements permit `signedIn`. Purchase callbacks alone never grant
+access. Entitlements are rechecked on transaction updates, foreground, and the session's 30-second refresh.
+Deep links remain buffered until the shell appears; background notification actions also require premium.
+There is no waitlist substitution or free path through the gate. Legacy `Route.paywall` opens settings,
+not another purchase screen; settings links to App Store subscription management.
+
+The final step shows full localized monthly/yearly billing prices, auto-renewal terms, a price-bearing
+purchase button, restore, legal/support links, subscription management, sign out and reauthenticated account
+deletion. It does not promise a free trial, discounted price, or guaranteed bookings. Cancellation is silent;
+pending approval, restore failures and loading failures offer explicit recovery.
+
+Funnel events: `onboarding_profile_saved`, `premium_activation_viewed`, `premium_purchase_started`,
+`premium_purchase_cancelled`, `premium_purchase_pending`, `premium_purchased`, `premium_restored`,
+`premium_activation_completed`. Profile completion is not counted as paid activation.
+
+Tests: `PremiumAccessTests` covers session boundaries and purchase/restore failures;
+`PremiumOnboardingTests` covers the onboarding-to-activation-to-shell path, relaunch, restoring without a
+subscription, existing subscribers, buffered deep links, and accessibility layout. Before release, verify
+real App Store sandbox purchase, cancellation, Ask to Buy, cross-device restore, expiry/refund, and legal
+destinations with the production products. Client gating does not replace server-side API authorization.
+
 ### Discover
 
 `MKMapView` (via `UIViewRepresentable`, for built-in `clusteringIdentifier`
 clustering), glass top chrome (avatar · search capsule · messages, venues/gigs picker, "finish setting up" banner,
 "search this area"), floating controls (filters, locate, debug zoom) that fade from `.medium` to `.large`, and
 `MapsStyleSheet` with results header, quick actions, results, genre chips, top performers, featured gigs.
-`DiscoverViewModel` handles bounding-box API/Postgres search, premium-gated filters and venue-fit sorting.
+`DiscoverViewModel` handles bounding-box API/Postgres search, filters and venue-fit sorting. All shell features are included in the subscription; there are no feature-level upsells or free-application quotas.
 
 ## Conventions
 
@@ -239,9 +268,9 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 | Shell, Discover, auth | Map + clustering, glass chrome, three-detent `MapsStyleSheet` (quick actions/results fade in above the collapsed detent), filters, all results; splash, login, sign up, forgot password, confirm email | `discovery`, `login`, `signUp`, `forgotPassword` | #18 |
 | Profile | Profile (hero, stats, socials, reviews, services, bookings; **message** via `MessageUserButton` → `ChatRepository.createDirectConversation` → `streamChannel`), settings / edit profile (delete account behind `.reauthenticationSheet`), share profile (QR), tasks, activity (unread badge on the Discover avatar), image viewer | `profile`, `settings`, `shareProfile`, `tasks`, `activities`, `image` | #22 |
 | Bookings | Bookings list (upcoming/past, sent/received), booking detail + accept/decline/cancel, create booking, confirmation, add past booking, booking history map, request to perform (+ add collaborators) and confirmation, services list / detail / create-edit | `bookings`, `booking`, `createBooking`, `bookingConfirmation`, `addPastBooking`, `bookingHistory`, `requestToPerform`, `requestToPerformConfirmation`, `addCollaborators`, `serviceSelection`, `service`, `createService` | #20 |
-| Search & opportunities | Search (performers/venues, recents), advanced search, location form, gig search (premium, venue fit), opportunity detail + apply, opportunities list, feed, interested users, reviews (new reviews carry the most recent confirmed booking id between the two users) | `search`, `advancedSearch`, `locationForm`, `gigSearch`, `opportunity`, `opportunities`, `opportunityFeed`, `interestedUsers`, `reviews` | #23 |
-| Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), FCM token, Remote Config gates (maintenance, update required/available, premium waitlist), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
-| Premium, messaging, admin | StoreKit 2 paywall (`PaywallGate`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
+| Search & opportunities | Search (performers/venues, recents), advanced search, location form, gig search (venue fit), opportunity detail + apply, opportunities list, feed, interested users, reviews (new reviews carry the most recent confirmed booking id between the two users) | `search`, `advancedSearch`, `locationForm`, `gigSearch`, `opportunity`, `opportunities`, `opportunityFeed`, `interestedUsers`, `reviews` | #23 |
+| Onboarding & platform | Onboarding steps, email verification, universal links + `com.intheloopstudio://` scheme + notification taps (`InboundLinks` → `DeepLinkResolver`), FCM token, Remote Config gates (maintenance, update required/available), `.reauthenticationSheet` | `onboarding`, `AppSession` phases | #21 |
+| Premium, messaging, admin | StoreKit 2 final onboarding activation (`PaywallView`, `Tapped.storekit`), Stream Chat conversation list + channel (native SwiftUI over `ChatRepository`), video call (coming-soon screen), admin opportunity form (admin claim) | `paywall`, `messagingChannelList`, `streamChannel`, `videoCall`, `admin` | #19 |
 
 `Route.discovery` pops to the root (Discover is the shell root).
 
@@ -249,7 +278,7 @@ Every `Route` case resolves to a real screen (`RouteDestination` → `BookingsRo
 
 - Video call remains a "coming soon" screen.
 - StoreKit uses the existing App Store Connect `Tapped Premium` subscription products: `prod_2499_1m` ($12.99/month)
-  and `prod_11999_1y` ($119.99/year). `StoreKit/Tapped.storekit` mirrors them for local testing.
+  and `prod_11999_1y` ($119.99/year). `StoreKit/Tapped.storekit` mirrors them for local testing. The activation UI always uses StoreKit's localized prices, not these reference amounts.
 - Push: no topic subscriptions; token registration goes through Rust.
 - Badges, curated leaders, premium waitlist, historical contact flags, blocking/reporting are explicitly disabled/unmigrated (contact support@tapped.ai). Applications are unmetered and feeds are computed.
 - Public Firebase configuration is committed at `Tapped/Resources/GoogleService-Info.plist`; it is not a service-account credential. Unit tests use mocks; simulator tests and actual App Store distribution remain separate validation paths.

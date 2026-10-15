@@ -20,10 +20,9 @@ final class PaywallViewModel {
     }
 
     static let features: [Feature] = [
-        Feature(title: "unlimited gig opportunities", detail: "apply to every gig on the map, no daily cap", systemImage: "infinity"),
-        Feature(title: "venue intel", detail: "exclusive info on venues actively looking for performers", systemImage: "building.2.fill"),
-        Feature(title: "direct contact", detail: "booking emails and phone numbers for thousands of venues", systemImage: "envelope.fill"),
-        Feature(title: "advanced search", detail: "filter by capacity, genre, and who venues actually book", systemImage: "slider.horizontal.3"),
+        Feature(title: "find your next stage", detail: "discover gigs and venues that fit your sound.", systemImage: "music.mic"),
+        Feature(title: "make the connection", detail: "reach out to venues and keep conversations in one place.", systemImage: "bubble.left.and.bubble.right"),
+        Feature(title: "go after every opportunity", detail: "unlimited gig applications. no extra feature unlocks.", systemImage: "infinity"),
     ]
 
     static let privacyURL = URL(string: "https://app.tapped.ai/privacy")!
@@ -35,12 +34,13 @@ final class PaywallViewModel {
     private(set) var isPremium = false
     private(set) var isPurchasing = false
     private(set) var isRestoring = false
-    /// Transient message shown in an alert ("purchase canceled", errors…).
+    /// Actionable purchase/restore status. User cancellation stays silent.
     var notice: String?
     /// Increments on every successful purchase/restore; drives the success haptic.
     private(set) var successCount = 0
     private(set) var errorCount = 0
 
+    private var hasRecordedView = false
     private let purchases: any PurchasesRepository
     private let analytics: any AnalyticsRepository
 
@@ -72,6 +72,10 @@ final class PaywallViewModel {
     }
 
     func load() async {
+        if !hasRecordedView {
+            hasRecordedView = true
+            await analytics.track("premium_activation_viewed")
+        }
         phase = .loading
         isPremium = await purchases.isPremium()
         do {
@@ -84,21 +88,7 @@ final class PaywallViewModel {
         }
     }
 
-    /// Keeps `isPremium` in sync with transaction updates (e.g. purchases on another device, Ask to Buy).
-    /// IDs for `SubscriptionStoreView`: whatever the repository loaded, else the bundled defaults.
-    var productIds: [String] { products.isEmpty ? TappedConfig.defaultPremiumProductIds : products.map(\.id) }
-
-    /// Called from `SubscriptionStoreView`'s completion handlers.
-    func storeCompleted(purchased: Bool, restored: Bool = false) async {
-        if purchased || restored {
-            isPremium = await purchases.isPremium() || purchased
-            successCount += 1
-            await analytics.track(restored ? "restore_purchases" : "purchase_premium")
-        } else {
-            errorCount += 1
-        }
-    }
-
+    /// Observe verified StoreKit updates, including Ask to Buy approval on a later launch.
     func observeEntitlements() async {
         for await entitlements in purchases.entitlementUpdates() {
             isPremium = entitlements.contains(.premium)
@@ -106,24 +96,30 @@ final class PaywallViewModel {
     }
 
     func purchase() async {
-        guard let product = selectedProduct, !isBusy else { return }
+        guard phase == .ready, let product = selectedProduct, !isBusy, !isPremium else { return }
         isPurchasing = true
         defer { isPurchasing = false }
+        await analytics.track("premium_purchase_started", properties: ["product_id": .string(product.id)])
         do {
             switch try await purchases.purchase(productId: product.id) {
             case .purchased:
-                isPremium = true
-                successCount += 1
-                await analytics.track("premium_purchased", properties: ["product_id": .string(product.id)])
+                isPremium = await purchases.isPremium()
+                if isPremium {
+                    successCount += 1
+                    await analytics.track("premium_purchased", properties: ["product_id": .string(product.id)])
+                } else {
+                    notice = "your purchase is processing. try restore purchases in a moment."
+                }
             case .pending:
                 notice = "purchase pending approval"
+                await analytics.track("premium_purchase_pending")
             case .cancelled:
-                notice = "purchase canceled"
+                await analytics.track("premium_purchase_cancelled")
             }
         } catch {
             FirebaseBootstrap.record(error: error)
             errorCount += 1
-            notice = ErrorCopy.action("complete the purchase", hint: "you weren't charged. try again")
+            notice = ErrorCopy.action("complete the purchase", hint: "check your App Store account or try restoring purchases")
         }
     }
 
@@ -136,6 +132,7 @@ final class PaywallViewModel {
             isPremium = await purchases.isPremium()
             if isPremium {
                 successCount += 1
+                await analytics.track("premium_restored")
             } else {
                 notice = "no purchases to restore"
             }

@@ -39,16 +39,6 @@ struct PaywallMessagingAdminTests {
         #expect(model.phase == .ready)
     }
 
-    @Test func premiumGateRoutesToPaywall() {
-        let route = Route.messagingChannelList
-        #expect(route.requiringPremium(true) == route)
-        #expect(route.requiringPremium(false) == .paywall)
-        let router = Router()
-        router.push(.admin, requiresPremium: false)
-        #expect(router.path.isEmpty)
-        #expect(router.sheet == .paywall)
-    }
-
     // MARK: messaging
 
     @Test func channelListObservesConversations() async throws {
@@ -262,8 +252,11 @@ struct PaywallMessagingAdminTests {
         #expect(!ChannelViewModel.startsCluster(messages, at: 99))
     }
 
-    @Test func paywallFallsBackToBundledProductIds() {
+    @Test func planSelectionShowsTheFullBillingPrice() async {
         let model = PaywallViewModel(dependencies: .mock(signedIn: true))
-        #expect(model.productIds == TappedConfig.defaultPremiumProductIds)
+        await model.load()
+        #expect(model.ctaTitle == "get full access · $12.99 / month")
+        model.selectedProductId = model.products.last?.id
+        #expect(model.ctaTitle == "get full access · $119.99 / year")
     }
 }

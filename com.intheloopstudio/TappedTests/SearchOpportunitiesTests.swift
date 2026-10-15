@@ -131,8 +131,8 @@ struct AdvancedSearchTests {
 @MainActor
 @Suite("Gig search")
 struct GigSearchViewModelTests {
-    func makeModel(isPremium: Bool = true) -> GigSearchViewModel {
-        GigSearchViewModel(dependencies: .mock(signedIn: true, isPremium: isPremium), currentUser: Samples.performer, isPremium: isPremium)
+    func makeModel() -> GigSearchViewModel {
+        GigSearchViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
     }
 
     @Test func defaultsComeFromThePerformer() {
@@ -150,8 +150,10 @@ struct GigSearchViewModelTests {
         #expect(model.capacityBounds() == 50...400)
     }
 
-    @Test func freeUsersArePaywalled() async {
-        #expect(await makeModel(isPremium: false).searchVenues() == .needsPremium)
+    @Test func searchDoesNotAddASecondSubscriptionGate() async {
+        let model = makeModel()
+        await model.loadInitialPlace()
+        #expect(await model.searchVenues() == .results)
     }
 
     @Test func validatesGenresAndPlace() async {
@@ -218,22 +220,17 @@ private actor FlakyOpportunityNotifications: OpportunityNotificationRepository {
 struct OpportunityTests {
     let opportunity = Samples.opportunities[0]
 
-    @Test func freeUsersSpendQuotaThenHitThePaywall() async throws {
-        let dependencies = Dependencies.mock(signedIn: true)
-        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: false)
-        let startingQuota = try #require(await application.remainingQuota())
-        #expect(try await application.apply(to: [opportunity], comment: "hi") == .applied)
-        // The quota spend now runs on the background task apply returns ahead of.
-        #expect(await eventually { await application.remainingQuota() == startingQuota - 1 })
-        #expect(try await dependencies.database.isUserAppliedForOpportunity(opportunityId: opportunity.id, userId: Samples.performer.id))
-        let tooMany = Array(repeating: opportunity, count: startingQuota)
-        #expect(try await application.apply(to: tooMany, comment: "") == .needsPremium)
+    @Test func applicationsIgnoreLegacyQuota() async throws {
+        var dependencies = Dependencies.mock(signedIn: true)
+        dependencies.database = MockDatabaseRepository(defaultOpportunityQuota: 0)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id)
+        #expect(try await application.apply(to: Samples.opportunities, comment: "") == .applied)
+        #expect(try await dependencies.database.getUserOpportunityQuota(Samples.performer.id) == 0)
     }
 
     @Test func premiumIsUnlimited() async throws {
         let dependencies = Dependencies.mock(signedIn: true, isPremium: true)
-        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: true)
-        #expect(await application.remainingQuota() == nil)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id)
         #expect(try await application.apply(to: Samples.opportunities, comment: "") == .applied)
     }
 
@@ -241,7 +238,7 @@ struct OpportunityTests {
         let notifications = MockOpportunityNotificationRepository()
         var dependencies = Dependencies.mock(signedIn: true)
         dependencies.opportunityNotifications = notifications
-        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: false)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id)
         let opportunities = Array(Samples.opportunities.prefix(2))
         #expect(try await application.apply(to: opportunities, comment: "pick me") == .applied)
         #expect(await eventually {
@@ -252,14 +249,14 @@ struct OpportunityTests {
     @Test func applyDoesNotBlockOnVenueNotification() async throws {
         var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.opportunityNotifications = HangingOpportunityNotifications()
-        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: true)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id)
         #expect(try await application.apply(to: [opportunity], comment: "") == .applied)
     }
 
     @Test func applySucceedsWhenVenueNotificationFails() async throws {
         var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.opportunityNotifications = FlakyOpportunityNotifications(failuresBeforeSuccess: .max)
-        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id, isPremium: true)
+        let application = OpportunityApplication(dependencies: dependencies, userId: Samples.performer.id)
         #expect(try await application.apply(to: [opportunity], comment: "") == .applied)
     }
 
@@ -273,11 +270,10 @@ struct OpportunityTests {
         #expect(await broken.attempts == 3)
     }
 
-    @Test func feedFillsQuotaAndVenuesBehindFirstPage() async throws {
-        let model = OpportunityFeedViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false)
+    @Test func feedFillsVenuesBehindFirstPage() async throws {
+        let model = OpportunityFeedViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
         await model.load()
         #expect(!model.isLoading)
-        #expect(model.remainingQuota == 3)
         let current = try #require(model.current)
         #expect(model.venue(for: current) != nil)
         #expect(model.opportunities.allSatisfy { model.venue(for: $0) != nil })
@@ -287,7 +283,7 @@ struct OpportunityTests {
         let database = MockDatabaseRepository()
         var dependencies = Dependencies.mock(signedIn: true)
         dependencies.database = database
-        let model = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer, isPremium: true)
+        let model = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer)
         await model.load()
         let current = try #require(model.current)
         #expect(await database.fetchedUserIds.first == (current.venueId ?? current.userId))
@@ -295,7 +291,7 @@ struct OpportunityTests {
 
     @Test func detailLoadsVenueAndApplies() async {
         let model = OpportunityViewModel(
-            dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [],
+            dependencies: .mock(signedIn: true), currentUser: Samples.performer, claims: [],
             opportunityId: opportunity.id, opportunity: nil
         )
         #expect(model.phase == .loading)
@@ -311,7 +307,7 @@ struct OpportunityTests {
 
     @Test func missingOpportunityIsNotFound() async {
         let model = OpportunityViewModel(
-            dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [],
+            dependencies: .mock(signedIn: true), currentUser: Samples.performer, claims: [],
             opportunityId: "nope", opportunity: nil
         )
         await model.load()
@@ -320,7 +316,7 @@ struct OpportunityTests {
 
     @Test func ownersAndAdminsSeeApplicants() async {
         let owner = OpportunityViewModel(
-            dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [.admin],
+            dependencies: .mock(signedIn: true), currentUser: Samples.performer, claims: [.admin],
             opportunityId: opportunity.id, opportunity: opportunity
         )
         #expect(owner.canSeeApplicants)
@@ -330,7 +326,7 @@ struct OpportunityTests {
     }
 
     @Test func batchApplyMarksAppliedAndExitsSelection() async {
-        let model = OpportunitiesListViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: true, opportunities: Samples.opportunities)
+        let model = OpportunitiesListViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer, opportunities: Samples.opportunities)
         await model.load()
         #expect(model.appliedIds.isEmpty)
         model.isSelecting = true
@@ -344,7 +340,7 @@ struct OpportunityTests {
 
     @Test func feedAdvancesAndRemembersSwipes() async {
         let dependencies = Dependencies.mock(signedIn: true, isPremium: true)
-        let model = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer, isPremium: true)
+        let model = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer)
         await model.load()
         let first = model.current
         #expect(first != nil)
@@ -353,13 +349,13 @@ struct OpportunityTests {
         #expect(await model.perform(.apply) == .applied)
         #expect(model.appliedCount == 1)
 
-        let reloaded = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer, isPremium: true)
+        let reloaded = OpportunityFeedViewModel(dependencies: dependencies, currentUser: Samples.performer)
         await reloaded.load()
         #expect(reloaded.opportunities.count == model.opportunities.count - 2)
     }
 
     @Test func feedIsCaughtUpWhenEmpty() async {
-        let model = OpportunityFeedViewModel(dependencies: .mock(signedIn: true, isPremium: true), currentUser: Samples.performer, isPremium: true)
+        let model = OpportunityFeedViewModel(dependencies: .mock(signedIn: true), currentUser: Samples.performer)
         await model.load()
         while model.current != nil { await model.perform(.dismiss) }
         #expect(model.isCaughtUp)
@@ -421,38 +417,4 @@ struct SearchOpportunitiesRouteTests {
         #expect(Route.opportunityFeed.owner == 4)
     }
 
-    // MARK: premium before the wall
-
-    @Test func quotaCaptionsNeverShowBareCounts() {
-        #expect(ApplicationQuota.caption(remaining: 2) == "2 of 3 free applications left today")
-        #expect(ApplicationQuota.caption(remaining: 3) == "3 of 3 free applications left today")
-        #expect(ApplicationQuota.caption(remaining: 0) == "you've used all 3 free applications today")
-        #expect(ApplicationQuota.caption(remaining: -1) == "you've used all 3 free applications today")
-        #expect(ApplicationQuota.caption(remaining: nil) == nil)
-    }
-
-    @MainActor @Test func zeroQuotaSwitchesToApplyWithPremium() async {
-        var dependencies = Dependencies.mock(signedIn: true)
-        dependencies.database = MockDatabaseRepository(defaultOpportunityQuota: 0)
-        let model = OpportunityViewModel(
-            dependencies: dependencies, currentUser: Samples.performer, isPremium: false, claims: [],
-            opportunityId: Samples.opportunities[0].id, opportunity: Samples.opportunities[0]
-        )
-        await model.load()
-        #expect(model.remainingFreeApplications == 0)
-        #expect(model.needsPremiumToApply)
-        #expect(model.quotaCaption == "you've used all 3 free applications today")
-        #expect(ApplicationQuota.applyWithPremium == "apply with premium")
-    }
-
-    @MainActor @Test func freeQuotaShowsRemainingCaption() async {
-        let model = OpportunityViewModel(
-            dependencies: .mock(signedIn: true), currentUser: Samples.performer, isPremium: false, claims: [],
-            opportunityId: Samples.opportunities[0].id, opportunity: Samples.opportunities[0]
-        )
-        await model.load()
-        #expect(model.remainingFreeApplications == 3)
-        #expect(!model.needsPremiumToApply)
-        #expect(model.quotaCaption == "3 of 3 free applications left today")
-    }
 }

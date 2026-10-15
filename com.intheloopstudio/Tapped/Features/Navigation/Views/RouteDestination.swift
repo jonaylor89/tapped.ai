@@ -43,7 +43,8 @@ struct RouteDestination: View {
         case .onboarding:
             OnboardingView(dependencies: dependencies)
         case .paywall:
-            PaywallGate { PaywallView(dependencies: dependencies) }
+            // Legacy links open subscription management, never a second purchase gate.
+            if let currentUser { SettingsView(dependencies: dependencies, currentUser: currentUser) }
         case .messagingChannelList:
             ChannelListView(dependencies: dependencies)
         case let .streamChannel(channelId):

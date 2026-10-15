@@ -24,7 +24,6 @@ struct ShellView: View {
     init(
         currentUser: UserModel,
         dependencies: Dependencies,
-        isPremium: Bool,
         claims: [CustomClaim],
         launchOptions: LaunchOptions = .none
     ) {
@@ -38,7 +37,6 @@ struct ShellView: View {
         _discover = State(initialValue: DiscoverViewModel(
             dependencies: dependencies,
             currentUser: currentUser,
-            isPremium: isPremium,
             claims: claims,
             defersStart: true,
             now: now
@@ -69,7 +67,6 @@ struct ShellView: View {
                     .reauthenticationSheet(isPresented: $showsReauthentication, reason: "enter your password to continue") {}
             }
             .environment(shell)
-            .onChange(of: session.isPremium) { _, isPremium in discover.isPremium = isPremium }
             .task {
                 await FirstFrame.rendered()
                 LaunchSignposts.mark(.shellVisible)
@@ -112,7 +109,7 @@ struct ShellView: View {
 
 #Preview {
     let dependencies = Dependencies.mock(signedIn: true)
-    ShellView(currentUser: .previewPerformer, dependencies: dependencies, isPremium: false, claims: [])
+    ShellView(currentUser: .previewPerformer, dependencies: dependencies, claims: [])
         .environment(\.dependencies, dependencies)
         .environment(AppSession(dependencies: dependencies))
 }

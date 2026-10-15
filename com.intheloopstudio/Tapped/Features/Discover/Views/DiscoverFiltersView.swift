@@ -2,19 +2,17 @@ import SwiftUI
 import TappedDomain
 import TappedUI
 
-/// `MapSettings`: genre + capacity filters. Premium-only, like Flutter.
+/// Genre and capacity filters; access is handled once by AppSession.
 struct DiscoverFiltersView: View {
     let model: DiscoverViewModel
-    let showPaywall: () -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var genres: Set<Genre>
     @State private var minCapacity: Double
     @State private var maxCapacity: Double
 
-    init(model: DiscoverViewModel, showPaywall: @escaping () -> Void) {
+    init(model: DiscoverViewModel) {
         self.model = model
-        self.showPaywall = showPaywall
         _genres = State(initialValue: Set(model.genreFilters))
         _minCapacity = State(initialValue: model.capacityRange.lowerBound)
         _maxCapacity = State(initialValue: model.capacityRange.upperBound)
@@ -23,13 +21,6 @@ struct DiscoverFiltersView: View {
     var body: some View {
         NavigationStack {
             Form {
-                if !model.isPremium {
-                    Section {
-                        Button(action: showPaywall) {
-                            Label("unlock filters with premium", systemImage: "crown")
-                        }
-                    }
-                }
                 Section("capacity") {
                     LabeledContent("min", value: "\(Int(minCapacity))")
                     Slider(value: $minCapacity, in: 0...DiscoverViewModel.capacityLimit, step: 50)
@@ -52,7 +43,6 @@ struct DiscoverFiltersView: View {
                     }
                 }
             }
-            .disabled(!model.isPremium)
             .navigationTitle("filters")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -68,11 +58,8 @@ struct DiscoverFiltersView: View {
                         let lower = min(minCapacity, maxCapacity), upper = max(minCapacity, maxCapacity)
                         let selected = Genre.allCases.filter(genres.contains)
                         Task {
-                            if await model.applyFilters(genres: selected, capacity: lower...upper) {
-                                dismiss()
-                            } else {
-                                showPaywall()
-                            }
+                            await model.applyFilters(genres: selected, capacity: lower...upper)
+                            dismiss()
                         }
                     }
                 }

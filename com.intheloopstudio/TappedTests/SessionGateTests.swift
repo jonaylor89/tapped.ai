@@ -24,7 +24,7 @@ struct SessionGateTests {
 
     @Test func latestVersionPromptCanBeIgnored() async throws {
         let store = defaults()
-        let dependencies = Dependencies.mock(signedIn: true, latestAppVersion: "2.1")
+        let dependencies = Dependencies.mock(signedIn: true, isPremium: true, latestAppVersion: "2.1")
         let session = AppSession(dependencies: dependencies, appVersion: AppVersion("2.0.0")!, defaults: store)
         let run = Task { await session.run() }
         defer { run.cancel() }
@@ -34,7 +34,7 @@ struct SessionGateTests {
         #expect(session.availableUpdate == nil)
         #expect(store.string(forKey: AppSession.skippedUpdateKey) == "2.1")
 
-        let next = AppSession(dependencies: .mock(signedIn: true, latestAppVersion: "2.1"), appVersion: AppVersion("2.0.0")!, defaults: store)
+        let next = AppSession(dependencies: .mock(signedIn: true, isPremium: true, latestAppVersion: "2.1"), appVersion: AppVersion("2.0.0")!, defaults: store)
         let nextRun = Task { await next.run() }
         defer { nextRun.cancel() }
         try await waitUntil { next.currentUser != nil }
@@ -81,7 +81,7 @@ struct SessionGateTests {
 
     @Test func signInRegistersForPushAndPublishesVersion() async throws {
         let notifications = MockNotificationRepository()
-        let dependencies = Dependencies.mock(signedIn: true, notifications: notifications)
+        let dependencies = Dependencies.mock(signedIn: true, isPremium: true, notifications: notifications)
         let session = AppSession(dependencies: dependencies, defaults: defaults())
         let run = Task { await session.run() }
         defer { run.cancel() }
@@ -96,7 +96,7 @@ struct SessionGateTests {
     }
 
     @Test func onboardingCompletionEntersShell() async throws {
-        let dependencies = Dependencies.mock(onboarding: true)
+        let dependencies = Dependencies.mock(isPremium: true, onboarding: true)
         let session = AppSession(dependencies: dependencies, defaults: defaults())
         let run = Task { await session.run() }
         defer { run.cancel() }
@@ -131,7 +131,7 @@ struct SessionGateTests {
     }
 
     @Test func waitlistJoin() async throws {
-        let dependencies = Dependencies.mock(signedIn: true, premiumWaitlist: true)
+        let dependencies = Dependencies.mock(signedIn: true, isPremium: true, premiumWaitlist: true)
         let model = PremiumWaitlistViewModel(dependencies: dependencies, userId: "performer-nova")
         await model.load()
         #expect(!model.isOnWaitlist)
@@ -155,7 +155,7 @@ struct SessionGateTests {
     }
 
     @Test func cachedMaintenanceIsConfirmedByTheServer() async {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         let remoteConfig = MockRemoteConfigRepository(downForMaintenance: true)
         dependencies.remoteConfig = remoteConfig
         let session = AppSession(dependencies: dependencies, defaults: defaults())
@@ -165,7 +165,7 @@ struct SessionGateTests {
     }
 
     @Test func staleCachedMaintenanceIsClearedByTheServer() async throws {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.remoteConfig = MockRemoteConfigRepository(downForMaintenance: true, fetched: .init())
         let session = AppSession(dependencies: dependencies, defaults: defaults())
         let run = Task { await session.run() }
@@ -174,7 +174,7 @@ struct SessionGateTests {
     }
 
     @Test func slowRemoteConfigFetchDoesNotHoldLaunch() async throws {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         let remoteConfig = MockRemoteConfigRepository(fetched: .init(premiumWaitlistEnabled: true), fetchDelay: .seconds(60))
         dependencies.remoteConfig = remoteConfig
         let session = AppSession(dependencies: dependencies, defaults: defaults())
@@ -186,7 +186,7 @@ struct SessionGateTests {
     }
 
     @Test func backgroundFetchStillAppliesTheGates() async throws {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.remoteConfig = MockRemoteConfigRepository(
             fetched: .init(minimumAppVersion: "2.1.0", premiumWaitlistEnabled: true),
             fetchDelay: .milliseconds(50)
@@ -199,7 +199,7 @@ struct SessionGateTests {
     }
 
     @Test func freshConfigFlagsApplyAfterTheBackgroundFetch() async throws {
-        var dependencies = Dependencies.mock(signedIn: true)
+        var dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         dependencies.remoteConfig = MockRemoteConfigRepository(fetched: .init(premiumWaitlistEnabled: true), fetchDelay: .milliseconds(20))
         let session = AppSession(dependencies: dependencies, defaults: defaults())
         let run = Task { await session.run() }
@@ -208,7 +208,7 @@ struct SessionGateTests {
     }
 
     @Test func currentProfileRefreshesAndStopsWithTheSession() async throws {
-        let dependencies = Dependencies.mock(signedIn: true)
+        let dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         let session = AppSession(dependencies: dependencies, defaults: defaults(), profileRefreshInterval: .milliseconds(20))
         let run = Task { await session.run() }
         defer { run.cancel() }
@@ -229,7 +229,7 @@ struct SessionGateTests {
     }
 
     @Test func signedOutSessionDoesNotRestoreCachedProfile() async throws {
-        let dependencies = Dependencies.mock(signedIn: true)
+        let dependencies = Dependencies.mock(signedIn: true, isPremium: true)
         let session = AppSession(dependencies: dependencies, defaults: defaults(), profileRefreshInterval: .milliseconds(20))
         let run = Task { await session.run() }
         defer { run.cancel() }

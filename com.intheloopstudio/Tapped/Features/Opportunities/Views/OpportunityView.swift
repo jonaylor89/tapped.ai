@@ -5,26 +5,24 @@ import TappedUI
 
 /// Port of `opportunity_view.dart`: flier hero, facts, venue/booker, floating apply bar.
 struct OpportunityView: View {
-    private let isPremium: Bool
     @State private var model: OpportunityViewModel
     @State private var showsApplySheet: Bool
     @Environment(Router.self) private var router
     @Environment(\.dismiss) private var dismiss
 
     init(
-        dependencies: Dependencies, currentUser: UserModel, isPremium: Bool, claims: [CustomClaim],
+        dependencies: Dependencies, currentUser: UserModel, claims: [CustomClaim],
         opportunityId: String, opportunity: Opportunity?, showsApplySheet: Bool = false
     ) {
-        self.isPremium = isPremium
         _model = State(initialValue: OpportunityViewModel(
-            dependencies: dependencies, currentUser: currentUser, isPremium: isPremium, claims: claims,
+            dependencies: dependencies, currentUser: currentUser, claims: claims,
             opportunityId: opportunityId, opportunity: opportunity
         ))
         _showsApplySheet = State(initialValue: showsApplySheet)
     }
 
     var body: some View {
-        screen.onChange(of: isPremium) { _, isPremium in model.isPremium = isPremium }
+        screen
     }
 
     @ViewBuilder private var screen: some View {
@@ -100,10 +98,8 @@ struct OpportunityView: View {
             }
         }
         .sheet(isPresented: $showsApplySheet) {
-            ApplySheet(opportunity: opportunity, remainingQuota: model.remainingQuota) { comment in
+            ApplySheet(opportunity: opportunity) { comment in
                 await model.apply(comment: comment)
-            } onNeedsPremium: {
-                router.push(.paywall)
             }
             .presentationDetents([.medium, .large])
         }
@@ -111,23 +107,8 @@ struct OpportunityView: View {
 
     private var applyBar: some View {
         VStack(spacing: TappedSpacing.xs) {
-            if let caption = model.quotaCaption, !model.isPastDeadline {
-                Text(caption)
-                    .font(TappedTypography.bodySm)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, TappedSpacing.md)
-                    .padding(.vertical, TappedSpacing.xs)
-                    .tappedGlass(.regular, in: Capsule())
-                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
-                    .accessibilityIdentifier("quota-caption")
-            }
             Button {
-                if model.needsPremiumToApply {
-                    router.push(.paywall)
-                } else {
-                    showsApplySheet = true
-                }
+                showsApplySheet = true
             } label: {
                 SwiftUI.Label(applyTitle, systemImage: applySymbol)
                     .font(TappedTypography.headingXs)
@@ -144,12 +125,12 @@ struct OpportunityView: View {
     private var applyTitle: String {
         if model.isApplied { return "applied" }
         if model.isPastDeadline { return "deadline passed" }
-        return model.needsPremiumToApply ? ApplicationQuota.applyWithPremium : "apply"
+        return "apply"
     }
 
     private var applySymbol: String {
         if model.isApplied { return "checkmark" }
-        return model.needsPremiumToApply ? "sparkles" : "paperplane.fill"
+        return "paperplane.fill"
     }
 }
 
@@ -157,7 +138,7 @@ struct OpportunityView: View {
     let dependencies = Dependencies.mock(signedIn: true)
     NavigationStack {
         OpportunityView(
-            dependencies: dependencies, currentUser: Samples.performer, isPremium: false, claims: [],
+            dependencies: dependencies, currentUser: Samples.performer, claims: [],
             opportunityId: Samples.opportunities[0].id, opportunity: Samples.opportunities[0]
         )
     }
@@ -168,7 +149,7 @@ struct OpportunityView: View {
     let venue = Samples.venues[0]
     NavigationStack {
         OpportunityView(
-            dependencies: .mock(signedIn: true), currentUser: venue, isPremium: false, claims: [],
+            dependencies: .mock(signedIn: true), currentUser: venue, claims: [],
             opportunityId: Samples.opportunities[0].id, opportunity: nil
         )
     }

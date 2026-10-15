@@ -169,10 +169,9 @@ struct SheetGenreChips: View {
     }
 }
 
-/// `SheetTopPerformers`: blurred + paywall for non-premium users.
+/// Featured performer profiles, available to everyone inside the shell.
 struct SheetTopPerformers: View {
     let performers: [UserModel]
-    let isPremium: Bool
     let push: (Route) -> Void
 
     var body: some View {
@@ -183,9 +182,9 @@ struct SheetTopPerformers: View {
                     HStack(spacing: TappedSpacing.sm) {
                         ForEach(performers) { performer in
                             Button {
-                                push(Route.profile(userId: performer.id, user: performer).requiringPremium(isPremium))
+                                push(.profile(userId: performer.id, user: performer))
                             } label: {
-                                UserCard(user: performer, isLocked: !isPremium)
+                                UserCard(user: performer)
                             }
                             .buttonStyle(GlassPressStyle())
                         }

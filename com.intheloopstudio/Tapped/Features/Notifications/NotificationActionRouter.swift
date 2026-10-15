@@ -11,7 +11,7 @@ struct NotificationActionRouter {
     enum Outcome: Equatable, Sendable {
         case unhandled
         case applied(opportunityId: String)
-        case needsPremium(opportunityId: String)
+        case requiresActivation(NotificationPayload)
         case bookingUpdated(bookingId: String, status: BookingStatus)
         case replied(conversationId: String)
         case failed(NotificationPayload)
@@ -24,6 +24,8 @@ struct NotificationActionRouter {
     func handle(_ response: NotificationActionResponse) async -> Outcome {
         guard let action = response.action else { return .unhandled }
         guard let userId = await dependencies.auth.getAuthUser()?.uid else { return .failed(response.payload) }
+        // Background actions must respect the same session-level access boundary.
+        guard await dependencies.purchases.isPremium() else { return .requiresActivation(response.payload) }
         switch (action, response.payload.link) {
         case let (.apply, .opportunity(opportunityId)?):
             return await apply(opportunityId: opportunityId, userId: userId, payload: response.payload)
@@ -41,10 +43,9 @@ struct NotificationActionRouter {
     private func apply(opportunityId: String, userId: String, payload: NotificationPayload) async -> Outcome {
         do {
             guard let opportunity = try await dependencies.database.getOpportunityById(opportunityId) else { return .failed(payload) }
-            let application = OpportunityApplication(dependencies: dependencies, userId: userId, isPremium: await dependencies.purchases.isPremium())
+            let application = OpportunityApplication(dependencies: dependencies, userId: userId)
             switch try await application.apply(to: [opportunity], comment: "") {
             case .applied: return .applied(opportunityId: opportunityId)
-            case .needsPremium: return .needsPremium(opportunityId: opportunityId)
             }
         } catch {
             return .failed(payload)
@@ -92,14 +93,9 @@ extension NotificationActionRouter {
         })
         let outcome = await router.handle(response)
         switch outcome {
-        case let .needsPremium(opportunityId):
-            NotificationCategories.setApplyOpensApp(true)
-            AppEnvironment.inbound.receive(NotificationPayload(link: .opportunity(opportunityId: opportunityId)))
-            await postFollowUp(
-                title: "you're out of free applications",
-                body: "go premium to apply to this gig",
-                link: URL(string: "https://app.tapped.ai/opportunity/\(opportunityId)")
-            )
+        case let .requiresActivation(payload):
+            AppEnvironment.inbound.receive(payload)
+            await postFollowUp(title: "finish activating tapped", body: "open tapped to continue with your subscription", link: payload.link?.url)
         case let .failed(payload):
             await postFollowUp(title: "that didn't go through", body: "open tapped to try again", link: payload.link.flatMap { (link: DeepLink) in link.url })
         case .unhandled:

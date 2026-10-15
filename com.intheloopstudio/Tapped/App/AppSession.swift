@@ -17,6 +17,8 @@ final class AppSession {
         case confirmEmail(AuthUser)
         /// Signed in with Firebase but no `users/{uid}` document yet.
         case onboarding(uid: String)
+        /// Profile saved; the final onboarding step is the only subscription gate.
+        case premiumRequired(UserModel)
         case signedIn(UserModel)
     }
 
@@ -134,7 +136,7 @@ final class AppSession {
         await resolve(authUser)
     }
 
-    /// Onboarding wrote `users/{uid}`; enter the app without waiting for another auth event.
+    /// Save profile progress before activation; a relaunch resumes at the same subscription gate.
     func completeOnboarding(_ user: UserModel) async {
         await enter(user)
     }
@@ -205,6 +207,8 @@ final class AppSession {
             if currentUser != nil { await dependencies.chat.disconnect() }
             guard await mayChangePhase() else { return }
             claims = []
+            isPremium = false
+            deviceRegistration?.cancel()
             phase = .signedOut
             LaunchSignposts.end(.auth)
             return
@@ -232,8 +236,35 @@ final class AppSession {
         phase = authUser.requiresEmailVerification ? .confirmEmail(authUser) : .onboarding(uid: authUser.uid)
     }
 
+    /// Recheck on foreground and after purchase/restore. Never trust a UI purchase callback for access.
+    func refreshPremiumAccess() async {
+        let premium = await dependencies.purchases.isPremium()
+        guard !isBlocked, !Task.isCancelled else { return }
+        isPremium = premium
+        switch phase {
+        case let .premiumRequired(user) where premium:
+            await enter(user)
+        case let .signedIn(user) where !premium:
+            phase = .premiumRequired(user)
+            deviceRegistration?.cancel()
+            await dependencies.chat.disconnect()
+        default: break
+        }
+    }
+
     private func enter(_ user: UserModel) async {
+        let premium = await dependencies.purchases.isPremium()
+        let authUser = await dependencies.auth.getAuthUser()
+        guard !isBlocked, !Task.isCancelled, authUser?.uid == user.id else { return }
+        let wasActivating: Bool
+        if case .premiumRequired = phase { wasActivating = true } else { wasActivating = false }
+        isPremium = premium
+        guard premium else {
+            phase = .premiumRequired(user)
+            return
+        }
         phase = .signedIn(user)
+        if wasActivating { await dependencies.analytics.track("premium_activation_completed") }
         await dependencies.analytics.identify(userId: user.id, properties: ["username": .string(user.username.username)])
         deviceRegistration?.cancel()
         let dependencies = dependencies
@@ -260,13 +291,14 @@ final class AppSession {
             } catch {
                 return
             }
+            await refreshPremiumAccess()
             await refreshCurrentUser()
         }
     }
 
     private func observePremium() async {
-        for await entitlements in dependencies.purchases.entitlementUpdates() {
-            isPremium = entitlements.contains(.premium)
+        for await _ in dependencies.purchases.entitlementUpdates() {
+            await refreshPremiumAccess()
         }
     }
 }

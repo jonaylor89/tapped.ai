@@ -7,7 +7,7 @@ import Testing
 @Suite("App shell")
 struct AppShellTests {
     @Test func sessionMovesFromSignedOutToSignedIn() async throws {
-        let dependencies = Dependencies.mock()
+        let dependencies = Dependencies.mock(isPremium: true)
         let session = AppSession(dependencies: dependencies)
         let run = Task { await session.run() }
         defer { run.cancel() }

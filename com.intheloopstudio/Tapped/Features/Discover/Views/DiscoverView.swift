@@ -56,6 +56,5 @@ struct DiscoverView: View {
             await FirstFrame.rendered()
             await model.start()
         }
-        .task(id: model.isPremium) { await model.observeQuota() }
     }
 }

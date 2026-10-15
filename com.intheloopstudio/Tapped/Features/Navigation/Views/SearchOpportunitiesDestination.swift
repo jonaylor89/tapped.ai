@@ -31,18 +31,18 @@ struct SearchOpportunitiesDestination: View {
         case .advancedSearch:
             AdvancedSearchView(dependencies: dependencies, showsResults: launchDetail != nil)
         case .gigSearch:
-            GigSearchView(dependencies: dependencies, currentUser: currentUser, isPremium: session.isPremium, showsResults: launchDetail != nil)
+            GigSearchView(dependencies: dependencies, currentUser: currentUser, showsResults: launchDetail != nil)
         case let .locationForm(initialPlace):
             LocationFormView(dependencies: dependencies, initialPlace: initialPlace) { _ in router.pop() }
         case let .opportunity(opportunityId, opportunity):
             OpportunityView(
-                dependencies: dependencies, currentUser: currentUser, isPremium: session.isPremium, claims: session.claims,
+                dependencies: dependencies, currentUser: currentUser, claims: session.claims,
                 opportunityId: opportunityId, opportunity: opportunity, showsApplySheet: launchDetail != nil
             )
         case let .opportunities(opportunities):
-            OpportunitiesListView(dependencies: dependencies, currentUser: currentUser, isPremium: session.isPremium, opportunities: opportunities)
+            OpportunitiesListView(dependencies: dependencies, currentUser: currentUser, opportunities: opportunities)
         case .opportunityFeed:
-            OpportunityFeedView(dependencies: dependencies, currentUser: currentUser, isPremium: session.isPremium)
+            OpportunityFeedView(dependencies: dependencies, currentUser: currentUser)
         case let .interestedUsers(opportunity):
             InterestedUsersView(dependencies: dependencies, opportunity: opportunity)
         case let .reviews(userId):

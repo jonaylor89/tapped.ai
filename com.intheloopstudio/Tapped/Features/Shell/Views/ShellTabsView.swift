@@ -61,7 +61,7 @@ struct ShellTabsView: View {
         .sheet(item: $discover.modal) { modal in
             switch modal {
             case .filters:
-                DiscoverFiltersView(model: discover, showPaywall: { discover.modal = nil; navigator.gigs.push(.paywall) })
+                DiscoverFiltersView(model: discover)
             case .allResults:
                 DiscoverAllResultsView(model: discover, push: { route in discover.modal = nil; navigator.gigs.push(route) })
             }

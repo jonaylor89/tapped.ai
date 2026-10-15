@@ -6,8 +6,6 @@ import TappedUI
 /// `ChannelListView`: conversations, most recent first, under the system glass nav bar.
 struct ChannelListView: View {
     @State private var model: ChannelListViewModel
-    @Environment(AppSession.self) private var session
-    @Environment(Router.self) private var router
 
     init(dependencies: Dependencies) {
         _model = State(initialValue: ChannelListViewModel(dependencies: dependencies))
@@ -25,13 +23,7 @@ struct ChannelListView: View {
                     "no conversations yet",
                     message: "start talking to venues and get the conversation started",
                     systemImage: "bubble.left.and.bubble.right"
-                ) {
-                    if !session.isPremium {
-                        GlassCapsuleButton("upgrade to message", systemImage: "crown.fill", style: .accent) {
-                            router.push(.paywall)
-                        }
-                    }
-                }
+                )
                 .padding(GlassMetrics.edgeInset)
             case .loaded:
                 List(model.conversations) { conversation in

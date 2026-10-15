@@ -2,55 +2,31 @@ import Foundation
 import TappedData
 import TappedDomain
 
-/// Port of `OpportunityBloc`'s `ApplyForOpportunity` / `BatchApplyForOpportunities`: non-premium users spend
-/// `credits/{uid}.opportunityQuota`; running out sends them to the paywall.
+/// Unmetered applications. The session owns premium access, not individual features.
 struct OpportunityApplication: Sendable {
     enum Outcome: Equatable, Sendable {
         case applied
-        case needsPremium
     }
 
     let database: any DatabaseRepository
     let analytics: any AnalyticsRepository
     let opportunityNotifications: any OpportunityNotificationRepository
     let userId: String
-    var isPremium: Bool
 
-    init(dependencies: Dependencies, userId: String, isPremium: Bool) {
+    init(dependencies: Dependencies, userId: String) {
         database = dependencies.database
         analytics = dependencies.analytics
         opportunityNotifications = dependencies.opportunityNotifications
         self.userId = userId
-        self.isPremium = isPremium
-    }
-
-    /// `nil` for premium users (unlimited).
-    func remainingQuota() async -> Int? {
-        guard !isPremium else { return nil }
-        return (try? await database.getUserOpportunityQuota(userId)) ?? 0
     }
 
     func apply(to opportunities: [Opportunity], comment: String) async throws -> Outcome {
-        if !isPremium {
-            let quota = (try? await database.getUserOpportunityQuota(userId)) ?? 0
-            guard quota >= opportunities.count else {
-                await analytics.track("quota_limit_hit", properties: ["user_id": .string(userId), "opportunity_count": .int(opportunities.count)])
-                return .needsPremium
-            }
-        }
         for opportunity in opportunities {
             try await database.applyForOpportunity(opportunity: opportunity, userId: userId, userComment: comment)
         }
-        // Applying is done once the Firestore write lands. The venue notification drafts
-        // one email per venue server-side and can take seconds, so it runs detached with a
-        // small retry alongside the quota spend and analytics tracking.
+        // The API write completes first; venue notifications retry in the background.
         let opportunityIds = opportunities.map(\.id)
-        Task.detached(priority: .utility) { [database, analytics, opportunityNotifications, isPremium, userId] in
-            if !isPremium {
-                for _ in opportunityIds {
-                    try? await database.decrementUserOpportunityQuota(userId)
-                }
-            }
+        Task.detached(priority: .utility) { [analytics, opportunityNotifications, userId] in
             await analytics.track("apply_for_opportunity", properties: ["user_id": .string(userId), "opportunity_count": .int(opportunityIds.count)])
             await Self.notifyVenue(opportunityNotifications, opportunityIds: opportunityIds, note: comment)
         }

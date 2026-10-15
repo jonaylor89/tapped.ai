@@ -4,7 +4,7 @@ import TappedData
 import TappedDomain
 
 /// `onboarding_flow_cubit.dart` + `onboarding_bloc`: three steps (name → genres → location), then
-/// writes `users/{uid}` and lands in the app. Everyone onboarding is a performer. Photo and socials live in the "finish setting up" checklist,
+/// saves the profile before the final premium activation step. Everyone onboarding is a performer. Photo and socials live in the "finish setting up" checklist,
 /// unless the name step imports them from a Spotify artist link (`onboard_with_spotify_view.dart`).
 @Observable
 @MainActor
@@ -22,7 +22,7 @@ final class OnboardingViewModel {
 
         var subtitle: String {
             switch self {
-            case .name: "this is how venues and fans see you. your username is your tapped link."
+            case .name: "this is how venues and fans see you. tapped requires a subscription — you’ll choose a plan in the final step."
             case .genres: "we use these to match you with gigs and venues."
             case .location: "we use your city to show you gigs and venues nearby."
             }
@@ -35,7 +35,7 @@ final class OnboardingViewModel {
             }
         }
 
-        var isLast: Bool { self == Step.allCases.last }
+        var isLastProfileStep: Bool { self == Step.allCases.last }
     }
 
     enum UsernameStatus: Equatable {
@@ -45,8 +45,6 @@ final class OnboardingViewModel {
         case taken(String)
     }
 
-    static let eulaURL = URL(string: "https://tapped.ai/eula")!
-    static let privacyURL = URL(string: "https://tapped.ai/privacy")!
     static let artistNameLimit = 50
     static let usernameLimit = 30
     /// Written to `users.occupations` for every new account; venues and promoters are set up outside onboarding.
@@ -106,7 +104,8 @@ final class OnboardingViewModel {
 
     // MARK: - progress
 
-    static var stepCount: Int { Step.allCases.count }
+    /// Three profile questions followed by the session's premium activation screen.
+    static var stepCount: Int { Step.allCases.count + 1 }
     var stepIndex: Int { Step.allCases.firstIndex(of: step) ?? 0 }
     var stepNumber: Int { stepIndex + 1 }
     var progress: Double { Double(stepNumber) / Double(Self.stepCount) }
@@ -311,7 +310,7 @@ final class OnboardingViewModel {
 
     // MARK: - finish
 
-    /// `finishOnboarding`: tapping "let's go" accepts the EULA, then writes `users/{uid}`. Returns the saved user.
+    /// Saves profile setup before subscription activation. Returns the saved user.
     /// Fields Flutter collected in steps that moved to the checklist keep `UserModel.empty` defaults (no social
     /// handles, follower counts `0`), except the Spotify id and photo when an artist was imported.
     func finish() async -> UserModel? {
@@ -342,11 +341,10 @@ final class OnboardingViewModel {
                 socialFollowing: socialFollowing
             )
             try await database.createUser(user)
-            await analytics.track("onboarding_complete", properties: [
+            await analytics.track("onboarding_profile_saved", properties: [
                 "username": .string(username),
                 "occupations": .string(user.occupations.joined(separator: ",")),
                 "role": .string("performer"),
-                "eula_accepted": .bool(true),
                 "spotify_imported": .bool(spotifyArtist != nil),
             ])
             return user

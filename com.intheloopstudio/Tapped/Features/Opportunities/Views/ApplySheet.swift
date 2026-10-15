@@ -2,12 +2,10 @@ import SwiftUI
 import TappedDomain
 import TappedUI
 
-/// Apply confirmation: optional note for the booker, remaining quota, then "application sent".
+/// Apply confirmation: optional note for the booker, then "application sent".
 struct ApplySheet: View {
     let opportunity: Opportunity
-    let remainingQuota: Int?
     let apply: (String) async -> OpportunityApplication.Outcome?
-    let onNeedsPremium: () -> Void
 
     @State private var comment = ""
     @State private var isSending = false
@@ -52,8 +50,6 @@ struct ApplySheet: View {
             Section {
                 TextField("add a note for the booker (optional)", text: $comment, axis: .vertical)
                     .lineLimit(3...6)
-            } footer: {
-                Text(ApplicationQuota.caption(remaining: remainingQuota).map { "\($0). premium makes it unlimited." } ?? ApplicationQuota.premiumCaption)
             }
             Section {
                 Button {
@@ -63,8 +59,6 @@ struct ApplySheet: View {
                         Spacer()
                         if isSending {
                             ProgressView()
-                        } else if remainingQuota == 0 {
-                            SwiftUI.Label(ApplicationQuota.applyWithPremium, systemImage: "sparkles").fontWeight(.semibold)
                         } else {
                             Text("send application").fontWeight(.semibold)
                         }
@@ -82,9 +76,6 @@ struct ApplySheet: View {
         switch await apply(comment) {
         case .applied:
             withAnimation(GlassMotion.spring) { isSent = true }
-        case .needsPremium:
-            dismiss()
-            onNeedsPremium()
         case nil:
             break
         }
@@ -93,7 +84,7 @@ struct ApplySheet: View {
 
 #Preview {
     Color.clear.sheet(isPresented: .constant(true)) {
-        ApplySheet(opportunity: Samples.opportunities[0], remainingQuota: 2, apply: { _ in .applied }, onNeedsPremium: {})
+        ApplySheet(opportunity: Samples.opportunities[0], apply: { _ in .applied })
             .presentationDetents([.medium, .large])
     }
 }

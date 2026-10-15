@@ -21,7 +21,6 @@ final class OpportunityFeedViewModel {
     private(set) var isLoading = true
     private(set) var failed = false
     private(set) var appliedCount = 0
-    private(set) var remainingQuota: Int?
     private(set) var venues: [String: UserModel] = [:]
     private var reachedEnd = false
     private var isFetchingMore = false
@@ -29,19 +28,12 @@ final class OpportunityFeedViewModel {
     private let database: any DatabaseRepository
     private var application: OpportunityApplication
 
-    init(dependencies: Dependencies, currentUser: UserModel, isPremium: Bool) {
+    init(dependencies: Dependencies, currentUser: UserModel) {
         self.currentUser = currentUser
         database = dependencies.database
-        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id, isPremium: isPremium)
+        application = OpportunityApplication(dependencies: dependencies, userId: currentUser.id)
     }
 
-    var isPremium: Bool {
-        get { application.isPremium }
-        set {
-            application.isPremium = newValue
-            if newValue { remainingQuota = nil }
-        }
-    }
 
     var current: Opportunity? { opportunities.indices.contains(currentIndex) ? opportunities[currentIndex] : nil }
     var next: Opportunity? { opportunities.indices.contains(currentIndex + 1) ? opportunities[currentIndex + 1] : nil }
@@ -62,19 +54,10 @@ final class OpportunityFeedViewModel {
         } catch {
             failed = true
         }
-        // The first card can render as soon as its page lands; the quota and the venue
-        // reads fill in behind it in parallel.
         isLoading = false
-        async let quotaLoad: () = loadQuota()
         await loadVenues()
-        await quotaLoad
     }
 
-    private func loadQuota() async {
-        remainingQuota = await application.remainingQuota()
-    }
-
-    /// Returns `.needsPremium` when the swipe couldn't be applied (quota exhausted).
     @discardableResult
     func perform(_ action: SwipeAction, comment: String = "") async -> OpportunityApplication.Outcome? {
         guard let opportunity = current else { return nil }
@@ -84,7 +67,6 @@ final class OpportunityFeedViewModel {
                 let outcome = try await application.apply(to: [opportunity], comment: comment)
                 guard outcome == .applied else { return outcome }
                 appliedCount += 1
-                remainingQuota = remainingQuota.map { max($0 - 1, 0) }
             } catch {
                 return nil
             }

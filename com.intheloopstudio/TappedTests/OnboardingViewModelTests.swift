@@ -44,8 +44,8 @@ struct OnboardingViewModelTests {
 
     @Test func threeStepsInOrder() {
         #expect(OnboardingViewModel.Step.allCases == [.name, .genres, .location])
-        #expect(OnboardingViewModel.stepCount == 3)
-        #expect(OnboardingViewModel.Step.location.isLast)
+        #expect(OnboardingViewModel.stepCount == 4)
+        #expect(OnboardingViewModel.Step.location.isLastProfileStep)
         #expect(OnboardingViewModel.Step.allCases.allSatisfy { !$0.subtitle.isEmpty })
         #expect(OnboardingViewModel.Step.genres.subtitle == "we use these to match you with gigs and venues.")
     }
@@ -54,7 +54,7 @@ struct OnboardingViewModelTests {
         let model = makeModel()
         #expect(model.step == .name)
         #expect(model.stepNumber == 1)
-        #expect(model.progress == 1.0 / 3.0)
+        #expect(model.progress == 1.0 / 4.0)
         #expect(model.genres.isEmpty)
         #expect(model.selectedPlace == nil)
         #expect(!model.isUsernameCustom)
@@ -84,7 +84,7 @@ struct OnboardingViewModelTests {
         #expect(model.skip() == true, "skipping the last step finishes")
         model.back()
         #expect(model.step == .genres)
-        #expect(model.progress == 2.0 / 3.0)
+        #expect(model.progress == 2.0 / 4.0)
     }
 
     @Test func usernameFollowsNameUntilTyped() async {
