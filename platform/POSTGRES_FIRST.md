@@ -2,7 +2,7 @@
 
 ## Contract
 
-Postgres owns application facts. Firebase is Auth/Storage only; the two Auth hooks are transports to Rust. StoreKit is unchanged. There is no serving Firestore fallback, synchronization, dual write, secondary search index, or application code on Cloudflare.
+Postgres owns application facts. Firebase is Auth only (media is in R2; see [Media storage](MEDIA.md)); the two Auth hooks are transports to Rust. StoreKit is unchanged. There is no serving Firestore fallback, synchronization, dual write, secondary search index, or application code on Cloudflare.
 
 `users` retains public profile IDs for client compatibility. `accounts` represents authenticated identities; `profile_owners` records ownership. Imported/unclaimed artists and hidden historical-reference stubs never create Firebase accounts, owners, welcome messages or notifications. Current profile creation remains the authenticated UID's primary profile; additional ownership/claims require a separately verified workflow, not an unauthenticated claim-by-name endpoint.
 
@@ -28,7 +28,7 @@ Public `GET /app/v1/public/profiles/{id}/stats` exposes current computed statist
 
 ## Crawlers
 
-Event crawler (including supported legacy scrapers) and ticket crawler use `@tapped/postgres-ingestion`. Mandatory `INGESTION_DATABASE_URL`; never reuse the owner/API credential. Missing configuration fails, with no Firebase fallback. Google Cloud Storage uploads use ADC (`GOOGLE_APPLICATION_CREDENTIALS` mounted at runtime), with Storage-only permissions; no Auth/Firestore/FCM client.
+Event crawler (including supported legacy scrapers) and ticket crawler use `@tapped/postgres-ingestion`. Mandatory `INGESTION_DATABASE_URL`; never reuse the owner/API credential. Missing configuration fails, with no Firebase fallback. Crawlers upload no media and have no Auth/Firestore/FCM/Storage client.
 
 `ingest_scraped_event` atomically captures public event facts/revisions, deterministic imported bookings and unclaimed artists. Retry is idempotent; corrections cancel removed/non-music relationships and update current facts. `booking_imports` relates bookings to source events, separate from private accounts. Colliding native booking IDs fail rather than overwrite native facts. No business-effect outbox is written. Ticket/door prices are retained as event provenance, not confused with performer fees.
 
@@ -69,7 +69,7 @@ Historical rollout procedure (crawler execution is NOT approved):
 
 1. Back up Postgres and test restore. Pause crawler producers and identity worker; keep writes quiescent while applying `20261024000000` and `20261024010000`. These migrations preserve source/provenance and do not replay historical effects. Do not rerun the old Firestore import after canonical cutover.
 2. Deploy the matching Rust image and restart the identity worker, then check readiness, counts, normalized filters, visibility and disabled-account behavior. Do not roll an old identity worker back across this boundary without reconciling account state.
-3. Only after separate owner approval: provision restricted crawler credentials/Storage ADC and validate producer deduplication before executing any job. Do not resume/start either crawler as part of the app/website/API deployment.
+3. Only after separate owner approval: provision restricted crawler credentials and validate producer deduplication before executing any job. Do not resume/start either crawler as part of the app/website/API deployment.
 4. Apply updated Compose. Explicitly stop/remove the old Typesense container and remove its tunnel ingress/DNS route in the infrastructure configuration. Preserve `/opt/typesense/data`, source Firestore and analytics/billing archives. Removing the service from Compose alone does not stop an orphaned running container. No blanket `--remove-orphans` or volume deletion.
 5. Remove obsolete Typesense environment entries after their consumers are confirmed absent. Never print credentials. Postmark remains owner-managed and is untouched.
 

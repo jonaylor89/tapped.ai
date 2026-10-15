@@ -209,7 +209,7 @@ clustering), glass top chrome (avatar · search capsule · messages, venues/gigs
   `tappedGlass(_:in:interactive:)`; forms/settings use native `Form`/inset-grouped lists; system font + SF Symbols;
   accent (`TappedColors.accent`, `#0086CC`) as tint/outline, not fills. Use `TappedSpacing`/`TappedRadius`/
   `GlassRadius`/`GlassMetrics`/`GlassMotion` tokens instead of literals.
-- **SDKs**: Firebase (Auth, Storage, Remote Config, Crashlytics, Messaging), GoogleSignIn, PostHog, Rive,
+- **SDKs**: Firebase (Auth, Remote Config, Crashlytics, Messaging), GoogleSignIn, PostHog, Rive,
   Stream Chat (messaging session). No Firestore/Functions serving SDK or Typesense; application data, functions and search use Rust API clients. Not used: Firebase Analytics, Stripe, RevenueCat, Mapbox, Lottie, Google Maps SDK.
 - **Pinning**: `.package(url:…, exact: "x.y.z")` only. After changing a dependency, resolve in Xcode (or
   `xcodebuild -resolvePackageDependencies`) and commit

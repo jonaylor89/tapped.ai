@@ -14,6 +14,6 @@ corepack pnpm --filter node-webcrawler start:prod
 docker build -f services/event-crawler/Dockerfile .
 ```
 
-Configure a private-network `INGESTION_DATABASE_URL` for a dedicated member of `tapped_ingestion`, not the API/owner credential. Missing configuration fails closed. GCS uploads use mounted ADC (`GOOGLE_APPLICATION_CREDENTIALS`) with Storage-only permissions. Provider settings remain `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY` and optional `SLACK_WEBHOOK_URL`; never bake them into an image.
+Configure a private-network `INGESTION_DATABASE_URL` for a dedicated member of `tapped_ingestion`, not the API/owner credential. Missing configuration fails closed. Provider settings remain `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY` and optional `SLACK_WEBHOOK_URL`; never bake them into an image.
 
 See [models, permissions, rollout and preservation](../../platform/POSTGRES_FIRST.md). Firestore migration files under `archive/firestore-migrations` are historical source, excluded from runtime builds and unsupported against the new schema. Do not run them on production or restore a dual-write path.

@@ -163,7 +163,7 @@ https://img.tapped.ai/unsafe/<preset>/<base64url(source URL)>
 ```
 
 - **Presets only.** `IMGPROXY_ONLY_PRESETS` rejects arbitrary sizes, so nobody can bust the cache with random dimensions. `w<N>` fits the image to N px wide; `sq<N>` crops it to an N×N square. All output is WebP.
-- **One source.** `IMGPROXY_ALLOWED_SOURCES` only allows `https://media.tapped.ai/` (see [R2 migration](R2_MIGRATION.md)), so the proxy can't be pointed at other hosts. Source URLs aren't signed because the iOS app can't keep a key secret.
+- **One source.** `IMGPROXY_ALLOWED_SOURCES` only allows `https://media.tapped.ai/` (see [Media storage](MEDIA.md)), so the proxy can't be pointed at other hosts. Source URLs aren't signed because the iOS app can't keep a key secret.
 - **Mirrored ladder.** The preset list in `docker-compose.prod.yml` is mirrored in `apps/app.tapped.ai/src/lib/image-loader.ts` and `com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift`. Add a preset to the server before any client uses it.
 
 ### One-time Cloudflare setup
