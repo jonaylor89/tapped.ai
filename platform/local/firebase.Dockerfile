@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends openjdk-17-jre-
     && rm -rf /var/lib/apt/lists/*
 RUN npm install -g firebase-tools@14.20.0
 WORKDIR /firebase
-COPY firebase.json storage.rules ./
+COPY firebase.json ./
 COPY emulator-seed ./emulator-seed
-EXPOSE 4000 9099 9199
+EXPOSE 4000 9099
 CMD ["firebase", "emulators:start", "--project", "demo-tapped", "--import", "emulator-seed"]

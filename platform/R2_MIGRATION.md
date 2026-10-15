@@ -1,7 +1,8 @@
 # Firebase Storage → Cloudflare R2
 
-User media moves from the Firebase bucket `in-the-loop-306520.appspot.com` to R2 in the **Tapped**
-Cloudflare account. Started 2026-10-14.
+User media moved from the Firebase bucket `in-the-loop-306520.appspot.com` to R2 in the **Tapped**
+Cloudflare account, 2026-10-14 to 2026-10-15. **Complete:** R2 is the only media store, and the
+Firebase bucket no longer exists.
 
 | Bucket | Access | Contents |
 | --- | --- | --- |
@@ -19,7 +20,7 @@ Cloudflare account. Started 2026-10-14.
 - 2026-10-15: production API has R2 credentials (`POST /app/v1/uploads` live). All 57,628 migrated
   objects deleted from the Firebase bucket after a final check (0 Firebase URLs in Postgres; every
   object unchanged since its copy and every R2 target matching size and MD5; deletes pinned to the
-  object generation). Log: `retired.jsonl` in the work directory. The empty default bucket remains.
+  object generation). Log: `retired.jsonl` in the work directory. The emptied bucket was later deleted as well.
   Firebase sources removed from the imgproxy, web and iOS allowlists.
 - 2026-10-15: two legacy press kits that were audio/video (a WAV and a 267 MB MP4) were archived and
   their `performerInfo.pressKitUrl` set to NULL (`press-kit-audio-video` in `storage_migration_map`).
@@ -73,50 +74,25 @@ PDFs are deliberately not sandboxed, because Chrome blocks its PDF viewer in san
 
 Cloudflare caches 404s on `media.tapped.ai`, so never hand out a URL before its `PUT` succeeded.
 
-## Runbook
+## How it ran (history)
 
-The copy runs from a workstation with `gcloud auth application-default login` and an R2 token
-(Object Read & Write on both buckets) in `~/.config/tapped/r2.env`. The work directory
-(`~/.local/share/tapped/r2-migration`) holds `manifest.jsonl`, the record of where every object went.
-Keep it until the Firebase bucket is gone.
+These steps can't be re-run: `copy`, `verify` and `retire` in `scripts/migrate_storage_to_r2.py` list
+the Firebase bucket, which no longer exists. They are kept as a record of what happened.
 
-```sh
-W=~/.local/share/tapped/r2-migration
-set -a; . ~/.config/tapped/r2.env; set +a
+1. Export every Firebase URL in Postgres (read-only) with `platform/r2-migration/refs.sql`.
+2. `copy` each object to R2 (resumable; keyed by content hash, classified by its bytes), then `verify`
+   the size and MD5 of every target against `manifest.jsonl`.
+3. Back up the five affected tables with `pg_dump`, generate `rewrite.sql` with `sql`, dry-run it in a
+   transaction that rolls back, then apply it with a guard that aborts unless 0 Firebase URLs remain.
+4. `retire`: delete Firebase objects only if unchanged since the copy and every R2 target matches,
+   pinned to the object generation.
 
-# 1. Every Firebase URL in Postgres (read-only), as table/column/row id/url.
-tailscale ssh root@tapped-prod 'cd /opt/tapped && docker compose exec -T postgres psql -U tapped -d tapped -q' \
-  < platform/r2-migration/refs.sql > $W/refs.tsv
+The work directory (`~/.local/share/tapped/r2-migration`) holds `manifest.jsonl` (where every object
+went), the refs exports, the rewrite SQL, the backup dump and `retired.jsonl`.
 
-# 2. Copy (resumable; re-runs only copy new or changed objects), then verify size + MD5 of every target.
-uv run scripts/migrate_storage_to_r2.py copy   --refs $W/refs.tsv --work $W
-uv run scripts/migrate_storage_to_r2.py verify --work $W
+## Undo
 
-# 3. Rewrite Postgres. Back up first; the script ends with a check that must report 0 before COMMIT.
-tailscale ssh root@tapped-prod 'cd /opt/tapped && docker compose exec -T postgres pg_dump -U tapped -d tapped -Fc \
-  -t users -t bookings -t opportunities -t legacy_profile_archive -t legacy_invalid_records' \
-  > $W/pre-rewrite-$(date +%Y%m%d%H%M).dump
-uv run scripts/migrate_storage_to_r2.py sql --refs $W/refs.tsv --work $W > $W/rewrite.sql
-```
-
-`rewrite.sql` opens a transaction and leaves it open; run it in an interactive `psql`, read the check
-and `COMMIT` (or `ROLLBACK`). Every change is recorded in `storage_migration_map` (old URL, new URL,
-reason: `moved`, `archived` or `overwritten-placeholder`); to undo, set each column back to
-`old_url` from that table.
-
-Until every client ships the R2 upload path, older App Store builds keep uploading to Firebase. Repeat
-steps 1–3 to move those uploads; each run only copies and rewrites the delta.
-
-## Retiring Firebase Storage
-
-Deletion is irreversible and needs the owner's explicit go-ahead. Before asking:
-
-1. The native release with `TappedAPIStorageRepository` is live and older builds are past the
-   minimum supported version (Remote Config `minimumAppVersion`).
-2. A final refs export finds no Firebase URLs in Postgres, and `verify` passes.
-3. Request logs show traffic to `firebasestorage.googleapis.com` / `storage.googleapis.com` for the
-   bucket has dropped to nothing.
-
-Then delete the bucket's objects, remove the Firebase prefixes from `IMGPROXY_ALLOWED_SOURCES`,
-`apps/app.tapped.ai/src/lib/image-loader.ts` and `ImageProxy.swift`, and delete the migration R2
-token.
+Every database change is recorded in `storage_migration_map` (`table_name`, `column_name`, `row_id`,
+`old_url`, `new_url`, `reason`: `moved`, `archived`, `not-media`, `overwritten-placeholder`,
+`press-kit-audio-video`). The Firebase originals are gone, so undoing a NULL means pointing the row at
+the archived copy in `tapped-media-archive` (`legacy/{original key}`), copied back to `tapped-media`.

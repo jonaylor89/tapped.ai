@@ -5,7 +5,6 @@ import { getApp, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
-import { getStorage } from "firebase-admin/storage";
 import { defineSecret } from "firebase-functions/params";
 
 const client = new SecretManagerServiceClient();
@@ -13,7 +12,6 @@ const app = getApps().length <= 0 ? initializeApp() : getApp();
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-export const storage = getStorage(app);
 export const fcm = getMessaging(app);
 
 export const usersRef = db.collection("users");
@@ -51,8 +49,6 @@ export const loopsFeedSubcollection = "userFeed";
 export const bookerReviewsSubcollection = "bookerReviews";
 export const performerReviewsSubcollection = "performerReviews";
 
-export const mainBucket = storage.bucket("in-the-loop-306520.appspot.com");
-
 export const streamKey = defineSecret("STREAM_KEY");
 export const streamSecret = defineSecret("STREAM_SECRET");
 
@@ -69,7 +65,6 @@ export const verifiedBotUuid = "1c0d9380-873c-493a-a3f8-1283d5408673";
 export const verifyUserBadgeId = "0aa46576-1fbe-4312-8b69-e2fef3269083";
 
 export const projectId = "in-the-loop-306520";
-export const bucket = storage.bucket(`${projectId}.appspot.com`);
 
 export const getSecretValue = async (secretName: string): Promise<string | null> => {
   const fullName = `projects/${projectId}/secrets/${secretName}/versions/latest`;

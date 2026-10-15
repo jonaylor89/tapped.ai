@@ -1,7 +1,7 @@
 # Local stack
 
 Runs the API, web app and iOS app against local Postgres/PostGIS, Redis, Mailpit and the Firebase
-Auth/Storage emulators. Nothing touches production data, the production Firebase project or
+Auth emulator. Nothing touches production data, the production Firebase project or
 production credentials.
 
 ## Start
@@ -20,7 +20,6 @@ platform/local/smoke.sh                           # emulator sign-in + API check
 | API | http://localhost:8080 |
 | Firebase emulator UI | http://localhost:4000 |
 | Auth emulator | localhost:9099 |
-| Storage emulator | localhost:9199 |
 | Mailpit | http://localhost:8025 |
 
 Without Docker, run the same services natively (`brew install postgresql@17 postgis redis mailpit`,

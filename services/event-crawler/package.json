@@ -14,7 +14,6 @@
     "puppeteer": "19.11.1",
     "sitemapper": "4.0.2",
     "@tapped/postgres-ingestion": "workspace:*",
-    "@google-cloud/storage": "7.11.2",
     "@langchain/core": "0.1.63"
   },
   "devDependencies": {

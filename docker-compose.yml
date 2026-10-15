@@ -43,7 +43,6 @@ services:
     ports:
       - "4000:4000"
       - "9099:9099"
-      - "9199:9199"
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:9099/"]
       interval: 2s
