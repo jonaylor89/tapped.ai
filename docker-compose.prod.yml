@@ -123,7 +123,7 @@ services:
     depends_on:
       - api
 
-  # Resizes media.tapped.ai (R2) and legacy Firebase Storage images for img.tapped.ai; Cloudflare caches every variant at the edge.
+  # Resizes media.tapped.ai (R2) images for img.tapped.ai; Cloudflare caches every variant at the edge.
   # The preset ladder is mirrored in apps/app.tapped.ai/src/lib/image-loader.ts and
   # com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift — change all three together.
   imgproxy:
@@ -136,7 +136,7 @@ services:
       IMGPROXY_TTL: "31536000"
       IMGPROXY_MAX_SRC_RESOLUTION: "40"
       IMGPROXY_QUALITY: "80"
-      IMGPROXY_ALLOWED_SOURCES: "https://media.tapped.ai/,https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/,https://storage.googleapis.com/in-the-loop-306520.appspot.com/"
+      IMGPROXY_ALLOWED_SOURCES: "https://media.tapped.ai/"
       IMGPROXY_ONLY_PRESETS: "true"
       IMGPROXY_PRESETS: >-
         w64=resize:fit:64:0/format:webp,

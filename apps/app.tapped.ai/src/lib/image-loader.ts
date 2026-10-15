@@ -5,11 +5,7 @@ import type { ImageLoaderProps } from "next/image";
 const PRESET_WIDTHS = [64, 128, 256, 384, 640, 828, 1080, 1600];
 
 // Mirrors IMGPROXY_ALLOWED_SOURCES; anything else is served as-is.
-const PROXIED_SOURCES = [
-	"https://media.tapped.ai/",
-	"https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/",
-	"https://storage.googleapis.com/in-the-loop-306520.appspot.com/",
-];
+const PROXIED_SOURCES = ["https://media.tapped.ai/"];
 
 // Unset (local dev, previews) serves original images.
 const proxyUrl = process.env.NEXT_PUBLIC_IMAGE_PROXY_URL;

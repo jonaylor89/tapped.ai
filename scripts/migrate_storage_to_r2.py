@@ -94,6 +94,14 @@ def sniff(data: bytes, key: str) -> tuple[str, str]:
         return "mp4", "video/mp4"
     if head.startswith(b"ID3") or (len(head) > 1 and head[0] == 0xFF and head[1] & 0xE0 == 0xE0):
         return "mp3", "audio/mpeg"
+    if head[:4] == b"RIFF" and head[8:12] == b"WAVE":
+        return "wav", "audio/wav"
+    if head.startswith(b"OggS"):
+        return "ogg", "audio/ogg"
+    if head.startswith(b"fLaC"):
+        return "flac", "audio/flac"
+    if head[:4] == b"FORM" and head[8:12] in (b"AIFF", b"AIFC"):
+        return "aiff", "audio/aiff"
     if head.startswith(b"BM"):
         return "bmp", "image/bmp"
     if head[:4] in (b"II*\x00", b"MM\x00*"):
@@ -136,20 +144,11 @@ EXT_BY_TYPE = {"image/jpeg": "jpg", "image/png": "png", "image/gif": "gif", "ima
                "audio/mpeg": "mp3"}
 
 
-def needs_copy(blob, entry: dict | None, refs: set[tuple[str, str, str]]) -> bool:
-    """New or changed bytes, or the rows referencing it changed (e.g. an upload the refs export now sees)."""
-    if entry is None or entry["md5"] != blob.md5_hash:
-        return True
-    ext = entry.get("ext") or EXT_BY_TYPE.get(entry["content_type"])
-    if ext is None:
-        return any(t not in LEGACY_TABLES for t, _, _ in refs)
-    current = {(t["bucket"], t["key"]) for t in entry["targets"]}
-    media = is_media(entry["content_type"]) and entry["size"] > 0
-    return set(targets_for(blob.name, refs, entry["sha"], ext, media)) != current
-
-
-def targets_are_public(targets: list[tuple[str, str]]) -> bool:
-    return any(bucket == PUBLIC_BUCKET for bucket, _ in targets)
+def needs_copy(blob, entry: dict | None) -> bool:
+    """New or changed bytes only. Never re-target from the refs export: once Postgres is rewritten it
+    holds no Firebase URLs, and treating that as "unreferenced" would archive live media. Use
+    --recheck for objects whose references changed."""
+    return entry is None or entry["md5"] != blob.md5_hash
 
 
 def r2_client():
@@ -191,8 +190,10 @@ def copy(args) -> None:
     gcs = storage.Client(project="in-the-loop-306520")
     recheck = set(Path(args.recheck).read_text().splitlines()) if args.recheck else set()
     blobs = [b for b in gcs.list_blobs(SOURCE_BUCKET, prefix=args.prefix)
-             if b.name in recheck or needs_copy(b, done.get(b.name), by_key.get(b.name, set()))]
+             if b.name in recheck or needs_copy(b, done.get(b.name))]
     print(f"{len(done)} already copied, {len(blobs)} to copy", file=sys.stderr)
+    if not by_key and done:
+        sys.exit("refs export is empty; after the Postgres rewrite, copy only with the pre-rewrite refs")
     r2 = r2_client()
     lock = threading.Lock()
     manifest = open(work / "manifest.jsonl", "a")
@@ -215,12 +216,12 @@ def copy(args) -> None:
                 Metadata={"source-key": urllib.parse.quote(blob.name, safe="/")},
             )
         # Archive keys are unique to their source, so a superseded one can go. Public keys are content
-        # addressed and may be shared, so only drop one when its bytes are not media (every source
-        # sharing it is moving to the archive too).
+        # addressed and may be shared: drop one only when no other source's entry still uses it.
         previous = done.get(blob.name, {}).get("targets", [])
         for stale in previous:
-            removable = stale["bucket"] == ARCHIVE_BUCKET or not targets_are_public(targets)
-            if removable and (stale["bucket"], stale["key"]) not in targets:
+            shared = stale["bucket"] == PUBLIC_BUCKET and any(
+                t == stale for source, other in done.items() if source != blob.name for t in other["targets"])
+            if not shared and (stale["bucket"], stale["key"]) not in targets:
                 r2.delete_object(Bucket=stale["bucket"], Key=stale["key"])
         entry = {"source": blob.name, "md5": blob.md5_hash, "size": len(data), "sha": sha, "ext": ext,
                  "content_type": content_type, "targets": [{"bucket": b, "key": k} for b, k in targets]}
@@ -274,6 +275,63 @@ def verify(args) -> None:
     if problems or unexpected:
         sys.exit(f"{len(problems)} problems, {len(unexpected)} unexpected R2 objects")
     print("OK")
+
+
+def retire(args) -> None:
+    """Delete Firebase objects that are safely in R2: unchanged since the copy (same MD5) and every
+    R2 target present with the same size and MD5. Deletes are pinned to the listed generation, so an
+    object overwritten meanwhile is kept. Dry run unless --execute."""
+    work = Path(args.work)
+    entries = load_manifest(work)
+    r2 = r2_client()
+    listed: dict[tuple[str, str], tuple[int, str]] = {}
+    for bucket in (PUBLIC_BUCKET, ARCHIVE_BUCKET):
+        for page in r2.get_paginator("list_objects_v2").paginate(Bucket=bucket):
+            for obj in page.get("Contents", []):
+                listed[(bucket, obj["Key"])] = (obj["Size"], obj["ETag"].strip('"'))
+    gcs = storage.Client(project="in-the-loop-306520")
+    bucket = gcs.bucket(SOURCE_BUCKET)
+    retire_list, keep = [], collections.Counter()
+    for blob in gcs.list_blobs(SOURCE_BUCKET):
+        entry = entries.get(blob.name)
+        if entry is None:
+            keep["not copied"] += 1
+            continue
+        if entry["md5"] != blob.md5_hash:
+            keep["changed since copy"] += 1
+            continue
+        md5_hex = base64.b64decode(entry["md5"]).hex()
+        if any(listed.get((t["bucket"], t["key"])) != (entry["size"], md5_hex) for t in entry["targets"]):
+            keep["R2 copy missing or different"] += 1
+            continue
+        retire_list.append((blob.name, blob.generation))
+    print(f"retire {len(retire_list)}, keep {sum(keep.values())} {dict(keep)}", file=sys.stderr)
+    if not args.execute:
+        print("dry run; pass --execute to delete", file=sys.stderr)
+        return
+    log = open(work / "retired.jsonl", "a")
+    lock = threading.Lock()
+    failures = []
+
+    def one(item) -> None:
+        name, generation = item
+        bucket.blob(name).delete(if_generation_match=generation)
+        with lock:
+            log.write(json.dumps({"source": name, "generation": generation}) + "\n")
+            log.flush()
+
+    with concurrent.futures.ThreadPoolExecutor(args.concurrency) as pool:
+        futures = {pool.submit(one, item): item[0] for item in retire_list}
+        for n, future in enumerate(concurrent.futures.as_completed(futures), 1):
+            if error := future.exception():
+                failures.append(futures[future])
+                print(f"FAILED {futures[future]!r}: {error}", file=sys.stderr)
+            if n % 5000 == 0:
+                print(f"{n}/{len(retire_list)}", file=sys.stderr)
+    log.close()
+    print(f"deleted {len(retire_list) - len(failures)}, failed {len(failures)}", file=sys.stderr)
+    if failures:
+        sys.exit("some deletes failed; re-run to retry")
 
 
 def sql_literal(value: str | None) -> str:
@@ -380,11 +438,15 @@ def main() -> None:
     p = sub.add_parser("verify")
     p.add_argument("--work", required=True)
     p.add_argument("--prefix", help="only this source prefix (smoke tests)")
+    p = sub.add_parser("retire")
+    p.add_argument("--work", required=True)
+    p.add_argument("--execute", action="store_true")
+    p.add_argument("--concurrency", type=int, default=16)
     p = sub.add_parser("sql")
     p.add_argument("--refs", required=True)
     p.add_argument("--work", required=True)
     args = parser.parse_args()
-    {"copy": copy, "verify": verify, "sql": sql}[args.command](args)
+    {"copy": copy, "verify": verify, "sql": sql, "retire": retire}[args.command](args)
 
 
 if __name__ == "__main__":

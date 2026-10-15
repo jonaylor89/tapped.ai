@@ -156,14 +156,14 @@ In PostHog's tracing view, filter by service `api.tapped.ai` and the `http.route
 
 ## Image resizing (img.tapped.ai)
 
-`imgproxy` resizes images from R2 (`media.tapped.ai`) and the legacy Firebase Storage bucket on request and Cloudflare caches each variant at the edge, so the VPS only processes an image once per size. Clients rewrite those URLs to
+`imgproxy` resizes images from R2 (`media.tapped.ai`) on request and Cloudflare caches each variant at the edge, so the VPS only processes an image once per size. Clients rewrite those URLs to
 
 ```
 https://img.tapped.ai/unsafe/<preset>/<base64url(source URL)>
 ```
 
 - **Presets only.** `IMGPROXY_ONLY_PRESETS` rejects arbitrary sizes, so nobody can bust the cache with random dimensions. `w<N>` fits the image to N px wide; `sq<N>` crops it to an N×N square. All output is WebP.
-- **Known sources.** `IMGPROXY_ALLOWED_SOURCES` only allows `https://media.tapped.ai/` and the `in-the-loop-306520.appspot.com` bucket (until it is retired; see [R2 migration](R2_MIGRATION.md)), so the proxy can't be pointed at other hosts. Source URLs aren't signed because the iOS app can't keep a key secret.
+- **One source.** `IMGPROXY_ALLOWED_SOURCES` only allows `https://media.tapped.ai/` (see [R2 migration](R2_MIGRATION.md)), so the proxy can't be pointed at other hosts. Source URLs aren't signed because the iOS app can't keep a key secret.
 - **Mirrored ladder.** The preset list in `docker-compose.prod.yml` is mirrored in `apps/app.tapped.ai/src/lib/image-loader.ts` and `com.intheloopstudio/Packages/TappedDomain/Sources/TappedDomain/ImageProxy.swift`. Add a preset to the server before any client uses it.
 
 ### One-time Cloudflare setup
@@ -180,7 +180,7 @@ tailscale ssh root@tapped-prod
 cd /opt/tapped
 docker compose pull imgproxy
 docker compose up -d imgproxy cloudflared
-curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' '<firebase download URL>' | base64 | tr '+/' '-_' | tr -d '=\n')"
+curl -sI "https://img.tapped.ai/unsafe/w256/$(printf '%s' 'https://media.tapped.ai/<key>' | base64 | tr '+/' '-_' | tr -d '=\n')"
 ```
 
 ## Postgres

@@ -7,7 +7,7 @@ import UIKit
 @Suite("RemoteImage loader + cache")
 struct ImageLoaderTests {
     let proxy = ImageProxy(baseURL: URL(string: "https://img.tapped.ai")!)
-    let source = URL(string: "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/o/a.jpg?alt=media")!
+    let source = URL(string: "https://media.tapped.ai/events/fliers/a.jpg")!
     let other = URL(string: "https://example.com/a.jpg")!
 
     private func request(_ source: URL, _ width: CGFloat, _ height: CGFloat, proxy: ImageProxy? = nil) -> ImageRequest {

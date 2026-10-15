@@ -16,7 +16,16 @@ Cloudflare account. Started 2026-10-14.
   and 1 press kit that were not media (HTML bot walls, error pages, empty files) or the overwritten
   placeholder are NULL. Backup: `/opt/backups/postgres/pre-r2-rewrite-20261015T1047.dump`.
   imgproxy recreated with `media.tapped.ai` allowed.
-- Firebase Storage is still intact and read by the App Store build. Not deleted.
+- 2026-10-15: production API has R2 credentials (`POST /app/v1/uploads` live). All 57,628 migrated
+  objects deleted from the Firebase bucket after a final check (0 Firebase URLs in Postgres; every
+  object unchanged since its copy and every R2 target matching size and MD5; deletes pinned to the
+  object generation). Log: `retired.jsonl` in the work directory. The empty default bucket remains.
+  Firebase sources removed from the imgproxy, web and iOS allowlists.
+- Incident, same day: a delta `copy` with the post-rewrite (empty) refs export re-targeted live media
+  to the archive and removed 1,008 public keys for ~15 minutes. All were restored byte-identical from
+  the archive copies and checked; no cached 404s remained. `copy` now never re-targets from refs,
+  refuses an empty refs export, and keeps public keys any other entry still uses. One real WAV press
+  kit misclassified as non-media was restored (WAV/OGG/FLAC/AIFF are now recognized).
 
 ## Layout
 

@@ -5,7 +5,7 @@ import Testing
 @Suite("ImageProxy")
 struct ImageProxyTests {
     let proxy = ImageProxy(baseURL: URL(string: "https://img.tapped.ai")!)
-    let source = URL(string: "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/o/images%2Fusers%2Fabc.jpg?alt=media&token=1234")!
+    let source = URL(string: "https://media.tapped.ai/users/abc/avatar/278645fd506a9197c6712c78fcc9b20b.jpg")!
 
     private func preset(_ url: URL) -> String { url.pathComponents[2] }
 
@@ -33,9 +33,9 @@ struct ImageProxyTests {
         #expect(preset(proxy.url(for: source, pixelWidth: 3000, pixelHeight: 2000)) == "w1600")
     }
 
-    @Test func proxiesR2Media() {
-        let media = URL(string: "https://media.tapped.ai/users/abc/avatar/278645fd506a9197c6712c78fcc9b20b.jpg")!
-        #expect(proxy.url(for: media, pixelWidth: 100, pixelHeight: 100).absoluteString.hasPrefix("https://img.tapped.ai/unsafe/sq128/"))
+    @Test func leavesRetiredFirebaseURLsAlone() {
+        let firebase = URL(string: "https://firebasestorage.googleapis.com/v0/b/in-the-loop-306520.appspot.com/o/a.jpg?alt=media")!
+        #expect(proxy.url(for: firebase, pixelWidth: 100, pixelHeight: 100) == firebase)
     }
 
     @Test func leavesOtherURLsAlone() {
