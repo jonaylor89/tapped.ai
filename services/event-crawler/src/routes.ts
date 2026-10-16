@@ -3,12 +3,14 @@ import { extractEventDataFromPage } from "./utils/openai.js";
 import { containsEventPath } from "./utils/parsing.js";
 
 const MAX_PAGE_CONTENT_LENGTH = 15_000;
-const MAX_PERFORMERS_PER_EVENT = 15;
 const MAX_PATH_PARTS = 10;
 
-export async function getRouter(ignoreLinks: string[] = []) {
+export async function getRouter(
+  shouldSkip: (key: string) => Promise<boolean>,
+  capture: (data: Record<string, unknown>, body: Buffer, observedAt: string) => Promise<void>,
+) {
   const router = createCheerioRouter();
-  router.addDefaultHandler(async ({ request, $, pushData, enqueueLinks, log }) => {
+  router.addDefaultHandler(async ({ request, $, body, enqueueLinks, log }) => {
     log.info(request.url);
 
     if (!request.loadedUrl) {
@@ -47,13 +49,17 @@ export async function getRouter(ignoreLinks: string[] = []) {
       }
 
       const encodedLink = encodeURIComponent(request.loadedUrl);
-      if (ignoreLinks.includes(encodedLink)) {
+      if (await shouldSkip(encodedLink)) {
         log.debug("[-] skipping... already processed", {
           url: request.loadedUrl,
         });
         return;
       }
 
+      // Keep one capture timestamp across handler retries. The delivery key also includes content.
+      const observedAt = String(request.userData.observedAt ?? new Date().toISOString());
+      request.userData.observedAt = observedAt;
+      const response = Buffer.isBuffer(body) ? body : Buffer.from(body);
       const title = $("title").text();
       log.info(`${title}`, { url: request.loadedUrl });
 
@@ -69,22 +75,18 @@ export async function getRouter(ignoreLinks: string[] = []) {
       const truncatedPageContent = pageContent.substring(0, lengthLimit);
       const fullContent = [request.loadedUrl, truncatedPageContent, imageUrls].join("\n");
       // console.log(fullContent);
-      const eventData = await extractEventDataFromPage(fullContent);
-
-      const numOfPerformers = eventData?.performers?.length ?? 0;
-      if (numOfPerformers >= MAX_PERFORMERS_PER_EVENT) {
-        log.debug("[-] skipping... no performers", {
-          url: request.loadedUrl,
-        });
-        return;
+      let eventData;
+      try {
+        eventData = await extractEventDataFromPage(fullContent);
+      } catch {
+        // Failed extraction is evidence too: persist a quarantined capture before retrying.
+        await capture({ loadedUrl: request.loadedUrl, extractionError: "Extraction failed" }, response, observedAt);
+        throw new Error("Extraction failed");
       }
-
-      await pushData({
-        loadedUrl: request.loadedUrl,
-        ...eventData,
-      });
-    } catch (e: any) {
-      log.error(e);
+      await capture({ loadedUrl: request.loadedUrl, ...eventData }, response, observedAt);
+    } catch {
+      // Let Crawlee retry failed persistence; never log raw payloads or credential-bearing errors.
+      throw new Error("Event extraction or evidence persistence failed");
     } finally {
       await enqueueLinks({
         strategy: "same-hostname",

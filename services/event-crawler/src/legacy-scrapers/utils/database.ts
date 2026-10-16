@@ -1,5 +1,5 @@
-import { endRun, latestRun, profile, saveRunEvent, startRun, unclaimedArtist } from "@tapped/postgres-ingestion";
-import type { Location, Option, RunData, ScrapedEventData, ScraperMetadata, UserModel } from "../types";
+import { endRun, latestRun, profile, saveRunEvent, startRun } from "@tapped/postgres-ingestion";
+import type { Option, RunData, ScrapedEventData, ScraperMetadata, UserModel } from "../types";
 
 export async function getUserById(id: string): Promise<Option<UserModel>> {
   return profile<UserModel>(id);
@@ -16,18 +16,6 @@ export async function endScrapeRun(
 }
 export async function getLatestRun(id: string): Promise<RunData | null> {
   return latestRun(id);
-}
-export async function getOrCreateArtist({
-  performerName,
-  genres,
-}: {
-  performerName: string;
-  bio?: string;
-  genres: string[];
-  location: Option<Location>;
-}): Promise<string> {
-  // Public unclaimed profile only: never create an Auth account or fabricated ratings.
-  return unclaimedArtist(performerName, genres);
 }
 export async function saveScrapeResult(scraper: ScraperMetadata, runId: string, data: ScrapedEventData): Promise<void> {
   const key = encodeURIComponent(data.url || `${scraper.venue.id}:${data.startTime.toISOString()}:${data.title}`);

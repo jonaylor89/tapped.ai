@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
+import { r2EvidenceStore } from "./evidence";
+import { captureObservations, deliveryKey } from "./observations";
+
+export * from "./evidence";
+export * from "./firestore-crawler";
+export * from "./observations";
+export * from "./targets";
 
 let connection: Pool | undefined;
+let evidenceStorage: ReturnType<typeof r2EvidenceStore> | undefined;
 /** A dedicated member of tapped_ingestion on a private network; never the API owner role. */
 export function database(): Pool {
   if (!connection) {
@@ -46,15 +54,16 @@ export async function venueUrls(): Promise<string[]> {
 }
 export async function scrapedLinks(venueIds: string[]): Promise<string[]> {
   const result = await database().query(
-    "SELECT DISTINCT source_key FROM scraped_events WHERE venue_id=ANY($1::text[])",
+    "SELECT DISTINCT source_key FROM scraped_events WHERE venue_id=ANY($1::text[]) AND source='event-crawler' AND last_seen_at > now()-interval '6 hours'",
     [venueIds],
   );
   return result.rows.map((row) => row.source_key);
 }
-export async function hasScrapedLink(key: string): Promise<boolean> {
-  const result = await database().query("SELECT EXISTS(SELECT 1 FROM scraped_events WHERE source_key=$1) AS found", [
-    key,
-  ]);
+export async function hasScrapedLink(key: string, source = "event-crawler"): Promise<boolean> {
+  const result = await database().query(
+    "SELECT EXISTS(SELECT 1 FROM scraped_events WHERE source=$1 AND source_key_hash=scrape_key_hash($2) AND source_key=$2 AND last_seen_at > now()-interval '6 hours') AS found",
+    [source, key],
+  );
   return result.rows[0].found;
 }
 export type EventFacts = {
@@ -100,59 +109,67 @@ export function eventPayload(event: EventFacts): object {
   };
 }
 export async function saveEvent(source: string, key: string, venueId: string, event: EventFacts): Promise<void> {
-  await database().query("SELECT ingest_scraped_event($1,$2,$3,$4::jsonb)", [
-    source,
-    key,
-    venueId,
-    eventPayload(event),
-  ]);
+  await saveRunEvent(source, event.runId ?? null, key, venueId, event);
 }
-export async function startRun(scraperId: string): Promise<string> {
+export async function startRun(
+  scraperId: string,
+  source = "legacy-scrapers",
+  parserVersion = "event-facts-v1",
+): Promise<string> {
   const id = randomUUID();
-  await database().query("INSERT INTO scrape_runs(id,scraper_id) VALUES($1,$2)", [id, scraperId]);
+  await database().query("INSERT INTO scrape_runs(id,scraper_id,source,parser_version) VALUES($1,$2,$3,$4)", [
+    id,
+    scraperId,
+    source,
+    parserVersion,
+  ]);
   return id;
 }
 export async function endRun(id: string, error: string | null): Promise<void> {
-  await database().query("UPDATE scrape_runs SET ended_at=now(),error=$2 WHERE id=$1", [id, error]);
+  await database().query(
+    "UPDATE scrape_runs SET ended_at=now(),error=$2,status=CASE WHEN $2::text IS NULL THEN 'completed' ELSE 'failed' END WHERE id=$1",
+    [id, error],
+  );
 }
 export async function latestRun(
   scraperId: string,
+  source = "legacy-scrapers",
 ): Promise<{ id: string; startTime: Date; endTime: Date | null; error: null } | null> {
   const result = await database().query(
-    'SELECT id,started_at AS "startTime",ended_at AS "endTime",error FROM scrape_runs WHERE scraper_id=$1 AND error IS NULL ORDER BY started_at DESC LIMIT 1',
-    [scraperId],
+    'SELECT id,started_at AS "startTime",ended_at AS "endTime",error FROM scrape_runs WHERE scraper_id=$1 AND source=$2 AND status=\'completed\' ORDER BY started_at DESC LIMIT 1',
+    [scraperId, source],
   );
   return result.rows[0] ?? null;
 }
 export async function saveRunEvent(
   source: string,
-  runId: string,
+  runId: string | null,
   key: string,
   venueId: string,
   event: EventFacts,
 ): Promise<void> {
-  const data = eventPayload(event);
-  const client = await database().connect();
-  try {
-    await client.query("BEGIN");
-    await client.query(
-      "INSERT INTO scrape_results(run_id,source_key,payload) VALUES($1,$2,$3) ON CONFLICT(run_id,source_key) DO NOTHING",
-      [runId, key, data],
-    );
-    await client.query("SELECT ingest_scraped_event($1,$2,$3,$4::jsonb)", [source, key, venueId, data]);
-    await client.query("COMMIT");
-  } catch {
-    await client.query("ROLLBACK");
-    throw new Error("Scraped event transaction failed");
-  } finally {
-    client.release();
-  }
-}
-export async function unclaimedArtist(name: string, genres: string[], venueId?: string): Promise<string> {
-  const result = await database().query("SELECT ingest_unclaimed_artist($1,$2,$3) AS id", [
-    name,
-    genres,
-    venueId ?? null,
-  ]);
-  return result.rows[0].id;
+  const pool = database();
+  // Compatibility producers use the durable run start as their capture time. New producers should
+  // use captureObservations directly with actual per-response timestamps and stable delivery IDs.
+  const run = runId ? await pool.query("SELECT started_at FROM scrape_runs WHERE id=$1", [runId]) : null;
+  if (runId && !run?.rows.length) throw new Error("Unknown scrape run");
+  const observedAt = run?.rows[0].started_at.toISOString() ?? new Date().toISOString();
+  await captureObservations(
+    pool,
+    (evidenceStorage ??= r2EvidenceStore()),
+    [
+      {
+        source,
+        sourceKey: key,
+        deliveryKey: deliveryKey(source, runId ?? observedAt, key),
+        observedAt,
+        parserVersion: "event-facts-v1",
+        venueId,
+        runId,
+        data: event as unknown as Record<string, unknown>,
+      },
+    ],
+    Buffer.from(JSON.stringify(event)),
+    { retention: "evidence", contentType: "application/json" },
+  );
 }

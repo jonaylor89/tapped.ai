@@ -1,6 +1,6 @@
 # Event crawler
 
-Reads sanitized profiles and writes event facts/import provenance to Postgres through `@tapped/postgres-ingestion`. No Auth users, Firestore writes, client-maintained counters or application notifications. Supported legacy scrapers use the same transport.
+Reads sanitized profiles, archives responses/extractions in private R2, and writes immutable observations plus unpublished relational facts through `@tapped/postgres-ingestion`. No artist/profile creation, booking creation/cancellation, Firebase writes or application notifications. Supported legacy scrapers use the same capture transport.
 
 From the monorepo root:
 
@@ -14,6 +14,6 @@ corepack pnpm --filter node-webcrawler start:prod
 docker build -f services/event-crawler/Dockerfile .
 ```
 
-Configure a private-network `INGESTION_DATABASE_URL` for a dedicated member of `tapped_ingestion`, not the API/owner credential. Missing configuration fails closed. Provider settings remain `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY` and optional `SLACK_WEBHOOK_URL`; never bake them into an image.
+Configure a private-network `INGESTION_DATABASE_URL` for a dedicated member of `tapped_ingestion`, not the API/owner credential. Independent private-bucket `SCRAPE_R2_ACCOUNT_ID`, `SCRAPE_R2_BUCKET`, `SCRAPE_R2_ACCESS_KEY_ID` and `SCRAPE_R2_SECRET_ACCESS_KEY` are also mandatory. No public-media credentials are reused. Missing configuration fails closed. Provider settings remain `OPENAI_API_KEY`, `GOOGLE_PLACES_API_KEY` and optional `SLACK_WEBHOOK_URL`; never bake them into an image.
 
-See [models, permissions, rollout and preservation](../../platform/POSTGRES_FIRST.md). Firestore migration files under `archive/firestore-migrations` are historical source, excluded from runtime builds and unsupported against the new schema. Do not run them on production or restore a dual-write path.
+See [observations, R2, migration rehearsal and tests](../../platform/SCRAPER_INGESTION.md) and [models, permissions, rollout and preservation](../../platform/POSTGRES_FIRST.md). Nothing here authorizes crawler execution or enables a schedule. Firestore migration files under `archive/firestore-migrations` are historical source, excluded from runtime builds and unsupported against the new schema. Do not run them on production or restore a dual-write path.

@@ -165,7 +165,7 @@ async fn domain_commands_use_canonical_facts_and_read_only_statistics() {
 }
 
 #[tokio::test]
-async fn restricted_ingestion_is_atomic_retryable_and_never_creates_accounts_or_notifications() {
+async fn restricted_observations_are_retryable_and_never_create_profiles_bookings_or_effects() {
     let Some((pool, admin, name)) = database().await else {
         return;
     };
@@ -180,6 +180,10 @@ async fn restricted_ingestion_is_atomic_retryable_and_never_creates_accounts_or_
         "UPDATE users SET unclaimed=false",
         "SELECT * FROM legacy_profile_archive",
         "INSERT INTO external_effect_outbox(id,kind,payload) VALUES('bad','auth_signup','{}')",
+        "SELECT ingest_scraped_event('test','event','venue','{}')",
+        "SELECT ingest_unclaimed_artist('Nova')",
+        "UPDATE scrape_results SET payload='{}'",
+        "UPDATE scraped_events SET publication_state='published'",
     ] {
         assert_eq!(
             sqlx::query(statement)
@@ -198,52 +202,78 @@ async fn restricted_ingestion_is_atomic_retryable_and_never_creates_accounts_or_
         .await
         .unwrap();
     assert_eq!(doc["email"], "");
-    let mut payload = json!({"isMusicEvent":true,"performers":["Nova","Nova","Echo"],"startTime":"2026-12-01T20:00:00Z","endTime":"2026-12-01T22:00:00Z","title":"Show","ticketPrice":25});
-    let mut event = String::new();
-    for _ in 0..2 {
-        event = sqlx::query_scalar("SELECT ingest_scraped_event('test','event','venue',$1)")
-            .bind(&payload)
+    let evidence = json!({
+        "bucket":"tapped-scrape-private-test",
+        "key":format!("archive/aa/{}.gz", "a".repeat(64)),
+        "sha256":"a".repeat(64), "bytes":100,
+        "contentType":"application/x-ndjson", "contentEncoding":"gzip"
+    });
+    let object_id: i64 = sqlx::query_scalar("SELECT register_scrape_object($1)")
+        .bind(evidence)
+        .fetch_one(&mut *conn)
+        .await
+        .unwrap();
+    let payload = json!([{
+        "source":"test", "sourceKey":"event", "deliveryKey":"first",
+        "venueId":"venue", "parserVersion":"test-v1",
+        "observedAt":"2020-01-02T00:00:00Z", "evidenceId":object_id, "errors":[],
+        "facts":{
+            "musicClassification":"music", "performers":["Nova","Echo"],
+            "startTime":"2030-12-01T20:00:00Z", "endTime":null,
+            "title":"Show", "prices":[{"kind":"ticket","amountMin":25,"currency":null}]
+        }
+    }]);
+    let mut event = Value::Null;
+    for expected in ["inserted", "duplicate"] {
+        let result: Value =
+            sqlx::query_scalar("SELECT to_jsonb(r) FROM record_scrape_observations($1) r")
+                .bind(&payload)
+                .fetch_one(&mut *conn)
+                .await
+                .unwrap();
+        assert_eq!(result["action"], expected);
+        event = result["event_id"].clone();
+    }
+    let mut invalid = payload.clone();
+    invalid[0]["sourceKey"] = json!("bad-event");
+    invalid[0]["deliveryKey"] = json!("bad-delivery");
+    invalid[0]["facts"]["startTime"] = json!("not-a-time");
+    let rejected: Value =
+        sqlx::query_scalar("SELECT to_jsonb(r) FROM record_scrape_observations($1) r")
+            .bind(invalid)
             .fetch_one(&mut *conn)
             .await
             .unwrap();
-    }
-    let mut invalid = payload.clone();
-    invalid["performers"] = json!(["Should Roll Back", ""]);
-    assert!(
-        sqlx::query("SELECT ingest_scraped_event('test','bad-event','venue',$1)")
-            .bind(invalid)
-            .execute(&mut *conn)
+    assert_eq!(rejected["action"], "quarantined");
+    assert!(rejected["event_id"].is_null());
+    let mut older = payload.clone();
+    older[0]["deliveryKey"] = json!("older");
+    older[0]["observedAt"] = json!("2020-01-01T00:00:00Z");
+    older[0]["facts"]["title"] = json!("Stale");
+    let historical: Value =
+        sqlx::query_scalar("SELECT to_jsonb(r) FROM record_scrape_observations($1) r")
+            .bind(older)
+            .fetch_one(&mut *conn)
             .await
-            .is_err()
-    );
-    payload["performers"] = json!(["Nova"]);
-    sqlx::query("SELECT ingest_scraped_event('test','event','venue',$1)")
-        .bind(&payload)
-        .execute(&mut *conn)
-        .await
-        .unwrap();
+            .unwrap();
+    assert_eq!(historical["action"], "historical");
     sqlx::query("RESET ROLE").execute(&mut *conn).await.unwrap();
     drop(conn);
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM bookings WHERE status='confirmed'")
+        sqlx::query_scalar::<_, String>("SELECT title FROM scraped_events WHERE event_id=$1")
+            .bind(event.as_str().unwrap())
             .fetch_one(&pool)
             .await
             .unwrap(),
-        1
+        "Show"
     );
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM bookings WHERE reference_event_id=$1")
-            .bind(event)
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        2
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM scraped_event_revisions")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
+        sqlx::query_scalar::<_, i64>(
+            "SELECT count(*) FROM event_performers WHERE profile_id IS NULL"
+        )
+        .fetch_one(&pool)
+        .await
+        .unwrap(),
         2
     );
     for table in [
@@ -251,6 +281,7 @@ async fn restricted_ingestion_is_atomic_retryable_and_never_creates_accounts_or_
         "profile_owners",
         "external_effect_outbox",
         "activities",
+        "bookings",
     ] {
         assert_eq!(
             sqlx::query_scalar::<_, i64>(sqlx::AssertSqlSafe(format!(
@@ -263,44 +294,11 @@ async fn restricted_ingestion_is_atomic_retryable_and_never_creates_accounts_or_
         );
     }
     assert_eq!(
-        sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM users WHERE artist_name='Should Roll Back'"
-        )
-        .fetch_one(&pool)
-        .await
-        .unwrap(),
-        0
-    );
-    // A member cannot cause ingestion to overwrite a native booking with a guessed reserved ID.
-    let collision:String=sqlx::query_scalar("SELECT \'scraped-booking-\'||md5((\'scraped-\'||md5(\'test:native-collision\'))||\':\'||id) FROM users WHERE username=\'nova\'").fetch_one(&pool).await.unwrap();
-    sqlx::query("INSERT INTO bookings(id,requester_id,requestee_id,status,note) SELECT $1,\'venue\',id,\'pending\',\'native note\' FROM users WHERE username=\'nova\'").bind(&collision).execute(&pool).await.unwrap();
-    assert!(
-        sqlx::query("SELECT ingest_scraped_event(\'test\',\'native-collision\',\'venue\',$1)")
-            .bind(&payload)
-            .execute(&pool)
-            .await
-            .is_err()
-    );
-    assert_eq!(
-        sqlx::query_scalar::<_, String>("SELECT note FROM bookings WHERE id=$1")
-            .bind(collision)
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM users")
             .fetch_one(&pool)
             .await
             .unwrap(),
-        "native note"
-    );
-    payload["isMusicEvent"] = json!(false);
-    sqlx::query("SELECT ingest_scraped_event('test','event','venue',$1)")
-        .bind(payload)
-        .execute(&pool)
-        .await
-        .unwrap();
-    assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM bookings WHERE status='confirmed'")
-            .fetch_one(&pool)
-            .await
-            .unwrap(),
-        0
+        1
     );
     cleanup(pool, admin, name).await;
 }

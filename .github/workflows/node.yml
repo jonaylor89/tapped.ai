@@ -9,16 +9,27 @@ on:
 jobs:
   lint-and-build:
     runs-on: ubuntu-latest
+    services:
+      ingestion-postgres:
+        image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
+        env:
+          POSTGRES_USER: tapped
+          POSTGRES_PASSWORD: ingestion-ci-only
+          POSTGRES_DB: ingestion_ci
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U tapped -d ingestion_ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       
       - uses: pnpm/action-setup@v2
         with:
-          version: 9
+          version: 10.27.0
           
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '22.17.0'
           cache: 'pnpm'
           
       - name: Install dependencies
@@ -33,6 +44,18 @@ jobs:
         
       - name: Test web helpers
         run: pnpm --filter app.tapped.ai test
+
+      - name: Test scraper ingestion and populated migrations
+        run: pnpm --filter @tapped/postgres-ingestion test
+        env:
+          INGESTION_TEST_DATABASE_URL: postgres://tapped:ingestion-ci-only@127.0.0.1:5432/ingestion_ci
+
+      - name: Check operator migration scripts
+        run: |
+          pnpm --filter @tapped/postgres-ingestion build
+          npm ci --prefix scripts
+          npm run --prefix scripts typecheck
+          npm run --prefix scripts crawler:import -- --help
 
       - name: Build
         run: pnpm run build

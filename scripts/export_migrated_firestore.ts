@@ -13,7 +13,7 @@ process.umask(0o077);
 const outputIndex = process.argv.indexOf("--output");
 if (outputIndex < 0 || !process.argv[outputIndex + 1]) throw new Error("--output <secure-directory> required");
 const output = resolve(process.argv[outputIndex + 1]);
-const names = ["users","services","bookings","activities","apiKeys","device_tokens","googlePlacesCache","opportunities","reviews"];
+const names = ["users","services","bookings","activities","apiKeys","device_tokens","googlePlacesCache","opportunities","reviews","crawler","rawScrapeData"];
 const selectedIndex = process.argv.indexOf("--collections");
 const selected = selectedIndex < 0 ? names : process.argv[selectedIndex + 1].split(",");
 if (selected.some(x => !names.includes(x))) throw new Error("unknown migrated collection");
@@ -25,6 +25,8 @@ function encode(value: unknown): unknown {
   if (Buffer.isBuffer(value)) return { $type:"bytes", base64:value.toString("base64") };
   if (value instanceof Date) return { $type:"date", iso:value.toISOString() };
   if (typeof value === "number" && !Number.isFinite(value)) return { $type:"number", value:String(value) };
+  if (Object.is(value,-0)) return { $type:"number", value:"-0" };
+  if (typeof value === "number" && Number.isInteger(value) && !Number.isSafeInteger(value)) throw new Error("Unsafe Firestore integer requires a native export before deletion");
   if (Array.isArray(value)) return value.map(encode);
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k,v]) => [k,encode(v)]));
   return value;
@@ -87,6 +89,7 @@ async function main() {
     if (name==="services") sources.push(db.collectionGroup("userServices") as any);
     if (name==="opportunities") sources.push(db.collectionGroup("interestedUsers") as any);
     if (name==="reviews") sources.push(db.collectionGroup("performerReviews") as any,db.collectionGroup("bookerReviews") as any);
+    if (name==="rawScrapeData") sources.push(db.collectionGroup("scrapeRuns") as any,db.collectionGroup("scrapeResults") as any);
     let total=0;
     for (const source of sources) {
       let cursor;

@@ -2,6 +2,9 @@
 
 User media lives in R2 in the **Tapped** Cloudflare account. Firebase is used only for Auth.
 
+Scraper evidence is a separate **private** storage concern, not public media. See
+[scraper ingestion](SCRAPER_INGESTION.md) for its dedicated bucket, credentials and retention.
+
 | Bucket | Access | Contents |
 | --- | --- | --- |
 | `tapped-media` | Public at `https://media.tapped.ai`; CORS `GET`/`HEAD`/`PUT` from `tapped.ai`, `app.tapped.ai` | Everything Postgres links to |
