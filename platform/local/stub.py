@@ -313,10 +313,10 @@ class Handler(StreamMixin, BaseHTTPRequestHandler):
     def do_POST(self):
         path = urlparse(self.path).path
         raw = self.rfile.read(int(self.headers.get("Content-Length", 0)))
-        if self.is_stream(path):
-            return self.stream_respond("POST", path, raw)
         if path.endswith("/api/token"):
             return self.send_json({"access_token": "local-spotify-token", "token_type": "Bearer", "expires_in": 3600})
+        if self.is_stream(path):
+            return self.stream_respond("POST", path, raw)
         body = json.loads(raw or b"{}")
         if path.endswith("/places:autocomplete"):
             query = body.get("input", "").lower()
