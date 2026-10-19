@@ -2,9 +2,10 @@
 
 ## Scope and safety
 
-Migration `20261028000000_scrape_observations.sql` prepares the Postgres data model. It does not
-run scrapers, provision credentials/buckets, publish events, create artists/bookings, replay effects,
-or delete Firestore. Apply it only through the normal backed-up/rehearsed API migration rollout.
+Migration `20261028000000_scrape_observations.sql` prepares the Postgres data model.
+`20261029000000_scrape_money_cents.sql` adds versioned normalization and integer-cent prices.
+Neither runs scrapers, provisions credentials/buckets, publishes events, creates artists/bookings,
+replays effects, or deletes Firestore. Apply them only through the backed-up/rehearsed migration rollout.
 Crawler execution remains separately owner-approved. See [Postgres-first](POSTGRES_FIRST.md).
 
 The old `ingest_scraped_event` / `ingest_unclaimed_artist` functions are retired (including owner
@@ -26,6 +27,8 @@ public response / legacy Firestore snapshot
   Scraper IDs are not user IDs. Historical unfinished runs are `interrupted`, not successful.
 - `scrape_results`: source-scoped delivery identity, capture time, parser version, evidence pointer and
   optional NDJSON line, validation errors, normalized facts and optional current-event reference.
+  `normalization_version`, `input_price_unit` and `normalization_notes` record the interpretation.
+  Original v1 payloads remain immutable dollar-major historical records, not current price projections.
   Raw run results can be archived with `materialize=false` without duplicating current events.
 - `scraped_events`: stable existing IDs, typed dates/status/classification/URLs/title/description,
   nullable venue, original venue identifier, first/last seen, last changed and current observation.
@@ -37,8 +40,11 @@ public response / legacy Firestore snapshot
   occurrences, including multiple events on one page; URLs are not universal event identities.
 - `event_performers`: ordered original names and optional explicitly verified profile resolution.
   Names alone never create or merge artists. Matching existing resolutions survive lineup refreshes.
-- `event_prices`: ordered offers, kind, decimal min/max, nullable currency and description. Legacy
-  numeric ticket/door prices have unknown currency, never assumed USD or treated as performer fees.
+- `event_prices`: ordered offers, kind, **bigint `amount_min_cents` / `amount_max_cents`**, `currency='USD'`
+  and description. On 2026-10-19 the owner approved treating this historical ingestion's dollar amounts
+  as USD. `$1` is `100`; unknown amounts stay `null`, not free. These are not performer fees. Current
+  event JSON uses `priceUnit: "usd_cent"` and `amountMinCents` / `amountMaxCents`; old ambiguous major-unit
+  keys are not used in current projections. Original v1 observation/evidence values are retained.
 - `booking_imports`: provenance links to existing bookings. No new bookings, status changes or ID rewrites.
 - `scrape_targets`: operator-owned discovery/work configuration, next-fetch time, lease token/expiry,
   attempt count and bounded error summary. `claimTargets` / `finishTarget` use SKIP LOCKED and token
@@ -56,8 +62,9 @@ formula used only for compatibility when creating new event IDs.
 
 Observation delivery retries are idempotent; reuse with different facts/identity is an error. Distinct
 captures remain observable even if extraction output is unchanged; response objects deduplicate by
-content. Older observations cannot overwrite newer current facts. Equal-time observations use a
-stable delivery-key tie-break. Venue corrections are held for reconciliation, not silently applied.
+content. Older captures cannot overwrite newer current facts. At an equal capture timestamp,
+normalization v2 supersedes v1; the delivery key breaks ties within one normalization version.
+Venue corrections are held for reconciliation, not silently applied.
 
 ## R2 provisioning (operator action, not performed by code)
 
@@ -225,11 +232,36 @@ accepts these roots and nested run/result groups for an independent lossless loc
 recursive deletion, final root/group emptiness checks and database shutdown are separate operations.
 Firebase Auth and its two transport hooks remain in use.
 
-## Formatting review
+## Formatting review and USD-cent normalization
 
-The [2026-10-19 formatting audit](SCRAPER_FORMATTING_REVIEW.md) classifies actual archived failures,
-proposes conservative cleanup and estimates its impact. It is read-only: no remediation has been
-applied, and the original v1 rehearsal/observations remain intact.
+The [2026-10-19 formatting audit](SCRAPER_FORMATTING_REVIEW.md) records the read-only pre-remediation
+findings. The owner subsequently approved omitting blank artist strings, treating `N/A`-style optional
+URL placeholders as `null`, and storing dollar amounts as USD integer cents. Names are not inferred,
+split or truncated; empty lineups remain `[]`, not invented artists or a non-music classification.
+Dates, malformed/relative URLs, unsupported prices and venue conflicts remain held.
+
+`withFormattingV2(input, "usd_major")` establishes a new delivery identity/parser version while keeping
+the original source key, capture time, run/venue and evidence. `normalizeObservation` applies cleanup
+and exact decimal conversion once. Explicit `usd_cent` inputs are supported without multiplying again;
+mis-tagged or mixed-unit inputs fail closed. Fractional cents are quarantined, never silently rounded.
+USD is assumed only for missing currency; explicit non-USD currency is held, not relabeled.
+
+The new schema migration refuses existing fractional-cent or explicit non-USD prices before changing
+any values. It converts canonical prices exactly, but never rewrites v1 observations/raw evidence or
+native booking/profile/identity amounts. Runtime capture boundaries explicitly select v2 and declare
+raw extractor dollar-major inputs; raw extraction/evidence itself stays unchanged.
+
+```sh
+# After BOTH schema migrations, on the isolated restore first:
+npm run crawler:import-r2 -- --apply --expect-database restore_check \
+  --manifest-ref /secure/complete.ndjson.r2.json --receipt /secure/new-v2-receipt.json \
+  --normalization-version 2 --input-price-unit usd_major
+```
+
+Version 1 remains the CLI default for historical compatibility checks. Production must use the
+explicit v2 flags and the approved immutable artifact, only after successful isolated reconciliation,
+a fresh production backup and separate sign-off. Inspect `pipeline-status.json` for the active
+rehearsal; implementation/tests alone are not an applied/reconciled proof.
 
 ## Tests
 
@@ -307,4 +339,26 @@ snapshot and unchanged-input replay also passed in the isolated rehearsal below.
   explicit production migration/import sign-off. The pipeline contains **no production step**.
   No production ingestion, Firestore deletion, bucket-object deletion, crawler scheduling or publication
   was performed.
+
+## Operator checkpoint — 2026-10-19, approved formatting v2
+
+The isolated v2 rehearsal **passed at 13:54:35Z**. Both v2 and v1 compatibility replays returned
+547,087 duplicates with zero additional materialization/links. Original v1 observation contents,
+all ten native-table signatures and 157,120 original event IDs/venue references were preserved.
+
+Canonical prices now use USD integer cents: 924,702 existing offers converted exactly before the
+R2-only reprocessing; the completed projection contains 1,042,954 offers. No mixed/invalid money
+projections or incorrect booking links were found. The cleanup made 59,148 additional current
+observations and 23 history observations usable, adding 18,460 provenance links (332,486 total).
+No native bookings, artists/profiles, accounts or effects were created/modified; publication stays zero.
+
+Latest v2 quality is 523,027 accepted / 21,329 quarantined current observations plus 2,657 accepted /
+74 quarantined history observations. Old v1 quarantines remain immutable history, not the active
+quality queue. Venue conflicts (8,349) and reversed times (9,015 including history) remain held; no
+venue/date guessing was introduced. See [the detailed review](SCRAPER_FORMATTING_REVIEW.md).
+
+44 ingestion tests, 74 Rust library tests and 107 Rust API tests passed; one manual Slack test remains
+intentionally ignored. Build, lint and operator/crawler typechecks passed. Apply/replay used the same
+R2 snapshot with **zero Firestore reads**. Production remains untouched and requires remaining quality
+review, a fresh backup and explicit migration/import approval.
 

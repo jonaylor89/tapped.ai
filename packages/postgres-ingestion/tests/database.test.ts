@@ -82,7 +82,7 @@ test("relational observation ingestion, populated migration, and producer permis
         (await pool.query("SELECT raw_name,profile_id FROM event_performers")).rows[0].raw_name,
         "Artist name",
       );
-      assert.equal((await pool.query("SELECT amount_min,currency FROM event_prices")).rows[0].currency, null);
+      assert.equal((await pool.query("SELECT amount_min_cents,currency FROM event_prices")).rows[0].currency, "USD");
       await pool.query(
         "UPDATE event_performers SET profile_id='artist',resolution_method='verified' WHERE raw_name='Artist name'",
       );

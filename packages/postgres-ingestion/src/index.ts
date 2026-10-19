@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { r2EvidenceStore } from "./evidence";
-import { captureObservations, deliveryKey } from "./observations";
+import { captureObservations, deliveryKey, withFormattingV2 } from "./observations";
 
 export * from "./evidence";
 export * from "./firestore-crawler";
+export * from "./formatting-v2";
 export * from "./observations";
 export * from "./targets";
 
@@ -76,6 +77,7 @@ export type EventFacts = {
   url?: string | null;
   flierUrl?: string | null;
   runId?: string;
+  /** Raw extractor dollar-major values. The ingestion boundary converts to canonical USD cents. */
   ticketPrice?: number | null;
   doorPrice?: number | null;
 };
@@ -158,16 +160,19 @@ export async function saveRunEvent(
     pool,
     (evidenceStorage ??= r2EvidenceStore()),
     [
-      {
-        source,
-        sourceKey: key,
-        deliveryKey: deliveryKey(source, runId ?? observedAt, key),
-        observedAt,
-        parserVersion: "event-facts-v1",
-        venueId,
-        runId,
-        data: event as unknown as Record<string, unknown>,
-      },
+      withFormattingV2(
+        {
+          source,
+          sourceKey: key,
+          deliveryKey: deliveryKey(source, runId ?? observedAt, key),
+          observedAt,
+          parserVersion: "event-facts-v1",
+          venueId,
+          runId,
+          data: event as unknown as Record<string, unknown>,
+        },
+        "usd_major",
+      ),
     ],
     Buffer.from(JSON.stringify(event)),
     { retention: "evidence", contentType: "application/json" },

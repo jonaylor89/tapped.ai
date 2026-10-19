@@ -10,6 +10,7 @@ import {
   recordObservations,
   registerEvidence,
   timestamp,
+  withFormattingV2,
 } from "../packages/postgres-ingestion/dist";
 import {
   type ArchiveGroup,
@@ -27,6 +28,8 @@ type Options = {
   expectDatabase: string;
   project: string;
   concurrency: number;
+  normalizationVersion: 1 | 2;
+  inputPriceUnit?: "usd_major";
   receipt?: string;
 };
 function options(args: string[]): Options {
@@ -36,12 +39,23 @@ function options(args: string[]): Options {
     expectDatabase: "",
     project: "in-the-loop-306520",
     concurrency: 4,
+    normalizationVersion: 1,
   };
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === "--apply") o.apply = true;
     else if (arg === "--dry-run") o.apply = false;
-    else if (["--manifest-ref", "--expect-database", "--project", "--concurrency", "--receipt"].includes(arg)) {
+    else if (
+      [
+        "--manifest-ref",
+        "--expect-database",
+        "--project",
+        "--concurrency",
+        "--receipt",
+        "--normalization-version",
+        "--input-price-unit",
+      ].includes(arg)
+    ) {
       const value = args[++i];
       if (!value || value.startsWith("--")) throw new Error("Missing option value");
       if (arg === "--manifest-ref") o.manifestRef = value;
@@ -49,9 +63,17 @@ function options(args: string[]): Options {
       if (arg === "--project") o.project = value;
       if (arg === "--receipt") o.receipt = value;
       if (arg === "--concurrency") o.concurrency = Number(value);
+      if (arg === "--normalization-version") {
+        if (value !== "1" && value !== "2") throw new Error("Unsupported normalization version");
+        o.normalizationVersion = Number(value) as 1 | 2;
+      }
+      if (arg === "--input-price-unit") {
+        if (value !== "usd_major") throw new Error("The captured v1 Firestore artifact contains dollar-major inputs");
+        o.inputPriceUnit = value;
+      }
     } else if (arg === "--help") {
       console.log(
-        "Usage: npm run crawler:import-r2 -- --manifest-ref <complete-manifest.ndjson.r2.json> --expect-database <name> [--dry-run|--apply --receipt <new-file>] [--concurrency 1..8] [--project ID]\nReads the completed immutable R2 snapshot only. ZERO Firestore calls. Dry run is default; DATABASE_URL and dedicated SCRAPE_R2_ARCHIVE_* credentials are required. --concurrency only bounds object prefetch; database writes stay sequential in batches <=500.",
+        "Usage: npm run crawler:import-r2 -- --manifest-ref <complete-manifest.ndjson.r2.json> --expect-database <name> [--dry-run|--apply --receipt <new-file>] [--concurrency 1..8] [--project ID] [--normalization-version 2 --input-price-unit usd_major]\nReads the completed immutable R2 snapshot only. ZERO Firestore calls. Dry run is default; DATABASE_URL and dedicated SCRAPE_R2_ARCHIVE_* credentials are required. --concurrency only bounds object prefetch; database writes stay sequential in batches <=500.",
       );
       process.exit(0);
     } else throw new Error("Unknown option");
@@ -60,6 +82,8 @@ function options(args: string[]): Options {
     throw new Error("Manifest reference, explicit database and apply receipt are required");
   if (!Number.isInteger(o.concurrency) || o.concurrency < 1 || o.concurrency > 8)
     throw new Error("Concurrency must be 1..8");
+  if ((o.normalizationVersion === 2) !== (o.inputPriceUnit === "usd_major"))
+    throw new Error("Version 2 requires explicit --input-price-unit usd_major; version 1 must not supply a unit");
   return o;
 }
 async function main(): Promise<void> {
@@ -77,6 +101,10 @@ async function main(): Promise<void> {
     const database = String((await pool.query("SELECT current_database() AS name")).rows[0].name);
     if (database !== opts.expectDatabase) throw new Error("Database name does not match --expect-database");
     await pool.query("SELECT current_observation_id FROM scraped_events LIMIT 0");
+    if (opts.normalizationVersion === 2) {
+      await pool.query("SELECT normalization_version,input_price_unit,normalization_notes FROM scrape_results LIMIT 0");
+      await pool.query("SELECT amount_min_cents,amount_max_cents FROM event_prices LIMIT 0");
+    }
     const sourceRef = validateArchiveReference(JSON.parse(await readFile(opts.manifestRef, "utf8")), reader.bucket);
     const manifest = parseArchiveManifest(await reader.read(sourceRef), reader.bucket, opts.project);
     if (opts.receipt)
@@ -90,6 +118,8 @@ async function main(): Promise<void> {
             project: opts.project,
             database,
             mode: opts.apply ? "apply" : "dry-run",
+            normalizationVersion: opts.normalizationVersion,
+            inputPriceUnit: opts.inputPriceUnit,
             firestoreReads: 0,
             startedAt,
           },
@@ -147,7 +177,10 @@ async function main(): Promise<void> {
               );
           }
         } else {
-          const inputs = documents.map((doc, i) => observationFromArchive(opts.project, doc, i + 1));
+          const inputs = documents.map((doc, i) => {
+            const original = observationFromArchive(opts.project, doc, i + 1);
+            return opts.normalizationVersion === 2 ? withFormattingV2(original, "usd_major") : original;
+          });
           const normalized = inputs.map(normalizeObservation);
           for (const item of normalized) {
             if (item.errors.length) totals.badFacts = (totals.badFacts ?? 0) + 1;
@@ -226,6 +259,8 @@ async function main(): Promise<void> {
       project: opts.project,
       database,
       mode: opts.apply ? "apply" : "dry-run",
+      normalizationVersion: opts.normalizationVersion,
+      inputPriceUnit: opts.inputPriceUnit,
       startedAt,
       completedAt: new Date().toISOString(),
       totals,

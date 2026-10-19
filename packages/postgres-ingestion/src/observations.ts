@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Pool } from "pg";
 import type { EvidenceRef, EvidenceStore } from "./evidence";
+import { formatExtractionV2, type InputPriceUnit, type NormalizedFactsV2 } from "./formatting-v2";
 
 export type ScrapedInput = Record<string, unknown>;
 export type ObservationInput = {
@@ -9,6 +10,9 @@ export type ObservationInput = {
   deliveryKey: string;
   observedAt: string;
   parserVersion: string;
+  /** Absent means immutable legacy v1 semantics. Version 2 requires an explicit raw-money unit. */
+  normalizationVersion?: 2;
+  inputPriceUnit?: InputPriceUnit;
   venueId?: string | null;
   runId?: string | null;
   legacyRunId?: string | null;
@@ -184,7 +188,24 @@ export function normalizeFacts(data: ScrapedInput): { facts: NormalizedFacts; er
   };
 }
 
+export function normalizeFactsV2(data: ScrapedInput, unit: InputPriceUnit) {
+  const formatted = formatExtractionV2(data, unit);
+  const base = normalizeFacts(formatted.data);
+  const errors = [...base.errors, ...formatted.errors];
+  const facts = cleanFactStrings(
+    { ...base.facts, priceUnit: "usd_cent", prices: formatted.prices },
+    errors,
+  ) as NormalizedFactsV2;
+  return { facts, errors: [...new Set(errors)], normalizationNotes: formatted.notes };
+}
+
 export function normalizeObservation(input: ObservationInput) {
+  if (input.normalizationVersion !== undefined && input.normalizationVersion !== 2)
+    throw new Error("Unsupported normalization version");
+  if (input.normalizationVersion === 2 && !["usd_major", "usd_cent"].includes(input.inputPriceUnit ?? ""))
+    throw new Error("Explicit input price unit is required");
+  if (input.normalizationVersion === undefined && input.inputPriceUnit !== undefined)
+    throw new Error("Price unit requires normalization version 2");
   if (!/^[a-z][a-z0-9_-]{0,99}$/.test(input.source)) throw new Error("Invalid source namespace");
   if (input.materialize !== undefined && typeof input.materialize !== "boolean")
     throw new Error("Invalid materialization flag");
@@ -201,7 +222,17 @@ export function normalizeObservation(input: ObservationInput) {
   const observedAt = timestamp(input.observedAt);
   if (!observedAt || new Date(observedAt).getTime() > Date.now() + 300_000) throw new Error("Invalid observation time");
   const { data, ...envelope } = input;
-  const normalized = normalizeFacts(data);
+  if (
+    input.normalizationVersion === undefined &&
+    (data.priceUnit === "usd_cent" ||
+      (Array.isArray(data.prices) &&
+        data.prices.some((p) => "amountMinCents" in record(p) || "amountMaxCents" in record(p))))
+  )
+    throw new Error("Cent input requires normalization version 2");
+  const normalized =
+    input.normalizationVersion === 2
+      ? normalizeFactsV2(data, input.inputPriceUnit as InputPriceUnit)
+      : normalizeFacts(data);
   for (const field of ["venueId", "runId", "legacyRunId"] as const) {
     const value = envelope[field];
     if (value != null && (typeof value !== "string" || databaseString(value) !== value)) {
@@ -252,4 +283,20 @@ export async function captureObservations(
 }
 export function deliveryKey(...parts: string[]): string {
   return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+}
+
+/** New interpretation, same captured source identity/time/evidence. Calling twice never re-scales money. */
+export function withFormattingV2(input: ObservationInput, inputPriceUnit: InputPriceUnit): ObservationInput {
+  if (!["usd_major", "usd_cent"].includes(inputPriceUnit)) throw new Error("Explicit input price unit is required");
+  if (input.normalizationVersion === 2) {
+    if (input.inputPriceUnit !== inputPriceUnit) throw new Error("Input price unit mismatch");
+    return input;
+  }
+  return {
+    ...input,
+    parserVersion: `${input.parserVersion}:usd-cents-v2`,
+    deliveryKey: deliveryKey("usd-cents-v2", input.source, input.deliveryKey, inputPriceUnit),
+    normalizationVersion: 2,
+    inputPriceUnit,
+  };
 }

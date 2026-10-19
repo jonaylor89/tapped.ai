@@ -6,6 +6,7 @@ import {
   endRun,
   r2EvidenceStore,
   startRun,
+  withFormattingV2,
 } from "@tapped/postgres-ingestion";
 import { CheerioCrawler, Sitemap } from "crawlee";
 import { configDotenv } from "dotenv";
@@ -35,16 +36,19 @@ async function main() {
         pool,
         store,
         [
-          {
-            source: SOURCE,
-            sourceKey,
-            deliveryKey: deliveryKey(SOURCE, runId, sourceKey, hash),
-            observedAt,
-            parserVersion: PARSER,
-            venueId,
-            runId,
-            data,
-          },
+          withFormattingV2(
+            {
+              source: SOURCE,
+              sourceKey,
+              deliveryKey: deliveryKey(SOURCE, runId, sourceKey, hash),
+              observedAt,
+              parserVersion: PARSER,
+              venueId,
+              runId,
+              data,
+            },
+            "usd_major",
+          ),
         ],
         Buffer.from(
           JSON.stringify({ url: loadedUrl, observedAt, responseBase64: body.toString("base64"), extraction: data }),
