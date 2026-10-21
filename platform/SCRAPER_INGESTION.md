@@ -340,6 +340,13 @@ snapshot and unchanged-input replay also passed in the isolated rehearsal below.
   No production ingestion, Firestore deletion, bucket-object deletion, crawler scheduling or publication
   was performed.
 
+## Venue audit — 2026-10-21
+
+The [read-only venue-conflict audit](SCRAPER_VENUE_REVIEW.md) covered all 8,349 held records:
+27 directed profile pairs affecting 14,598 existing bookings. It distinguishes separate branches/
+rooms from eight plausible alias-review pairs (959 records), and documents the shared-domain routing
+hazard. No remaps or aliases were applied; all ingestion/native signatures remain unchanged.
+
 ## Operator checkpoint — 2026-10-19, approved formatting v2
 
 The isolated v2 rehearsal **passed at 13:54:35Z**. Both v2 and v1 compatibility replays returned
