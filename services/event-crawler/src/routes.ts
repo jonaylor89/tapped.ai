@@ -1,3 +1,4 @@
+import { isScopedDiscoveryLink, type VenueDiscoveryContext } from "@tapped/postgres-ingestion";
 import { createCheerioRouter } from "crawlee";
 import { extractEventDataFromPage } from "./utils/openai.js";
 import { containsEventPath } from "./utils/parsing.js";
@@ -7,7 +8,12 @@ const MAX_PATH_PARTS = 10;
 
 export async function getRouter(
   shouldSkip: (key: string) => Promise<boolean>,
-  capture: (data: Record<string, unknown>, body: Buffer, observedAt: string) => Promise<void>,
+  capture: (
+    data: Record<string, unknown>,
+    body: Buffer,
+    observedAt: string,
+    context: VenueDiscoveryContext,
+  ) => Promise<void>,
 ) {
   const router = createCheerioRouter();
   router.addDefaultHandler(async ({ request, $, body, enqueueLinks, log }) => {
@@ -18,6 +24,13 @@ export async function getRouter(
     }
     const urlObj = new URL(request.loadedUrl);
     const path = urlObj.pathname;
+    const context: VenueDiscoveryContext = {
+      requestedUrl: request.url,
+      loadedUrl: request.loadedUrl,
+      discoveryVenueId:
+        typeof request.userData.discoveryVenueId === "string" ? request.userData.discoveryVenueId : undefined,
+      discoveryUrl: typeof request.userData.discoveryUrl === "string" ? request.userData.discoveryUrl : undefined,
+    };
 
     try {
       const isRSSFeed = request.loadedUrl.endsWith(".rss");
@@ -80,27 +93,36 @@ export async function getRouter(
         eventData = await extractEventDataFromPage(fullContent);
       } catch {
         // Failed extraction is evidence too: persist a quarantined capture before retrying.
-        await capture({ loadedUrl: request.loadedUrl, extractionError: "Extraction failed" }, response, observedAt);
+        await capture(
+          { loadedUrl: request.loadedUrl, extractionError: "Extraction failed" },
+          response,
+          observedAt,
+          context,
+        );
         throw new Error("Extraction failed");
       }
-      await capture({ loadedUrl: request.loadedUrl, ...eventData }, response, observedAt);
+      await capture({ ...eventData, loadedUrl: request.loadedUrl }, response, observedAt, context);
     } catch {
       // Let Crawlee retry failed persistence; never log raw payloads or credential-bearing errors.
       throw new Error("Event extraction or evidence persistence failed");
     } finally {
-      await enqueueLinks({
-        strategy: "same-hostname",
-        globs: [
-          "!*/photobooth/*",
-          "!*/www.arrobanat.com*",
-          "!*format=ical*",
-          "!*ical=1*",
-          "!*/gallery/*",
-          "!*(format=ical|format=json|format=xml|format=rss)*",
-          "!*(.jpg|.jpeg|.png|.gif|.svg|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.)",
-          "!*/photo/*",
-        ],
-      });
+      if (isScopedDiscoveryLink(context.loadedUrl, context))
+        await enqueueLinks({
+          strategy: "same-hostname",
+          // Propagate only discovery scope, never the parent page's capture/retry timestamp.
+          userData: { discoveryVenueId: context.discoveryVenueId, discoveryUrl: context.discoveryUrl },
+          transformRequestFunction: (next) => (isScopedDiscoveryLink(next.url, context) ? next : false),
+          globs: [
+            "!*/photobooth/*",
+            "!*/www.arrobanat.com*",
+            "!*format=ical*",
+            "!*ical=1*",
+            "!*/gallery/*",
+            "!*(format=ical|format=json|format=xml|format=rss)*",
+            "!*(.jpg|.jpeg|.png|.gif|.svg|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.tar|.gz|.bz2|.xz|.pdf|.doc|.docx|.xls|.xlsx|.ppt|.pptx|.mp3|.mp4|.avi|.mov|.wmv|.flv|.m4v|.webm|.ogg|.webp|.ico|.css|.js|.json|.xml|.rss|.zip|.rar|.7z|.)",
+            "!*/photo/*",
+          ],
+        });
     }
   });
 

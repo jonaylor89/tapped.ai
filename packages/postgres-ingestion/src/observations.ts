@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import type { Pool } from "pg";
 import type { EvidenceRef, EvidenceStore } from "./evidence";
 import { formatExtractionV2, type InputPriceUnit, type NormalizedFactsV2 } from "./formatting-v2";
+import type { VenueRoutingStatus } from "./venue-routing";
 
 export type ScrapedInput = Record<string, unknown>;
 export type ObservationInput = {
@@ -13,6 +14,8 @@ export type ObservationInput = {
   /** Absent means immutable legacy v1 semantics. Version 2 requires an explicit raw-money unit. */
   normalizationVersion?: 2;
   inputPriceUnit?: InputPriceUnit;
+  venueRoutingStatus?: VenueRoutingStatus;
+  venueResolutionId?: string;
   venueId?: string | null;
   runId?: string | null;
   legacyRunId?: string | null;
@@ -206,6 +209,19 @@ export function normalizeObservation(input: ObservationInput) {
     throw new Error("Explicit input price unit is required");
   if (input.normalizationVersion === undefined && input.inputPriceUnit !== undefined)
     throw new Error("Price unit requires normalization version 2");
+  if (
+    input.venueRoutingStatus !== undefined &&
+    (input.normalizationVersion !== 2 ||
+      !["resolved", "ambiguous", "unmatched", "cross_host_redirect", "seed_mismatch"].includes(
+        input.venueRoutingStatus,
+      ))
+  )
+    throw new Error("Invalid venue routing status");
+  if (
+    input.venueResolutionId !== undefined &&
+    (input.normalizationVersion !== 2 || !/^venue-resolution-[a-f0-9]{64}$/.test(input.venueResolutionId))
+  )
+    throw new Error("Invalid venue resolution identity");
   if (!/^[a-z][a-z0-9_-]{0,99}$/.test(input.source)) throw new Error("Invalid source namespace");
   if (input.materialize !== undefined && typeof input.materialize !== "boolean")
     throw new Error("Invalid materialization flag");
@@ -240,6 +256,8 @@ export function normalizeObservation(input: ObservationInput) {
       normalized.errors.push(`invalid_${field}`);
     }
   }
+  if (input.venueRoutingStatus && input.venueRoutingStatus !== "resolved")
+    normalized.errors.push(`venue_context_${input.venueRoutingStatus}`);
   // Preserve source microseconds for Postgres ordering instead of rounding through JS Date.
   return { ...envelope, observedAt: input.observedAt, ...normalized };
 }
@@ -286,6 +304,22 @@ export function deliveryKey(...parts: string[]): string {
 }
 
 /** New interpretation, same captured source identity/time/evidence. Calling twice never re-scales money. */
+/** Attach a reviewed decision without changing source venue, source key, facts, capture time or evidence. */
+export function withVenueResolution(input: ObservationInput, venueResolutionId: string): ObservationInput {
+  if (input.normalizationVersion !== 2 || !/^venue-resolution-[a-f0-9]{64}$/.test(venueResolutionId))
+    throw new Error("Reviewed venue resolution requires version 2 and an approved identity");
+  if (input.venueResolutionId) {
+    if (input.venueResolutionId !== venueResolutionId) throw new Error("Venue resolution identity mismatch");
+    return input;
+  }
+  return {
+    ...input,
+    venueResolutionId,
+    parserVersion: `${input.parserVersion}:venue-review-v1`,
+    deliveryKey: deliveryKey("venue-review-v1", input.deliveryKey, venueResolutionId),
+  };
+}
+
 export function withFormattingV2(input: ObservationInput, inputPriceUnit: InputPriceUnit): ObservationInput {
   if (!["usd_major", "usd_cent"].includes(inputPriceUnit)) throw new Error("Explicit input price unit is required");
   if (input.normalizationVersion === 2) {

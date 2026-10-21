@@ -1,6 +1,13 @@
-import { hasScrapedLink, profile, profileByUsername, saveEvent, scrapedLinks } from "@tapped/postgres-ingestion";
+import {
+  hasScrapedLink,
+  normalizeVenueRoutes,
+  profile,
+  profileByUsername,
+  saveEvent,
+  scrapedLinks,
+  type VenueRoute,
+} from "@tapped/postgres-ingestion";
 import type { EventData, UserModel } from "../types.js";
-import { getBaseDomain } from "./parsing.js";
 
 export function getVenueUsernameChunk(): string[] {
   const initVenueUsernames = [
@@ -2732,8 +2739,8 @@ export const hasLinkBeenScraped = hasScrapedLink;
 export async function saveEventData(encodedLink: string, event: EventData): Promise<void> {
   await saveEvent("event-crawler", encodedLink, event.venue.id, { ...event, runId: event.crawlerInfo.runId });
 }
-export async function buildDomainMap(usernames: string[]): Promise<Record<string, { venue: UserModel; url: string }>> {
-  const result: Record<string, { venue: UserModel; url: string }> = {};
+export async function buildVenueRoutes(usernames: string[]): Promise<VenueRoute[]> {
+  const result: VenueRoute[] = [];
   for (const username of usernames) {
     const venue = await getUserByUsername(username);
     if (!venue) throw new Error(`No venue found for ${username}`);
@@ -2741,7 +2748,7 @@ export async function buildDomainMap(usernames: string[]): Promise<Record<string
     if (!website) throw new Error(`No website for ${username}`);
     const url = new URL(/^https?:\/\//i.test(website) ? website : `https://${website}`);
     if (!["http:", "https:"].includes(url.protocol)) throw new Error("Invalid venue website");
-    result[getBaseDomain(url.href)] = { venue, url: url.href };
+    result.push({ venueId: venue.id, url: url.href });
   }
-  return result;
+  return normalizeVenueRoutes(result);
 }

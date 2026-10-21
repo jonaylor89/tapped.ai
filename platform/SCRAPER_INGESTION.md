@@ -4,7 +4,9 @@
 
 Migration `20261028000000_scrape_observations.sql` prepares the Postgres data model.
 `20261029000000_scrape_money_cents.sql` adds versioned normalization and integer-cent prices.
-Neither runs scrapers, provisions credentials/buckets, publishes events, creates artists/bookings,
+`20261030000000_reviewed_venue_resolutions.sql` permits privileged, event/capture-scoped compatibility
+reviews without global profile aliases or venue remaps. These migrations do not run scrapers,
+provision credentials/buckets, publish events, create artists/bookings,
 replays effects, or deletes Firestore. Apply them only through the backed-up/rehearsed migration rollout.
 Crawler execution remains separately owner-approved. See [Postgres-first](POSTGRES_FIRST.md).
 
@@ -29,6 +31,8 @@ public response / legacy Firestore snapshot
   optional NDJSON line, validation errors, normalized facts and optional current-event reference.
   `normalization_version`, `input_price_unit` and `normalization_notes` record the interpretation.
   Original v1 payloads remain immutable dollar-major historical records, not current price projections.
+  `venue_resolution_id` can reference a separate operator-reviewed capture; it never overwrites the
+  original observation/source venue or creates a global profile equivalence.
   Raw run results can be archived with `materialize=false` without duplicating current events.
 - `scraped_events`: stable existing IDs, typed dates/status/classification/URLs/title/description,
   nullable venue, original venue identifier, first/last seen, last changed and current observation.
@@ -45,6 +49,10 @@ public response / legacy Firestore snapshot
   as USD. `$1` is `100`; unknown amounts stay `null`, not free. These are not performer fees. Current
   event JSON uses `priceUnit: "usd_cent"` and `amountMinCents` / `amountMaxCents`; old ambiguous major-unit
   keys are not used in current projections. Original v1 observation/evidence values are retained.
+- `scrape_venue_resolutions`: operator-only decisions scoped to one source delivery/event and exact
+  captured facts. Public-profile identity hashes, evidence, policy and original/preserved venue IDs
+  are recorded. Producers cannot approve decisions or write the table. Profile drift, changed facts,
+  capture/evidence mismatch or revocation blocks new application; retries remain idempotent.
 - `booking_imports`: provenance links to existing bookings. No new bookings, status changes or ID rewrites.
 - `scrape_targets`: operator-owned discovery/work configuration, next-fetch time, lease token/expiry,
   attempt count and bounded error summary. `claimTargets` / `finishTarget` use SKIP LOCKED and token
@@ -65,6 +73,42 @@ captures remain observable even if extraction output is unchanged; response obje
 content. Older captures cannot overwrite newer current facts. At an equal capture timestamp,
 normalization v2 supersedes v1; the delivery key breaks ties within one normalization version.
 Venue corrections are held for reconciliation, not silently applied.
+
+## Reviewed venue compatibility and routing guards
+
+`approve_scrape_venue_resolution` is operator-only. A decision is bound to one immutable source
+capture, its exact facts/evidence, existing event ID, original source venue and preserved event venue.
+`withVenueResolution` creates a separate replayable observation; it does not change source identity,
+capture time, extracted dates/prices/names, original observations, profiles or native bookings.
+Approval pins public-profile identity fingerprints and records policy/evidence. Producers may consume
+an exact approved decision but cannot approve, broaden or write decisions. There are no global aliases.
+
+```sh
+# Private plan + archive credentials; dry run is default. Only after the new review migration.
+cd scripts
+npm run crawler:resolve-venues -- --plan /secure/reviewed-captures.json \
+  --expect-database restore_check --receipt /secure/new-review-dry-run.json
+npm run crawler:resolve-venues -- --plan /secure/reviewed-captures.json \
+  --expect-database restore_check --apply --receipt /secure/new-review-apply.json
+```
+
+The operator CLI prevalidates/reproduces every planned capture from the same complete R2 snapshot,
+then approves/materializes the bounded plan atomically in a serializable transaction. It only adds
+exact source-key/venue provenance links for the reviewed events. Replaying the plan and the unchanged
+full v2 archive must both be no-ops; old v1/v2 quarantines remain immutable audit history.
+
+For active quarantine counts, exclude a base observation only when a linked reviewed observation
+has actually been accepted; an approval alone is not a successful resolution. Do not simply count
+all retained `processing_state='quarantined'` rows as unresolved work.
+
+Future crawler routing uses explicit discovery context and a catalog of all known active public
+venue websites, not a last-writer-wins domain map or just the selected crawl chunk. Competing profile
+IDs on a seed's hostname (including `www` aliases) stop the batch **before fetching**. Paths alone do
+not distinguish venue identity. Unique hosts still require a matching configured discovery seed;
+cross-host redirects, unknown/unseeded scopes or invalid URLs do not inherit a venue. Reached-but-
+unresolved extractions are quarantined with a routing reason. Enqueued links inherit only discovery
+scope, not their parent's observed-at timestamp; redirects cannot expand traversal to another host.
+These guards do not authorize execution/scheduling or resolve shared-brand event-level ambiguity.
 
 ## R2 provisioning (operator action, not performed by code)
 
@@ -345,7 +389,19 @@ snapshot and unchanged-input replay also passed in the isolated rehearsal below.
 The [read-only venue-conflict audit](SCRAPER_VENUE_REVIEW.md) covered all 8,349 held records:
 27 directed profile pairs affecting 14,598 existing bookings. It distinguishes separate branches/
 rooms from eight plausible alias-review pairs (959 records), and documents the shared-domain routing
-hazard. No remaps or aliases were applied; all ingestion/native signatures remain unchanged.
+hazard. That audit applied no remaps or aliases; all ingestion/native signatures remained unchanged.
+The owner subsequently delegated conservative review/remediation. The isolated scoped-resolution
+rehearsal **passed**: 959 exact captures materialized without changing source/original venue lineage,
+adding 1,447 provenance links (333,933 total). No profiles were merged or native references rewritten.
+Plan replay yielded 959 duplicates; full v2 replay yielded 547,087 duplicates, with zero new actions/
+links. All 1,094,174 prior observations and native-table signatures were preserved. 7,390 venue conflicts
+remain actively held. Routing ambiguity guards, 51 ingestion tests and the full Rust regressions passed;
+no production writes, Firestore reads, crawler execution or publication occurred. See the detailed
+[resolution checkpoint](SCRAPER_VENUE_REVIEW.md) and private exact-code reconciliation.
+
+For active v2 venue holds, count base rows with `normalization_version=2` and `venue_conflict` only if
+there is no accepted observation whose `venue_resolution_id` joins a decision targeting that base row.
+Raw historical quarantine counts intentionally do not shrink when a new reviewed observation is added.
 
 ## Operator checkpoint — 2026-10-19, approved formatting v2
 

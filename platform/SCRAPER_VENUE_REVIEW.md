@@ -1,7 +1,8 @@
 # Venue-conflict audit — 2026-10-21
 
-**Read-only; no resolutions applied.** Audited all **8,349** v2 venue-conflict observations on the isolated
-restore, including every archived venue snapshot. No production Postgres access, Firestore reads,
+**Original read-only audit.** Audited all **8,349** v2 venue-conflict observations on the isolated
+restore, including every archived venue snapshot. Subsequent owner-authorized implementation and
+isolated results are recorded in the checkpoint below. No production Postgres access, Firestore reads,
 external website/Places lookups, profile merges, venue remaps, booking changes or publications occurred.
 
 Private aggregate report and operator-only pair/case files:
@@ -11,7 +12,46 @@ Private aggregate report and operator-only pair/case files:
 outside the repository in mode-0600 files under a mode-0700 operator directory. No contact details,
 account owner identifiers, credentials or raw venue documents are published here.
 
-## Findings
+## Owner-authorized scoped resolution checkpoint — 2026-10-21
+
+The owner delegated best-judgment remediation after this audit. **The isolated rehearsal passed**:
+
+- Materialized **959** exact captures across **P004, P005, P017, P019, P022, P024, P025 and P027**.
+  Seven pairs have matching place/site evidence and clear name variants. P005 has the same NoMad
+  branch page, a punctuation-only name variation and coordinates 10.52 metres apart despite different
+  place IDs. All pairs were unclaimed active profiles with no account-owner link in the restore.
+- These are **event/capture-scoped compatibility decisions**, not global aliases, account/profile
+  merges, or venue remaps. Each original source venue remains recorded; each existing event retains
+  its preserved venue/ID. Dates, prices, names and evidence must exactly reproduce the reviewed capture.
+- Added **1,447** exact provenance links to existing bookings (**333,933** total). No native bookings,
+  profiles, accounts or effects changed. All 157,120 original event/venue references remain unchanged;
+  all **1,094,174** original v1/v2 observations retain their previous contents/state/evidence pointers.
+- Scoped-plan replay returned **959 duplicates**, zero updates and zero new links. Full original v2
+  replay returned **547,087 duplicates**, with no materializing actions or new links. All ten current
+  ingestion/resolution entity signatures were stable across replays, and all ten native signatures
+  still match the original restore. No incorrect provenance links were found; publication stays zero.
+- **7,390** venue conflicts remain actively held. The 959 superseded base quarantine observations remain
+  immutable history; exclude them from the active queue only when their reviewed capture was accepted.
+  No separate-room/theatre/branch/parent-space cases were automatically resolved.
+- `20261030000000_reviewed_venue_resolutions.sql` adds operator-only approvals and exact-facts replay.
+  Producer roles cannot approve decisions or write the review table. Profile drift, changed facts,
+  another capture/event/evidence pointer, and revoked decisions block new application.
+- Routing no longer overwrites venue identities by domain. Seed hosts are checked against **all known
+  active public venue profiles**, including profiles outside the selected crawl chunk and `www`
+  competitors. Ambiguous configurations stop before fetching; unknown/unseeded/cross-host captures
+  cannot inherit a venue. Child requests carry only validated discovery scope, not parent timestamps.
+  This is a guard, not a new shared-brand location classifier; no crawler was executed or scheduled.
+- **51 ingestion tests**, **74 Rust library tests** and **107 Rust API tests** passed; one manual Slack
+  test remains intentionally ignored. Lint, build and operator/crawler typechecks passed. All archival
+  reads came from R2; **zero Firestore reads and zero production writes** occurred.
+
+The private plan and exact-code reconciliation are referenced by
+`~/.local/share/tapped/scrape-rehearsal-20261016/pipeline-status.json`. Reusing that plan in production
+requires the approved source artifact, matching original deliveries/events/profile evidence, a fresh
+backup and explicit production approval. Live identity drift must prompt review, not refreshed hashes
+or a broader alias rule. Firestore deletion, publication and crawler scheduling remain separate gates.
+
+## Original audit findings
 
 - **27 directed venue pairs**, involving 25 preserved venue IDs, 23 source venue IDs and 47 distinct
   profiles—not 8,349 separate identity decisions.
@@ -112,9 +152,10 @@ No crawler code was changed or executed by this audit.
    native-data changes before production approval. Firestore deletion, scheduling and publication
    remain separately gated.
 
-## Verification
+## Original audit verification (before the approved remediation)
 
-All **nine ingestion-entity signatures** still match the passed v2 rehearsal; all **ten native-table
-signatures** still match the original restore baseline. All audited event IDs/venue references are
-preserved. Database sessions were read-only, Firestore reads were zero, external website fetches were
-zero, and no resolution/alias was applied. The v2 rehearsal status remains passed and unchanged.
+At audit completion, all **nine ingestion-entity signatures** matched the passed v2 rehearsal; all
+**ten native-table signatures** matched the original restore baseline. All audited event IDs/venue
+references were preserved. Audit sessions were read-only, Firestore reads and external website fetches
+were zero, and no resolution was applied during the audit. Subsequent scoped-remediation verification
+and current counts are recorded in the owner-authorized checkpoint above.

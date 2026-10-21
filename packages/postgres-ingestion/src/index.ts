@@ -2,12 +2,14 @@ import { randomUUID } from "node:crypto";
 import { Pool } from "pg";
 import { r2EvidenceStore } from "./evidence";
 import { captureObservations, deliveryKey, withFormattingV2 } from "./observations";
+import { normalizeVenueRoutes, type VenueRoute } from "./venue-routing";
 
 export * from "./evidence";
 export * from "./firestore-crawler";
 export * from "./formatting-v2";
 export * from "./observations";
 export * from "./targets";
+export * from "./venue-routing";
 
 let connection: Pool | undefined;
 let evidenceStorage: ReturnType<typeof r2EvidenceStore> | undefined;
@@ -39,6 +41,28 @@ export async function profileByUsername<T>(username: string): Promise<T | null> 
   );
   return result.rows[0]?.doc ?? null;
 }
+/** Public routing identity catalog, not historical private venue snapshots or processed URL preloads. */
+export async function knownVenueRoutes(): Promise<VenueRoute[]> {
+  const result = await database().query(
+    "SELECT id,venue_website_url FROM ingestion_profiles WHERE venue_website_url IS NOT NULL",
+  );
+  return result.rows.flatMap((row) => {
+    const raw = typeof row.venue_website_url === "string" ? row.venue_website_url.trim() : "";
+    try {
+      const url = new URL(
+        raw.toLowerCase().startsWith("https://") || raw.toLowerCase().startsWith("http://") ? raw : `https://${raw}`,
+      );
+      // Catalog only: credentials must not hide a competing profile or be copied into discovery evidence.
+      // Selected seed validation still rejects credential-bearing URLs before any fetching.
+      url.username = "";
+      url.password = "";
+      return normalizeVenueRoutes([{ venueId: String(row.id), url: url.href }]);
+    } catch {
+      return [];
+    }
+  });
+}
+
 export async function venueUrls(): Promise<string[]> {
   const result = await database().query(
     "SELECT DISTINCT venue_website_url FROM ingestion_profiles WHERE venue_website_url IS NOT NULL",

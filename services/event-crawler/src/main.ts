@@ -4,34 +4,42 @@ import {
   database,
   deliveryKey,
   endRun,
+  knownVenueRoutes,
   r2EvidenceStore,
+  requireUnambiguousVenueRoutes,
+  resolveVenueRouting,
   startRun,
+  venueRoutesForSeeds,
   withFormattingV2,
 } from "@tapped/postgres-ingestion";
 import { CheerioCrawler, Sitemap } from "crawlee";
 import { configDotenv } from "dotenv";
 import { getRouter } from "./routes.js";
-import { buildDomainMap, getVenueUsernameChunk, hasLinkBeenScraped } from "./utils/database.js";
-import { getBaseDomain } from "./utils/parsing.js";
+import { buildVenueRoutes, getVenueUsernameChunk, hasLinkBeenScraped } from "./utils/database.js";
 
 configDotenv({ path: ".env.local" });
 const SOURCE = "event-crawler";
-const PARSER = "event-crawler-extract-v1";
+const PARSER = "event-crawler-extract-v2-scoped-routing";
 const blacklistDomains = [".edu", "facebook.com", "instagram.com", "yelp.com", "linktr.ee", "toast.site", "google.com"];
 
 async function main() {
   // Fail closed before any fetching when restricted database/private evidence configuration is absent.
   const pool = database();
   const store = r2EvidenceStore();
-  const domainMap = await buildDomainMap(getVenueUsernameChunk());
+  const selectedRoutes = await buildVenueRoutes(getVenueUsernameChunk());
+  // A shared brand can be ambiguous even if only one of its venues is selected in this chunk.
+  const venueRoutes = venueRoutesForSeeds(await knownVenueRoutes(), selectedRoutes);
+  // Do not fetch a whole ambiguous batch and silently assign the last profile on a shared domain.
+  requireUnambiguousVenueRoutes(venueRoutes);
   const runId = await startRun(SOURCE, SOURCE, PARSER);
   let failed = 0;
   try {
-    const router = await getRouter(hasLinkBeenScraped, async (data, body, observedAt) => {
-      const loadedUrl = String(data.loadedUrl);
-      const venueId = domainMap[getBaseDomain(loadedUrl)]?.venue.id ?? null;
+    const router = await getRouter(hasLinkBeenScraped, async (data, body, observedAt, context) => {
+      const loadedUrl = context.loadedUrl;
+      const routing = resolveVenueRouting(venueRoutes, context);
       const sourceKey = encodeURIComponent(loadedUrl);
-      const hash = createHash("sha256").update(body).update(JSON.stringify(data)).digest("hex");
+      const extraction = { ...data, venueRouting: routing, discoveryContext: context };
+      const hash = createHash("sha256").update(body).update(JSON.stringify(extraction)).digest("hex");
       await captureObservations(
         pool,
         store,
@@ -43,7 +51,8 @@ async function main() {
               deliveryKey: deliveryKey(SOURCE, runId, sourceKey, hash),
               observedAt,
               parserVersion: PARSER,
-              venueId,
+              venueId: routing.venueId,
+              venueRoutingStatus: routing.status,
               runId,
               data,
             },
@@ -51,7 +60,7 @@ async function main() {
           ),
         ],
         Buffer.from(
-          JSON.stringify({ url: loadedUrl, observedAt, responseBase64: body.toString("base64"), extraction: data }),
+          JSON.stringify({ url: loadedUrl, observedAt, responseBase64: body.toString("base64"), extraction }),
         ),
         {
           retention: "evidence",
@@ -70,18 +79,32 @@ async function main() {
         failed++;
       },
     });
-    const urls = Object.values(domainMap)
-      .map(({ url }) => url)
-      .filter((url) => !blacklistDomains.some((domain) => url.includes(domain)));
-    for (const url of urls) {
-      const { urls: sitemapUrls } = await Sitemap.load(`https://${new URL(url).hostname}/sitemap.xml`);
+    const seeds = selectedRoutes.filter(({ url }) => !blacklistDomains.some((domain) => url.includes(domain)));
+    const requests = seeds.map(({ url, venueId }) => ({
+      url,
+      userData: { discoveryVenueId: venueId, discoveryUrl: url },
+    }));
+    for (const { url, venueId } of seeds) {
+      const { urls: sitemapUrls } = await Sitemap.load(new URL("/sitemap.xml", url).href);
       await crawler.addRequests(
-        sitemapUrls.filter((link) => !link.includes("/photobooth") && !link.includes("format=ical")),
+        sitemapUrls
+          .filter(
+            (link) =>
+              !link.includes("/photobooth") &&
+              !link.includes("format=ical") &&
+              resolveVenueRouting(venueRoutes, {
+                requestedUrl: link,
+                loadedUrl: link,
+                discoveryVenueId: venueId,
+                discoveryUrl: url,
+              }).status === "resolved",
+          )
+          .map((link) => ({ url: link, userData: { discoveryVenueId: venueId, discoveryUrl: url } })),
       );
     }
     // Each response is archived and recorded inside its handler; no whole-run dataset in RAM,
     // deferred persistence, public venue snapshots, or application booking/profile writes.
-    await crawler.run(urls);
+    await crawler.run(requests);
     await endRun(runId, failed ? `${failed} requests failed` : null);
     if (failed) throw new Error("Some crawler requests failed");
   } catch {
