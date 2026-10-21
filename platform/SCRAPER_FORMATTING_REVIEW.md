@@ -6,7 +6,10 @@ quarantined observations before simulating changes. Counts below describe that p
 
 The owner subsequently approved the conservative cleanup and **USD integer-cent storage** (`$1 → 100`).
 Implementation uses a new normalization/parser version, retaining original observations/evidence.
-The isolated v2 migration/apply/replay is tracked in `pipeline-status.json`; production remains gated.
+The isolated v2 migration/apply/replay is tracked in `pipeline-status.json`. The subsequently approved
+**production cutover passed on 2026-10-21**; see [production results](SCRAPER_PRODUCTION_CUTOVER.md).
+Production holds 1,044,872 canonical USD-cent price rows, zero mixed/invalid projections and 333,933
+exact booking links after the scoped venue review. Publication and source deletion remain gated.
 
 ## Approved implementation checkpoint — 2026-10-19
 
@@ -35,7 +38,8 @@ The isolated v2 migration/apply/replay is tracked in `pipeline-status.json`; pro
   use `normalization_version=2` for the latest quality queue.
 - All apply/replay operations used the original private R2 artifact with **zero Firestore reads**.
   No production migration/import, Firestore deletion, crawler scheduling or publication occurred.
-  Remaining quality review, fresh production backup and explicit production approval are still required.
+  Those were the remaining gates at that rehearsal checkpoint; the later approved production cutover
+  and its fresh backup, held-quality acceptance and no-op replay are documented separately.
 
 Private aggregate report and candidate identifiers:
 `~/.local/share/tapped/scrape-rehearsal-20261016/latest-formatting-audit.json`.
@@ -103,5 +107,5 @@ but is not proof. Another 527 exceed one week. Correct dates require authoritati
 5. Verify all native-table signatures/original event references, expected provenance links, no
    publication, and a no-op replay. Report current/latest quality separately from retained v1
    quarantines; historical observations remain immutable rather than being deleted or marked valid.
-6. Production import, Firestore deletion, crawler scheduling and publication still require their
-   separate approvals.
+6. Production import, Firestore deletion, crawler scheduling and publication require separate approvals.
+   Production import was subsequently explicitly approved and completed; the other approvals remain separate.

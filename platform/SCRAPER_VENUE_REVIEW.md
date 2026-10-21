@@ -1,5 +1,11 @@
 # Venue-conflict audit — 2026-10-21
 
+**Subsequent production checkpoint:** the owner-approved production cutover passed on 2026-10-21.
+All 959 capture-scoped decisions are applied with 1,447 additional booking links; 7,390 venue conflicts
+remain held. Both production replays were no-ops, with original references/native data preserved.
+See [verified production results](SCRAPER_PRODUCTION_CUTOVER.md). No global aliases or profile merges
+were applied; the original audit and isolated checkpoints below remain historical records.
+
 **Original read-only audit.** Audited all **8,349** v2 venue-conflict observations on the isolated
 restore, including every archived venue snapshot. Subsequent owner-authorized implementation and
 isolated results are recorded in the checkpoint below. No production Postgres access, Firestore reads,

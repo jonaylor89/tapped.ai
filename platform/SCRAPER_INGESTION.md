@@ -1,5 +1,11 @@
 # Scraper observations and private R2 evidence
 
+**Production cutover passed on 2026-10-21.** Migrations 28–30, the complete R2-only v2 import and 959
+reviewed captures are applied. There are 333,933 exact booking links; original IDs/native data are
+preserved and both replays were no-ops. See the [production checkpoint](SCRAPER_PRODUCTION_CUTOVER.md)
+for verified results, bounded-link recovery and the minimum runtime migration-ledger requirement.
+Events remain unpublished; this cutover did not enable crawlers or delete Firestore.
+
 ## Scope and safety
 
 Migration `20261028000000_scrape_observations.sql` prepares the Postgres data model.
@@ -7,7 +13,7 @@ Migration `20261028000000_scrape_observations.sql` prepares the Postgres data mo
 `20261030000000_reviewed_venue_resolutions.sql` permits privileged, event/capture-scoped compatibility
 reviews without global profile aliases or venue remaps. These migrations do not run scrapers,
 provision credentials/buckets, publish events, create artists/bookings,
-replays effects, or deletes Firestore. Apply them only through the backed-up/rehearsed migration rollout.
+replay effects, or delete Firestore. Apply them only through the backed-up/rehearsed migration rollout.
 Crawler execution remains separately owner-approved. See [Postgres-first](POSTGRES_FIRST.md).
 
 The old `ingest_scraped_event` / `ingest_unclaimed_artist` functions are retired (including owner
@@ -378,11 +384,12 @@ snapshot and unchanged-input replay also passed in the isolated rehearsal below.
   The completed input is `snapshot-completion/complete.ndjson.r2.json` in that operator directory;
   use that same approved artifact for production, never another full Firestore scan. The run directory
   also contains `quality-impact-review.json` and the final exact-code replay receipt.
-- **Still required:** explicit review/acceptance or separately approved remediation of quarantines,
-  especially venue conflicts and the resulting unlinked bookings; a fresh production backup; and
-  explicit production migration/import sign-off. The pipeline contains **no production step**.
+- **At this original rehearsal checkpoint, still required:** explicit quality acceptance or separately
+  approved quarantine remediation, especially venue conflicts/unlinked bookings; a fresh production backup; and
+  explicit production migration/import sign-off. That rehearsal pipeline contains **no production step**.
   No production ingestion, Firestore deletion, bucket-object deletion, crawler scheduling or publication
-  was performed.
+  was performed during the rehearsal. The subsequent explicitly approved production cutover is recorded
+  separately in [the production checkpoint](SCRAPER_PRODUCTION_CUTOVER.md).
 
 ## Venue audit — 2026-10-21
 
