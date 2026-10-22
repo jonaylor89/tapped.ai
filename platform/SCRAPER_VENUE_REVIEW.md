@@ -5,6 +5,10 @@ All 959 capture-scoped decisions are applied with 1,447 additional booking links
 remain held. Both production replays were no-ops, with original references/native data preserved.
 See [verified production results](SCRAPER_PRODUCTION_CUTOVER.md). No global aliases or profile merges
 were applied; the original audit and isolated checkpoints below remain historical records.
+The **2026-10-22 closeout review** reproduced every remaining effective quarantine from R2 and
+reviewed all 19 remaining venue pairs. None supports an additional safe automatic equivalence;
+the 7,390 conflicts are retained intentionally in production, not left dependent on Firestore.
+See [the completed API release and deletion readiness](FIRESTORE_RETIREMENT_READY.md).
 
 **Original read-only audit.** Audited all **8,349** v2 venue-conflict observations on the isolated
 restore, including every archived venue snapshot. Subsequent owner-authorized implementation and

@@ -1,6 +1,16 @@
 # Scraper production cutover — 2026-10-21
 
-## Status
+## Normal release / Firestore closeout — 2026-10-22
+
+**Completed.** The normal registry-backed API, mail and identity release is now
+`1f441f884133a107eca983b645e7f193f3ac97cb` on `main` (Deploy API **39793300329**, successful Node/Rust CI).
+Migrations 28–30 are in the normal release source; the manually assembled cutover image below is
+historical. Deployment/rollback guards enforce the applied migration-bundle minimum. All native and
+ingestion/evidence signatures were preserved. The complete remaining quarantine review passed;
+Firestore's only two roots/groups match the 547,142-document R2 snapshot.
+See [final deletion readiness](FIRESTORE_RETIREMENT_READY.md). Firestore itself has not been deleted.
+
+## Original cutover status
 
 **Production cutover passed at 2026-10-21T21:28:59Z.** The owner explicitly approved the production
 migration and R2-only import. Migrations **20261028000000–20261030000000** committed atomically;
@@ -55,8 +65,8 @@ quality counts and backup pointers are cross-referenced by `production-status.js
   with **157,120** placeholder events and no scrape observations/runs/provenance links.
 - Native business data matched the restore. The identity worker's periodic `scan_id` markers were the
   only drift; comparing every other identity column proved the business identity records unchanged.
-  The worker is temporarily paused for exact native before/after signatures; the API remains available
-  except for its bounded runtime replacement. Normal identity synchronization resumes after verification.
+  The worker was temporarily paused for exact native before/after signatures; the API remained available
+  except for its bounded runtime replacement. Normal identity synchronization resumed after verification.
 - Fresh backup: **190,421,535 bytes**, SHA-256 checked, catalog verified, two private copies (operator
   workstation and `/root/scrape-cutover-backups/` on the server). Environment/container configuration
   backups remain private on the server; they contain credentials and must not be published.
@@ -71,8 +81,9 @@ quality counts and backup pointers are cross-referenced by `production-status.js
 **Next deployments must embed migrations through `20261030000000`, including the unchanged original
 APNs/app-config migration 27.** Old binaries reject unknown ledger versions on worker startup; merely
 retagging an old image is not safe. Promote the migration-only additions into the normal API release
-source before another automated deployment. Do not deploy unrelated working-branch changes as part
-of this cutover. The existing schema-epoch label alone does not prove this embedded-ledger requirement.
+source before another automated deployment. **This promotion and guarded normal deployment completed
+on 2026-10-22; no outstanding migration-source promotion remains.** The existing schema-epoch label
+alone does not prove the embedded-ledger requirement; the tested bundle guard now checks it.
 
 ## Bounded booking-link recovery
 

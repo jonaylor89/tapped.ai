@@ -1,5 +1,9 @@
 # Firestore retirement closeout — 2026-10-22
 
+**Closeout passed at 2026-10-22T14:32:11Z.** The normal API release is deployed and verified;
+remaining quarantines are reviewed and preserved outside Firestore. The owner may now delete the
+reviewed Firestore `(default)` database, keeping Firebase Auth/project/hooks. **No deletion was executed.**
+
 ## Scope
 
 The owner requested the remaining-conflict review and normal API release so the Firestore database
@@ -90,9 +94,26 @@ Local verification: **51 ingestion tests**, **74 Rust library tests**, **111 Rus
 ingestion lint/build, operator scripts and crawler typechecks passed. CI/release identifiers and final
 production readiness must be recorded below before treating the release as complete.
 
-**Release status: pending normal CI deployment and final production verification.**
+**Release status: deployed and verified.** Revision
+`1f441f884133a107eca983b645e7f193f3ac97cb` is on `main` and deployed as
+`ghcr.io/jonaylor89/tapped-api:1f441f884133a107eca983b645e7f193f3ac97cb`.
+Rust CI **39792255283**, Node CI **39792255389** and Deploy API **39793300329** all succeeded.
+API, mail and identity workers run the same image, unpaused, with migration bundle `20261030000000`;
+public readiness and the on-server schema guard passed.
 
-After that recorded gate passes, the reviewed remaining Firestore data is eligible for the owner's
+The first CI attempt correctly blocked a newly published certificate-validation advisory
+**RUSTSEC-2026-0382**. The transitive `rustls-webpki` dependency was pinned from **0.103.15 to 0.103.16**,
+and the audit tool is now pinned to **0.22.2**. No security gate was ignored; the patched release passed
+all checks and the full local Rust regression suite.
+
+Post-release verification matched all **ten native business-table signatures** (excluding only routine
+identity `scan_id` markers), **eleven ingestion/evidence table signatures**, all **24 migration checksums**
+and all **157,120 original event/venue references**. The fresh deployment backup is **458,370,710 bytes**,
+SHA-256/catalog verified, with two private copies. No ingestion replay or native-data mutation was needed
+for the release; the already verified production observations/prices/provenance remain unchanged.
+Private final evidence: `~/.local/share/tapped/scrape-rehearsal-20261016/closeout-status.json`.
+
+With those gates passed, the reviewed remaining Firestore data is eligible for the owner's
 separate deletion action. Delete only the Firestore **`(default)` database in project
 `in-the-loop-306520`**, or its two reviewed roots recursively if retaining an empty database is desired.
 Do not delete the Firebase/GCP project, Firebase Auth users/configuration, the two Auth hooks, R2

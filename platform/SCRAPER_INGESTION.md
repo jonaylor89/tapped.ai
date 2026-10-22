@@ -5,6 +5,9 @@ reviewed captures are applied. There are 333,933 exact booking links; original I
 preserved and both replays were no-ops. See the [production checkpoint](SCRAPER_PRODUCTION_CUTOVER.md)
 for verified results, bounded-link recovery and the minimum runtime migration-ledger requirement.
 Events remain unpublished; this cutover did not enable crawlers or delete Firestore.
+**Normal API release and retirement closeout completed on 2026-10-22:** all remaining quarantines were
+reviewed, the registry-backed API release is on `main`/production, and the remaining Firestore database
+is eligible for the owner's separate deletion. See [the final closeout](FIRESTORE_RETIREMENT_READY.md).
 
 ## Scope and safety
 
