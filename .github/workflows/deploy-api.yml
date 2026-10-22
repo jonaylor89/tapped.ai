@@ -71,6 +71,12 @@ jobs:
           printf '%s' "$GHCR_TOKEN" | tailscale ssh root@tapped-prod \
             "docker login ghcr.io --username '${{ github.actor }}' --password-stdin"
 
+      - name: Install migration compatibility guard
+        run: |
+          tailscale ssh root@tapped-prod \
+            "umask 077; cat > /opt/tapped/check-image-schema.sh.new && mv /opt/tapped/check-image-schema.sh.new /opt/tapped/check-image-schema.sh" \
+            < services/api.tapped.ai/scripts/check-image-schema.sh
+
       - name: Deploy API and mail worker
         id: deploy
         env:
@@ -99,19 +105,14 @@ jobs:
           }
 
           schema_compatible() {
-            local version epoch
-            version="$(docker exec tapped-postgres-1 psql -U tapped -d tapped -At -c "SELECT coalesce(max(version),0) FROM _sqlx_migrations WHERE success")"
-            epoch="$(docker image inspect "$1" --format '{{ index .Config.Labels "io.tapped.schema_epoch" }}')"
-            if [ "$version" -ge 20261024000000 ] && [ "$epoch" != 20261024010000 ]; then
-              return 1
-            fi
-            test "$(docker image inspect "$1" --format '{{ index .Config.Labels "io.tapped.datastore" }}')" = postgres
+            bash /opt/tapped/check-image-schema.sh "$1"
           }
           rollback() {
             if schema_compatible "$previous_image"; then
               echo "Deployment failed; restoring Postgres-compatible $previous_image" >&2
               set_api_image "$previous_image"
               docker compose up -d --no-deps api mail-worker || true
+              docker compose --profile identity up -d --no-deps identity-worker || true
             else
               echo "Deployment failed; refusing a schema-incompatible serving image; preserve the backup and fix forward" >&2
               docker compose --profile identity stop api mail-worker identity-worker || true
@@ -119,6 +120,9 @@ jobs:
           }
           trap rollback ERR
 
+          # Check the actual candidate before changing configuration or stopping healthy containers.
+          docker pull "$image"
+          schema_compatible "$image"
           set_api_image "$image"
           docker compose config --quiet
           docker compose pull api mail-worker redis
@@ -202,9 +206,7 @@ jobs:
           set -Eeuo pipefail
           cd /opt/tapped
 
-          version="$(docker exec tapped-postgres-1 psql -U tapped -d tapped -At -c "SELECT coalesce(max(version),0) FROM _sqlx_migrations WHERE success")"
-          epoch="$(docker image inspect "$1" --format '{{ index .Config.Labels "io.tapped.schema_epoch" }}')"
-          if [ "$(docker image inspect "$1" --format '{{ index .Config.Labels "io.tapped.datastore" }}')" != postgres ] || { [ "$version" -ge 20261024000000 ] && [ "$epoch" != 20261024010000 ]; }; then
+          if ! bash /opt/tapped/check-image-schema.sh "$1"; then
             echo "Refusing health-check rollback to a schema-incompatible image" >&2
             docker compose --profile identity stop api mail-worker identity-worker
             exit 1
@@ -213,4 +215,5 @@ jobs:
           sed -i "s|^API_IMAGE=.*$|API_IMAGE=$1|" .env
           chmod 600 .env
           docker compose up -d --no-deps api mail-worker
+          docker compose --profile identity up -d --no-deps identity-worker
           REMOTE

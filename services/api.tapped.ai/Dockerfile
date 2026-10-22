@@ -19,12 +19,14 @@ COPY ./build.rs ./build.rs
 COPY ./migrations ./migrations
 
 # Build for release.
-RUN touch src/main.rs && cargo build --release
+RUN touch src/main.rs && cargo build --release --locked
 
 # Step 2: Runtime Stage
 FROM debian:bookworm-slim
 LABEL io.tapped.datastore="postgres"
 LABEL io.tapped.schema_epoch="20261024010000"
+# Keep in sync with the highest embedded migration; deployment rejects older bundles.
+LABEL io.tapped.migration_bundle="20261030000000"
 
 # Run as "app" user. The uid is fixed so the deploy can chown the mail volume and credentials.
 RUN useradd -u 10001 -ms /bin/bash app && mkdir /data && chown app:app /data

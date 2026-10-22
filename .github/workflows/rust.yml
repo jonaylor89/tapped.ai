@@ -50,6 +50,9 @@ jobs:
         with:
           workspaces: ${{ matrix.project }}
           
+      - name: Deployment migration compatibility
+        run: python3 -m unittest discover -s tests/deployment -v
+
       - name: Format
         run: cargo fmt --check
 
