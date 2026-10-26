@@ -55,7 +55,7 @@ jobs:
           pnpm --filter @tapped/postgres-ingestion build
           npm ci --prefix scripts
           npm run --prefix scripts typecheck
-          npm run --prefix scripts crawler:import -- --help
+          npm run --prefix scripts crawler:import-r2 -- --help
 
       - name: Build
         run: pnpm run build
