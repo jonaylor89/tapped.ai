@@ -49,7 +49,7 @@ Every dependency and toolchain version must be exact. Floating ranges (`^1.2.3`,
 
 - Use `npm ci` inside `services/firebase-functions/`, with its committed `package-lock.json`.
 - Pin dependency versions, `packageManager`, and Node in `.node-version`/`firebase-functions.yml`.
-- Only named, allowlisted handlers may be deployed through the service's deployment command; no blanket function or Firestore rules deployments. See its live deployment audit first.
+- Only named, allowlisted handlers may be deployed through the service's deployment command; no blanket function or Firestore rules deployments.
 
 ### Native iOS
 

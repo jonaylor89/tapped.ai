@@ -16,10 +16,6 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL:-gpt-4.1-mini}
       VENUE_CONTACT_FOUNDER_CC: ${VENUE_CONTACT_FOUNDER_CC:-johannes@tapped.ai,ilias@tapped.ai}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL}
-      TYPESENSE_HOST: ${TYPESENSE_HOST}
-      TYPESENSE_PORT: ${TYPESENSE_PORT:-443}
-      TYPESENSE_PROTOCOL: ${TYPESENSE_PROTOCOL:-https}
-      TYPESENSE_SEARCH_API_KEY: ${TYPESENSE_SEARCH_API_KEY}
     volumes:
       - mail-data:/data
       - ${GOOGLE_APPLICATION_CREDENTIALS:-./credentials.json}:/run/secrets/firebase-credentials.json:ro

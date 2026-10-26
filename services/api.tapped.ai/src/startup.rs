@@ -8,9 +8,8 @@ use crate::{
         firebase_auth::verify_firebase_token,
         founder_notifications::{SlackWebhook, run_worker as run_founder_worker},
         mail_bridge::{
-            MailBridge, SqliteMailStore, StreamHttpGateway, backfill_email_message,
-            backfill_email_thread, create_email_thread, enqueue_service_email, inbound_email,
-            postmark_inbound_email, stream_before_message,
+            MailBridge, SqliteMailStore, StreamHttpGateway, create_email_thread,
+            enqueue_service_email, inbound_email, postmark_inbound_email, stream_before_message,
         },
         mail_composer::OpenAiEmailComposer,
     },
@@ -376,14 +375,6 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .route("/internal/mail/inbound", post(inbound_email))
         .route("/webhooks/postmark/inbound", post(postmark_inbound_email))
         .route("/internal/mail/outbound", post(enqueue_service_email))
-        .route(
-            "/internal/mail/backfill-thread",
-            post(backfill_email_thread),
-        )
-        .route(
-            "/internal/mail/backfill-message",
-            post(backfill_email_message),
-        )
         .merge(crate::domain::mcp::router(state.clone(), rate_limits))
         .merge(docs_routes(&api));
 

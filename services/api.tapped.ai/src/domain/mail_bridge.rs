@@ -110,7 +110,6 @@ pub struct StreamDelivery {
 #[async_trait]
 pub trait MailStore: Send + Sync {
     async fn upsert_thread(&self, thread: EmailThread) -> anyhow::Result<()>;
-    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()>;
     async fn create_thread_and_enqueue(
         &self,
         thread: EmailThread,
@@ -226,15 +225,6 @@ impl MailStore for InMemoryMailStore {
         } else {
             state.threads.push(thread);
         }
-        Ok(())
-    }
-
-    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()> {
-        let mut state = self.state.lock().unwrap();
-        state
-            .messages
-            .retain(|item| item.message_id != message.message_id);
-        state.messages.push(message);
         Ok(())
     }
 
@@ -577,22 +567,6 @@ impl MailStore for SqliteMailStore {
                 thread.subject,
                 thread.latest_message_id
             ],
-        )?;
-        Ok(())
-    }
-
-    async fn upsert_message(&self, message: EmailMessage) -> anyhow::Result<()> {
-        self.connection.lock().unwrap().execute(
-            "INSERT INTO email_messages
-             (message_id,thread_id,direction,sender,recipients,subject,text_body,html_body,state,created_at)
-             VALUES (?1,?2,?3,?4,?5,?6,?7,?8,'sent',?9)
-             ON CONFLICT(message_id) DO UPDATE SET thread_id=excluded.thread_id,
-             direction=excluded.direction,sender=excluded.sender,recipients=excluded.recipients,
-             subject=excluded.subject,text_body=excluded.text_body,html_body=excluded.html_body,
-             state='sent',created_at=excluded.created_at",
-            params![message.message_id, message.thread_id, message.direction, message.from,
-                serde_json::to_string(&message.to)?, message.subject, message.text_body,
-                message.html_body, message.created_at],
         )?;
         Ok(())
     }
@@ -1567,90 +1541,6 @@ pub async fn enqueue_service_email(
     };
     match state.mail.store.enqueue_outbound(queued).await {
         Ok(_) => StatusCode::ACCEPTED,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    }
-}
-
-pub async fn backfill_email_thread(
-    State(state): State<AppStateDyn>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> impl IntoResponse {
-    let timestamp = headers
-        .get("x-tapped-timestamp")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
-    let signature = headers
-        .get("x-tapped-signature")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
-    let Ok(timestamp_number) = timestamp.parse::<i64>() else {
-        return StatusCode::UNAUTHORIZED;
-    };
-    if (Utc::now().timestamp() - timestamp_number).abs() > 300 {
-        return StatusCode::UNAUTHORIZED;
-    }
-    let signed = [timestamp.as_bytes(), b".", b"", b".", &body].concat();
-    if !valid_signature(&state.mail.service_secret, &signed, signature) {
-        return StatusCode::UNAUTHORIZED;
-    }
-    let thread: EmailThread = match serde_json::from_slice(&body) {
-        Ok(thread) => thread,
-        Err(_) => return StatusCode::BAD_REQUEST,
-    };
-    if thread.id.is_empty()
-        || thread.performer_id.is_empty()
-        || thread.performer_username.is_empty()
-        || thread.venue_id.is_empty()
-        || thread.recipients.is_empty()
-        || thread.subject.is_empty()
-        || thread.latest_message_id.is_empty()
-    {
-        return StatusCode::BAD_REQUEST;
-    }
-    match state.mail.store.upsert_thread(thread).await {
-        Ok(()) => StatusCode::NO_CONTENT,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    }
-}
-
-pub async fn backfill_email_message(
-    State(state): State<AppStateDyn>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> impl IntoResponse {
-    let timestamp = headers
-        .get("x-tapped-timestamp")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
-    let signature = headers
-        .get("x-tapped-signature")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
-    let Ok(timestamp_number) = timestamp.parse::<i64>() else {
-        return StatusCode::UNAUTHORIZED;
-    };
-    if (Utc::now().timestamp() - timestamp_number).abs() > 300 {
-        return StatusCode::UNAUTHORIZED;
-    }
-    let signed = [timestamp.as_bytes(), b".", b"", b".", &body].concat();
-    if !valid_signature(&state.mail.service_secret, &signed, signature) {
-        return StatusCode::UNAUTHORIZED;
-    }
-    let message: EmailMessage = match serde_json::from_slice(&body) {
-        Ok(message) => message,
-        Err(_) => return StatusCode::BAD_REQUEST,
-    };
-    if message.thread_id.is_empty()
-        || message.message_id.is_empty()
-        || message.direction.is_empty()
-        || message.from.is_empty()
-        || message.to.is_empty()
-    {
-        return StatusCode::BAD_REQUEST;
-    }
-    match state.mail.store.upsert_message(message).await {
-        Ok(()) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }

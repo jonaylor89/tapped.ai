@@ -1,18 +1,9 @@
 
 scripts/*
-!scripts/import_firestore_users.ts
-!scripts/import_firestore_core_collections.ts
-!scripts/import_firestore_crawler.ts
 !scripts/import_r2_crawler.ts
 !scripts/resolve_scrape_venues.ts
-!scripts/import_opportunities_reviews.ts
-!scripts/seed_firestore_places_cache_to_redis.ts
-!scripts/export_migrated_firestore.ts
 !scripts/package.json
 !scripts/package-lock.json
-!scripts/helpers/
-scripts/helpers/*
-!scripts/helpers/database.ts
 node_modules/
 # Logs
 logs

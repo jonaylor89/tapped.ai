@@ -26,16 +26,12 @@ REDIS_URL
 STREAM_KEY
 STREAM_SECRET
 MAIL_INGRESS_SECRET       # random password used for Postmark inbound webhook Basic auth
-MAIL_API_SECRET           # random HMAC secret used by transitional Firebase Functions
+MAIL_API_SECRET           # random HMAC secret for signed internal mail endpoints
 MAIL_STORE_PATH=/data/tapped-mail.sqlite3
 BOOKING_EMAIL_DOMAIN=booking.tapped.ai
-TYPESENSE_HOST
-TYPESENSE_PORT
-TYPESENSE_PROTOCOL
-TYPESENSE_SEARCH_API_KEY
 ```
 
-No Firebase administrative credential is mounted into the serving API. The optional identity worker has its own least-privilege credential; one-time administrative backfill uses local ADC separately.
+No Firebase administrative credential is mounted into the serving API. The optional identity worker has its own least-privilege credential.
 
 When the Postmark plan permits editing inbound webhooks, configure:
 
@@ -43,7 +39,7 @@ When the Postmark plan permits editing inbound webhooks, configure:
 https://postmark:<MAIL_INGRESS_SECRET>@api.tapped.ai/webhooks/postmark/inbound
 ```
 
-Postmark sends HTTP Basic authentication from the URL credentials. Use HTTPS and a dedicated random secret. Until inbound processing is enabled on the Postmark account, the existing `inboundEmailWebhook` Firebase URL remains stable and acts only as an authenticated proxy to this Rust endpoint. The API also retains signed `POST /internal/mail/inbound` for local Haraka delivery.
+Postmark sends HTTP Basic authentication from the URL credentials. Use HTTPS and a dedicated random secret. The API also retains signed `POST /internal/mail/inbound` for local Haraka delivery.
 
 ## Local mail stack
 
@@ -63,10 +59,6 @@ STREAM_KEY
 STREAM_SECRET
 MAIL_INGRESS_SECRET
 MAIL_API_SECRET
-TYPESENSE_HOST
-TYPESENSE_PORT
-TYPESENSE_PROTOCOL
-TYPESENSE_SEARCH_API_KEY
 OPENAI_API_KEY
 OPENAI_MODEL              # defaults to gpt-4.1-mini
 VENUE_CONTACT_FOUNDER_CC  # comma-separated; defaults to the legacy founder recipients
@@ -94,18 +86,10 @@ python3 -m unittest discover -s services/mail-gateway/tools -p 'test_*.py'
 
 Administrative/smoke requests identify themselves with descriptive User-Agent headers; default Python requests from the production host were rejected by Cloudflare's browser-integrity policy. Authentication/signatures remain required. These offline checks do not establish real SMTP replies or end-to-end provider delivery.
 
-## Manual Steps
+## Open items
 
-- [ ] Back up the current Hetzner Compose configuration and tag the running API image for rollback.
-- [ ] Add a persistent `mail-data` volume shared by the API and `mail_worker`.
-- [ ] Deploy the merged API image with the production variables above; set the worker to `MAIL_TRANSPORT=postmark`.
-- [ ] Confirm `/health`, API logs, worker startup, SQLite WAL creation, and Postmark API connectivity.
-- [ ] Authenticate Application Default Credentials with `gcloud auth application-default login`, then preview the legacy migration with `python3 services/mail-gateway/tools/backfill_mail_threads.py`.
-- [ ] Apply it with `MAIL_API_SECRET=... TAPPED_API_URL=https://api.tapped.ai python3 services/mail-gateway/tools/backfill_mail_threads.py --apply`; confirm the eligible thread/message and written counts match. The import is idempotent and records historical messages as sent without redelivery.
-- [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records. Until then, selectively deploy the `inboundEmailWebhook` proxy from `services/firebase-functions/` against the unchanged Postmark URL.
-- [ ] Point the Stream before-message webhook at `https://api.tapped.ai/webhooks/stream/before-message`.
-- [ ] Build and release the native SwiftUI app that calls `POST /app/v1/venue-email-threads`.
+- [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records.
 - [ ] Run **Post-deploy mail smoke** manually. IMAP is used only by this optional end-to-end deliverability test, not by production infrastructure.
 - [ ] Verify app → Postmark → recipient, recipient reply → Postmark webhook → Stream, Stream follow-up → Postmark, duplicate webhook retries, and attachment handling.
-- [ ] Retain only API-backed compatibility handlers while provider URLs cannot change; never roll back to Firestore-backed handlers.
-- [ ] After 72 healthy hours, remove deprecated handlers and obsolete Functions configuration. Keep the actual Postmark server token under `POSTMARK_SERVER_TOKEN`; never reuse it as `MAIL_API_SECRET`.
+
+Keep the actual Postmark server token under `POSTMARK_SERVER_TOKEN`; never reuse it as `MAIL_API_SECRET`.

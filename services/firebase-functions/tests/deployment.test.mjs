@@ -113,8 +113,3 @@ test("Auth hooks contain only signed API forwarding and retry on failure", () =>
   const entrypoint = read("../src/index.ts");
   assert.doesNotMatch(entrypoint, /from "\.\/lib\/(signups|email_triggers|stream)"/);
 });
-
-test("active webhook bridge contains no Firestore reads, writes or imports", () => {
-  const source = read("../src/lib/webhooks.ts");
-  assert.doesNotMatch(source, /usersRef|contactVenuesRef|\.collection\(|firebase-admin\/firestore/);
-});

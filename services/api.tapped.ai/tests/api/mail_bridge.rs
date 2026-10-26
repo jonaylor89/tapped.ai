@@ -467,69 +467,6 @@ async fn signed_service_email_is_queued_without_postmark() {
 }
 
 #[tokio::test]
-async fn signed_backfill_registers_an_existing_email_thread() {
-    let (app, store, _) = test_app().await;
-    let body = serde_json::to_vec(&serde_json::json!({
-        "id": "legacy-thread",
-        "performer_id": "legacy-artist",
-        "performer_username": "legacy-name",
-        "venue_id": "legacy-venue",
-        "recipients": ["booking@venue.example"],
-        "subject": "Legacy inquiry",
-        "latest_message_id": "<legacy@booking.tapped.ai>"
-    }))
-    .unwrap();
-    let timestamp = chrono::Utc::now().timestamp().to_string();
-    let signed = [timestamp.as_bytes(), b".", b"", b".", body.as_slice()].concat();
-    let response = app
-        .api_client
-        .post(format!("{}/internal/mail/backfill-thread", app.address))
-        .header("x-tapped-timestamp", &timestamp)
-        .header("x-tapped-signature", sign("service-secret", &signed))
-        .body(body)
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
-    let thread = store
-        .thread_for_stream("legacy-artist", "legacy-venue")
-        .await
-        .unwrap()
-        .unwrap();
-    assert_eq!(thread.id, "legacy-thread");
-    assert_eq!(thread.latest_message_id, "<legacy@booking.tapped.ai>");
-
-    let body = serde_json::to_vec(&serde_json::json!({
-        "thread_id": "legacy-thread",
-        "message_id": "<historic@booking.tapped.ai>",
-        "direction": "outbound",
-        "from": "legacy-name@booking.tapped.ai",
-        "to": ["booking@venue.example"],
-        "subject": "Legacy inquiry",
-        "text_body": "A historic conversation",
-        "html_body": "<p>A historic conversation</p>",
-        "created_at": 1
-    }))
-    .unwrap();
-    let timestamp = chrono::Utc::now().timestamp().to_string();
-    let signed = [timestamp.as_bytes(), b".", b"", b".", body.as_slice()].concat();
-    let response = app
-        .api_client
-        .post(format!("{}/internal/mail/backfill-message", app.address))
-        .header("x-tapped-timestamp", &timestamp)
-        .header("x-tapped-signature", sign("service-secret", &signed))
-        .body(body)
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::NO_CONTENT);
-    let messages = store.messages_for_thread("legacy-thread").await.unwrap();
-    assert_eq!(messages.len(), 1);
-    assert_eq!(messages[0].text_body, "A historic conversation");
-}
-
-#[tokio::test]
 async fn stream_success_echoes_original_json_and_supports_attachment_only_messages() {
     let (app, _, _) = test_app().await;
     for venue in [true, false] {

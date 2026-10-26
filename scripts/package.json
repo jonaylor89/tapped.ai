@@ -5,11 +5,9 @@
   "scripts": {
     "crawler:resolve-venues": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"esModuleInterop\":true,\"skipLibCheck\":true}' resolve_scrape_venues.ts",
     "crawler:import-r2": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"esModuleInterop\":true,\"skipLibCheck\":true}' import_r2_crawler.ts",
-    "crawler:import": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"esModuleInterop\":true,\"skipLibCheck\":true}' import_firestore_crawler.ts",
-    "typecheck": "tsc --noEmit --target es2020 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --types node resolve_scrape_venues.ts import_r2_crawler.ts import_firestore_crawler.ts import_firestore_users.ts import_firestore_core_collections.ts import_opportunities_reviews.ts export_migrated_firestore.ts seed_firestore_places_cache_to_redis.ts helpers/database.ts"
+    "typecheck": "tsc --noEmit --target es2020 --module commonjs --moduleResolution node --esModuleInterop --skipLibCheck --types node resolve_scrape_venues.ts import_r2_crawler.ts"
   },
   "dependencies": {
-    "firebase-admin": "11.11.1",
     "pg": "8.13.1",
     "redis": "4.7.0"
   },

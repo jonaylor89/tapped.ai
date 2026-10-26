@@ -60,5 +60,3 @@ key in `/opt/tapped/apns/` on the host and set `APNS_KEY_FILE=/run/secrets/apns/
 `APNS_KEY_ID` and `APNS_TEAM_ID` (`APNS_TOPIC` defaults to `com.intheloopstudio`). The worker
 runs as uid 10001, so the directory and key must be owned by it (`chown -R 10001:10001`, dir `0500`, key `0400`). Without
 a key, APNs pushes stay queued in the outbox and retry. 410/`BadDeviceToken` prunes the token.
-Real retirement gates and rollout requirements are tracked in
-[`platform/FIREBASE_FUNCTIONS_RETIREMENT.md`](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md).

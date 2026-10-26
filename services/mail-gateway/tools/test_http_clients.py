@@ -22,16 +22,5 @@ class HttpClients(unittest.TestCase):
             self.assertEqual(request.get_header("User-agent"),"Tapped-Mail-Deployment-Smoke/1.0")
             self.assertEqual(request.get_header("Authorization"),"Bearer test-only")
 
-    def test_backfill_signed_ingress_keeps_signature_and_identifies_itself(self):
-        client=module("backfill_mail_threads")
-        response=MagicMock()
-        response.__enter__.return_value.status=204
-        with patch.object(client.urllib.request,"urlopen",return_value=response) as opening:
-            client.send_record("https://example.invalid","test-only","threads",{"id":"synthetic"})
-            request=opening.call_args.args[0]
-            self.assertEqual(request.get_header("User-agent"),"Tapped-Mail-Backfill/1.0")
-            self.assertTrue(request.get_header("X-tapped-signature"))
-            self.assertTrue(request.get_header("X-tapped-timestamp"))
-
 if __name__=="__main__":
     unittest.main()

@@ -6,13 +6,9 @@ Firebase retries failed calls; Rust acknowledges only after durable capture and 
 founder-notification, Stream and cleanup business logic. Firebase Auth and hosted email verification remain.
 Application data/search use Rust/Postgres, never Firestore fallback, synchronization or dual writes.
 
-Unexported legacy modules remain for reference only. All other custom Functions and managed
-extensions have been retired. Postmark inbound configuration is owner-managed and must target
-Rust directly; there is no Firebase HTTP compatibility handler. StoreKit purchases remain supported;
+All other custom Functions and managed extensions have been retired, and their source removed.
+Postmark inbound configuration is owner-managed and must target Rust directly; there is no Firebase HTTP compatibility handler. StoreKit purchases remain supported;
 Stripe and BigQuery integrations are retired without deleting historical provider/source data.
-
-See [DEPLOYMENT_AUDIT.md](DEPLOYMENT_AUDIT.md) and the
-[retirement record](../../platform/FIREBASE_FUNCTIONS_RETIREMENT.md) for current production evidence.
 
 ## Setup and tests
 

@@ -5,8 +5,8 @@
     "typecheck": "tsc --noEmit",
     "test": "npm run build && vitest run && node --test tests/*.test.mjs",
     "test:watch": "vitest",
-    "lint": "biome check src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
-    "lint:fix": "biome check --write src/index.ts src/lib/api_proxy.ts src/lib/webhooks.ts src/lib/webhooks.test.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
+    "lint": "biome check src/index.ts src/lib/api_proxy.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
+    "lint:fix": "biome check --write src/index.ts src/lib/api_proxy.ts src/lib/auth_hooks.ts src/lib/auth_hooks.test.ts scripts tests",
     "deploy": "node scripts/deploy.mjs"
   },
   "engines": {
@@ -14,29 +14,12 @@
   },
   "main": "lib/index.js",
   "dependencies": {
-    "@google-cloud/secret-manager": "5.0.1",
-    "@sendgrid/inbound-mail-parser": "8.0.0",
-    "@sendgrid/mail": "8.1.0",
-    "cookie-parser": "1.4.6",
     "firebase-admin": "11.10.1",
-    "firebase-functions": "5.0.1",
-    "mailparser": "3.6.7",
-    "node-fetch": "3.3.2",
-    "nodemailer": "6.9.5",
-    "openai": "4.73.0",
-    "spotify-web-api-node": "5.0.2",
-    "stream-chat": "4.4.3",
-    "uuid": "9.0.1"
+    "firebase-functions": "5.0.1"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.12",
-    "@types/cookie-parser": "1.4.7",
-    "@types/mailparser": "3.4.4",
     "@types/node": "22.15.30",
-    "@types/react": "18.2.24",
-    "@types/spotify-web-api-node": "5.0.11",
-    "@types/uuid": "9.0.4",
-    "firebase-functions-test": "0.2.3",
     "typescript": "5.9.3",
     "vitest": "4.1.0"
   },
