@@ -1,0 +1,20 @@
+{
+  "cities": [
+    {
+      "name": "Indianapolis",
+      "bbox": { "south": 39.632, "west": -86.328, "north": 39.928, "east": -85.937 },
+      "timezone": "America/Indiana/Indianapolis",
+      "cellMeters": 2500
+    }
+  ],
+  "listings": [
+    {
+      "url": "https://www.example-altweekly.com/music/calendar",
+      "city": "Indianapolis",
+      "timezone": "America/Indiana/Indianapolis",
+      "label": "Alt-weekly music calendar (example URL, replace)"
+    }
+  ],
+  "placesQueries": ["live music venue", "jazz club", "concert hall", "comedy club", "theater", "music bar", "open mic"],
+  "bandsintownArtists": []
+}

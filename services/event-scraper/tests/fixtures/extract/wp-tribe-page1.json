@@ -1,0 +1,103 @@
+{
+  "events": [
+    {
+      "id": 4821,
+      "global_id": "www.saltshedmusic.com?id=4821",
+      "author": "3",
+      "status": "publish",
+      "date": "2026-09-12 10:14:22",
+      "url": "https://www.saltshedmusic.com/event/neko-case/",
+      "rest_url": "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events/4821",
+      "title": "Neko Case &#8211; Live in Concert",
+      "description": "<p>Neko Case returns with her full band.&nbsp;</p>\n<p>Seated show &amp; bar.</p>",
+      "excerpt": "",
+      "slug": "neko-case",
+      "image": {
+        "url": "https://www.saltshedmusic.com/wp-content/uploads/2026/09/neko.jpg",
+        "id": 4822,
+        "width": 1080,
+        "height": 1080
+      },
+      "all_day": false,
+      "start_date": "2026-11-08 19:30:00",
+      "start_date_details": {
+        "year": "2026",
+        "month": "11",
+        "day": "08",
+        "hour": "19",
+        "minutes": "30",
+        "seconds": "00"
+      },
+      "end_date": "2026-11-08 22:30:00",
+      "utc_start_date": "2026-11-09 01:30:00",
+      "utc_end_date": "2026-11-09 04:30:00",
+      "timezone": "America/Chicago",
+      "timezone_abbr": "CST",
+      "cost": "$45 &#8211; $65",
+      "cost_details": {
+        "currency_symbol": "$",
+        "currency_code": "USD",
+        "currency_position": "prefix",
+        "values": ["45", "65"]
+      },
+      "website": "https://www.axs.com/events/123456/neko-case-tickets",
+      "show_map": true,
+      "categories": [{ "name": "Concerts", "slug": "concerts", "id": 12 }],
+      "tags": [],
+      "venue": {
+        "id": 77,
+        "venue": "The Salt Shed",
+        "address": "1357 N Elston Ave",
+        "city": "Chicago",
+        "country": "United States",
+        "state": "IL",
+        "zip": "60642",
+        "geo_lat": 41.9069,
+        "geo_lng": -87.6614,
+        "website": "https://www.saltshedmusic.com"
+      },
+      "organizer": [{ "id": 80, "organizer": "Salt Shed Presents" }]
+    },
+    {
+      "id": 4830,
+      "status": "publish",
+      "url": "https://www.saltshedmusic.com/event/comedy-night-11-12/",
+      "title": "Comedy Night: Hannah Gadsby",
+      "description": "",
+      "excerpt": "<p>Stand-up in the Shed.</p>",
+      "image": false,
+      "all_day": false,
+      "start_date": "2026-11-12 20:00:00",
+      "end_date": "2026-11-12 20:00:00",
+      "utc_start_date": "2026-11-13 02:00:00",
+      "utc_end_date": "2026-11-13 02:00:00",
+      "timezone": "America/Chicago",
+      "cost": "Free",
+      "cost_details": { "currency_symbol": "$", "values": [] },
+      "website": "",
+      "categories": [{ "name": "Comedy", "slug": "comedy" }],
+      "venue": []
+    },
+    {
+      "id": 4835,
+      "status": "publish",
+      "url": "https://www.saltshedmusic.com/event/neighborhood-day/",
+      "title": "Neighborhood Day",
+      "description": "<p>Food trucks all day.</p>",
+      "all_day": true,
+      "start_date": "2026-11-14 00:00:00",
+      "end_date": "2026-11-14 23:59:59",
+      "utc_start_date": "2026-11-14 06:00:00",
+      "utc_end_date": "2026-11-15 05:59:59",
+      "timezone": "America/Chicago",
+      "cost": "",
+      "cost_details": { "values": [] },
+      "categories": [],
+      "venue": []
+    }
+  ],
+  "rest_url": "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events/?page=1&per_page=3",
+  "next_rest_url": "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events/?page=2&per_page=3",
+  "total": 5,
+  "total_pages": 2
+}

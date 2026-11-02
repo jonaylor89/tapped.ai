@@ -1,0 +1,88 @@
+{
+  "website": {
+    "id": "5f1a2b3c4d5e6f7a8b9c0d1e",
+    "siteTitle": "The Owl Listening Room",
+    "timeZone": "America/Chicago",
+    "baseUrl": "https://www.owllisteningroom.com"
+  },
+  "websiteSettings": {
+    "storeSettings": {}
+  },
+  "collection": {
+    "id": "6123abc",
+    "title": "Shows",
+    "urlId": "shows",
+    "typeName": "events",
+    "fullUrl": "/shows",
+    "type": 10
+  },
+  "upcoming": [
+    {
+      "id": "64aa01",
+      "collectionId": "6123abc",
+      "recordType": 12,
+      "title": "Molly Tuttle &amp; Golden Highway",
+      "fullUrl": "/shows/molly-tuttle",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/abc/molly.jpg",
+      "startDate": 1794358800000,
+      "endDate": 1794369600000,
+      "excerpt": "<p>Bluegrass from the two-time Grammy winner. $28 advance / $32 day of show.</p>",
+      "body": "<div class=\"sqs-block\"><p>All ages.</p><a href=\"https://www.eventbrite.com/e/molly-tuttle-tickets-1234\" class=\"sqs-block-button-element\">Get Tickets</a></div>",
+      "location": {
+        "addressTitle": "The Owl Listening Room",
+        "addressLine1": "2440 E 9th St",
+        "addressLine2": "Tulsa, OK, 74104",
+        "addressCountry": "United States",
+        "markerLat": 36.1489,
+        "markerLng": -95.9638,
+        "mapLat": 36.1489,
+        "mapLng": -95.9638
+      },
+      "tags": ["bluegrass"],
+      "categories": ["Live Music"]
+    },
+    {
+      "id": "64aa02",
+      "collectionId": "6123abc",
+      "title": "Poetry &amp; Open Mic",
+      "fullUrl": "/shows/poetry-open-mic-nov",
+      "assetUrl": "",
+      "startDate": 1794965400000,
+      "endDate": 1794965400000,
+      "excerpt": "<p>Free entry, sign up at the bar.</p>",
+      "body": "",
+      "location": {
+        "addressTitle": "",
+        "addressLine1": "",
+        "addressLine2": "",
+        "markerLat": 40.7207559,
+        "markerLng": -74.0007613
+      },
+      "tags": [],
+      "categories": []
+    },
+    {
+      "id": "64aa03",
+      "collectionId": "6123abc",
+      "title": "New Year's Eve with The Tulsa Allstars",
+      "fullUrl": "/shows/nye",
+      "assetUrl": "https://images.squarespace-cdn.com/content/v1/abc/nye.jpg",
+      "startDate": 1798772400000,
+      "endDate": 1798786800000,
+      "excerpt": "",
+      "body": "<p>Party favors included.</p>",
+      "tags": [],
+      "categories": ["Live Music"]
+    }
+  ],
+  "past": [
+    {
+      "id": "63ff99",
+      "title": "Some Past Show",
+      "fullUrl": "/shows/past",
+      "startDate": 1790902800000,
+      "endDate": 1790913600000
+    }
+  ],
+  "itemCount": 3
+}

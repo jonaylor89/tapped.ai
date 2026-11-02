@@ -1,0 +1,31 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Hi-Fi Room//Shows//EN
+X-WR-CALNAME:Hi-Fi Room
+X-WR-TIMEZONE:America/Indiana/Indianapolis
+BEGIN:VEVENT
+UID:hifi-2001@hifiroom.example
+DTSTAMP:20261020T150000Z
+DTSTART;TZID=America/Indiana/Indianapolis:20261107T210000
+DTEND;TZID=America/Indiana/Indianapolis:20261107T235900
+SUMMARY:Jazz Trio Night with the Rob Dixon Trio
+DESCRIPTION:Live jazz. $10 cover.
+URL:https://hifiroom.example/shows/rob-dixon-trio
+END:VEVENT
+BEGIN:VEVENT
+UID:hifi-2002@hifiroom.example
+DTSTAMP:20261020T150000Z
+DTSTART;TZID=America/Indiana/Indianapolis:20261113T200000
+SUMMARY:Sun Room - album release show
+DESCRIPTION:Indie rock band Sun Room celebrates their new album. $15 adv / $18 door.
+END:VEVENT
+BEGIN:VEVENT
+UID:hifi-openmic@hifiroom.example
+DTSTAMP:20261020T150000Z
+DTSTART;TZID=America/Indiana/Indianapolis:20261104T190000
+DURATION:PT3H
+RRULE:FREQ=WEEKLY;COUNT=3
+SUMMARY:Open Mic Night
+DESCRIPTION:Sign-up at 6:30. Free.
+END:VEVENT
+END:VCALENDAR

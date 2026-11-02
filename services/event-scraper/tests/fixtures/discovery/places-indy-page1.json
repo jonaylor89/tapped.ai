@@ -1,0 +1,92 @@
+{
+  "places": [
+    {
+      "id": "ChIJ_MERCURY_BIZ",
+      "displayName": { "text": "The Mercury Room", "languageCode": "en" },
+      "types": ["live_music_venue", "night_club", "bar", "point_of_interest", "establishment"],
+      "primaryType": "live_music_venue",
+      "formattedAddress": "412 Shelby St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75712, "longitude": -86.14321 },
+      "websiteUri": "https://www.mercuryroomindy.com/",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_MERCURY_PREMISE",
+      "displayName": { "text": "412 Shelby St", "languageCode": "en" },
+      "types": ["premise"],
+      "primaryType": "premise",
+      "formattedAddress": "412 Shelby St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75718, "longitude": -86.14329 }
+    },
+    {
+      "id": "ChIJ_MERCURY_ADDR",
+      "displayName": { "text": "412 Shelby St", "languageCode": "en" },
+      "types": ["street_address", "geocode"],
+      "formattedAddress": "412 Shelby St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75705, "longitude": -86.14315 }
+    },
+    {
+      "id": "ChIJ_MERCURY_EVENTS",
+      "displayName": { "text": "Mercury Room Live", "languageCode": "en" },
+      "types": ["event_venue", "point_of_interest", "establishment"],
+      "primaryType": "event_venue",
+      "formattedAddress": "412 Shelby St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75731, "longitude": -86.14344 },
+      "websiteUri": "https://mercuryroomindy.com/events",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_HIFI_BIZ",
+      "displayName": { "text": "The Hi-Fi", "languageCode": "en" },
+      "types": ["night_club", "bar", "point_of_interest", "establishment"],
+      "primaryType": "night_club",
+      "formattedAddress": "1043 Virginia Ave #4, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75405, "longitude": -86.14102 },
+      "websiteUri": "https://www.thehifi.com/",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_HIFI_ANNEX",
+      "displayName": { "text": "Hi-Fi Annex", "languageCode": "en" },
+      "types": ["live_music_venue", "point_of_interest", "establishment"],
+      "primaryType": "live_music_venue",
+      "formattedAddress": "1043 Virginia Ave, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75397, "longitude": -86.14085 },
+      "websiteUri": "https://thehifi.com/annex",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_VIRGINIA_PREMISE",
+      "displayName": { "text": "1043 Virginia Ave", "languageCode": "en" },
+      "types": ["premise", "point_of_interest", "establishment"],
+      "formattedAddress": "1043 Virginia Ave, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75401, "longitude": -86.14094 }
+    },
+    {
+      "id": "ChIJ_FOUNTAIN_SQUARE",
+      "displayName": { "text": "Fountain Square", "languageCode": "en" },
+      "types": ["neighborhood", "political"],
+      "primaryType": "neighborhood",
+      "formattedAddress": "Fountain Square, Indianapolis, IN, USA",
+      "location": { "latitude": 39.75398, "longitude": -86.14099 }
+    },
+    {
+      "id": "ChIJ_INDIANAPOLIS",
+      "displayName": { "text": "Indianapolis", "languageCode": "en" },
+      "types": ["locality", "political"],
+      "primaryType": "locality",
+      "formattedAddress": "Indianapolis, IN, USA",
+      "location": { "latitude": 39.76838, "longitude": -86.15804 }
+    },
+    {
+      "id": "ChIJ_OLD_VENUE",
+      "displayName": { "text": "The Old Spot", "languageCode": "en" },
+      "types": ["bar", "point_of_interest", "establishment"],
+      "primaryType": "bar",
+      "formattedAddress": "900 Prospect St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75301, "longitude": -86.14501 },
+      "businessStatus": "CLOSED_PERMANENTLY"
+    }
+  ],
+  "nextPageToken": "PAGE_TWO_TOKEN"
+}

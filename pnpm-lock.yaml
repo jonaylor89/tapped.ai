@@ -281,7 +281,7 @@ importers:
         version: 1.2.0
       langchain:
         specifier: 0.1.37
-        version: 0.1.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-s3@3.922.0)(@aws-sdk/credential-provider-node@3.922.0)(@google-cloud/storage@7.11.2(encoding@0.1.13))(@smithy/util-utf8@2.3.0)(@upstash/redis@1.36.1)(axios@1.13.4)(cheerio@1.0.0-rc.12)(encoding@0.1.13)(fast-xml-parser@5.2.5)(firebase-admin@12.7.0(encoding@0.1.13))(google-auth-library@8.9.0(encoding@0.1.13))(html-to-text@9.0.5)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.3)(lodash@4.17.23)(openai@4.104.0(encoding@0.1.13)(ws@8.19.0)(zod@3.25.76))(pg@8.13.1)(playwright@1.58.1)(puppeteer@19.11.1(encoding@0.1.13)(typescript@5.4.5))(ws@8.19.0)
+        version: 0.1.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-s3@3.922.0)(@aws-sdk/credential-provider-node@3.922.0)(@google-cloud/storage@7.11.2(encoding@0.1.13))(@smithy/util-utf8@2.3.0)(@upstash/redis@1.36.1)(axios@1.13.4)(cheerio@1.0.0)(encoding@0.1.13)(fast-xml-parser@5.2.5)(firebase-admin@12.7.0(encoding@0.1.13))(google-auth-library@8.9.0(encoding@0.1.13))(html-to-text@9.0.5)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.3)(lodash@4.17.23)(openai@4.104.0(encoding@0.1.13)(ws@8.19.0)(zod@3.25.76))(pg@8.13.1)(playwright@1.58.1)(puppeteer@19.11.1(encoding@0.1.13)(typescript@5.4.5))(ws@8.19.0)
       node-schedule:
         specifier: 2.1.1
         version: 2.1.1
@@ -307,6 +307,31 @@ importers:
       lint-staged:
         specifier: 15.5.2
         version: 15.5.2
+      tsx:
+        specifier: 4.21.0
+        version: 4.21.0
+      typescript:
+        specifier: 5.4.5
+        version: 5.4.5
+
+  services/event-scraper:
+    dependencies:
+      '@tapped/postgres-ingestion':
+        specifier: workspace:*
+        version: link:../../packages/postgres-ingestion
+      cheerio:
+        specifier: 1.0.0
+        version: 1.0.0
+      pg:
+        specifier: 8.13.1
+        version: 8.13.1
+    devDependencies:
+      '@types/node':
+        specifier: 22.19.7
+        version: 22.19.7
+      '@types/pg':
+        specifier: 8.11.10
+        version: 8.11.10
       tsx:
         specifier: 4.21.0
         version: 4.21.0
@@ -3422,6 +3447,10 @@ packages:
   cheerio-select@2.1.0:
     resolution: {integrity: sha512-9v9kG0LvzrlcungtnJtpGNxY+fzECQKhK4EGJX2vByejiMX84MFNQw4UxPJl3bFbTMw+Dfs37XaIkCwTZfLh4g==}
 
+  cheerio@1.0.0:
+    resolution: {integrity: sha512-quS9HgjQpdaXOvsZz82Oz7uxtXiy6UIsIQcpBj7HRw2M63Skasm9qlDocAM7jNuaxdhpPU7c4kJN+gA5MCu4ww==}
+    engines: {node: '>=18.17'}
+
   cheerio@1.0.0-rc.12:
     resolution: {integrity: sha512-VqR8m68vM46BNnuZ5NtnGBKIE/DfN0cRIzg9n40EIq9NOv90ayxLBXA8fXC5gquFRGJSTRqBq25Jt2ECLR431Q==}
     engines: {node: '>= 6'}
@@ -3973,6 +4002,9 @@ packages:
 
   emoji-regex@9.2.2:
     resolution: {integrity: sha512-L18DaJsXSUk2+42pv8mLs5jJT2hqFkFE4j21wOmgbUqsZ2hL72NsUU785g9RXgo3s0ZNgVl42TiHp3ZtOv/Vyg==}
+
+  encoding-sniffer@0.2.1:
+    resolution: {integrity: sha512-5gvq20T6vfpekVtqrYQsSCFZ1wEg5+wW0/QaZMWkFr6BqD3NfKs0rLCx4rrVlSWJeZb5NBJgVLswK/w2MWU+Gw==}
 
   encoding@0.1.13:
     resolution: {integrity: sha512-ETBauow1T35Y/WZMkio9jiM0Z5xjHHmJ4XmjZOq1l/dXz3lr2sRn87nJy20RupqSh1F2m3HHPSp8ShIPQJrJ3A==}
@@ -5767,6 +5799,9 @@ packages:
 
   parse5-htmlparser2-tree-adapter@7.1.0:
     resolution: {integrity: sha512-ruw5xyKs6lrpo9x9rCZqZZnIUntICjQAd0Wsmp396Ul9lN/h+ifgVV1x1gZHi8euej6wTfpqX8j+BFQxF0NS/g==}
+
+  parse5-parser-stream@7.1.2:
+    resolution: {integrity: sha512-JyeQc9iwFLn5TbvvqACIF/VXG6abODeB3Fwmv/TGdLk2LfbWkaySGY72at4+Ty7EkPZj854u4CrICqNk2qIbow==}
 
   parse5@7.3.0:
     resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
@@ -10202,7 +10237,7 @@ snapshots:
 
   '@types/pg@8.11.10':
     dependencies:
-      '@types/node': 20.10.7
+      '@types/node': 22.19.7
       pg-protocol: 1.16.1
       pg-types: 4.1.0
 
@@ -10800,6 +10835,20 @@ snapshots:
       domhandler: 5.0.3
       domutils: 3.2.2
 
+  cheerio@1.0.0:
+    dependencies:
+      cheerio-select: 2.1.0
+      dom-serializer: 2.0.0
+      domhandler: 5.0.3
+      domutils: 3.2.2
+      encoding-sniffer: 0.2.1
+      htmlparser2: 9.1.0
+      parse5: 7.3.0
+      parse5-htmlparser2-tree-adapter: 7.1.0
+      parse5-parser-stream: 7.1.2
+      undici: 6.19.7
+      whatwg-mimetype: 4.0.0
+
   cheerio@1.0.0-rc.12:
     dependencies:
       cheerio-select: 2.1.0
@@ -11357,6 +11406,11 @@ snapshots:
   emoji-regex@8.0.0: {}
 
   emoji-regex@9.2.2: {}
+
+  encoding-sniffer@0.2.1:
+    dependencies:
+      iconv-lite: 0.6.3
+      whatwg-encoding: 3.1.1
 
   encoding@0.1.13:
     dependencies:
@@ -12444,7 +12498,7 @@ snapshots:
     dependencies:
       '@keyv/serialize': 1.1.1
 
-  langchain@0.1.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-s3@3.922.0)(@aws-sdk/credential-provider-node@3.922.0)(@google-cloud/storage@7.11.2(encoding@0.1.13))(@smithy/util-utf8@2.3.0)(@upstash/redis@1.36.1)(axios@1.13.4)(cheerio@1.0.0-rc.12)(encoding@0.1.13)(fast-xml-parser@5.2.5)(firebase-admin@12.7.0(encoding@0.1.13))(google-auth-library@8.9.0(encoding@0.1.13))(html-to-text@9.0.5)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.3)(lodash@4.17.23)(openai@4.104.0(encoding@0.1.13)(ws@8.19.0)(zod@3.25.76))(pg@8.13.1)(playwright@1.58.1)(puppeteer@19.11.1(encoding@0.1.13)(typescript@5.4.5))(ws@8.19.0):
+  langchain@0.1.37(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/client-s3@3.922.0)(@aws-sdk/credential-provider-node@3.922.0)(@google-cloud/storage@7.11.2(encoding@0.1.13))(@smithy/util-utf8@2.3.0)(@upstash/redis@1.36.1)(axios@1.13.4)(cheerio@1.0.0)(encoding@0.1.13)(fast-xml-parser@5.2.5)(firebase-admin@12.7.0(encoding@0.1.13))(google-auth-library@8.9.0(encoding@0.1.13))(html-to-text@9.0.5)(ignore@5.3.2)(jsdom@26.1.0)(jsonwebtoken@9.0.3)(lodash@4.17.23)(openai@4.104.0(encoding@0.1.13)(ws@8.19.0)(zod@3.25.76))(pg@8.13.1)(playwright@1.58.1)(puppeteer@19.11.1(encoding@0.1.13)(typescript@5.4.5))(ws@8.19.0):
     dependencies:
       '@anthropic-ai/sdk': 0.9.1(encoding@0.1.13)
       '@langchain/community': 0.0.57(@aws-crypto/sha256-js@5.2.0)(@aws-sdk/credential-provider-node@3.922.0)(@smithy/util-utf8@2.3.0)(@upstash/redis@1.36.1)(encoding@0.1.13)(firebase-admin@12.7.0(encoding@0.1.13))(google-auth-library@8.9.0(encoding@0.1.13))(html-to-text@9.0.5)(jsdom@26.1.0)(jsonwebtoken@9.0.3)(lodash@4.17.23)(openai@4.104.0(encoding@0.1.13)(ws@8.19.0)(zod@3.25.76))(pg@8.13.1)(ws@8.19.0)
@@ -12469,7 +12523,7 @@ snapshots:
       '@aws-sdk/credential-provider-node': 3.922.0
       '@google-cloud/storage': 7.11.2(encoding@0.1.13)
       axios: 1.13.4
-      cheerio: 1.0.0-rc.12
+      cheerio: 1.0.0
       fast-xml-parser: 5.2.5
       google-auth-library: 8.9.0(encoding@0.1.13)
       html-to-text: 9.0.5
@@ -13517,6 +13571,10 @@ snapshots:
   parse5-htmlparser2-tree-adapter@7.1.0:
     dependencies:
       domhandler: 5.0.3
+      parse5: 7.3.0
+
+  parse5-parser-stream@7.1.2:
+    dependencies:
       parse5: 7.3.0
 
   parse5@7.3.0:

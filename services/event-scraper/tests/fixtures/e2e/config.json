@@ -1,0 +1,12 @@
+{
+  "cities": [
+    {
+      "name": "Indianapolis",
+      "bbox": { "south": 39.74, "west": -86.17, "north": 39.84, "east": -86.08 },
+      "timezone": "America/Indiana/Indianapolis",
+      "cellMeters": 20000
+    }
+  ],
+  "listings": [],
+  "placesQueries": ["live music venue", "comedy club"]
+}

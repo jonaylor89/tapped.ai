@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Calendar | Café Lumière</title>
+<!-- Theme outputs an ItemList of events, then a duplicate of the featured event, then a hand-edited broken block -->
+<script type="application/ld+json">
+{
+  "@context": "http://schema.org",
+  "@type": "ItemList",
+  "itemListElement": [
+    {"@type": "ListItem", "position": 1, "item": {
+      "@type": "MusicEvent",
+      "name": "Les Filles de Illighadad",
+      "startDate": "2026-11-06T20:30",
+      "doorTime": "19:30",
+      "url": "/events/les-filles-de-illighadad",
+      "location": {"@type": "Place", "name": "Café Lumière", "address": "2201 N Lincoln Ave, Chicago, IL 60614"},
+      "offers": {"@type": "Offer", "price": 18, "priceCurrency": "usd", "availability": "http://schema.org/SoldOut"}
+    }},
+    {"@type": "ListItem", "position": 2, "item": {
+      "@type": "ComedyEvent",
+      "name": "Tuesday Stand-Up Showcase",
+      "startDate": "2026-11-10T19:00:00",
+      "endDate": "21:00",
+      "url": "https://www.cafelumiere.com/events/standup-showcase-nov-10",
+      "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+    }},
+    {"@type": "ListItem", "position": 3, "item": {
+      "@type": "Event",
+      "name": "Holiday Market",
+      "startDate": "2026-12-05",
+      "endDate": "2026-12-06"
+    }}
+  ]
+}
+</script>
+<script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"MusicEvent","name":"Les Filles de Illighadad","startDate":"2026-11-06T20:30","url":"https://www.cafelumiere.com/events/les-filles-de-illighadad","image":"https://www.cafelumiere.com/img/lfdi.jpg","performer":"Les Filles de Illighadad"}
+</script>
+<script type="application/ld+json">
+<!--
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "Open Mic Night",
+  "description": "Sign-up at 6:30.
+Bring your own instrument!",
+  "startDate": "2026-11-11T19:00:00-06:00",
+  "location": {"@type": "Place", "name": "Café Lumière",},
+  "eventStatus": "EventRescheduled",
+}
+-->
+</script>
+<script type="application/ld+json">{ this is not json at all </script>
+</head>
+<body><h1>Calendar</h1></body>
+</html>

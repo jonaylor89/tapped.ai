@@ -1,0 +1,30 @@
+{
+  "name": "@tapped/event-scraper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone venue-website event scraper and venue discovery with its own SQLite state.",
+  "type": "module",
+  "main": "dist/cli.js",
+  "bin": {
+    "event-scraper": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "biome check src tests",
+    "lint:fix": "biome check --write src tests",
+    "test": "tsx --test \"tests/**/*.test.ts\"",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@tapped/postgres-ingestion": "workspace:*",
+    "cheerio": "1.0.0",
+    "pg": "8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.7",
+    "@types/pg": "8.11.10",
+    "tsx": "4.21.0",
+    "typescript": "5.4.5"
+  }
+}

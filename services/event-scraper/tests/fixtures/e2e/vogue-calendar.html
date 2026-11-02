@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Calendar | The Vogue</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": "https://thevogue.example/calendar/#webpage",
+            "name": "Calendar"
+          },
+          {
+            "@type": "MusicEvent",
+            "@id": "https://thevogue.example/events/nikki-lane/",
+            "name": "Nikki Lane",
+            "url": "https://thevogue.example/events/nikki-lane/",
+            "startDate": "2026-11-14T20:00:00-05:00",
+            "doorTime": "2026-11-14T19:00:00-05:00",
+            "eventStatus": "https://schema.org/EventScheduled",
+            "location": { "@type": "Place", "name": "The Vogue", "address": "6259 N College Ave, Indianapolis, IN" },
+            "performer": [{ "@type": "MusicGroup", "name": "Nikki Lane" }],
+            "offers": {
+              "@type": "Offer",
+              "url": "https://www.ticketmaster.com/nikki-lane-indianapolis/event/05006",
+              "price": "25.00",
+              "priceCurrency": "USD"
+            }
+          },
+          {
+            "@type": "MusicEvent",
+            "@id": "https://thevogue.example/events/the-districts/",
+            "name": "The Districts with Slow Pulp",
+            "url": "https://thevogue.example/events/the-districts/",
+            "startDate": "2026-11-20T19:30:00-05:00",
+            "location": { "@type": "Place", "name": "The Vogue" },
+            "performer": [
+              { "@type": "MusicGroup", "name": "The Districts" },
+              { "@type": "MusicGroup", "name": "Slow Pulp" }
+            ],
+            "offers": { "@type": "Offer", "price": "20", "priceCurrency": "USD" }
+          },
+          {
+            "@type": "ComedyEvent",
+            "@id": "https://thevogue.example/events/late-night-laughs/",
+            "name": "Late Night Laughs: Stand-Up Showcase",
+            "url": "https://thevogue.example/events/late-night-laughs/",
+            "startDate": "2026-12-05T21:00:00-05:00",
+            "location": { "@type": "Place", "name": "The Vogue" }
+          },
+          {
+            "@type": "Event",
+            "@id": "https://thevogue.example/events/trivia/",
+            "name": "Trivia Night",
+            "url": "https://thevogue.example/events/trivia/",
+            "startDate": "2026-11-10T19:00:00-05:00",
+            "location": { "@type": "Place", "name": "The Vogue" }
+          },
+          {
+            "@type": "MusicEvent",
+            "@id": "https://thevogue.example/events/old-show/",
+            "name": "Last Month's Show",
+            "url": "https://thevogue.example/events/old-show/",
+            "startDate": "2026-10-01T20:00:00-04:00",
+            "location": { "@type": "Place", "name": "The Vogue" }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <h1>Upcoming at The Vogue</h1>
+    <ul>
+      <li><a href="/events/nikki-lane/">Nikki Lane</a> - Sat Nov 14 -
+        <a href="https://www.ticketmaster.com/nikki-lane-indianapolis/event/05006">Tickets</a></li>
+      <li><a href="/events/the-districts/">The Districts with Slow Pulp</a> - Fri Nov 20</li>
+      <li><a href="/events/late-night-laughs/">Late Night Laughs</a> - Sat Dec 5</li>
+      <li><a href="/events/trivia/">Trivia Night</a> - Tue Nov 10</li>
+    </ul>
+  </body>
+</html>

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "venue-vogue",
+    "name": "The Vogue",
+    "website": "https://thevogue.example/",
+    "lat": 39.8687,
+    "lng": -86.1427,
+    "placeId": "ChIJ_VOGUE",
+    "timezone": "America/Indiana/Indianapolis"
+  },
+  {
+    "id": "venue-hifi-room",
+    "name": "The Hi-Fi Room",
+    "website": "https://hifiroom.example/",
+    "lat": 39.7801,
+    "lng": -86.1201,
+    "placeId": "ChIJ_HIFI_ROOM",
+    "timezone": "America/Indiana/Indianapolis"
+  }
+]

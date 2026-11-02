@@ -1,0 +1,15 @@
+# Example venue robots.txt
+User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /*.pdf$
+Disallow: /private
+
+User-agent: BadBot
+Disallow: /
+
+User-agent: TappedEventScraper
+User-agent: OtherFriendlyBot
+Disallow: /members/
+Allow: /members/calendar
+Crawl-delay: 10

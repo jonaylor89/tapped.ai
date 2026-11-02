@@ -1,0 +1,25 @@
+{
+  "venues": [
+    {
+      "id": "venue-hifi",
+      "name": "The Hi-Fi",
+      "website": "thehifi.example",
+      "lat": 39.7684,
+      "lng": -86.1581,
+      "placeId": "ChIJhifi",
+      "timezone": "America/Indiana/Indianapolis"
+    },
+    {
+      "id": "venue-annex",
+      "artistName": "HI-FI Annex",
+      "websiteUrl": "https://user:pw@thehifi.example/annex",
+      "lat": "39.7690",
+      "lng": "-86.1585",
+      "place_id": "ChIJhifi",
+      "timezone": "Not/AZone"
+    },
+    { "id": "venue-nogeo", "username": "nogeo", "lat": 0, "lng": 0, "website": "mailto:hi@example.test" },
+    { "name": "missing id is skipped" },
+    "not an object"
+  ]
+}

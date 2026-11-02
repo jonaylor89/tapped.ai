@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>This Week in Indy Music | Indy Weekly</title>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "WebPage", "name": "This Week in Indy Music" },
+      {
+        "@type": "MusicEvent",
+        "name": "Local Band Night",
+        "startDate": "2026-11-06T20:00",
+        "location": {
+          "@type": "Place",
+          "name": "Melody Inn",
+          "address": { "@type": "PostalAddress", "streetAddress": "3826 N Illinois St", "addressLocality": "Indianapolis", "addressRegion": "IN" },
+          "url": "/venues/melody-inn"
+        }
+      },
+      {
+        "@type": "MusicEvent",
+        "name": "Healer Showcase",
+        "startDate": "2026-11-07T21:00",
+        "location": {
+          "@type": "Place",
+          "name": "Healer",
+          "address": "1101 E 16th St, Indianapolis, IN",
+          "geo": { "@type": "GeoCoordinates", "latitude": "39.7741", "longitude": "-86.1338" },
+          "url": "https://healerindy.com/"
+        }
+      },
+      {
+        "@type": ["Event", "ComedyEvent"],
+        "name": "Late Night Laughs",
+        "startDate": "2026-11-08T22:00",
+        "location": [{ "@type": "Place", "name": "Healer", "url": "https://healerindy.com/" }]
+      },
+      {
+        "@type": "MusicEvent",
+        "name": "Arena Tour 2026",
+        "startDate": "2026-11-09T19:00",
+        "location": { "@type": "Place", "name": "Gainbridge Fieldhouse", "url": "https://www.ticketmaster.com/gainbridge-fieldhouse-tickets/venue/123" },
+        "offers": { "@type": "Offer", "url": "https://www.ticketmaster.com/event/abc" }
+      },
+      {
+        "@type": "Event",
+        "name": "Livestream Session",
+        "startDate": "2026-11-10T19:00",
+        "location": { "@type": "VirtualLocation", "url": "https://example.org/stream" }
+      },
+      {
+        "@type": "Event",
+        "name": "Mystery Show",
+        "startDate": "2026-11-11T19:00",
+        "location": "TBA"
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <h1>This Week in Indy Music</h1>
+  <div itemscope itemtype="https://schema.org/MusicEvent">
+    <h2 itemprop="name">Vinyl Night</h2>
+    <time itemprop="startDate" datetime="2026-11-12T19:00">Nov 12, 7pm</time>
+    <div itemprop="location" itemscope itemtype="https://schema.org/Place">
+      <a itemprop="url" href="https://squarecatvinyl.com"><span itemprop="name">Square Cat Vinyl</span></a>
+      <span itemprop="address">1054 Virginia Ave, Indianapolis</span>
+    </div>
+  </div>
+</body>
+</html>

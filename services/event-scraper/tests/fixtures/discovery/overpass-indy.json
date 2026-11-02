@@ -1,0 +1,51 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62",
+  "osm3s": { "timestamp_osm_base": "2026-11-01T00:00:00Z" },
+  "elements": [
+    {
+      "type": "node",
+      "id": 1001,
+      "lat": 39.75709,
+      "lon": -86.14318,
+      "tags": {
+        "amenity": "nightclub",
+        "name": "Mercury Room",
+        "addr:housenumber": "412",
+        "addr:street": "Shelby Street",
+        "addr:city": "Indianapolis",
+        "website": "https://mercuryroomindy.com"
+      }
+    },
+    {
+      "type": "way",
+      "id": 2002,
+      "center": { "lat": 39.76841, "lon": -86.15532 },
+      "tags": { "amenity": "theatre", "name": "Murat Theatre", "theatre:type": "concert_hall" }
+    },
+    {
+      "type": "node",
+      "id": 1003,
+      "lat": 39.77001,
+      "lon": -86.13002,
+      "tags": {
+        "amenity": "bar",
+        "live_music": "yes",
+        "name": "Radio Radio",
+        "contact:website": "radioradioindy.com;https://facebook.com/radioradio"
+      }
+    },
+    {
+      "type": "node",
+      "id": 1004,
+      "lat": 39.77101,
+      "lon": -86.13102,
+      "tags": { "amenity": "nightclub" }
+    },
+    {
+      "type": "relation",
+      "id": 3005,
+      "tags": { "amenity": "arts_centre", "name": "No Center Arts" }
+    }
+  ]
+}

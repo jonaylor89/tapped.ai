@@ -1,0 +1,38 @@
+{
+  "events": [
+    {
+      "id": 4840,
+      "url": "https://www.saltshedmusic.com/event/cancelled-the-hold-steady/",
+      "title": "CANCELLED: The Hold Steady",
+      "description": "<p>Refunds at point of purchase.</p>",
+      "all_day": false,
+      "start_date": "2026-11-20 20:00:00",
+      "end_date": "2026-11-20 23:00:00",
+      "utc_start_date": "2026-11-21 02:00:00",
+      "utc_end_date": "2026-11-21 05:00:00",
+      "timezone": "America/Chicago",
+      "cost": "$35",
+      "cost_details": { "currency_symbol": "$", "values": ["35"] },
+      "categories": [{ "name": "Concerts", "slug": "concerts" }]
+    },
+    {
+      "id": 4851,
+      "url": "https://www.saltshedmusic.com/event/vinyl-night/",
+      "title": "Vinyl Night w/ DJ Sadie &amp; Friends",
+      "description": "",
+      "all_day": false,
+      "start_date": "2026-11-21 21:00:00",
+      "end_date": "2026-11-22 02:00:00",
+      "utc_start_date": "2026-11-21 21:00:00",
+      "utc_end_date": "2026-11-22 02:00:00",
+      "timezone": "UTC+0",
+      "cost": "$10 adv / $15 door",
+      "cost_details": { "currency_symbol": "$", "values": ["10", "15"] },
+      "categories": [{ "name": "DJ Nights", "slug": "dj" }]
+    }
+  ],
+  "rest_url": "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events/?page=2&per_page=3",
+  "previous_rest_url": "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events/?page=1&per_page=3",
+  "total": 5,
+  "total_pages": 2
+}

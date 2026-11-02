@@ -1,0 +1,44 @@
+{
+  "places": [
+    {
+      "id": "ChIJ_MELODY_INN",
+      "displayName": { "text": "Melody Inn", "languageCode": "en" },
+      "types": ["bar", "live_music_venue", "point_of_interest", "establishment"],
+      "primaryType": "bar",
+      "formattedAddress": "3826 N Illinois St, Indianapolis, IN 46208, USA",
+      "location": { "latitude": 39.82601, "longitude": -86.16012 },
+      "websiteUri": "https://indyvenuegroup.com/melody-inn",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_DOME_ROOM",
+      "displayName": { "text": "The Dome Room", "languageCode": "en" },
+      "types": ["night_club", "point_of_interest", "establishment"],
+      "primaryType": "night_club",
+      "formattedAddress": "3830 N Illinois St, Indianapolis, IN 46208, USA",
+      "location": { "latitude": 39.82632, "longitude": -86.16018 },
+      "websiteUri": "https://www.indyvenuegroup.com/dome-room",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_EMERSON",
+      "displayName": { "text": "The Emerson Theater", "languageCode": "en" },
+      "types": ["performing_arts_theater", "point_of_interest", "establishment"],
+      "primaryType": "performing_arts_theater",
+      "formattedAddress": "4630 E 10th St, Indianapolis, IN 46201, USA",
+      "location": { "latitude": 39.78152, "longitude": -86.08731 },
+      "websiteUri": "https://emersontheater.com/",
+      "businessStatus": "OPERATIONAL"
+    },
+    {
+      "id": "ChIJ_MERCURY_BIZ",
+      "displayName": { "text": "The Mercury Room", "languageCode": "en" },
+      "types": ["live_music_venue", "night_club", "bar", "point_of_interest", "establishment"],
+      "primaryType": "live_music_venue",
+      "formattedAddress": "412 Shelby St, Indianapolis, IN 46203, USA",
+      "location": { "latitude": 39.75712, "longitude": -86.14321 },
+      "websiteUri": "https://www.mercuryroomindy.com/",
+      "businessStatus": "OPERATIONAL"
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+[
+  {
+    "id": "104998001",
+    "artist_id": "123",
+    "url": "https://www.bandsintown.com/e/104998001",
+    "datetime": "2026-11-14T20:00:00",
+    "title": "",
+    "lineup": ["The Example Band"],
+    "venue": {
+      "name": "Healer",
+      "latitude": "39.7741",
+      "longitude": "-86.1338",
+      "city": "Indianapolis",
+      "region": "IN",
+      "country": "United States"
+    }
+  },
+  {
+    "id": "104998002",
+    "url": "https://www.bandsintown.com/e/104998002",
+    "datetime": "2026-11-20T21:00:00",
+    "lineup": ["The Example Band"],
+    "venue": {
+      "name": "Empty Bottle",
+      "latitude": "41.9001",
+      "longitude": "-87.6866",
+      "city": "Chicago",
+      "region": "IL",
+      "country": "United States"
+    }
+  },
+  { "id": "bad", "datetime": "2026-11-21T21:00:00", "venue": {} }
+]

@@ -4,6 +4,7 @@
   "workspaces": [
     "apps/*",
     "services/event-crawler",
+    "services/event-scraper",
     "services/ticket-crawler",
     "packages/*"
   ],
