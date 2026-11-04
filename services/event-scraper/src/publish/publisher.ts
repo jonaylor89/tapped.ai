@@ -36,6 +36,7 @@ import {
   stableStringify,
 } from "../db.js";
 import type { EventStatus, OutboxItem, Publisher, PublishOutcome, ValidatedEvent } from "../types.js";
+import { findKnownEvent } from "./known-events.js";
 
 /** Observation namespace in production (`scrape_results.source`). Distinct from the retired "event-crawler". */
 export const OBSERVATION_SOURCE = "event-scraper";
@@ -378,6 +379,8 @@ export interface PublishRunResult {
   considered: number;
   published: number;
   skipped: number;
+  /** Rows dropped (marked done, never sent) because another crawler's event in production already covers them. */
+  alreadyInProduction: number;
   failed: number;
   /** Failed rows that just hit maxAttempts and will no longer be retried automatically. */
   exhausted: number;
@@ -402,6 +405,7 @@ export async function publishOutbox(
     considered: pending.length,
     published: 0,
     skipped: 0,
+    alreadyInProduction: 0,
     failed: 0,
     exhausted: 0,
   };
@@ -411,8 +415,22 @@ export async function publishOutbox(
   };
   const failures: { outboxId: number; message: string }[] = [];
 
-  for (let i = 0; i < pending.length; i += batchSize) {
-    const batch = pending.slice(i, i + batchSize);
+  // Queued before the last known-events sync: never send an event another crawler already put in production. Matches
+  // of this scraper's own earlier deliveries are sent (idempotent updates of the same production event).
+  const duplicates: number[] = [];
+  const toSend = pending.filter((item) => {
+    const known = findKnownEvent(db, item.event);
+    if (!known || known.origin === OBSERVATION_SOURCE) return true;
+    duplicates.push(item.id);
+    return false;
+  });
+  if (duplicates.length) {
+    markOutboxPublished(db, duplicates, now());
+    result.alreadyInProduction = duplicates.length;
+  }
+
+  for (let i = 0; i < toSend.length; i += batchSize) {
+    const batch = toSend.slice(i, i + batchSize);
     let outcomes: PublishOutcome[];
     try {
       outcomes = await publisher.publish(batch, evidence);

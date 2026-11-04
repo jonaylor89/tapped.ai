@@ -200,6 +200,7 @@ describe("cli", () => {
       sleep: async () => controller.abort(),
       llm: null,
       venueSnapshot: null,
+      knownEvents: { query: async () => ({ rows: [] }) },
     };
     const quiet = { stdout: () => {}, stderr: () => {} };
     const db = openDb(env.EVENT_SCRAPER_DB);

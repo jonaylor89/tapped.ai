@@ -82,6 +82,7 @@ describe("end to end (offline)", () => {
       bandsintown: null,
       llm: null,
       venueSnapshot: null,
+      knownEvents: { query: async () => ({ rows: [] }) },
       clock,
       sleep: async () => {},
     };

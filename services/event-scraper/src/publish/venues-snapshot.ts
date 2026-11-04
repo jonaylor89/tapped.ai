@@ -37,17 +37,17 @@ export interface ReadOnlyQueryable {
 }
 
 /** Opens one connection per pull, inside a READ ONLY transaction, and always disconnects. */
-export function readOnlyPostgres(connectionString: string): ReadOnlyQueryable {
+export function readOnlyPostgres(connectionString: string, label = "venue-snapshot"): ReadOnlyQueryable {
   return {
     async query(sql: string) {
       const client = new pg.Client({
         connectionString,
         connectionTimeoutMillis: 10_000,
         statement_timeout: 60_000,
-        application_name: "event-scraper-venue-snapshot",
+        application_name: `event-scraper-${label}`,
       });
       // Never log raw pg errors or the connection string; they may contain credentials.
-      client.on("error", () => console.error("Venue snapshot connection failed"));
+      client.on("error", () => console.error(`Read-only ${label} connection failed`));
       try {
         await client.connect();
         await client.query("BEGIN READ ONLY");
@@ -55,7 +55,7 @@ export function readOnlyPostgres(connectionString: string): ReadOnlyQueryable {
         await client.query("COMMIT");
         return { rows: result.rows as Record<string, unknown>[] };
       } catch {
-        throw new Error("Venue snapshot query failed");
+        throw new Error(`Read-only ${label} query failed`);
       } finally {
         await client.end().catch(() => undefined);
       }

@@ -248,6 +248,25 @@ CREATE TABLE host_slots (
 );
 `,
   },
+  {
+    version: 3,
+    name: "known_events",
+    sql: `
+-- Events production Postgres already has (any crawler). Replaced wholesale by every sync; an incoming event matching
+-- one of these is never stored, reconciled or published.
+CREATE TABLE known_events (
+  origin TEXT NOT NULL,
+  origin_key TEXT NOT NULL,
+  venue_id TEXT,
+  start_utc TEXT NOT NULL,
+  norm_title TEXT NOT NULL,
+  url_key TEXT,
+  PRIMARY KEY (origin, origin_key)
+);
+CREATE INDEX known_events_venue_start ON known_events(venue_id, start_utc);
+CREATE INDEX known_events_url ON known_events(url_key) WHERE url_key IS NOT NULL;
+`,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
@@ -1546,4 +1565,63 @@ export function pruneOutbox(db: Db, options: { publishedBefore: number; pendingB
 
 export function markOutboxFailed(db: Db, id: number, error: string): void {
   run(db, "UPDATE publish_outbox SET attempts=attempts+1, last_error=? WHERE id=?", error.slice(0, 2000), id);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Events production already has (synced read-only from Postgres); see src/publish/known-events.ts
+// ---------------------------------------------------------------------------------------------------------------------
+
+export const KNOWN_EVENTS_SYNCED_KEY = "known_events:synced_at";
+
+export interface KnownEventRow {
+  origin: string;
+  originKey: string;
+  venueId: string | null;
+  startUtc: string;
+  normTitle: string;
+  urlKey: string | null;
+}
+
+/** Replaces the whole known-events set in one transaction and stamps the sync time. */
+export function replaceKnownEvents(db: Db, rows: KnownEventRow[], now: number = Date.now()): number {
+  return transaction(db, () => {
+    run(db, "DELETE FROM known_events");
+    const insert = db.prepare(
+      "INSERT OR REPLACE INTO known_events (origin,origin_key,venue_id,start_utc,norm_title,url_key) VALUES (?,?,?,?,?,?)",
+    );
+    for (const r of rows) insert.run(r.origin, r.originKey, r.venueId, r.startUtc, r.normTitle, r.urlKey);
+    setKv(db, KNOWN_EVENTS_SYNCED_KEY, String(now), now);
+    return Number((one(db, "SELECT COUNT(*) AS n FROM known_events") as Row).n);
+  });
+}
+
+/** Epoch ms of the last known-events sync, or null when never synced. */
+export function knownEventsSyncedAt(db: Db): number | null {
+  const value = Number(getKv(db, KNOWN_EVENTS_SYNCED_KEY));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+export function knownEventsByVenue(db: Db, venueId: string, fromUtc: string, toUtc: string): KnownEventRow[] {
+  return all(
+    db,
+    "SELECT * FROM known_events WHERE venue_id=? AND start_utc>=? AND start_utc<=?",
+    venueId,
+    fromUtc,
+    toUtc,
+  ).map(toKnownEvent);
+}
+
+export function knownEventsByUrl(db: Db, urlKey: string): KnownEventRow[] {
+  return all(db, "SELECT * FROM known_events WHERE url_key=?", urlKey).map(toKnownEvent);
+}
+
+function toKnownEvent(row: Row): KnownEventRow {
+  return {
+    origin: String(row.origin),
+    originKey: String(row.origin_key),
+    venueId: strOrNull(row.venue_id),
+    startUtc: String(row.start_utc),
+    normTitle: String(row.norm_title),
+    urlKey: strOrNull(row.url_key),
+  };
 }

@@ -14,6 +14,7 @@ import {
   transaction,
   upsertEvent,
 } from "../db.js";
+import { findKnownEvent } from "../publish/known-events.js";
 import type { Alert, ChangeKind, Source, StoredEvent, ValidatedEvent } from "../types.js";
 import { addDays, dateOf, localDate } from "../validate/time.js";
 import { identityBase } from "./identity.js";
@@ -49,6 +50,11 @@ export interface ReconcileOptions {
   pastGraceDays?: number;
   /** Queue observations in publish_outbox. Default true. */
   enqueue?: boolean;
+  /**
+   * Drop new events that production Postgres already has (`known_events`, see publish/known-events.ts): they are not
+   * stored, reconciled or published. Default true.
+   */
+  skipKnown?: boolean;
   /** Update consecutiveZeroResults / lastEventCount / maxEventCount in fetch_state. Default true. */
   updateFetchState?: boolean;
 }
@@ -62,13 +68,29 @@ export interface ReconcileChange {
 
 export interface ReconcileResult {
   changes: ReconcileChange[];
-  counts: Record<ChangeKind, number> & { missed: number; expired: number; outsideWindow: number };
+  counts: Record<ChangeKind, number> & {
+    missed: number;
+    expired: number;
+    outsideWindow: number;
+    /** New events dropped because production already has them. */
+    alreadyInProduction: number;
+  };
   zeroResults: boolean;
   alert: Alert | null;
 }
 
 function emptyCounts(): ReconcileResult["counts"] {
-  return { new: 0, updated: 0, unchanged: 0, canceled: 0, reappeared: 0, missed: 0, expired: 0, outsideWindow: 0 };
+  return {
+    new: 0,
+    updated: 0,
+    unchanged: 0,
+    canceled: 0,
+    reappeared: 0,
+    missed: 0,
+    expired: 0,
+    outsideWindow: 0,
+    alreadyInProduction: 0,
+  };
 }
 
 /** True when the stored event's local date is before `today - graceDays` in its timezone. */
@@ -125,6 +147,7 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
   const cancelAfter = Math.max(1, options.cancelAfterMisses ?? 2);
   const grace = options.pastGraceDays ?? 1;
   const enqueue = options.enqueue ?? true;
+  const skipKnown = options.skipKnown ?? true;
   const today = localDate(now, source.timezone);
   const result: ReconcileResult = { changes: [], counts: emptyCounts(), zeroResults: false, alert: null };
 
@@ -211,6 +234,10 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
     for (const event of incoming.values()) {
       const existing = getEventByIdentity(db, source.id, event.identityKey);
       const siteCanceled = event.status === "canceled";
+      if (!existing && skipKnown && findKnownEvent(db, event)) {
+        result.counts.alreadyInProduction++;
+        continue;
+      }
       if (!existing) {
         const stored = upsertEvent(db, event, {
           status: siteCanceled ? "canceled" : "active",

@@ -834,6 +834,7 @@ describe("finding: housekeeping only ran in loop mode; standalone mode filled th
       sleep: async () => {},
       llm: null,
       venueSnapshot: null,
+      knownEvents: { query: async () => ({ rows: [] }) },
     };
     const quiet = { stdout: () => {}, stderr: () => {} };
     const setupDb = openDb(env.EVENT_SCRAPER_DB);

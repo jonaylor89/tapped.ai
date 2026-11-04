@@ -11,6 +11,7 @@
  *   export-candidates   write the human review list (promoted + needs_review) as JSON and CSV
  *   add-source          register a calendar/iCal/listing URL for a venue (or from a promoted candidate)
  *   import-venues       pull the read-only venue snapshot (file or read-only Postgres) into SQLite
+ *   import-known-events pull the events production already has (read-only Postgres or file) into SQLite
  *   status              counts of sources, jobs, candidates, open alerts
  */
 import { realpathSync } from "node:fs";
@@ -48,8 +49,15 @@ import { seedKnownVenues } from "./discovery/seed.js";
 import { runDiscovery } from "./discovery-runner.js";
 import { createHttpClient } from "./fetch.js";
 import { llmClientFromEnv } from "./llm/openai.js";
+import { importKnownEventsFile, knownEventsProblem, syncKnownEvents } from "./publish/known-events.js";
 import { NdjsonPublisher, PostgresIngestionPublisher, publishOutbox } from "./publish/publisher.js";
-import { JsonFileVenueSnapshot, syncVenueSnapshot, venueSnapshotFromEnv } from "./publish/venues-snapshot.js";
+import {
+  JsonFileVenueSnapshot,
+  type ReadOnlyQueryable,
+  readOnlyPostgres,
+  syncVenueSnapshot,
+  venueSnapshotFromEnv,
+} from "./publish/venues-snapshot.js";
 import {
   createLlmExtractor,
   dailyLlmBudget,
@@ -86,6 +94,8 @@ export interface Services {
   bandsintown: BandsintownClient | null;
   publisher: Publisher | null;
   venueSnapshot: VenueSnapshotSource | null;
+  /** Read-only Postgres for the events production already has (VENUE_SNAPSHOT_DATABASE_URL). */
+  knownEvents: ReadOnlyQueryable | null;
   clock: Clock;
   sleep: Sleep;
 }
@@ -128,6 +138,9 @@ export function buildServices(
       return new NdjsonPublisher(config.publish.dryRunPath);
     }),
     venueSnapshot: lazy("venueSnapshot", () => venueSnapshotFromEnv(env, clock)),
+    knownEvents: lazy("knownEvents", () =>
+      env.VENUE_SNAPSHOT_DATABASE_URL ? readOnlyPostgres(env.VENUE_SNAPSHOT_DATABASE_URL, "known-events") : null,
+    ),
   };
 }
 
@@ -153,6 +166,7 @@ Commands:
              [--timezone IANA] [--label TEXT]
   add-source --candidate ID [--venue ID]      (register a reviewed, promoted candidate's proven source)
   import-venues [--file venues.json]
+  import-known-events [--file events.json]   (events production already has; refreshed automatically when stale)
   seed-venues --city NAME                     (send known venues in a city through find-source -> prove)
   status
 
@@ -415,6 +429,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
     "export-candidates",
     "add-source",
     "import-venues",
+    "import-known-events",
     "seed-venues",
     "status",
   ];
@@ -451,9 +466,29 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         { ...discoveryOptions(config), city: city ?? null, skipProve },
       );
     const publisher = values["no-publish"] ? null : services.publisher;
+    /**
+     * Scraping and publishing never run without a fresh copy (< 24h) of the events production already has, so no
+     * event already in Postgres is scraped or sent again. Refreshed from read-only Postgres when configured.
+     * EVENT_SCRAPER_KNOWN_EVENTS=off is honored only when nothing can reach production (publish mode not postgres).
+     */
+    const ensureKnownEvents = async () => {
+      if (env.EVENT_SCRAPER_KNOWN_EVENTS === "off" && config.publish.mode !== "postgres") return;
+      const now = clock.now().getTime();
+      const problem = knownEventsProblem(db, now);
+      if (!problem) return;
+      if (services.knownEvents) {
+        log("known_events_synced", { ...(await syncKnownEvents(db, services.knownEvents, now)) });
+        return;
+      }
+      throw new UsageError(
+        `Events already in production are ${problem === "stale" ? "stale (older than 24h)" : "not synced"}. ` +
+          "Set VENUE_SNAPSHOT_DATABASE_URL (read-only) or run import-known-events --file FILE first.",
+      );
+    };
 
     switch (command) {
       case "run-once": {
+        await ensureKnownEvents();
         const run = await runOnce(
           { db, http: services.http, llm: services.llm, clock, log },
           runnerOptions(config, positiveInt(values["max-jobs"], "max-jobs")),
@@ -468,6 +503,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         let lastPublish = 0;
         let lastDiscover = 0;
         while (!signal.aborted) {
+          await ensureKnownEvents();
           const run = await runOnce({ db, http: services.http, llm: services.llm, clock, log }, runnerOptions(config));
           if (run.processed) log("run_once", { processed: run.processed, ...run.totals });
           const now = clock.now().getTime();
@@ -524,6 +560,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
           print({ publish: null, message: "publishing is off (EVENT_SCRAPER_PUBLISH=off)" });
           return 0;
         }
+        await ensureKnownEvents();
         const limit = positiveInt(values.limit, "limit");
         const published = await publishOutbox(db, publisher, {
           limit,
@@ -555,6 +592,18 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         if (!city)
           throw new Error(`seed-venues needs --city with one of: ${config.cities.map((c) => c.name).join(", ")}`);
         print(seedKnownVenues(db, city, clock.now().getTime()));
+        return 0;
+      }
+      case "import-known-events": {
+        const now = clock.now().getTime();
+        if (values.file) {
+          print(importKnownEventsFile(db, resolve(values.file), now));
+          return 0;
+        }
+        if (!services.knownEvents) {
+          throw new UsageError("No read-only Postgres configured: pass --file or set VENUE_SNAPSHOT_DATABASE_URL");
+        }
+        print(await syncKnownEvents(db, services.knownEvents, now));
         return 0;
       }
       case "import-venues": {

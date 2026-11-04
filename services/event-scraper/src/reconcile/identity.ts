@@ -57,7 +57,7 @@ function stripTrackingParams(url: string): string {
   }
 }
 
-function urlKey(url: string | null | undefined): string | null {
+export function urlKey(url: string | null | undefined): string | null {
   if (!url) return null;
   const canonical = canonicalUrl(url);
   return canonical ? stripTrackingParams(canonical) : null;
