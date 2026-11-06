@@ -49,6 +49,7 @@ import { proveCandidate } from "./discovery/prove.js";
 import { syncVenuePlaceAliases } from "./discovery/resolve.js";
 import { seedKnownVenues } from "./discovery/seed.js";
 import { runDiscovery } from "./discovery-runner.js";
+import { parseRoutes } from "./extract/routes.js";
 import { createHttpClient } from "./fetch.js";
 import { importSqlite } from "./import-sqlite.js";
 import { llmClientFromEnv } from "./llm/openai.js";
@@ -154,7 +155,7 @@ Commands:
   prove <candidateId>
   publish [--limit N]
   export-candidates [--out DIR] [--status promoted,needs_review]
-  add-source --url URL (--venue ID | --listing) [--kind html|ical|wp_tribe|squarespace|listing]
+  add-source --url URL (--venue ID | --listing | --kind multi_venue --route KEY=VENUE_ID|ignore ...) [--kind html|ical|wp_tribe|squarespace|listing]
              [--timezone IANA] [--label TEXT]
   add-source --candidate ID [--venue ID]      (register a reviewed, promoted candidate's proven source)
   import-venues [--file venues.json]
@@ -181,6 +182,7 @@ const OPTIONS = {
   kind: { type: "string" },
   timezone: { type: "string" },
   label: { type: "string" },
+  route: { type: "string", multiple: true },
   candidate: { type: "string" },
   file: { type: "string" },
   help: { type: "boolean", short: "h" },
@@ -337,7 +339,15 @@ async function addSourceCommand(db: Db, values: Record<string, unknown>, clock: 
   const kind = ((values.kind as string | undefined) ?? (values.listing ? "listing" : "html")) as SourceKind;
   if (!SOURCE_KINDS.includes(kind)) throw new UsageError(`--kind must be one of ${SOURCE_KINDS.join(", ")}`);
   const venueId = (values.venue as string | undefined) ?? null;
-  if (!venueId && kind !== "listing") throw new UsageError("--venue is required (or --listing for a city listing)");
+  const venueRoutes = kind === "multi_venue" ? parseRoutes((values.route as string[] | undefined) ?? []) : null;
+  if (kind === "multi_venue" && !Object.keys(venueRoutes ?? {}).length)
+    throw new UsageError("--kind multi_venue needs --route KEY=VENUE_ID or --route KEY=ignore for each venue");
+  if (kind === "multi_venue" && venueId) throw new UsageError("A multi-venue source has routes; omit --venue");
+  for (const target of Object.values(venueRoutes ?? {}))
+    if (target && !(await getVenue(db, target as string)))
+      throw new UsageError(`Unknown venue ${target}; run import-venues first`);
+  if (!venueId && kind !== "listing" && kind !== "multi_venue")
+    throw new UsageError("--venue is required (or --listing for a city listing)");
   if (venueId && kind === "listing") throw new UsageError("Listing sources cover many venues; omit --venue");
   const venue = venueId ? await getVenue(db, venueId) : null;
   if (venueId && !venue) throw new UsageError(`Unknown venue ${venueId}; run import-venues first`);
@@ -347,6 +357,7 @@ async function addSourceCommand(db: Db, values: Record<string, unknown>, clock: 
     db,
     {
       venueId,
+      venueRoutes,
       kind,
       url,
       timezone,

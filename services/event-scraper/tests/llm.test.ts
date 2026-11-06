@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import { LlmError, llmClientFromEnv, OpenAiCompatibleClient } from "../src/llm/openai.js";
 import { buildEventPrompt, EVENT_LIST_SCHEMA, extractEventsWithLlm, parseLlmEvents } from "../src/llm/prompt.js";
-import { chunkText, cleanPageText, pageToText } from "../src/llm/text.js";
+import { chunkItems, chunkText, cleanPageText, pageToText } from "../src/llm/text.js";
 import type { ExtractContext, LlmClient, LlmJsonRequest, LlmJsonResponse, Page, Source } from "../src/types.js";
 import { validateEvents } from "../src/validate/validate.js";
 
@@ -14,6 +14,7 @@ const NOW = new Date("2026-11-02T15:00:00Z");
 
 const SOURCE: Source = {
   id: "src-1",
+  venueRoutes: null,
   venueId: "venue-1",
   kind: "html",
   url: "https://example-room.test/shows",
@@ -87,6 +88,15 @@ describe("page text", () => {
 
   test("non-HTML passes through", () => {
     assert.equal(cleanPageText("BEGIN:VCALENDAR\r\nEND:VCALENDAR", "text/calendar"), "BEGIN:VCALENDAR\nEND:VCALENDAR");
+  });
+
+  test("chunkItems keeps each listing item whole and limits items per chunk", () => {
+    const items = Array.from({ length: 30 }, (_, i) => `Show ${i}\nNovember ${i + 1}, 2026`);
+    const chunks = chunkItems(items.join("\n---\n"), { maxItems: 12 });
+    assert.equal(chunks.length, 3);
+    const all = chunks.join("\n");
+    for (let i = 0; i < 30; i++) assert.ok(all.includes(`Show ${i}\nNovember ${i + 1}, 2026`), `item ${i}`);
+    assert.deepEqual(chunkItems("no separators"), ["no separators"]);
   });
 
   test("chunkText splits on lines with overlap and caps chunk count", () => {

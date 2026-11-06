@@ -594,6 +594,12 @@ export function validateEvents(events: ExtractedEvent[], ctx: ValidateContext): 
     seen.add(outcome.event.identityKey);
     out.valid.push(outcome.event);
   }
+  // A page can show one event in two views, only one of them with a time. The timed copy is the event.
+  const dayKey = (event: ValidatedEvent) => `${normalizeTitle(event.title)}|${event.startLocal.slice(0, 10)}`;
+  const timed = new Set(out.valid.filter((event) => event.datePrecision === "instant").map(dayKey));
+  const kept = out.valid.filter((event) => event.datePrecision === "instant" || !timed.has(dayKey(event)));
+  out.duplicates += out.valid.length - kept.length;
+  out.valid = kept;
   return out;
 }
 

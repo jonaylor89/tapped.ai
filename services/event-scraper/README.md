@@ -127,6 +127,25 @@ production event. Legacy rows stay in place: 333,933 bookings link to them throu
   per UTC day across all runs and processes (`EVENT_SCRAPER_LLM_MAX_PAGES`, counted in Postgres), uses a strict JSON schema with venue timezone + "today" context, and every
   evidence quote must appear verbatim in the page text or the event is rejected.
 
+- **Big pages** go to the LLM about 12 listings at a time, three requests at once. If any batch fails, the page fails and
+  is retried, so a run never stores part of a calendar. Pages with a repeatable layout should get their own extractor
+  instead: `aeg` (AEG events JSON), `rhp` (RHP WordPress cards) and `webflow_shows` (Webflow show cards) use no LLM.
+- **Two views of one event:** a copy with no time is dropped when the same page lists that title on that day with a time.
+- **Nothing valid on a page:** if a page lists events and every one is rejected for a reason other than being past,
+  non-music or deliberately ignored, the run raises `all_rejected` and keeps no content hash, so the page is read again.
+
+## Multi-venue calendars
+
+Some venue groups publish one calendar for all their rooms (The Broadberry's covers about a dozen, including venues in
+other states). A `multi_venue` source has no venue of its own. Each event carries the venue key from its card, and
+`--route` decides where it goes:
+
+- `--route the-broadberry-2=VENUE_ID` assigns those shows to that Tapped venue.
+- `--route the-camel=ignore` drops them, for rooms out of scope or with a better source of their own.
+- A key with no route, or a card with no venue, is held back and raises `unrouted_venue`. Nothing is guessed.
+
+Events are validated per venue and reconciled per source. Each event keeps its own venue id through to publishing.
+
 ## Commands
 
 From `services/event-scraper` after `pnpm --filter @tapped/postgres-ingestion build && pnpm --filter
@@ -137,6 +156,7 @@ From `services/event-scraper` after `pnpm --filter @tapped/postgres-ingestion bu
 | `import-venues [--file venues.json]` | Pull the read-only venue snapshot (file, or `VENUE_SNAPSHOT_*`) and register place-id aliases |
 | `import-sqlite FILE` | One-off: copy an old SQLite state file into the schema. Existing rows win |
 | `add-source --venue ID --url URL [--kind html\|ical\|wp_tribe\|squarespace] [--timezone IANA] [--label TEXT]` | Register a venue's calendar URL (timezone defaults to the venue's) |
+| `add-source --kind multi_venue --url URL --timezone IANA --route KEY=VENUE_ID [--route KEY=ignore ...]` | Register one calendar that covers several venues (see below) |
 | `add-source --listing --url URL --timezone IANA` | Register a city listing source (not a ticketing site) |
 | `add-source --candidate ID --venue ID` | After review: register a promoted candidate's proven source for an existing venue |
 | `run-once [--max-jobs N] [--no-publish]` | Fetch every due source once, then drain the outbox |
@@ -227,6 +247,9 @@ Production Postgres has no public port, so reach it through a tunnel over Tailsc
 ssh -N -o ProxyCommand='tailscale nc %h %p' -L 55433:172.18.0.7:5432 root@tapped-prod   # keep this running
 ```
 
+Run scrapes under `caffeinate -i` on a Mac. If the laptop sleeps mid-transaction, Postgres closes the connection after 60
+seconds and that run fails (nothing is half-written).
+
 `172.18.0.7` is the Postgres container's address on the Docker network; check it with
 `docker inspect tapped-postgres-1` if the tunnel can't connect.
 
@@ -267,6 +290,7 @@ Node 22; pass `--disable-warning=ExperimentalWarning`.
 | `src/discovery-runner.ts` | Discovery loop: feed jobs, Places budget, resolve + prove |
 | `src/types.ts` | Shared contract (domain types, extractor + network client interfaces) |
 | `src/db.ts` | Postgres schema, migrations, repositories, leased job queue |
+| `src/extract/rhp.ts`, `src/extract/routes.ts` | Multi-venue calendars: read cards, route each show to its venue |
 | `src/pages.ts` | Raw page storage (R2, or disk for dry runs) |
 | `src/import-sqlite.ts` | One-off import of an old SQLite state file |
 | `sql/` | Production bootstrap and rollback, run by an operator |

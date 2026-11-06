@@ -257,6 +257,21 @@ CREATE TABLE host_slots (
 );
 `,
   },
+  {
+    version: 2,
+    name: "multi_venue_sources",
+    sql: `
+ALTER TABLE sources ADD COLUMN venue_routes JSONB;
+ALTER TABLE sources DROP CONSTRAINT sources_kind_check;
+ALTER TABLE sources ADD CONSTRAINT sources_kind_check
+  CHECK (kind IN ('html','ical','wp_tribe','squarespace','listing','multi_venue'));
+ALTER TABLE sources DROP CONSTRAINT sources_check;
+ALTER TABLE sources ADD CONSTRAINT sources_venue_check CHECK (
+  (kind = 'multi_venue' AND venue_id IS NULL AND venue_routes IS NOT NULL)
+  OR (kind <> 'multi_venue' AND venue_routes IS NULL AND (venue_id IS NOT NULL OR kind = 'listing'))
+);
+`,
+  },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS[MIGRATIONS.length - 1]?.version ?? 0;
@@ -356,9 +371,22 @@ export async function openDb(options: OpenDbOptions): Promise<Db> {
 export async function transaction<T>(db: Db, fn: () => Promise<T>): Promise<T> {
   if (db.tx.getStore()) return fn();
   const client = await db.pool.connect();
+  // Losing the connection mid-transaction (laptop sleep, tunnel restart, idle timeout) fails the next query below. Without
+  // a listener the same error is thrown from the socket and kills the process.
+  let lost: Error | undefined;
+  const onError = (error: Error) => {
+    lost = error;
+  };
+  client.on("error", onError);
   try {
     await client.query("BEGIN");
+    // Waiting for another scraper's transaction is normal, and a long calendar over the tunnel can take minutes. The role's
+    // short timeouts protect production's tables from a stuck query, so they come back as soon as the lock is held.
+    await client.query("SET LOCAL lock_timeout = '5min'");
+    await client.query("SET LOCAL statement_timeout = '5min'");
     await client.query("SELECT pg_advisory_xact_lock(hashtext($1))", [`event-scraper:${db.schema}`]);
+    await client.query("SET LOCAL lock_timeout TO DEFAULT");
+    await client.query("SET LOCAL statement_timeout TO DEFAULT");
     const result = await db.tx.run(client, fn);
     await client.query("COMMIT");
     return result;
@@ -366,7 +394,8 @@ export async function transaction<T>(db: Db, fn: () => Promise<T>): Promise<T> {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
   } finally {
-    client.release();
+    client.off("error", onError);
+    client.release(lost);
   }
 }
 
@@ -504,6 +533,7 @@ function toSource(row: Row): Source {
   return {
     id: str(row.id),
     venueId: strOrNull(row.venue_id),
+    venueRoutes: (row.venue_routes as Record<string, string | null> | null) ?? null,
     kind: str(row.kind) as SourceKind,
     url: str(row.url),
     timezone: str(row.timezone),
@@ -520,16 +550,20 @@ function toSource(row: Row): Source {
 export async function addSource(db: Db, input: NewSource, now: number = Date.now()): Promise<Source> {
   const url = canonicalUrl(input.url);
   if (!url) throw new Error(`Invalid source URL: ${input.url}`);
-  if (input.venueId == null && input.kind !== "listing") throw new Error("Only listing sources may omit venueId");
+  if (input.venueId == null && input.kind !== "listing" && input.kind !== "multi_venue")
+    throw new Error("Only listing and multi-venue sources may omit venueId");
+  if (input.kind === "multi_venue" && (input.venueId != null || !Object.keys(input.venueRoutes ?? {}).length))
+    throw new Error("A multi-venue source has routes instead of a venueId");
   const existing = await getSourceByUrl(db, url);
   if (existing) return existing;
   const id = input.id ?? randomUUID();
   await run(
     db,
-    `INSERT INTO sources (id,venue_id,kind,url,timezone,enabled,label,origin,fetch_interval_ms,created_at,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (url) DO NOTHING`,
+    `INSERT INTO sources (id,venue_id,venue_routes,kind,url,timezone,enabled,label,origin,fetch_interval_ms,created_at,updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT (url) DO NOTHING`,
     id,
     input.venueId,
+    input.venueRoutes ? JSON.stringify(input.venueRoutes) : null,
     input.kind,
     url,
     input.timezone,

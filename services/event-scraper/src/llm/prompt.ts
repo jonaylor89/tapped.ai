@@ -10,7 +10,7 @@ import type {
 } from "../types.js";
 import { parsePriceText } from "../validate/price.js";
 import { localDate, weekdayOf } from "../validate/time.js";
-import { type ChunkOptions, chunkText, cleanPageText } from "./text.js";
+import { chunkItems, cleanPageText, type ItemChunkOptions } from "./text.js";
 
 /**
  * LLM fallback extraction: a strict JSON schema asking for a LIST of events with verbatim evidence quotes, plus the
@@ -105,6 +105,7 @@ export const EVENT_SYSTEM_PROMPT = [
   "You extract upcoming public events from a venue's own website text.",
   "Return every distinct event occurrence listed on the page as one item in `events` (recurring events: one item per listed date).",
   "Rules:",
+  "- Return every event in the text, whatever its date; do not stop early or return only the nearest dates.",
   "- Only use facts written in the text. Never invent titles, dates, times, prices or performers.",
   "- Dates: if the page shows the year use YYYY-MM-DD; if it does not, use --MM-DD. Do not guess the year.",
   "- Times are local venue wall-clock times in 24h HH:mm. Use null when a time is not written.",
@@ -217,7 +218,7 @@ export function parseLlmEvents(data: unknown, extractor = LLM_EXTRACTOR_NAME): E
 // End-to-end helper (clean -> chunk -> prompt -> parse -> merge)
 // ---------------------------------------------------------------------------------------------------------------------
 
-export interface LlmExtractOptions extends ChunkOptions {
+export interface LlmExtractOptions extends ItemChunkOptions {
   maxOutputTokens?: number;
 }
 
@@ -228,6 +229,8 @@ export interface LlmExtractResult {
   outputTokens: number;
   model: string | null;
 }
+
+const CHUNK_CONCURRENCY = 3;
 
 /**
  * Runs the LLM over a page: boilerplate-stripped text, chunked, one structured call per chunk, results merged and
@@ -242,10 +245,10 @@ export async function extractEventsWithLlm(
   const llm: LlmClient | undefined = ctx.llm;
   if (!llm) return result;
   const text = cleanPageText(page.text, page.contentType);
-  const chunks = chunkText(text, options);
+  const chunks = chunkItems(text, options);
   result.chunks = chunks.length;
   const seen = new Set<string>();
-  for (const [index, chunk] of chunks.entries()) {
+  const callChunk = async (chunk: string, index: number) => {
     const request = buildEventRequest(
       {
         venueName: ctx.venue?.name ?? ctx.source.label ?? null,
@@ -258,15 +261,23 @@ export async function extractEventsWithLlm(
       },
       options.maxOutputTokens,
     );
-    const response = await llm.completeJson(request);
-    result.model = response.model;
-    result.inputTokens += response.inputTokens ?? 0;
-    result.outputTokens += response.outputTokens ?? 0;
-    for (const event of parseLlmEvents(response.data)) {
-      const key = `${(event.title ?? "").toLowerCase().replace(/\s+/g, " ")}|${event.start ?? ""}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      result.events.push(event);
+    return llm.completeJson(request);
+  };
+  // A few at a time keeps a long page within reason. Any failed call fails the page: a partial list must not look like
+  // shows were removed.
+  for (let start = 0; start < chunks.length; start += CHUNK_CONCURRENCY) {
+    const batch = chunks.slice(start, start + CHUNK_CONCURRENCY);
+    const responses = await Promise.all(batch.map((chunk, offset) => callChunk(chunk, start + offset)));
+    for (const response of responses) {
+      result.model = response.model;
+      result.inputTokens += response.inputTokens ?? 0;
+      result.outputTokens += response.outputTokens ?? 0;
+      for (const event of parseLlmEvents(response.data)) {
+        const key = `${(event.title ?? "").toLowerCase().replace(/\s+/g, " ")}|${event.start ?? ""}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        result.events.push(event);
+      }
     }
   }
   return result;

@@ -18,6 +18,7 @@ import {
   raiseAlert,
   reserveHostSlot,
   run,
+  transaction,
 } from "../src/db.js";
 import { importSqlite } from "../src/import-sqlite.js";
 import { DiskPageStore } from "../src/pages.js";
@@ -103,6 +104,46 @@ describe("production role", () => {
         .then(() => admin.query("DROP ROLE IF EXISTS tapped_scraper"))
         .finally(() => admin.end());
     }
+  });
+});
+
+describe("writer lock", () => {
+  test("a transaction waits for the lock past the role's timeouts, then gets them back", async () => {
+    const db = await openTestDb();
+    const outside = await one(
+      db,
+      "SELECT current_setting('lock_timeout') AS lock, current_setting('statement_timeout') AS st",
+    );
+    let release: () => void = () => undefined;
+    const holding = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const first = transaction(db, () => holding);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    const second = transaction(db, () =>
+      one(db, "SELECT current_setting('lock_timeout') AS lock, current_setting('statement_timeout') AS st"),
+    );
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    release();
+    await first;
+    assert.deepEqual(await second, outside);
+    await db.close();
+  });
+});
+
+describe("lost connection", () => {
+  test("a connection dropped mid-transaction fails that transaction, not the process, and the next one works", async () => {
+    const db = await openTestDb();
+    await assert.rejects(
+      transaction(db, async () => {
+        const row = await one(db, "SELECT pg_backend_pid() AS pid");
+        await db.pool.query("SELECT pg_terminate_backend($1)", [row?.pid]);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        await one(db, "SELECT 1");
+      }),
+    );
+    assert.equal((await one(db, "SELECT 1 AS ok"))?.ok, 1);
+    await db.close();
   });
 });
 

@@ -264,6 +264,7 @@ export async function proveCandidate(db: Db, candidateId: number, options: Prove
     }
     const source: Source = {
       id: `candidate:${candidateId}`,
+      venueRoutes: null,
       venueId: candidate.matchedVenueId,
       kind: proposal.kind,
       url: proposal.url,

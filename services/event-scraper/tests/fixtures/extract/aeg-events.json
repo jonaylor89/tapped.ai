@@ -1,0 +1,111 @@
+{
+  "meta": {
+    "version": 1
+  },
+  "events": [
+    {
+      "eventId": "1611230",
+      "active": true,
+      "private": false,
+      "publishStatus": 1,
+      "title": {
+        "presentedBy": null,
+        "presentedByText": null,
+        "headliners": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "headlinersText": "The Sword",
+        "supporting": "Hippie Death Cult",
+        "supportingText": "Hippie Death Cult",
+        "tour": null,
+        "eventTitle": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "eventTitleText": "The Sword"
+      },
+      "eventDateTime": "2026-11-07T20:00:00",
+      "eventDateTimeZone": "America/New_York",
+      "eventDateTimeISO": "2026-11-07T20:00:00-05:00",
+      "doorDateTime": "2026-11-07T19:00:00",
+      "ticketing": {
+        "status": "Buy Tickets",
+        "url": "https://www.axs.com/events/1611230/the-sword-tickets"
+      },
+      "description": null
+    },
+    {
+      "eventId": "1566248",
+      "active": true,
+      "private": false,
+      "publishStatus": 1,
+      "title": {
+        "presentedBy": null,
+        "presentedByText": null,
+        "headliners": "<a href=\"/artists/1122126/clara-la-san-tickets\">Clara La San</a>",
+        "headlinersText": "Clara La San",
+        "supporting": "<a href=\"/artists/1122596/sausha-tickets\">Sausha</a>",
+        "supportingText": "Sausha",
+        "tour": "Chosen Silences Tour Fall 2026",
+        "eventTitle": "<a href=\"/artists/1122126/clara-la-san-tickets\">Clara La San</a>",
+        "eventTitleText": "Clara La San"
+      },
+      "eventDateTime": "2026-11-08T19:30:00",
+      "eventDateTimeZone": "America/New_York",
+      "eventDateTimeISO": "2026-11-08T19:30:00-05:00",
+      "doorDateTime": "2026-11-08T18:30:00",
+      "ticketing": {
+        "status": "Buy Tickets",
+        "url": "https://www.axs.com/events/1566248/clara-la-san-tickets"
+      },
+      "description": null
+    },
+    {
+      "eventId": "3",
+      "active": true,
+      "private": true,
+      "publishStatus": 1,
+      "title": {
+        "presentedBy": null,
+        "presentedByText": null,
+        "headliners": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "headlinersText": "The Sword",
+        "supporting": "Hippie Death Cult",
+        "supportingText": "Hippie Death Cult",
+        "tour": null,
+        "eventTitle": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "eventTitleText": "The Sword"
+      },
+      "eventDateTime": "2026-11-07T20:00:00",
+      "eventDateTimeZone": "America/New_York",
+      "eventDateTimeISO": "2026-11-07T20:00:00-05:00",
+      "doorDateTime": "2026-11-07T19:00:00",
+      "ticketing": {
+        "status": "Buy Tickets",
+        "url": "https://www.axs.com/events/1611230/the-sword-tickets"
+      },
+      "description": null
+    },
+    {
+      "eventId": "4",
+      "active": true,
+      "private": false,
+      "publishStatus": 1,
+      "title": {
+        "presentedBy": null,
+        "presentedByText": null,
+        "headliners": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "headlinersText": "The Sword",
+        "supporting": "Hippie Death Cult",
+        "supportingText": "Hippie Death Cult",
+        "tour": null,
+        "eventTitle": "<a href=\"/artists/114671/the-sword-tickets\">The Sword</a>",
+        "eventTitleText": "The Sword"
+      },
+      "eventDateTime": "2027-01-02T20:00:00",
+      "eventDateTimeZone": "America/New_York",
+      "eventDateTimeISO": "2027-01-02T20:00:00-05:00",
+      "doorDateTime": "2026-11-07T19:00:00",
+      "ticketing": {
+        "status": "Canceled",
+        "url": "https://www.axs.com/events/1611230/the-sword-tickets"
+      },
+      "description": null
+    }
+  ]
+}

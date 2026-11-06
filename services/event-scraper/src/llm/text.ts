@@ -216,6 +216,42 @@ export function chunkText(text: string, options: ChunkOptions = {}): string[] {
   return chunks.slice(0, maxChunks);
 }
 
+export interface ItemChunkOptions extends ChunkOptions {
+  /** Max listing items per chunk (default 12). */
+  maxItems?: number;
+}
+
+/**
+ * Splits a listing between its items, so each LLM call covers few enough events to finish in time and be complete: the
+ * model stops early on long lists. Text without at least two item separators falls back to `chunkText`.
+ */
+export function chunkItems(text: string, options: ItemChunkOptions = {}): string[] {
+  const parts = text.split(/^---$/m);
+  if (parts.length < 3) return chunkText(text, options);
+  const maxItems = Math.max(1, options.maxItems ?? 12);
+  const maxChars = Math.max(500, options.maxChars ?? 24_000);
+  const maxChunks = Math.max(1, options.maxChunks ?? 20);
+  const chunks: string[] = [];
+  let current: string[] = [];
+  let size = 0;
+  const flush = () => {
+    if (current.length) chunks.push(current.join(`${ITEM_SEPARATOR}\n`).trim());
+    current = [];
+    size = 0;
+  };
+  for (const part of parts) {
+    if (current.length >= maxItems || (current.length && size + part.length > maxChars)) flush();
+    if (part.length > maxChars) {
+      chunks.push(...chunkText(part, options));
+      continue;
+    }
+    current.push(part.replace(/^\n/, ""));
+    size += part.length;
+  }
+  flush();
+  return chunks.filter(Boolean).slice(0, maxChunks);
+}
+
 // ---------------------------------------------------------------------------------------------------------------------
 // Entity decoding + quote matching normalization
 // ---------------------------------------------------------------------------------------------------------------------

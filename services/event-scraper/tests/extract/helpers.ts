@@ -37,6 +37,7 @@ export function fixturePage(name: string, url: string, contentType?: string | nu
 export function makeSource(url: string, timezone = "America/Chicago"): Source {
   return {
     id: "src-test",
+    venueRoutes: null,
     venueId: "venue-test",
     kind: "html",
     url,

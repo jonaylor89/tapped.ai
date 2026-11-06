@@ -31,7 +31,7 @@ import {
   sha256Hex,
 } from "./db.js";
 import { isTicketingUrl } from "./denylist.js";
-import { type ExtractionResult, extractEvents, pageFromFetch } from "./extract/index.js";
+import { type ExtractionResult, extractEvents, pageFromFetch, routeEvents } from "./extract/index.js";
 import { FetchBlockedError, FetchError } from "./fetch.js";
 import { LlmError } from "./llm/openai.js";
 import { extractEventsWithLlm, LLM_EXTRACTOR_NAME, type LlmExtractOptions } from "./llm/prompt.js";
@@ -492,15 +492,54 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
         );
   result.evidenceSha256 = evidenceSha;
 
-  const validated = validateEvents(extraction.events, {
-    source,
-    venue,
-    timezone: source.timezone,
+  const validationContext = {
     now,
+    timezone: source.timezone,
     pageText: evidencePage.text,
     pageContentType: evidencePage.contentType,
     pageUrl: evidencePage.finalUrl || evidencePage.url,
-  });
+  };
+  let validated: ReturnType<typeof validateEvents> = { valid: [], rejected: [], duplicates: 0 };
+  if (source.kind === "multi_venue") {
+    const routed = routeEvents(source, extraction.events);
+    const unknown = new Map<string, number>(routed.unknown);
+    for (const [venueId, events] of routed.byVenue) {
+      const routedVenue = await getVenue(db, venueId);
+      if (!routedVenue) {
+        unknown.set(`venue:${venueId}`, events.length);
+        continue;
+      }
+      const batch = validateEvents(events, {
+        ...validationContext,
+        source: { ...source, venueId },
+        venue: routedVenue,
+      });
+      validated = {
+        valid: [...validated.valid, ...batch.valid],
+        rejected: [...validated.rejected, ...batch.rejected],
+        duplicates: validated.duplicates + batch.duplicates,
+      };
+    }
+    if (routed.ignored) result.rejectedReasons.route_ignored = routed.ignored;
+    const held = [...unknown.values()].reduce((sum, count) => sum + count, 0);
+    if (held) {
+      result.rejectedReasons.route_unknown = held;
+      await raiseAlert(
+        db,
+        {
+          kind: "unrouted_venue",
+          sourceId: source.id,
+          message: `${held} events held back: no route for ${[...unknown.keys()].map((k) => k || "(no venue)").join(", ")}`,
+          details: { unknown: Object.fromEntries(unknown) },
+        },
+        startedAt,
+      );
+    } else {
+      await resolveAlerts(db, { kind: "unrouted_venue", sourceId: source.id }, startedAt);
+    }
+  } else {
+    validated = validateEvents(extraction.events, { ...validationContext, source, venue });
+  }
   result.valid = validated.valid.length;
   result.rejected = validated.rejected.length;
   for (const rejection of validated.rejected) {
@@ -523,9 +562,30 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   });
   result.reconcile = reconciled.counts;
   result.zeroResults = reconciled.zeroResults;
+  // Everything was thrown out for a reason other than being old or off-topic: the read itself looks wrong. Say so, and
+  // read the page again next time even if it has not changed.
+  const allRejected =
+    extraction.events.length > 0 &&
+    validated.valid.length === 0 &&
+    Object.keys(result.rejectedReasons).some((r) => !["past_event", "category_other", "route_ignored"].includes(r));
+  if (allRejected) {
+    await raiseAlert(
+      db,
+      {
+        kind: "all_rejected",
+        sourceId: source.id,
+        message: `All ${extraction.events.length} extracted events were rejected`,
+        details: { rejected: result.rejectedReasons },
+      },
+      startedAt,
+    );
+  } else {
+    await resolveAlerts(db, { kind: "all_rejected", sourceId: source.id }, startedAt);
+  }
   await saveFetchState(db, source.id, {
     ...success,
     ...validators,
+    ...(allRejected ? { contentHash: null } : {}),
     lastExtractor: extraction.extractor ?? state.lastExtractor,
   });
 
@@ -545,7 +605,11 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   return {
     ...result,
     outcome: "extracted",
-    nextDelayMs: productive ? nextDelay("productive", 0, opts) : nextDelay("unchanged", nextStreak, opts),
+    nextDelayMs: allRejected
+      ? nextDelay("failure", 1, opts)
+      : productive
+        ? nextDelay("productive", 0, opts)
+        : nextDelay("unchanged", nextStreak, opts),
     next: { unchangedStreak: nextStreak, selfContained },
   };
 }

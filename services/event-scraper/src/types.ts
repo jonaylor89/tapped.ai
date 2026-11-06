@@ -26,8 +26,15 @@ export const KEPT_CATEGORIES: readonly KeptCategory[] = ["music", "comedy", "ope
 export type EventStatus = "scheduled" | "canceled" | "postponed" | "rescheduled" | "sold_out";
 
 /** How a source is fetched/parsed. The venue always comes from the source row, never from the URL's domain. */
-export type SourceKind = "html" | "ical" | "wp_tribe" | "squarespace" | "listing";
-export const SOURCE_KINDS: readonly SourceKind[] = ["html", "ical", "wp_tribe", "squarespace", "listing"];
+export type SourceKind = "html" | "ical" | "wp_tribe" | "squarespace" | "listing" | "multi_venue";
+export const SOURCE_KINDS: readonly SourceKind[] = [
+  "html",
+  "ical",
+  "wp_tribe",
+  "squarespace",
+  "listing",
+  "multi_venue",
+];
 
 /** Read-only local snapshot of a production venue (pulled from prod, never written back). */
 export interface Venue {
@@ -46,8 +53,10 @@ export interface Venue {
 
 export interface Source {
   id: string;
-  /** Null only for kind "listing" (city calendars covering many venues). */
+  /** Null only for kinds "listing" (city calendars) and "multi_venue" (see venueRoutes). */
   venueId: string | null;
+  /** multi_venue only: the site's venue key -> Tapped venue id, or null to ignore that key. */
+  venueRoutes: Record<string, string | null> | null;
   kind: SourceKind;
   url: string;
   /** IANA timezone used to interpret local times from this source. */
@@ -72,6 +81,7 @@ export interface NewSource {
   label?: string | null;
   origin?: string;
   fetchIntervalMs?: number;
+  venueRoutes?: Record<string, string | null> | null;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -168,6 +178,8 @@ export interface ExtractedEvent {
   evidence: string[];
   /** Name of the extractor that produced this event. */
   extractor: string;
+  /** The site's own name for this event's venue, for multi-venue calendars. */
+  venueKey?: string | null;
   /** The site's own stable event id (e.g. WP post id, iCal UID), if any. */
   sourceEventId: string | null;
   /** Raw date text as seen on the page, for debugging/year inference. */
@@ -531,6 +543,8 @@ export interface Job<P = Record<string, unknown>> {
 
 export type AlertKind =
   | "zero_results"
+  | "unrouted_venue"
+  | "all_rejected"
   | "fetch_failed"
   | "robots_blocked"
   | "ticketing_blocked"

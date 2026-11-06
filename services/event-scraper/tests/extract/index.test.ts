@@ -9,7 +9,7 @@ describe("extractStructured", () => {
   test("cheapest-first order", () => {
     assert.deepEqual(
       STRUCTURED_EXTRACTORS.map((e) => e.name),
-      ["ical", "wp_tribe", "squarespace", "jsonld", "microdata"],
+      ["ical", "wp_tribe", "squarespace", "aeg", "rhp", "webflow_shows", "jsonld", "microdata"],
     );
   });
 
@@ -20,6 +20,7 @@ describe("extractStructured", () => {
       ["venue-calendar.ics", "https://www.redlinetavern.com/?ical=1", "ical"],
       ["wp-tribe-page1.json", "https://www.saltshedmusic.com/wp-json/tribe/events/v1/events", "wp_tribe"],
       ["squarespace-events.json", "https://www.owllisteningroom.com/shows?format=json", "squarespace"],
+      ["aeg-events.json", "https://example-content.test/json/events/51/events.json", "aeg"],
     ];
     for (const [name, url, winner] of cases) {
       const result = await extractStructured(fixturePage(name, url), makeCtx(url));

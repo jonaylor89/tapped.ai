@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
+import { blankEvent } from "../src/extract/util.js";
 import type { ExtractedEvent, ValidatedEvent } from "../src/types.js";
 import { classifyEvent } from "../src/validate/classify.js";
 import { parsePriceText } from "../src/validate/price.js";
@@ -335,5 +336,34 @@ describe("evidence quotes", () => {
     assert.equal(result.valid[0]?.category, "open_mic");
     assert.equal(result.duplicates, 1);
     assert.equal(result.rejected.length, 1);
+  });
+});
+
+describe("one event shown in two views", () => {
+  test("the copy without a time is dropped when a timed copy exists; a different show that day stays", () => {
+    const ctx = {
+      source: { id: "s", venueId: "v", url: "https://room.test/shows", timezone: "America/New_York" },
+      venue: { id: "v", name: "The Room" },
+      timezone: "America/New_York",
+      now: new Date("2026-11-02T15:00:00Z"),
+    };
+    const base = {
+      ...blankEvent("jsonld"),
+      performers: ["Someone"],
+      category: "music" as const,
+    };
+    const result = validateEvents(
+      [
+        { ...base, title: "Big Shrimp", start: "2026-11-07" },
+        { ...base, title: "Big Shrimp", start: "2026-11-07T21:00" },
+        { ...base, title: "Other Band", start: "2026-11-07" },
+      ],
+      ctx,
+    );
+    assert.deepEqual(result.valid.map((event) => [event.title, event.startLocal]).sort(), [
+      ["Big Shrimp", "2026-11-07T21:00"],
+      ["Other Band", "2026-11-07"],
+    ]);
+    assert.equal(result.duplicates, 1);
   });
 });

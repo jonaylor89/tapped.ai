@@ -1,6 +1,6 @@
 /**
  * Structured extraction, cheapest first:
- *   ical -> wp_tribe (JSON) -> squarespace (JSON) -> jsonld -> microdata
+ *   ical -> wp_tribe (JSON) -> squarespace (JSON) -> aeg (JSON) -> rhp -> jsonld -> microdata
  * The first extractor that yields events wins. JSON-LD and microdata come from the same HTML, so when JSON-LD wins
  * microdata is still consulted and events it alone has are merged in (duplicates collapse, JSON-LD fields win).
  * When an HTML page yields nothing and `ctx.http` is available, calendar endpoints advertised by the page on the
@@ -8,18 +8,24 @@
  */
 import { isTicketingUrl } from "../denylist.js";
 import type { ExtractContext, ExtractedEvent, Extractor, FetchResult, Page } from "../types.js";
+import { aegExtractor } from "./aeg.js";
 import { discoverStructuredEndpoints, type StructuredEndpoint } from "./endpoints.js";
 import { icalExtractor } from "./ical.js";
 import { jsonLdExtractor } from "./jsonld.js";
 import { microdataExtractor } from "./microdata.js";
+import { rhpExtractor } from "./rhp.js";
 import { squarespaceExtractor } from "./squarespace.js";
 import { dedupeEvents, looksLikeHtml, moveTicketingEventUrl } from "./util.js";
+import { webflowShowsExtractor } from "./webflow-shows.js";
 import { wpTribeExtractor } from "./wp-tribe.js";
 
+export * from "./aeg.js";
 export * from "./endpoints.js";
 export * from "./ical.js";
 export * from "./jsonld.js";
 export * from "./microdata.js";
+export * from "./rhp.js";
+export * from "./routes.js";
 export * from "./schemaorg.js";
 export * from "./squarespace.js";
 export * from "./time.js";
@@ -31,6 +37,9 @@ export const STRUCTURED_EXTRACTORS: readonly Extractor[] = [
   icalExtractor,
   wpTribeExtractor,
   squarespaceExtractor,
+  aegExtractor,
+  rhpExtractor,
+  webflowShowsExtractor,
   jsonLdExtractor,
   microdataExtractor,
 ];

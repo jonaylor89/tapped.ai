@@ -255,3 +255,63 @@ describe("cli", () => {
     assert.equal(await main(["bogus"], { env, services, ...quiet }), 2);
   });
 });
+
+describe("multi-venue source", () => {
+  const card = (title: string, date: string, venue: string) => `
+    <div class="rhpSingleEvent">
+      <div class="singleEventDate">${date}</div>
+      <a id="eventTitle" class="url" href="https://group.example/event/${title.toLowerCase().replace(/ /g, "-")}/${venue}/city/">
+        <h2 class="rhp-event__title--list">${title}</h2></a>
+      <span class="rhp-event__time-text--list">Door: 7 pm</span>
+      <a class="venueLink" href="https://group.example/venue/${venue}/">${venue}</a>
+    </div>`;
+  const page = (...cards: string[]) => `<html><body>${cards.join("")}</body></html>`;
+
+  async function multiVenue() {
+    const context = await setup();
+    await upsertVenues(context.db, [
+      {
+        id: "v2",
+        name: "Second Room",
+        address: null,
+        lat: null,
+        lng: null,
+        website: null,
+        googlePlaceId: null,
+        timezone: TZ,
+        syncedAt: NOW_MS,
+      },
+    ]);
+    const source = await addSource(context.db, {
+      kind: "multi_venue",
+      venueId: null,
+      venueRoutes: { "room-one": "v1", "room-two": "v2", elsewhere: null },
+      url: "https://group.example/events/",
+      timezone: TZ,
+    });
+    return { ...context, source };
+  }
+
+  test("each show lands on its own venue; ignored and unknown venues do not, and unknown raises an alert", async () => {
+    const { db, clock, source } = await multiVenue();
+    const net = fakeFetch({
+      "https://group.example/events/": page(
+        card("Alpha Band", "Dec 05", "room-one"),
+        card("Beta Band", "Dec 06", "room-two"),
+        card("Gamma Band", "Dec 07", "elsewhere"),
+        card("Delta Band", "Dec 08", "new-room"),
+      ),
+    });
+    const run = await runOnce({ db, http: politeClient(net.fetchImpl), clock }, { concurrency: 1 });
+    assert.equal(run.results[0]?.extractor, "rhp");
+    assert.deepEqual((await listSourceEvents(db, source.id)).map((event) => [event.title, event.venueId]).sort(), [
+      ["Alpha Band", "v1"],
+      ["Beta Band", "v2"],
+    ]);
+    assert.equal(run.results[0]?.rejectedReasons.route_ignored, 1);
+    assert.equal(run.results[0]?.rejectedReasons.route_unknown, 1);
+    const alerts = await listAlerts(db, { open: true, kind: "unrouted_venue", sourceId: source.id });
+    assert.equal(alerts.length, 1);
+    assert.match(alerts[0]?.message ?? "", /new-room/);
+  });
+});
