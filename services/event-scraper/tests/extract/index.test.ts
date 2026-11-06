@@ -9,7 +9,7 @@ describe("extractStructured", () => {
   test("cheapest-first order", () => {
     assert.deepEqual(
       STRUCTURED_EXTRACTORS.map((e) => e.name),
-      ["ical", "wp_tribe", "squarespace", "aeg", "rhp", "webflow_shows", "jsonld", "microdata"],
+      ["ical", "wp_tribe", "squarespace", "aeg", "rhp", "webflow_shows", "season_dates", "jsonld", "microdata"],
     );
   });
 

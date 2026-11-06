@@ -129,7 +129,9 @@ production event. Legacy rows stay in place: 333,933 bookings link to them throu
 
 - **Big pages** go to the LLM about 12 listings at a time, three requests at once. If any batch fails, the page fails and
   is retried, so a run never stores part of a calendar. Pages with a repeatable layout should get their own extractor
-  instead: `aeg` (AEG events JSON), `rhp` (RHP WordPress cards) and `webflow_shows` (Webflow show cards) use no LLM.
+  instead: `aeg` (AEG events JSON), `rhp` (RHP WordPress cards), `webflow_shows` (Webflow show cards) and `season_dates` (theater
+  season lists, one event per run) use no LLM.
+- **Two sets on one night** ("6 + 8:30PM") are separate shows, so each set is its own event.
 - **Two views of one event:** a copy with no time is dropped when the same page lists that title on that day with a time.
 - **Nothing valid on a page:** if a page lists events and every one is rejected for a reason other than being past,
   non-music or deliberately ignored, the run raises `all_rejected` and keeps no content hash, so the page is read again.

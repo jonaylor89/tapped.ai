@@ -14,6 +14,7 @@ import { icalExtractor } from "./ical.js";
 import { jsonLdExtractor } from "./jsonld.js";
 import { microdataExtractor } from "./microdata.js";
 import { rhpExtractor } from "./rhp.js";
+import { seasonDatesExtractor } from "./season-dates.js";
 import { squarespaceExtractor } from "./squarespace.js";
 import { dedupeEvents, looksLikeHtml, moveTicketingEventUrl } from "./util.js";
 import { webflowShowsExtractor } from "./webflow-shows.js";
@@ -40,6 +41,7 @@ export const STRUCTURED_EXTRACTORS: readonly Extractor[] = [
   aegExtractor,
   rhpExtractor,
   webflowShowsExtractor,
+  seasonDatesExtractor,
   jsonLdExtractor,
   microdataExtractor,
 ];
