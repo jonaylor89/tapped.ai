@@ -278,8 +278,8 @@ export async function discoverPlacesCell(
   cell: GridCell,
   options: DiscoverPlacesCellOptions = {},
 ): Promise<IngestSummary & { requests: number; truncated: boolean }> {
-  const ingest = (search: CellSearchResult) => {
-    const summary = ingestPlaces(db, search.places, {
+  const ingest = async (search: CellSearchResult) => {
+    const summary = await ingestPlaces(db, search.places, {
       city: cell.city,
       timezone: cell.timezone,
       area: cell.bbox,
@@ -300,7 +300,7 @@ export async function discoverPlacesCell(
     search = await searchCell(client, cell, options);
   } catch (error) {
     // Keep what the paid requests before the failure returned; the cell is retried later.
-    if (error instanceof CellSearchError && error.partial.places.length) ingest(error.partial);
+    if (error instanceof CellSearchError && error.partial.places.length) await ingest(error.partial);
     throw error;
   }
   return ingest(search);

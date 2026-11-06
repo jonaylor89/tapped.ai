@@ -8,14 +8,15 @@ import { ConfigError, loadConfig, parseConfigFile } from "../src/config.js";
 import { addSource, countJobs, getSource, listAlerts, listSourceEvents, openDb, upsertVenues } from "../src/db.js";
 import { DAY_MS, HOUR_MS, nextDelay, runOnce } from "../src/runner.js";
 import type { Clock, LlmClient } from "../src/types.js";
+import { openTestDb, testDatabaseEnv } from "./helpers/db.js";
 import { fakeFetch, NOW_MS, politeClient } from "./helpers/discovery.js";
 
 const TZ = "America/Chicago";
 const llmFixture = (name: string) => readFileSync(new URL(`./fixtures/llm/${name}`, import.meta.url), "utf8");
 
-function setup() {
-  const db = openDb(":memory:");
-  upsertVenues(db, [
+async function setup() {
+  const db = await openTestDb();
+  await upsertVenues(db, [
     {
       id: "v1",
       name: "Redline Tavern",
@@ -35,7 +36,8 @@ function setup() {
 
 describe("config", () => {
   test("defaults: OSM and listings on; Places, LLM, Bandsintown off; NDJSON dry run", () => {
-    const config = loadConfig({}, { configFile: null });
+    const config = loadConfig({ EVENT_SCRAPER_DATABASE_URL: "postgres://unused.invalid/x" }, { configFile: null });
+    assert.equal(config.dbSchema, "scraper");
     assert.deepEqual(config.features, { llm: false, places: false, osm: true, listings: true, bandsintown: false });
     assert.equal(config.publish.mode, "ndjson");
     assert.equal(config.discovery.minProvenEvents, 3);
@@ -56,7 +58,8 @@ describe("config", () => {
         ),
       (error: unknown) => {
         assert.ok(error instanceof ConfigError);
-        assert.equal(error.issues.length, 4);
+        assert.equal(error.issues.length, 5);
+        assert.ok(error.issues.includes("EVENT_SCRAPER_DATABASE_URL is required"));
         assert.ok(error.issues.some((i) => i.includes("GOOGLE_PLACES_API_KEY")));
         return true;
       },
@@ -106,9 +109,14 @@ describe("runner scheduling", () => {
   });
 
   test("HTTP failures back off, alert after 3 in a row, and never cancel events", async () => {
-    const { db, clock, advance } = setup();
+    const { db, clock, advance } = await setup();
     const net = fakeFetch({ "https://venue.example/calendar": () => new Response("down", { status: 503 }) });
-    const source = addSource(db, { venueId: "v1", kind: "html", url: "https://venue.example/calendar", timezone: TZ });
+    const source = await addSource(db, {
+      venueId: "v1",
+      kind: "html",
+      url: "https://venue.example/calendar",
+      timezone: TZ,
+    });
     const delays: number[] = [];
     for (let i = 0; i < 3; i++) {
       const run = await runOnce({ db, http: politeClient(net.fetchImpl), clock }, { concurrency: 1 });
@@ -117,34 +125,48 @@ describe("runner scheduling", () => {
       advance(DAY_MS);
     }
     assert.deepEqual(delays, [HOUR_MS, 2 * HOUR_MS, 4 * HOUR_MS]);
-    assert.equal(listAlerts(db, { open: true, kind: "fetch_failed", sourceId: source.id }).length, 1);
-    assert.equal(countJobs(db, { kind: "fetch_source", status: "queued" }), 1, "exactly one pending job per source");
+    assert.equal((await listAlerts(db, { open: true, kind: "fetch_failed", sourceId: source.id })).length, 1);
+    assert.equal(
+      await countJobs(db, { kind: "fetch_source", status: "queued" }),
+      1,
+      "exactly one pending job per source",
+    );
   });
 
   test("robots.txt disallow is respected; a redirect to a ticketing platform disables the source", async () => {
-    const { db, clock } = setup();
+    const { db, clock } = await setup();
     const net = fakeFetch({
       "https://blocked.example/robots.txt": () => new Response("User-agent: *\nDisallow: /", { status: 200 }),
       "https://venue.example/shows": () =>
         new Response(null, { status: 302, headers: { location: "https://www.ticketmaster.com/venue/123" } }),
     });
-    const robots = addSource(db, { venueId: "v1", kind: "html", url: "https://blocked.example/events", timezone: TZ });
-    const redirect = addSource(db, { venueId: "v1", kind: "html", url: "https://venue.example/shows", timezone: TZ });
+    const robots = await addSource(db, {
+      venueId: "v1",
+      kind: "html",
+      url: "https://blocked.example/events",
+      timezone: TZ,
+    });
+    const redirect = await addSource(db, {
+      venueId: "v1",
+      kind: "html",
+      url: "https://venue.example/shows",
+      timezone: TZ,
+    });
     const run = await runOnce({ db, http: politeClient(net.fetchImpl), clock }, { concurrency: 1 });
     const by = new Map(run.results.map((r) => [r.sourceId, r]));
     assert.equal(by.get(robots.id)?.outcome, "robots_blocked");
     assert.equal(by.get(robots.id)?.nextDelayMs, 7 * DAY_MS);
     assert.equal(by.get(redirect.id)?.outcome, "disabled");
-    assert.equal(getSource(db, redirect.id)?.enabled, false);
-    assert.equal(listAlerts(db, { kind: "ticketing_blocked" }).length, 1);
+    assert.equal((await getSource(db, redirect.id))?.enabled, false);
+    assert.equal((await listAlerts(db, { kind: "ticketing_blocked" })).length, 1);
     assert.ok(!net.calls.some((c) => c.url.includes("ticketmaster")), "the ticketing hop is never requested");
     assert.ok(!net.calls.some((c) => c.url === "https://blocked.example/events"));
   });
 
   test("LLM fallback runs only when structured extraction found nothing, and evidence is verified", async () => {
-    const { db, clock } = setup();
+    const { db, clock } = await setup();
     const net = fakeFetch({ "https://venue.example/calendar": llmFixture("venue-calendar.html") });
-    addSource(db, { venueId: "v1", kind: "html", url: "https://venue.example/calendar", timezone: TZ });
+    await addSource(db, { venueId: "v1", kind: "html", url: "https://venue.example/calendar", timezone: TZ });
     let calls = 0;
     const llm: LlmClient = {
       completeJson: async () => {
@@ -161,8 +183,8 @@ describe("runner scheduling", () => {
     assert.equal(off.results[0]?.extractor, null, "no LLM client, no fallback");
     assert.equal(calls, 0);
 
-    const { db: db2 } = setup();
-    const source2 = addSource(db2, {
+    const { db: db2 } = await setup();
+    const source2 = await addSource(db2, {
       venueId: "v1",
       kind: "html",
       url: "https://venue.example/calendar",
@@ -175,7 +197,7 @@ describe("runner scheduling", () => {
     assert.equal(on.results[0]?.extractor, "llm");
     assert.ok(calls >= 1);
     assert.equal(on.llmPages, 1);
-    const events = listSourceEvents(db2, source2.id);
+    const events = await listSourceEvents(db2, source2.id);
     assert.ok(events.length > 0);
     assert.ok(events.every((e) => e.data.evidence.length > 0));
   });
@@ -193,18 +215,18 @@ describe("cli", () => {
     const dir = mkdtempSync(join(tmpdir(), "event-scraper-loop-"));
     const controller = new AbortController();
     const net = fakeFetch({ "https://venue.example/calendar": llmFixture("venue-calendar.html") });
-    const env = { EVENT_SCRAPER_DB: join(dir, "db.sqlite"), EVENT_SCRAPER_DATA_DIR: dir, EVENT_SCRAPER_OSM: "0" };
+    const databaseEnv = await testDatabaseEnv();
+    const env = { ...databaseEnv, EVENT_SCRAPER_DATA_DIR: dir, EVENT_SCRAPER_OSM: "0" };
     const services = {
       http: politeClient(net.fetchImpl),
       clock: { now: () => new Date(NOW_MS) },
       sleep: async () => controller.abort(),
       llm: null,
       venueSnapshot: null,
-      knownEvents: { query: async () => ({ rows: [] }) },
     };
     const quiet = { stdout: () => {}, stderr: () => {} };
-    const db = openDb(env.EVENT_SCRAPER_DB);
-    upsertVenues(db, [
+    const db = await openDb({ url: env.EVENT_SCRAPER_DATABASE_URL, schema: env.EVENT_SCRAPER_DB_SCHEMA });
+    await upsertVenues(db, [
       {
         id: "v1",
         name: "Redline Tavern",
@@ -217,7 +239,7 @@ describe("cli", () => {
         syncedAt: NOW_MS,
       },
     ]);
-    db.close();
+    await db.close();
     assert.equal(
       await main(["add-source", "--venue", "v1", "--url", "https://venue.example/calendar"], {
         env,

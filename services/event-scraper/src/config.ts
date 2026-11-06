@@ -35,7 +35,10 @@ export interface ConfigFile {
 }
 
 export interface ScraperConfig {
-  dbPath: string;
+  /** Postgres holding the `scraper` schema; over Tailscale from a laptop. */
+  databaseUrl: string;
+  dbSchema: string;
+  maxDbConnections: number;
   dataDir: string;
   configFile: string | null;
   cities: CityConfig[];
@@ -54,7 +57,7 @@ export interface ScraperConfig {
     productiveIntervalMs: number;
     /** Upper bound of the unchanged-content backoff. Default 7d. */
     maxIntervalMs: number;
-    /** Max pages sent to the LLM per UTC day across all runs and processes (cost cap, counted in SQLite). */
+    /** Max pages sent to the LLM per UTC day across all runs and processes (cost cap, counted in Postgres). */
     llmMaxPagesPerDay: number;
   };
   discovery: {
@@ -239,7 +242,8 @@ export function readConfigFile(path: string): ConfigFile {
 export function loadConfig(env: Env = process.env, overrides: { configFile?: string | null } = {}): ScraperConfig {
   const issues: string[] = [];
   const dataDir = resolve(env.EVENT_SCRAPER_DATA_DIR?.trim() || "./data");
-  const dbPath = env.EVENT_SCRAPER_DB?.trim() || resolve(dataDir, "event-scraper.sqlite");
+  const databaseUrl = env.EVENT_SCRAPER_DATABASE_URL?.trim() ?? "";
+  if (!databaseUrl) issues.push("EVENT_SCRAPER_DATABASE_URL is required");
   const configPath =
     overrides.configFile !== undefined ? overrides.configFile : env.EVENT_SCRAPER_CONFIG?.trim() || null;
 
@@ -280,7 +284,9 @@ export function loadConfig(env: Env = process.env, overrides: { configFile?: str
     env.EVENT_SCRAPER_DRY_RUN_PATH?.trim() || resolve(dataDir, "publish", `observations-${day}.ndjson`);
 
   const config: ScraperConfig = {
-    dbPath,
+    databaseUrl,
+    dbSchema: env.EVENT_SCRAPER_DB_SCHEMA?.trim() || "scraper",
+    maxDbConnections: int(env, "EVENT_SCRAPER_DB_CONNECTIONS", 4, issues, 1, 8),
     dataDir,
     configFile: configPath,
     cities: file.cities,

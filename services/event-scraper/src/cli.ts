@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * event-scraper CLI. One process, one SQLite file; every network client is built here from the configuration and can
+ * event-scraper CLI. Every network client is built here from the configuration and can
  * be replaced (tests inject fakes through `main(argv, { services })`).
  *
  *   run-once            fetch every due source once, then publish the outbox
@@ -10,8 +10,8 @@
  *   publish             drain the publish outbox
  *   export-candidates   write the human review list (promoted + needs_review) as JSON and CSV
  *   add-source          register a calendar/iCal/listing URL for a venue (or from a promoted candidate)
- *   import-venues       pull the read-only venue snapshot (file or read-only Postgres) into SQLite
- *   import-known-events pull the events production already has (read-only Postgres or file) into SQLite
+ *   import-venues       pull the venue snapshot (file or production's read-only view) into the scraper schema
+ *   import-sqlite       one-off: copy an old SQLite state file into Postgres
  *   status              counts of sources, jobs, candidates, open alerts
  */
 import { realpathSync } from "node:fs";
@@ -21,6 +21,7 @@ import { parseArgs } from "node:util";
 import { ConfigError, loadConfig, type ScraperConfig } from "./config.js";
 import {
   addSource,
+  all,
   type Db,
   getCandidate,
   getKv,
@@ -29,6 +30,7 @@ import {
   listAlerts,
   listCandidates,
   listSources,
+  one,
   openDb,
   pruneHostSlots,
   pruneJobs,
@@ -48,16 +50,11 @@ import { syncVenuePlaceAliases } from "./discovery/resolve.js";
 import { seedKnownVenues } from "./discovery/seed.js";
 import { runDiscovery } from "./discovery-runner.js";
 import { createHttpClient } from "./fetch.js";
+import { importSqlite } from "./import-sqlite.js";
 import { llmClientFromEnv } from "./llm/openai.js";
-import { importKnownEventsFile, knownEventsProblem, syncKnownEvents } from "./publish/known-events.js";
+import { pageStoreFromEnv } from "./pages.js";
 import { NdjsonPublisher, PostgresIngestionPublisher, publishOutbox } from "./publish/publisher.js";
-import {
-  JsonFileVenueSnapshot,
-  type ReadOnlyQueryable,
-  readOnlyPostgres,
-  syncVenueSnapshot,
-  venueSnapshotFromEnv,
-} from "./publish/venues-snapshot.js";
+import { JsonFileVenueSnapshot, syncVenueSnapshot, venueSnapshotFromEnv } from "./publish/venues-snapshot.js";
 import {
   createLlmExtractor,
   dailyLlmBudget,
@@ -94,15 +91,13 @@ export interface Services {
   bandsintown: BandsintownClient | null;
   publisher: Publisher | null;
   venueSnapshot: VenueSnapshotSource | null;
-  /** Read-only Postgres for the events production already has (VENUE_SNAPSHOT_DATABASE_URL). */
-  knownEvents: ReadOnlyQueryable | null;
   clock: Clock;
   sleep: Sleep;
 }
 
 /**
  * Builds the real network clients for the enabled features only. Keys are read by the clients, never printed. With
- * `db`, the HTTP client's per-host politeness slots live in SQLite, shared with every other process on that file.
+ * `db`, the HTTP client's per-host politeness slots live in Postgres, shared with every other process and laptop.
  */
 export function buildServices(
   config: ScraperConfig,
@@ -137,10 +132,7 @@ export function buildServices(
       if (config.publish.mode === "postgres") return new PostgresIngestionPublisher();
       return new NdjsonPublisher(config.publish.dryRunPath);
     }),
-    venueSnapshot: lazy("venueSnapshot", () => venueSnapshotFromEnv(env, clock)),
-    knownEvents: lazy("knownEvents", () =>
-      env.VENUE_SNAPSHOT_DATABASE_URL ? readOnlyPostgres(env.VENUE_SNAPSHOT_DATABASE_URL, "known-events") : null,
-    ),
+    venueSnapshot: lazy("venueSnapshot", () => venueSnapshotFromEnv(env, clock, db)),
   };
 }
 
@@ -166,16 +158,15 @@ Commands:
              [--timezone IANA] [--label TEXT]
   add-source --candidate ID [--venue ID]      (register a reviewed, promoted candidate's proven source)
   import-venues [--file venues.json]
-  import-known-events [--file events.json]   (events production already has; refreshed automatically when stale)
+  import-sqlite FILE                          (one-off: copy an old SQLite state file into Postgres)
   seed-venues --city NAME                     (send known venues in a city through find-source -> prove)
   status
 
-Global options: --config FILE (cities/listings JSON), --db FILE (SQLite path)
+Global options: --config FILE (cities/listings JSON)
 Environment variables are documented in services/event-scraper/README.md.`;
 
 const OPTIONS = {
   config: { type: "string" },
-  db: { type: "string" },
   "max-jobs": { type: "string" },
   "no-publish": { type: "boolean" },
   "no-discover": { type: "boolean" },
@@ -246,29 +237,29 @@ export interface HousekeepingResult {
 }
 
 /**
- * Retention for the local SQLite file, run from every command that does work (run-once, loop, discover) and at most
+ * Retention for the scraper schema, run from every command that does work (run-once, loop, discover) and at most
  * once per 6 hours (timestamp in kv), so timer-driven deployments never grow the file without bound:
  * finished jobs after 30 days; published outbox rows after 30 days (and, with publishing off, unpublished rows too,
  * so their evidence becomes prunable); unreferenced raw pages after 90 days; old daily counters and host slots.
  */
-export function runHousekeeping(
+export async function runHousekeeping(
   db: Db,
   options: { now: number; publishOff: boolean; force?: boolean },
-): HousekeepingResult | null {
+): Promise<HousekeepingResult | null> {
   const { now } = options;
-  const last = Number(getKv(db, HOUSEKEEPING_KEY) ?? 0);
+  const last = Number((await getKv(db, HOUSEKEEPING_KEY)) ?? 0);
   if (!options.force && Number.isFinite(last) && now - last < HOUSEKEEPING_EVERY_MS) return null;
-  setKv(db, HOUSEKEEPING_KEY, String(now), now);
-  const outbox = pruneOutbox(db, {
+  await setKv(db, HOUSEKEEPING_KEY, String(now), now);
+  const outbox = await pruneOutbox(db, {
     publishedBefore: now - 30 * DAY,
     pendingBefore: options.publishOff ? now - 30 * DAY : null,
   });
   return {
-    jobs: pruneJobs(db, now - 30 * DAY),
+    jobs: await pruneJobs(db, now - 30 * DAY),
     outbox,
-    rawPages: pruneRawPages(db, now - 90 * DAY),
-    kv: pruneKv(db, LLM_PAGES_KEY_PREFIX, now - 7 * DAY),
-    hostSlots: pruneHostSlots(db, now - DAY),
+    rawPages: await pruneRawPages(db, now - 90 * DAY),
+    kv: await pruneKv(db, LLM_PAGES_KEY_PREFIX, now - 7 * DAY),
+    hostSlots: await pruneHostSlots(db, now - DAY),
   };
 }
 
@@ -304,15 +295,15 @@ async function importVenues(db: Db, services: Services, file: string | undefined
   }
   const now = clock.now().getTime();
   const synced = await syncVenueSnapshot(db, source, now);
-  const aliases = syncVenuePlaceAliases(db, now);
+  const aliases = await syncVenuePlaceAliases(db, now);
   return { ...synced, aliasesAssigned: aliases.assigned, sharedPlaceIds: aliases.shared };
 }
 
-function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock) {
+async function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock) {
   const now = clock.now().getTime();
   if (values.candidate !== undefined) {
     const id = positiveInt(values.candidate as string, "candidate") as number;
-    const candidate = getCandidate(db, id);
+    const candidate = await getCandidate(db, id);
     if (!candidate) throw new UsageError(`Unknown candidate ${id}`);
     if (candidate.status !== "promoted" || !candidate.sourceUrl || !candidate.sourceKind) {
       throw new UsageError(`Candidate ${id} is ${candidate.status}; only promoted candidates with a proven source`);
@@ -325,7 +316,7 @@ function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock)
     }
     const timezone = (values.timezone as string | undefined) ?? candidate.timezone;
     if (!timezone || !isValidTimeZone(timezone)) throw new UsageError("A valid --timezone is required");
-    const source = addSource(
+    const source = await addSource(
       db,
       {
         venueId,
@@ -337,7 +328,7 @@ function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock)
       },
       now,
     );
-    updateCandidate(db, id, { matchedVenueId: venueId, statusReason: `source_added:${source.id}` }, now);
+    await updateCandidate(db, id, { matchedVenueId: venueId, statusReason: `source_added:${source.id}` }, now);
     return source;
   }
   const url = values.url as string | undefined;
@@ -348,7 +339,7 @@ function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock)
   const venueId = (values.venue as string | undefined) ?? null;
   if (!venueId && kind !== "listing") throw new UsageError("--venue is required (or --listing for a city listing)");
   if (venueId && kind === "listing") throw new UsageError("Listing sources cover many venues; omit --venue");
-  const venue = venueId ? getVenue(db, venueId) : null;
+  const venue = venueId ? await getVenue(db, venueId) : null;
   if (venueId && !venue) throw new UsageError(`Unknown venue ${venueId}; run import-venues first`);
   const timezone = (values.timezone as string | undefined) ?? venue?.timezone ?? null;
   if (!timezone || !isValidTimeZone(timezone)) throw new UsageError("A valid IANA --timezone is required");
@@ -366,21 +357,26 @@ function addSourceCommand(db: Db, values: Record<string, unknown>, clock: Clock)
   );
 }
 
-function status(db: Db) {
-  const jobs = db
-    .prepare("SELECT kind, status, COUNT(*) AS n FROM jobs GROUP BY kind, status ORDER BY kind, status")
-    .all();
+async function status(db: Db) {
+  const jobs = await all(
+    db,
+    "SELECT kind, status, COUNT(*) AS n FROM jobs GROUP BY kind, status ORDER BY kind, status",
+  );
   const candidates: Record<string, number> = {};
-  for (const c of listCandidates(db)) candidates[c.status] = (candidates[c.status] ?? 0) + 1;
-  const pendingOutbox = db.prepare("SELECT COUNT(*) AS n FROM publish_outbox WHERE published_at IS NULL").get() as {
+  for (const c of await listCandidates(db)) candidates[c.status] = (candidates[c.status] ?? 0) + 1;
+  const pendingOutbox = (await one(db, "SELECT COUNT(*) AS n FROM publish_outbox WHERE published_at IS NULL")) as {
     n: number;
   };
   return {
-    sources: { enabled: listSources(db, { enabled: true }).length, total: listSources(db).length },
+    sources: { enabled: (await listSources(db, { enabled: true })).length, total: (await listSources(db)).length },
     jobs,
     candidates,
     pendingOutbox: Number(pendingOutbox.n),
-    openAlerts: listAlerts(db, { open: true }).map((a) => ({ kind: a.kind, sourceId: a.sourceId, message: a.message })),
+    openAlerts: (await listAlerts(db, { open: true })).map((a) => ({
+      kind: a.kind,
+      sourceId: a.sourceId,
+      message: a.message,
+    })),
   };
 }
 
@@ -408,10 +404,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
 
   let config: ScraperConfig;
   try {
-    config = loadConfig(
-      values.db ? { ...env, EVENT_SCRAPER_DB: values.db } : env,
-      values.config ? { configFile: values.config } : {},
-    );
+    config = loadConfig(env, values.config ? { configFile: values.config } : {});
   } catch (error) {
     if (error instanceof ConfigError) {
       err(`${error.message}\n`);
@@ -429,7 +422,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
     "export-candidates",
     "add-source",
     "import-venues",
-    "import-known-events",
+    "import-sqlite",
     "seed-venues",
     "status",
   ];
@@ -438,18 +431,26 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
     return 2;
   }
 
-  const db = openDb(config.dbPath);
+  const db = await openDb({
+    url: config.databaseUrl,
+    schema: config.dbSchema,
+    maxConnections: config.maxDbConnections,
+    pages: pageStoreFromEnv(env, config.dataDir),
+  });
   const services = buildServices(config, env, io.services, db);
   const clock = services.clock;
   try {
-    // Every LLM page (scraping and proving, in any process) is charged to one daily counter in SQLite.
+    // Every LLM page (scraping and proving, in any process) is charged to one daily counter in Postgres.
     const fallback = () =>
       services.llm ? createLlmExtractor({ budget: dailyLlmBudget(db, config.scrape.llmMaxPagesPerDay, clock) }) : null;
-    const housekeeping = () => {
-      const pruned = runHousekeeping(db, { now: clock.now().getTime(), publishOff: config.publish.mode === "off" });
+    const housekeeping = async () => {
+      const pruned = await runHousekeeping(db, {
+        now: clock.now().getTime(),
+        publishOff: config.publish.mode === "off",
+      });
       if (pruned && Object.values(pruned).some((n) => n > 0)) log("pruned", { ...pruned });
     };
-    const discover = (city?: string, skipProve?: boolean) =>
+    const discover = async (city?: string, skipProve?: boolean) =>
       runDiscovery(
         {
           db,
@@ -466,35 +467,15 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         { ...discoveryOptions(config), city: city ?? null, skipProve },
       );
     const publisher = values["no-publish"] ? null : services.publisher;
-    /**
-     * Scraping and publishing never run without a fresh copy (< 24h) of the events production already has, so no
-     * event already in Postgres is scraped or sent again. Refreshed from read-only Postgres when configured.
-     * EVENT_SCRAPER_KNOWN_EVENTS=off is honored only when nothing can reach production (publish mode not postgres).
-     */
-    const ensureKnownEvents = async () => {
-      if (env.EVENT_SCRAPER_KNOWN_EVENTS === "off" && config.publish.mode !== "postgres") return;
-      const now = clock.now().getTime();
-      const problem = knownEventsProblem(db, now);
-      if (!problem) return;
-      if (services.knownEvents) {
-        log("known_events_synced", { ...(await syncKnownEvents(db, services.knownEvents, now)) });
-        return;
-      }
-      throw new UsageError(
-        `Events already in production are ${problem === "stale" ? "stale (older than 24h)" : "not synced"}. ` +
-          "Set VENUE_SNAPSHOT_DATABASE_URL (read-only) or run import-known-events --file FILE first.",
-      );
-    };
 
     switch (command) {
       case "run-once": {
-        await ensureKnownEvents();
         const run = await runOnce(
           { db, http: services.http, llm: services.llm, clock, log },
           runnerOptions(config, positiveInt(values["max-jobs"], "max-jobs")),
         );
         const published = await runPublish(db, publisher, clock);
-        housekeeping();
+        await housekeeping();
         print({ run: compactRun(run), publish: published });
         return 0;
       }
@@ -503,7 +484,6 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         let lastPublish = 0;
         let lastDiscover = 0;
         while (!signal.aborted) {
-          await ensureKnownEvents();
           const run = await runOnce({ db, http: services.http, llm: services.llm, clock, log }, runnerOptions(config));
           if (run.processed) log("run_once", { processed: run.processed, ...run.totals });
           const now = clock.now().getTime();
@@ -521,7 +501,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
               log("discover_failed", { error: (error as Error).message });
             }
           }
-          housekeeping();
+          await housekeeping();
           if (signal.aborted) break;
           await abortableSleep(services.sleep, config.loop.tickMs, signal);
         }
@@ -529,7 +509,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
       }
       case "discover": {
         const d = await discover(values.city, values["skip-prove"]);
-        housekeeping();
+        await housekeeping();
         print({
           scheduled: d.scheduled,
           units: d.units,
@@ -544,7 +524,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
       case "prove": {
         const id = positiveInt(positionals[1] ?? values.candidate, "candidate");
         if (!id) throw new UsageError("prove needs a candidate id");
-        if (!getCandidate(db, id)) throw new UsageError(`Unknown candidate ${id}`);
+        if (!(await getCandidate(db, id))) throw new UsageError(`Unknown candidate ${id}`);
         const result = await proveCandidate(db, id, {
           http: services.http,
           llm: services.llm,
@@ -560,7 +540,6 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
           print({ publish: null, message: "publishing is off (EVENT_SCRAPER_PUBLISH=off)" });
           return 0;
         }
-        await ensureKnownEvents();
         const limit = positiveInt(values.limit, "limit");
         const published = await publishOutbox(db, publisher, {
           limit,
@@ -576,7 +555,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         if (statuses?.some((s) => !CANDIDATE_STATUSES.includes(s))) {
           throw new UsageError(`--status must be a comma list of ${CANDIDATE_STATUSES.join(", ")}`);
         }
-        const written = writeReviewList(db, resolve(values.out ?? resolve(config.dataDir, "review")), {
+        const written = await writeReviewList(db, resolve(values.out ?? resolve(config.dataDir, "review")), {
           statuses,
           now: clock.now(),
         });
@@ -584,26 +563,20 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         return 0;
       }
       case "add-source": {
-        print(addSourceCommand(db, values, clock));
+        print(await addSourceCommand(db, values, clock));
         return 0;
       }
       case "seed-venues": {
         const city = config.cities.find((c) => c.name.toLowerCase() === (values.city ?? "").toLowerCase());
         if (!city)
           throw new Error(`seed-venues needs --city with one of: ${config.cities.map((c) => c.name).join(", ")}`);
-        print(seedKnownVenues(db, city, clock.now().getTime()));
+        print(await seedKnownVenues(db, city, clock.now().getTime()));
         return 0;
       }
-      case "import-known-events": {
-        const now = clock.now().getTime();
-        if (values.file) {
-          print(importKnownEventsFile(db, resolve(values.file), now));
-          return 0;
-        }
-        if (!services.knownEvents) {
-          throw new UsageError("No read-only Postgres configured: pass --file or set VENUE_SNAPSHOT_DATABASE_URL");
-        }
-        print(await syncKnownEvents(db, services.knownEvents, now));
+      case "import-sqlite": {
+        const file = positionals[1] ?? values.file;
+        if (!file) throw new UsageError("import-sqlite needs a file path");
+        print(await importSqlite(db, resolve(file)));
         return 0;
       }
       case "import-venues": {
@@ -611,7 +584,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
         return 0;
       }
       case "status": {
-        print(status(db));
+        print(await status(db));
         return 0;
       }
     }
@@ -624,7 +597,7 @@ export async function main(argv: string[], io: MainIo = {}): Promise<number> {
     err(`event-scraper ${command} failed: ${(error as Error).message}\n`);
     return 1;
   } finally {
-    db.close();
+    await db.close();
   }
 }
 
@@ -639,7 +612,7 @@ function processSignal(): AbortSignal {
 async function abortableSleep(sleep: Sleep, ms: number, signal: AbortSignal): Promise<void> {
   if (signal.aborted) return;
   await Promise.race([
-    sleep(ms),
+    await sleep(ms),
     new Promise<void>((resolveAbort) => signal.addEventListener("abort", () => resolveAbort(), { once: true })),
   ]);
 }

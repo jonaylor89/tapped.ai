@@ -1,13 +1,11 @@
 /**
- * Read-only venue snapshot: production venues -> local SQLite `venues` table (+ their Google place id as an alias).
+ * Venue snapshot: production venues -> the scraper schema's `venues` table (+ their Google place id as an alias).
  *
- * Nothing here ever writes to production. The Postgres source opens one short `BEGIN READ ONLY` transaction on a
- * dedicated connection string (VENUE_SNAPSHOT_DATABASE_URL), runs a single SELECT and disconnects. For standalone
- * runs the same rows can be loaded from a JSON file instead.
+ * Nothing here writes to application tables. The source is one SELECT on `ingestion_profiles`, which is all the
+ * scraper's role may read of them. The same rows can be loaded from a JSON file instead.
  */
 import { readFileSync } from "node:fs";
-import pg from "pg";
-import { type Db, listPlaceAliases, resolvePlaceId, transaction, upsertPlaceAlias, upsertVenues } from "../db.js";
+import { all, type Db, listPlaceAliases, resolvePlaceId, transaction, upsertPlaceAlias, upsertVenues } from "../db.js";
 import type { Clock, Venue, VenueSnapshotSource } from "../types.js";
 import { systemClock } from "../types.js";
 import { parseHttpUrl } from "../url.js";
@@ -34,33 +32,6 @@ ORDER BY p.id`;
 /** Minimal query surface so tests can pass a fake instead of a real connection. */
 export interface ReadOnlyQueryable {
   query(sql: string): Promise<{ rows: Record<string, unknown>[] }>;
-}
-
-/** Opens one connection per pull, inside a READ ONLY transaction, and always disconnects. */
-export function readOnlyPostgres(connectionString: string, label = "venue-snapshot"): ReadOnlyQueryable {
-  return {
-    async query(sql: string) {
-      const client = new pg.Client({
-        connectionString,
-        connectionTimeoutMillis: 10_000,
-        statement_timeout: 60_000,
-        application_name: `event-scraper-${label}`,
-      });
-      // Never log raw pg errors or the connection string; they may contain credentials.
-      client.on("error", () => console.error(`Read-only ${label} connection failed`));
-      try {
-        await client.connect();
-        await client.query("BEGIN READ ONLY");
-        const result = await client.query(sql);
-        await client.query("COMMIT");
-        return { rows: result.rows as Record<string, unknown>[] };
-      } catch {
-        throw new Error(`Read-only ${label} query failed`);
-      } finally {
-        await client.end().catch(() => undefined);
-      }
-    },
-  };
 }
 
 function text(value: unknown): string | null {
@@ -157,13 +128,16 @@ export class JsonFileVenueSnapshot implements VenueSnapshotSource {
 }
 
 /**
- * Picks the snapshot source from env: a JSON file (VENUE_SNAPSHOT_FILE) wins for standalone use, else the read-only
- * database URL (VENUE_SNAPSHOT_DATABASE_URL). Returns null when neither is configured.
+ * Picks the snapshot source: a JSON file (VENUE_SNAPSHOT_FILE) wins, else `ingestion_profiles` on the scraper's own
+ * connection, whose role can only read it. Returns null when neither is available.
  */
-export function venueSnapshotFromEnv(env: NodeJS.ProcessEnv = process.env, clock: Clock = systemClock) {
+export function venueSnapshotFromEnv(
+  env: NodeJS.ProcessEnv = process.env,
+  clock: Clock = systemClock,
+  db: Db | null = null,
+) {
   if (env.VENUE_SNAPSHOT_FILE) return new JsonFileVenueSnapshot(env.VENUE_SNAPSHOT_FILE, clock);
-  if (env.VENUE_SNAPSHOT_DATABASE_URL)
-    return new PostgresVenueSnapshot(readOnlyPostgres(env.VENUE_SNAPSHOT_DATABASE_URL), clock);
+  if (db) return new PostgresVenueSnapshot({ query: (sql) => all(db, sql).then((rows) => ({ rows })) }, clock);
   return null;
 }
 
@@ -185,11 +159,11 @@ export async function syncVenueSnapshot(
 ): Promise<VenueSyncResult> {
   const venues = await source.listVenues();
   const result: VenueSyncResult = { venues: 0, placeAliasesAdded: 0, placeAliasConflicts: [] };
-  transaction(db, () => {
-    result.venues = upsertVenues(db, venues);
+  await transaction(db, async () => {
+    result.venues = await upsertVenues(db, venues);
     for (const venue of venues) {
       if (!venue.googlePlaceId) continue;
-      const existing = resolvePlaceId(db, venue.googlePlaceId);
+      const existing = await resolvePlaceId(db, venue.googlePlaceId);
       if (existing?.venueId === venue.id) continue;
       if (existing?.venueId) {
         result.placeAliasConflicts.push({
@@ -199,8 +173,8 @@ export async function syncVenueSnapshot(
         });
         continue;
       }
-      const hasCanonical = listPlaceAliases(db, { venueId: venue.id }).some((alias) => alias.isCanonical);
-      upsertPlaceAlias(
+      const hasCanonical = (await listPlaceAliases(db, { venueId: venue.id })).some((alias) => alias.isCanonical);
+      await upsertPlaceAlias(
         db,
         {
           placeId: venue.googlePlaceId,

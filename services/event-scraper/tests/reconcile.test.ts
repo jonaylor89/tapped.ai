@@ -7,7 +7,6 @@ import {
   getFetchState,
   listAlerts,
   listEventChanges,
-  openDb,
   pendingOutbox,
   saveFetchState,
   upsertVenues,
@@ -16,14 +15,15 @@ import { computeIdentityKey, normalizeTitle } from "../src/reconcile/identity.js
 import { reconcileSource } from "../src/reconcile/reconcile.js";
 import type { ExtractedEvent, Source, ValidatedEvent } from "../src/types.js";
 import { validateEvent } from "../src/validate/validate.js";
+import { openTestDb } from "./helpers/db.js";
 
 const DAY = 24 * 60 * 60 * 1000;
 const T0 = new Date("2026-11-02T15:00:00Z");
 const at = (days: number) => new Date(T0.getTime() + days * DAY);
 
-function setup(): { db: Db; source: Source } {
-  const db = openDb(":memory:");
-  upsertVenues(db, [
+async function setup(): Promise<{ db: Db; source: Source }> {
+  const db = await openTestDb();
+  await upsertVenues(db, [
     {
       id: "venue-1",
       name: "The Example Room",
@@ -36,7 +36,7 @@ function setup(): { db: Db; source: Source } {
       syncedAt: 0,
     },
   ]);
-  const source = addSource(
+  const source = await addSource(
     db,
     {
       id: "src-1",
@@ -99,141 +99,141 @@ describe("identity", () => {
 });
 
 describe("reconcileSource", () => {
-  test("new -> unchanged -> updated, with change log and outbox", () => {
-    const { db, source } = setup();
+  test("new -> unchanged -> updated, with change log and outbox", async () => {
+    const { db, source } = await setup();
     const a = make(source, "Band A", "2026-11-07T20:00");
     const b = make(source, "Band B", "2026-11-08T20:00");
 
-    const first = reconcileSource(db, { source, events: [a, b], now: T0, evidenceSha256: "abc" });
+    const first = await reconcileSource(db, { source, events: [a, b], now: T0, evidenceSha256: "abc" });
     assert.equal(first.counts.new, 2);
-    assert.equal(pendingOutbox(db).length, 2);
-    assert.equal(pendingOutbox(db)[0]?.evidenceSha256, "abc");
+    assert.equal((await pendingOutbox(db)).length, 2);
+    assert.equal((await pendingOutbox(db))[0]?.evidenceSha256, "abc");
 
-    const second = reconcileSource(db, { source, events: [a, b], now: at(0.25) });
+    const second = await reconcileSource(db, { source, events: [a, b], now: at(0.25) });
     assert.equal(second.counts.unchanged, 2);
-    assert.equal(pendingOutbox(db).length, 2);
+    assert.equal((await pendingOutbox(db)).length, 2);
 
     const a2 = { ...a, description: "Now with special guests" };
-    const third = reconcileSource(db, { source, events: [a2, b], now: at(0.5) });
+    const third = await reconcileSource(db, { source, events: [a2, b], now: at(0.5) });
     assert.equal(third.counts.updated, 1);
     assert.equal(third.counts.unchanged, 1);
     assert.deepEqual(
-      listEventChanges(db, { sourceId: source.id }).map((c) => c.change),
+      (await listEventChanges(db, { sourceId: source.id })).map((c) => c.change),
       ["new", "new", "updated"],
     );
-    assert.equal(pendingOutbox(db).length, 3);
-    assert.equal(getFetchState(db, source.id).maxEventCount, 2);
+    assert.equal((await pendingOutbox(db)).length, 3);
+    assert.equal((await getFetchState(db, source.id)).maxEventCount, 2);
   });
 
-  test("cancel only after 2 consecutive successful misses; a sighting resets the counter", () => {
-    const { db, source } = setup();
+  test("cancel only after 2 consecutive successful misses; a sighting resets the counter", async () => {
+    const { db, source } = await setup();
     const a = make(source, "Band A", "2026-11-07T20:00");
     const b = make(source, "Band B", "2026-11-08T20:00");
     const c = make(source, "Band C", "2026-11-20T20:00");
-    reconcileSource(db, { source, events: [a, b, c], now: T0 });
+    await reconcileSource(db, { source, events: [a, b, c], now: T0 });
 
-    let r = reconcileSource(db, { source, events: [a, c], now: at(0.25) });
+    let r = await reconcileSource(db, { source, events: [a, c], now: at(0.25) });
     assert.equal(r.counts.missed, 1);
     assert.equal(r.counts.canceled, 0);
-    assert.equal(getEventByIdentity(db, source.id, b.identityKey)?.missCount, 1);
+    assert.equal((await getEventByIdentity(db, source.id, b.identityKey))?.missCount, 1);
 
     // Seen again: counter resets.
-    reconcileSource(db, { source, events: [a, b, c], now: at(0.5) });
-    assert.equal(getEventByIdentity(db, source.id, b.identityKey)?.missCount, 0);
+    await reconcileSource(db, { source, events: [a, b, c], now: at(0.5) });
+    assert.equal((await getEventByIdentity(db, source.id, b.identityKey))?.missCount, 0);
 
-    reconcileSource(db, { source, events: [a, c], now: at(0.75) });
-    r = reconcileSource(db, { source, events: [a, c], now: at(1) });
+    await reconcileSource(db, { source, events: [a, c], now: at(0.75) });
+    r = await reconcileSource(db, { source, events: [a, c], now: at(1) });
     assert.equal(r.counts.canceled, 1);
-    const stored = getEventByIdentity(db, source.id, b.identityKey);
+    const stored = await getEventByIdentity(db, source.id, b.identityKey);
     assert.equal(stored?.status, "canceled");
-    const outbox = pendingOutbox(db).filter((o) => o.change === "canceled");
+    const outbox = (await pendingOutbox(db)).filter((o) => o.change === "canceled");
     assert.equal(outbox.length, 1);
     assert.equal(outbox[0]?.event.status, "canceled");
 
     // It comes back.
-    r = reconcileSource(db, { source, events: [a, b, c], now: at(1.25) });
+    r = await reconcileSource(db, { source, events: [a, b, c], now: at(1.25) });
     assert.equal(r.counts.reappeared, 1);
-    assert.equal(getEventByIdentity(db, source.id, b.identityKey)?.status, "active");
+    assert.equal((await getEventByIdentity(db, source.id, b.identityKey))?.status, "active");
   });
 
-  test("zero results on a productive source raise an alert and cancel nothing", () => {
-    const { db, source } = setup();
+  test("zero results on a productive source raise an alert and cancel nothing", async () => {
+    const { db, source } = await setup();
     const a = make(source, "Band A", "2026-11-07T20:00");
-    reconcileSource(db, { source, events: [a], now: T0 });
+    await reconcileSource(db, { source, events: [a], now: T0 });
     for (let i = 1; i <= 3; i++) {
-      const r = reconcileSource(db, { source, events: [], now: at(i * 0.1) });
+      const r = await reconcileSource(db, { source, events: [], now: at(i * 0.1) });
       assert.equal(r.zeroResults, true);
       assert.ok(r.alert);
     }
-    assert.equal(getEventByIdentity(db, source.id, a.identityKey)?.status, "active");
-    assert.equal(getEventByIdentity(db, source.id, a.identityKey)?.missCount, 0);
-    const alerts = listAlerts(db, { open: true, kind: "zero_results" });
+    assert.equal((await getEventByIdentity(db, source.id, a.identityKey))?.status, "active");
+    assert.equal((await getEventByIdentity(db, source.id, a.identityKey))?.missCount, 0);
+    const alerts = await listAlerts(db, { open: true, kind: "zero_results" });
     assert.equal(alerts.length, 1);
-    assert.equal(getFetchState(db, source.id).consecutiveZeroResults, 3);
+    assert.equal((await getFetchState(db, source.id)).consecutiveZeroResults, 3);
 
     // Productive again: alert resolved, counter reset.
-    reconcileSource(db, { source, events: [a], now: at(0.5) });
-    assert.equal(listAlerts(db, { open: true, kind: "zero_results" }).length, 0);
-    assert.equal(getFetchState(db, source.id).consecutiveZeroResults, 0);
+    await reconcileSource(db, { source, events: [a], now: at(0.5) });
+    assert.equal((await listAlerts(db, { open: true, kind: "zero_results" })).length, 0);
+    assert.equal((await getFetchState(db, source.id)).consecutiveZeroResults, 0);
   });
 
-  test("zero results on a never-productive source: no alert", () => {
-    const { db, source } = setup();
-    const r = reconcileSource(db, { source, events: [], now: T0 });
+  test("zero results on a never-productive source: no alert", async () => {
+    const { db, source } = await setup();
+    const r = await reconcileSource(db, { source, events: [], now: T0 });
     assert.equal(r.alert, null);
-    assert.equal(listAlerts(db).length, 0);
+    assert.equal((await listAlerts(db)).length, 0);
   });
 
-  test("past events are never canceled; they expire to 'past'", () => {
-    const { db, source } = setup();
+  test("past events are never canceled; they expire to 'past'", async () => {
+    const { db, source } = await setup();
     const soon = make(source, "Band A", "2026-11-03T20:00");
     const later = make(source, "Band B", "2026-11-20T20:00");
-    reconcileSource(db, { source, events: [soon, later], now: T0 });
+    await reconcileSource(db, { source, events: [soon, later], now: T0 });
 
     // After the show starts it drops off the page: not a miss.
     const afterShow = new Date("2026-11-04T05:00:00Z"); // 23:00 Chicago on Nov 3
-    reconcileSource(db, { source, events: [later], now: afterShow });
-    reconcileSource(db, { source, events: [later], now: new Date(afterShow.getTime() + 3600_000) });
-    assert.equal(getEventByIdentity(db, source.id, soon.identityKey)?.status, "active");
-    assert.equal(getEventByIdentity(db, source.id, soon.identityKey)?.missCount, 0);
+    await reconcileSource(db, { source, events: [later], now: afterShow });
+    await reconcileSource(db, { source, events: [later], now: new Date(afterShow.getTime() + 3600_000) });
+    assert.equal((await getEventByIdentity(db, source.id, soon.identityKey))?.status, "active");
+    assert.equal((await getEventByIdentity(db, source.id, soon.identityKey))?.missCount, 0);
 
     // Two days later it is expired to 'past'.
-    const r = reconcileSource(db, { source, events: [later], now: at(3) });
+    const r = await reconcileSource(db, { source, events: [later], now: at(3) });
     assert.equal(r.counts.expired, 1);
-    assert.equal(getEventByIdentity(db, source.id, soon.identityKey)?.status, "past");
-    assert.equal(pendingOutbox(db).filter((o) => o.change === "canceled").length, 0);
+    assert.equal((await getEventByIdentity(db, source.id, soon.identityKey))?.status, "past");
+    assert.equal((await pendingOutbox(db)).filter((o) => o.change === "canceled").length, 0);
   });
 
-  test("events beyond the window covered by this fetch are not counted as missing", () => {
-    const { db, source } = setup();
+  test("events beyond the window covered by this fetch are not counted as missing", async () => {
+    const { db, source } = await setup();
     const a = make(source, "Band A", "2026-11-07T20:00");
     const far = make(source, "Band Far", "2027-03-01T20:00");
-    reconcileSource(db, { source, events: [a, far], now: T0 });
+    await reconcileSource(db, { source, events: [a, far], now: T0 });
     // Page now only shows November.
-    reconcileSource(db, { source, events: [a], now: at(0.25) });
-    const r = reconcileSource(db, { source, events: [a], now: at(0.5) });
+    await reconcileSource(db, { source, events: [a], now: at(0.25) });
+    const r = await reconcileSource(db, { source, events: [a], now: at(0.5) });
     assert.equal(r.counts.outsideWindow, 1);
-    assert.equal(getEventByIdentity(db, source.id, far.identityKey)?.status, "active");
+    assert.equal((await getEventByIdentity(db, source.id, far.identityKey))?.status, "active");
   });
 
-  test("site-declared cancellation is immediate; brand-new identities are 'new'", () => {
-    const { db, source } = setup();
+  test("site-declared cancellation is immediate; brand-new identities are 'new'", async () => {
+    const { db, source } = await setup();
     const a = make(source, "Band A", "2026-11-07T20:00");
-    reconcileSource(db, { source, events: [a], now: T0 });
+    await reconcileSource(db, { source, events: [a], now: T0 });
     const canceled = make(source, "CANCELED: Band A", "2026-11-07T20:00");
     assert.equal(canceled.identityKey, a.identityKey);
-    const r = reconcileSource(db, { source, events: [canceled], now: at(0.25) });
+    const r = await reconcileSource(db, { source, events: [canceled], now: at(0.25) });
     assert.equal(r.counts.canceled, 1);
-    assert.equal(getEventByIdentity(db, source.id, a.identityKey)?.status, "canceled");
+    assert.equal((await getEventByIdentity(db, source.id, a.identityKey))?.status, "canceled");
   });
 
-  test("enqueue:false records changes without outbox rows; updateFetchState:false leaves counts alone", () => {
-    const { db, source } = setup();
-    saveFetchState(db, source.id, { maxEventCount: 7 });
+  test("enqueue:false records changes without outbox rows; updateFetchState:false leaves counts alone", async () => {
+    const { db, source } = await setup();
+    await saveFetchState(db, source.id, { maxEventCount: 7 });
     const a = make(source, "Band A", "2026-11-07T20:00");
-    reconcileSource(db, { source, events: [a], now: T0, enqueue: false, updateFetchState: false });
-    assert.equal(pendingOutbox(db).length, 0);
-    assert.equal(listEventChanges(db).length, 1);
-    assert.equal(getFetchState(db, source.id).lastEventCount, null);
+    await reconcileSource(db, { source, events: [a], now: T0, enqueue: false, updateFetchState: false });
+    assert.equal((await pendingOutbox(db)).length, 0);
+    assert.equal((await listEventChanges(db)).length, 1);
+    assert.equal((await getFetchState(db, source.id)).lastEventCount, null);
   });
 });

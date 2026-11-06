@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import { getCandidate, getRawPage, insertCandidate, openDb, updateCandidate } from "../src/db.js";
+import { type Db, getCandidate, getRawPage, insertCandidate, updateCandidate } from "../src/db.js";
 import { buildReviewList, csvCell, reviewListToCsv, writeReviewList } from "../src/discovery/export.js";
 import { DEFAULT_RETRY_AFTER_MS, proveCandidate, runCandidatePipeline } from "../src/discovery/prove.js";
 import { recordProbe } from "../src/discovery/resolve.js";
@@ -14,6 +14,7 @@ import {
   websiteRejection,
 } from "../src/discovery/source-finder.js";
 import type { LlmClient, LlmJsonRequest } from "../src/types.js";
+import { openTestDb } from "./helpers/db.js";
 import { fakeFetch, fixedClock, fixtureText, NOW_MS, politeClient } from "./helpers/discovery.js";
 
 const TZ = "America/Indiana/Indianapolis";
@@ -162,30 +163,32 @@ describe("source finder", () => {
 });
 
 describe("prove", () => {
-  function healerCandidate(db: ReturnType<typeof openDb>) {
-    return recordProbe(
-      db,
-      {
-        name: "Healer",
-        city: "Indianapolis",
-        lat: 39.7741,
-        lng: -86.1338,
-        website: "https://healerindy.com/",
-        timezone: TZ,
-        discoveredFrom: "listing",
-      },
-      { now: NOW_MS },
+  async function healerCandidate(db: Db) {
+    return (
+      await recordProbe(
+        db,
+        {
+          name: "Healer",
+          city: "Indianapolis",
+          lat: 39.7741,
+          lng: -86.1338,
+          website: "https://healerindy.com/",
+          timezone: TZ,
+          discoveredFrom: "listing",
+        },
+        { now: NOW_MS },
+      )
     ).candidate;
   }
 
   test("promotes with >= 3 valid upcoming events using the real extract + validate pipeline", async () => {
-    const db = openDb(":memory:");
-    const candidate = healerCandidate(db);
+    const db = await openTestDb();
+    const candidate = await healerCandidate(db);
     const net = healerSite();
     const result = await proveCandidate(db, candidate.id, { http: politeClient(net.fetchImpl), clock: fixedClock });
     assert.equal(result.status, "promoted", JSON.stringify(result.attempts));
     assert.equal(result.upcoming, 4, "the past show is not counted");
-    const stored = getCandidate(db, candidate.id)!;
+    const stored = (await getCandidate(db, candidate.id))!;
     assert.equal(stored.status, "promoted");
     assert.equal(stored.sourceUrl, "https://healerindy.com/shows/");
     assert.equal(stored.sourceKind, "html");
@@ -197,33 +200,35 @@ describe("prove", () => {
       evidenceSha256: string;
     };
     assert.ok(proof.sample.some((e) => e.title === "Ghost Pepper w/ Static Bloom"));
-    assert.ok(getRawPage(db, proof.evidenceSha256), "evidence page bytes stored");
+    assert.ok(await getRawPage(db, proof.evidenceSha256), "evidence page bytes stored");
     assert.ok(!net.calls.some((c) => c.url.includes("etix")), "ticket links are recorded, never fetched");
   });
 
   test("too few events => no_source, retried in 30 days", async () => {
-    const db = openDb(":memory:");
-    const candidate = recordProbe(
-      db,
-      {
-        name: "Radio Radio",
-        lat: 39.77,
-        lng: -86.13,
-        website: "https://radioradioindy.com",
-        timezone: TZ,
-        discoveredFrom: "osm",
-      },
-      { now: NOW_MS },
+    const db = await openTestDb();
+    const candidate = (
+      await recordProbe(
+        db,
+        {
+          name: "Radio Radio",
+          lat: 39.77,
+          lng: -86.13,
+          website: "https://radioradioindy.com",
+          timezone: TZ,
+          discoveredFrom: "osm",
+        },
+        { now: NOW_MS },
+      )
     ).candidate;
     const net = thinSite();
     const result = await proveCandidate(db, candidate.id, { http: politeClient(net.fetchImpl), clock: fixedClock });
     assert.equal(result.status, "no_source");
     assert.equal(result.reason, "insufficient_events:1/3");
-    const stored = getCandidate(db, candidate.id)!;
+    const stored = (await getCandidate(db, candidate.id))!;
     assert.equal(stored.nextAttemptAt, NOW_MS + DEFAULT_RETRY_AFTER_MS);
     assert.equal(stored.provenEventCount, 1);
     // A lower threshold (configurable) promotes the same site.
-    updateCandidate(db, candidate.id, { status: "resolved", nextAttemptAt: null }, NOW_MS);
+    await updateCandidate(db, candidate.id, { status: "resolved", nextAttemptAt: null }, NOW_MS);
     const lenient = await proveCandidate(db, candidate.id, {
       http: politeClient(thinSite().fetchImpl),
       clock: fixedClock,
@@ -233,15 +238,15 @@ describe("prove", () => {
   });
 
   test("missing website / timezone and finder failures => no_source with a reason", async () => {
-    const db = openDb(":memory:");
-    const noSite = insertCandidate(
+    const db = await openTestDb();
+    const noSite = await insertCandidate(
       db,
       { name: "No Site", discoveredFrom: "osm", timezone: TZ, status: "resolved" },
       NOW_MS,
     );
     const r1 = await proveCandidate(db, noSite.id, { http: politeClient(fakeFetch({}).fetchImpl), clock: fixedClock });
     assert.deepEqual([r1.status, r1.reason], ["no_source", "no_website"]);
-    const noTz = insertCandidate(
+    const noTz = await insertCandidate(
       db,
       // Named like the site's events' location so they count toward the proof.
       { name: "Healer", website: "https://healerindy.com", discoveredFrom: "osm", status: "resolved" },
@@ -258,8 +263,8 @@ describe("prove", () => {
   });
 
   test("injected extract/validate stubs are honored (no network beyond the fake)", async () => {
-    const db = openDb(":memory:");
-    const candidate = healerCandidate(db);
+    const db = await openTestDb();
+    const candidate = await healerCandidate(db);
     let validated = 0;
     const result = await proveCandidate(db, candidate.id, {
       http: politeClient(healerSite().fetchImpl),
@@ -285,8 +290,8 @@ describe("prove", () => {
   });
 
   test("pipeline resolves new candidates, proves due ones, and export lists them for review", async () => {
-    const db = openDb(":memory:");
-    insertCandidate(
+    const db = await openTestDb();
+    await insertCandidate(
       db,
       {
         name: "Healer",
@@ -299,7 +304,7 @@ describe("prove", () => {
       },
       NOW_MS,
     );
-    recordProbe(
+    await recordProbe(
       db,
       {
         name: '=HYPERLINK("http://evil")',
@@ -317,7 +322,7 @@ describe("prove", () => {
     assert.equal(summary.proved.length, 1);
     assert.equal(summary.proved[0]!.status, "promoted");
 
-    const entries = buildReviewList(db);
+    const entries = await buildReviewList(db);
     assert.deepEqual(
       entries.map((e) => e.status),
       ["promoted", "needs_review"],
@@ -336,7 +341,7 @@ describe("prove", () => {
     assert.equal(csvCell(["a", "b"]), "a; b");
 
     const dir = mkdtempSync(join(tmpdir(), "event-scraper-review-"));
-    const written = writeReviewList(db, dir, { now: new Date(NOW_MS) });
+    const written = await writeReviewList(db, dir, { now: new Date(NOW_MS) });
     assert.equal(written.count, 2);
     assert.match(written.jsonPath, /venue-review-2026-11-02\.json$/);
     assert.equal(JSON.parse(readFileSync(written.jsonPath, "utf8")).length, 2);

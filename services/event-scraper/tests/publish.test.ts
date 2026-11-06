@@ -13,7 +13,6 @@ import {
   getVenue,
   listAlerts,
   listPlaceAliases,
-  openDb,
   pendingOutbox,
   putRawPage,
   resolvePlaceId,
@@ -34,6 +33,7 @@ import {
   VENUE_SNAPSHOT_SQL,
 } from "../src/publish/venues-snapshot.js";
 import type { OutboxItem, Publisher, ValidatedEvent } from "../src/types.js";
+import { openTestDb } from "./helpers/db.js";
 
 const fixtures = fileURLToPath(new URL("./fixtures/publish/", import.meta.url));
 const NOW = Date.parse("2026-06-02T18:00:00Z");
@@ -92,7 +92,7 @@ function item(id: number, patch: Partial<OutboxItem> = {}, event: Partial<Valida
 }
 
 const page = { bytes: readFileSync(join(fixtures, "page.ics")), contentType: "text/calendar" };
-const evidence = (sha: string) => (sha === "page-sha" ? page : null);
+const evidence = async (sha: string) => (sha === "page-sha" ? page : null);
 
 function fakeCapture(fail?: (inputs: ObservationInput[]) => Error | null) {
   const calls: { inputs: ObservationInput[]; raw: Buffer; contentType: string }[] = [];
@@ -308,9 +308,9 @@ describe("NdjsonPublisher", () => {
 });
 
 describe("publishOutbox", () => {
-  function seed() {
-    const db = openDb(":memory:");
-    addSource(
+  async function seed() {
+    const db = await openTestDb();
+    await addSource(
       db,
       {
         id: "src-1",
@@ -321,7 +321,7 @@ describe("publishOutbox", () => {
       },
       NOW,
     );
-    const sha = putRawPage(
+    const sha = await putRawPage(
       db,
       { url: "https://venue.example/cal.ics", contentType: "text/calendar", bytes: page.bytes },
       NOW,
@@ -332,27 +332,27 @@ describe("publishOutbox", () => {
       ["b", "Bad"],
     ]) {
       const ev = validated({ identityKey: key, title });
-      const stored = upsertEvent(db, ev, { now: NOW });
+      const stored = await upsertEvent(db, ev, { now: NOW });
       ids.push(
-        enqueueOutbox(
+        (await enqueueOutbox(
           db,
           { eventId: stored.id, change: "new", event: ev, observedAt: NOW - 1000, evidenceSha256: sha },
           NOW,
-        ) as number,
+        )) as number,
       );
     }
     return { db, ids };
   }
 
   test("marks successes published, records failures, alerts, and retries later", async () => {
-    const { db, ids } = seed();
+    const { db, ids } = await seed();
     let failing = true;
     const seen: string[] = [];
     const publisher: Publisher = {
       name: "fake",
       publish: async (items, lookup) => {
         for (const i of items)
-          seen.push(new TextDecoder().decode(lookup(i.evidenceSha256 as string)?.bytes).slice(0, 15));
+          seen.push(new TextDecoder().decode((await lookup(i.evidenceSha256 as string))?.bytes).slice(0, 15));
         return items.map((i) => ({ outboxId: i.id, ok: !(failing && i.event.title === "Bad"), message: "x" }));
       },
     };
@@ -363,21 +363,25 @@ describe("publishOutbox", () => {
     );
     assert.equal(seen[0], "BEGIN:VCALENDAR");
     assert.deepEqual(
-      pendingOutbox(db).map((row) => [row.id, row.attempts]),
+      (await pendingOutbox(db)).map((row) => [row.id, row.attempts]),
       [[ids[1], 1]],
     );
-    const alerts = listAlerts(db, { open: true, kind: "publish_failed" });
+    const alerts = await listAlerts(db, { open: true, kind: "publish_failed" });
     assert.equal(alerts.length, 1);
 
     failing = false;
     const second = await publishOutbox(db, publisher, { now: () => NOW });
     assert.equal(second.published, 1);
-    assert.equal(pendingOutbox(db).length, 0);
-    assert.equal(listAlerts(db, { open: true, kind: "publish_failed" }).length, 0, "clean run resolves the alert");
+    assert.equal((await pendingOutbox(db)).length, 0);
+    assert.equal(
+      (await listAlerts(db, { open: true, kind: "publish_failed" })).length,
+      0,
+      "clean run resolves the alert",
+    );
   });
 
   test("a throwing publisher never throws out of the run and stops retrying at maxAttempts", async () => {
-    const { db } = seed();
+    const { db } = await seed();
     const publisher: Publisher = {
       name: "down",
       publish: async () => {
@@ -386,9 +390,9 @@ describe("publishOutbox", () => {
     };
     for (let attempt = 0; attempt < 3; attempt++)
       await publishOutbox(db, publisher, { maxAttempts: 2, now: () => NOW });
-    assert.equal(pendingOutbox(db, 100, 2).length, 0);
-    assert.equal(pendingOutbox(db, 100, 10).length, 2);
-    const alert = listAlerts(db, { open: true, kind: "publish_failed" })[0];
+    assert.equal((await pendingOutbox(db, 100, 2)).length, 0);
+    assert.equal((await pendingOutbox(db, 100, 10)).length, 2);
+    const alert = (await listAlerts(db, { open: true, kind: "publish_failed" }))[0];
     assert.ok(!JSON.stringify(alert).includes("secret"));
   });
 });
@@ -445,16 +449,16 @@ describe("venue snapshot", () => {
   });
 
   test("sync upserts venues and records place ids without stealing another venue's alias", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const result = await syncVenueSnapshot(db, new JsonFileVenueSnapshot(join(fixtures, "venues.json"), clock), NOW);
     assert.equal(result.venues, 3);
     assert.equal(result.placeAliasesAdded, 1);
     assert.deepEqual(result.placeAliasConflicts, [
       { placeId: "ChIJhifi", venueId: "venue-annex", ownerVenueId: "venue-hifi" },
     ]);
-    assert.equal(resolvePlaceId(db, "ChIJhifi")?.venueId, "venue-hifi");
-    assert.equal(listPlaceAliases(db, { venueId: "venue-hifi" })[0].isCanonical, true);
-    assert.equal(getVenue(db, "venue-annex")?.name, "HI-FI Annex");
+    assert.equal((await resolvePlaceId(db, "ChIJhifi"))?.venueId, "venue-hifi");
+    assert.equal((await listPlaceAliases(db, { venueId: "venue-hifi" }))[0].isCanonical, true);
+    assert.equal((await getVenue(db, "venue-annex"))?.name, "HI-FI Annex");
     // Re-running is idempotent.
     const again = await syncVenueSnapshot(db, new JsonFileVenueSnapshot(join(fixtures, "venues.json"), clock), NOW);
     assert.equal(again.placeAliasesAdded, 0);

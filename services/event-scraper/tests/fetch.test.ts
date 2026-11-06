@@ -319,7 +319,7 @@ describe("HTTP behaviour", () => {
       sleep: time.sleep,
       minHostIntervalMs: 1000,
     });
-    await Promise.all([client.get({ url: "https://a.test/x" }), client.get({ url: "https://a.test/x" })]);
+    await Promise.all([await client.get({ url: "https://a.test/x" }), await client.get({ url: "https://a.test/x" })]);
     const aTimes = net.calls.filter((call) => call.url.startsWith("https://a.test/")).map((call) => call.at);
     for (let i = 1; i < aTimes.length; i++)
       assert.ok(aTimes[i]! - aTimes[i - 1]! >= 1000, `a.test spacing ${aTimes[i]! - aTimes[i - 1]!}`);

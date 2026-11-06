@@ -7,7 +7,6 @@ import {
   insertCandidate,
   listCandidates,
   listPlaceAliases,
-  openDb,
   resolvePlaceId,
   upsertVenues,
 } from "../src/db.js";
@@ -25,6 +24,7 @@ import {
   syncVenuePlaceAliases,
 } from "../src/discovery/resolve.js";
 import type { PlaceResult, Venue } from "../src/types.js";
+import { openTestDb } from "./helpers/db.js";
 
 const NOW = Date.UTC(2026, 10, 2, 17);
 
@@ -192,47 +192,47 @@ describe("clusterPlaces", () => {
 });
 
 describe("ingestPlaces", () => {
-  test("writes one candidate per real venue with every place id as an alias", () => {
-    const db = openDb(":memory:");
-    const summary = ingestPlaces(db, allPlaces(), INDY);
+  test("writes one candidate per real venue with every place id as an alias", async () => {
+    const db = await openTestDb();
+    const summary = await ingestPlaces(db, allPlaces(), INDY);
     assert.equal(summary.closed, 1, "CLOSED_PERMANENTLY is skipped");
     assert.equal(summary.needsReview, 2, "Hi-Fi and Hi-Fi Annex");
     assert.equal(summary.created, 4, "Mercury, Melody Inn, Dome Room, Emerson");
-    const mercury = listCandidates(db).find((c) => c.name === "The Mercury Room")!;
+    const mercury = (await listCandidates(db)).find((c) => c.name === "The Mercury Room")!;
     assert.equal(mercury.status, "resolved");
     assert.equal(mercury.primaryPlaceId, "ChIJ_MERCURY_BIZ");
     assert.equal(mercury.timezone, "America/Indiana/Indianapolis");
     assert.equal(mercury.websiteDomain, "mercuryroomindy.com");
     for (const id of ["ChIJ_MERCURY_BIZ", "ChIJ_MERCURY_EVENTS", "ChIJ_MERCURY_PREMISE", "ChIJ_MERCURY_ADDR"]) {
-      assert.equal(resolvePlaceId(db, id)?.candidateId, mercury.id, `${id} resolves to Mercury`);
+      assert.equal((await resolvePlaceId(db, id))?.candidateId, mercury.id, `${id} resolves to Mercury`);
     }
-    const aliases = listPlaceAliases(db, { candidateId: mercury.id });
+    const aliases = await listPlaceAliases(db, { candidateId: mercury.id });
     assert.equal(aliases.filter((a) => a.isCanonical).length, 1);
     assert.equal(aliases.find((a) => a.isCanonical)?.placeId, "ChIJ_MERCURY_BIZ");
-    assert.equal(resolvePlaceId(db, "ChIJ_VIRGINIA_PREMISE"), null);
-    assert.equal(resolvePlaceId(db, "ChIJ_INDIANAPOLIS"), null);
-    const hifi = listCandidates(db).find((c) => c.name === "The Hi-Fi")!;
+    assert.equal(await resolvePlaceId(db, "ChIJ_VIRGINIA_PREMISE"), null);
+    assert.equal(await resolvePlaceId(db, "ChIJ_INDIANAPOLIS"), null);
+    const hifi = (await listCandidates(db)).find((c) => c.name === "The Hi-Fi")!;
     assert.equal(hifi.status, "needs_review");
     assert.equal(hifi.statusReason, "nearby_similar_name");
   });
 
-  test("re-running is idempotent: the same venue resolves through any alias", () => {
-    const db = openDb(":memory:");
-    ingestPlaces(db, allPlaces(), INDY);
-    const before = listCandidates(db).length;
-    const second = ingestPlaces(db, allPlaces(), { ...INDY, now: NOW + 1000 });
-    assert.equal(listCandidates(db).length, before);
+  test("re-running is idempotent: the same venue resolves through any alias", async () => {
+    const db = await openTestDb();
+    await ingestPlaces(db, allPlaces(), INDY);
+    const before = (await listCandidates(db)).length;
+    const second = await ingestPlaces(db, allPlaces(), { ...INDY, now: NOW + 1000 });
+    assert.equal((await listCandidates(db)).length, before);
     assert.equal(second.created, 0);
     // A later search that only returns the street address-like listing id still lands on Mercury.
     const eventsOnly = byId(allPlaces(), "ChIJ_MERCURY_EVENTS");
-    const third = ingestPlaces(db, [eventsOnly], { ...INDY, now: NOW + 2000 });
+    const third = await ingestPlaces(db, [eventsOnly], { ...INDY, now: NOW + 2000 });
     assert.equal(third.merged, 1);
-    assert.equal(listCandidates(db).length, before);
+    assert.equal((await listCandidates(db)).length, before);
   });
 
-  test("matches an existing production venue whose stored id is a premise and adopts the business id", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("matches an existing production venue whose stored id is a premise and adopts the business id", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       venue({
         id: "v-mercury",
         name: "Mercury Room",
@@ -241,13 +241,13 @@ describe("ingestPlaces", () => {
         googlePlaceId: "ChIJ_MERCURY_PREMISE",
       }),
     ]);
-    assert.deepEqual(syncVenuePlaceAliases(db, NOW), { assigned: 1, shared: [] });
-    ingestPlaces(db, allPlaces(), INDY);
-    const mercury = listCandidates(db).find((c) => c.matchedVenueId === "v-mercury")!;
+    assert.deepEqual(await syncVenuePlaceAliases(db, NOW), { assigned: 1, shared: [] });
+    await ingestPlaces(db, allPlaces(), INDY);
+    const mercury = (await listCandidates(db)).find((c) => c.matchedVenueId === "v-mercury")!;
     assert.equal(mercury.status, "resolved");
     // The premise (building) id never decides identity; the venue still matches by proximity + name.
     assert.equal(mercury.statusReason, "matched_venue:geo_name");
-    const aliases = listPlaceAliases(db, { venueId: "v-mercury" });
+    const aliases = await listPlaceAliases(db, { venueId: "v-mercury" });
     assert.deepEqual(aliases.map((a) => a.placeId).sort(), [
       "ChIJ_MERCURY_ADDR",
       "ChIJ_MERCURY_BIZ",
@@ -257,10 +257,10 @@ describe("ingestPlaces", () => {
     assert.equal(aliases.find((a) => a.isCanonical)?.placeId, "ChIJ_MERCURY_BIZ", "establishment beats premise");
   });
 
-  test("a venue that already has an enabled source is not re-proposed", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [venue({ id: "v-melody", name: "Melody Inn", lat: 39.8261, lng: -86.1601 })]);
-    addSource(
+  test("a venue that already has an enabled source is not re-proposed", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [venue({ id: "v-melody", name: "Melody Inn", lat: 39.8261, lng: -86.1601 })]);
+    await addSource(
       db,
       {
         venueId: "v-melody",
@@ -270,15 +270,15 @@ describe("ingestPlaces", () => {
       },
       NOW,
     );
-    ingestPlaces(db, allPlaces(), INDY);
-    const melody = listCandidates(db).find((c) => c.matchedVenueId === "v-melody")!;
+    await ingestPlaces(db, allPlaces(), INDY);
+    const melody = (await listCandidates(db)).find((c) => c.matchedVenueId === "v-melody")!;
     assert.equal(melody.status, "rejected");
     assert.equal(melody.statusReason, "venue_has_source");
   });
 
-  test("two rooms sharing one place id in production => needs_review, nothing merged or stolen", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("two rooms sharing one place id in production => needs_review, nothing merged or stolen", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       venue({
         id: "v-emerson",
         name: "The Emerson Theater",
@@ -288,24 +288,24 @@ describe("ingestPlaces", () => {
       }),
       venue({ id: "v-side", name: "Emerson Side Room", googlePlaceId: "ChIJ_EMERSON", lat: 39.7815, lng: -86.0873 }),
     ]);
-    assert.deepEqual(syncVenuePlaceAliases(db, NOW), { assigned: 0, shared: ["ChIJ_EMERSON"] });
-    ingestPlaces(db, allPlaces(), INDY);
-    const emerson = listCandidates(db).find((c) => c.name === "The Emerson Theater")!;
+    assert.deepEqual(await syncVenuePlaceAliases(db, NOW), { assigned: 0, shared: ["ChIJ_EMERSON"] });
+    await ingestPlaces(db, allPlaces(), INDY);
+    const emerson = (await listCandidates(db)).find((c) => c.name === "The Emerson Theater")!;
     assert.equal(emerson.status, "needs_review");
     assert.equal(emerson.statusReason, "same_place_id_different_name");
     assert.equal(emerson.matchedVenueId, null);
-    assert.equal(resolvePlaceId(db, "ChIJ_EMERSON"), null, "alias not assigned to anyone");
+    assert.equal(await resolvePlaceId(db, "ChIJ_EMERSON"), null, "alias not assigned to anyone");
     const conflict = emerson.evidence.conflict as { venueIds: string[] };
     assert.deepEqual(conflict.venueIds.sort(), ["v-emerson", "v-side"]);
     // Re-running does not create a second review row.
-    ingestPlaces(db, allPlaces(), { ...INDY, now: NOW + 1 });
-    assert.equal(listCandidates(db).filter((c) => c.name === "The Emerson Theater").length, 1);
+    await ingestPlaces(db, allPlaces(), { ...INDY, now: NOW + 1 });
+    assert.equal((await listCandidates(db)).filter((c) => c.name === "The Emerson Theater").length, 1);
   });
 
-  test("a mis-assigned place id (different name) is routed to review", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [venue({ id: "v-annex", name: "Hi-Fi Annex", googlePlaceId: "ChIJ_HIFI_BIZ" })]);
-    const outcome = recordProbe(
+  test("a mis-assigned place id (different name) is routed to review", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [venue({ id: "v-annex", name: "Hi-Fi Annex", googlePlaceId: "ChIJ_HIFI_BIZ" })]);
+    const outcome = await recordProbe(
       db,
       {
         name: "The Hi-Fi",
@@ -327,36 +327,41 @@ describe("ingestPlaces", () => {
     );
     assert.equal(outcome.kind, "needs_review");
     assert.equal(outcome.match.kind, "conflict");
-    assert.equal(resolvePlaceId(db, "ChIJ_HIFI_BIZ"), null);
+    assert.equal(await resolvePlaceId(db, "ChIJ_HIFI_BIZ"), null);
   });
 });
 
 describe("matchIdentity without place ids", () => {
-  test("geo + name matches production venues; similar names nearby are ambiguous", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("geo + name matches production venues; similar names nearby are ambiguous", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       venue({ id: "v-hifi", name: "The Hi-Fi", lat: 39.75405, lng: -86.14102, website: "https://thehifi.com" }),
     ]);
-    assert.deepEqual(matchIdentity(db, { name: "Hi-Fi", lat: 39.7541, lng: -86.141, discoveredFrom: "osm" }), {
+    assert.deepEqual(await matchIdentity(db, { name: "Hi-Fi", lat: 39.7541, lng: -86.141, discoveredFrom: "osm" }), {
       kind: "venue",
       venueId: "v-hifi",
       candidateId: null,
       via: "geo_name",
     });
-    const annex = matchIdentity(db, { name: "Hi-Fi Annex", lat: 39.75397, lng: -86.14085, discoveredFrom: "osm" });
+    const annex = await matchIdentity(db, {
+      name: "Hi-Fi Annex",
+      lat: 39.75397,
+      lng: -86.14085,
+      discoveredFrom: "osm",
+    });
     assert.equal(annex.kind, "conflict");
     assert.equal(annex.kind === "conflict" && annex.reason, "nearby_similar_name");
-    assert.deepEqual(matchIdentity(db, { name: "The Hi-Fi", lat: 39.8, lng: -86.2, discoveredFrom: "osm" }), {
+    assert.deepEqual(await matchIdentity(db, { name: "The Hi-Fi", lat: 39.8, lng: -86.2, discoveredFrom: "osm" }), {
       kind: "none",
     });
   });
 
-  test("a matching website domain alone never matches", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("a matching website domain alone never matches", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       venue({ id: "v-hifi", name: "The Hi-Fi", lat: 39.75405, lng: -86.14102, website: "https://thehifi.com" }),
     ]);
-    const result = matchIdentity(db, {
+    const result = await matchIdentity(db, {
       name: "Square Cat Vinyl",
       website: "https://thehifi.com/square-cat",
       lat: 39.7541,
@@ -366,43 +371,48 @@ describe("matchIdentity without place ids", () => {
     assert.deepEqual(result, { kind: "none" });
   });
 
-  test("name-only probes match within the same city only", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [venue({ id: "v-melody", name: "Melody Inn", address: "3826 N Illinois St, Indianapolis, IN" })]);
+  test("name-only probes match within the same city only", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
+      venue({ id: "v-melody", name: "Melody Inn", address: "3826 N Illinois St, Indianapolis, IN" }),
+    ]);
     assert.equal(
-      matchIdentity(db, { name: "The Melody Inn", city: "Indianapolis", discoveredFrom: "listing" }).kind,
+      (await matchIdentity(db, { name: "The Melody Inn", city: "Indianapolis", discoveredFrom: "listing" })).kind,
       "venue",
     );
-    assert.equal(matchIdentity(db, { name: "Melody Inn", city: "Louisville", discoveredFrom: "listing" }).kind, "none");
-    assert.equal(matchIdentity(db, { name: "Melody Inn", discoveredFrom: "listing" }).kind, "none");
+    assert.equal(
+      (await matchIdentity(db, { name: "Melody Inn", city: "Louisville", discoveredFrom: "listing" })).kind,
+      "none",
+    );
+    assert.equal((await matchIdentity(db, { name: "Melody Inn", discoveredFrom: "listing" })).kind, "none");
   });
 });
 
 describe("resolveCandidate", () => {
-  test("folds a manually added duplicate into the existing candidate", () => {
-    const db = openDb(":memory:");
-    ingestPlaces(db, allPlaces(), INDY);
-    const mercury = listCandidates(db).find((c) => c.name === "The Mercury Room")!;
-    const manual = insertCandidate(
+  test("folds a manually added duplicate into the existing candidate", async () => {
+    const db = await openTestDb();
+    await ingestPlaces(db, allPlaces(), INDY);
+    const mercury = (await listCandidates(db)).find((c) => c.name === "The Mercury Room")!;
+    const manual = await insertCandidate(
       db,
       { name: "Mercury Room", lat: 39.7571, lng: -86.1432, discoveredFrom: "manual", status: "new" },
       NOW,
     );
-    const outcome = resolveCandidate(db, manual.id, { now: NOW });
+    const outcome = await resolveCandidate(db, manual.id, { now: NOW });
     assert.equal(outcome.kind, "merged");
     assert.equal(outcome.candidate.id, mercury.id);
-    assert.equal(getCandidate(db, manual.id)?.status, "rejected");
-    assert.equal(getCandidate(db, manual.id)?.statusReason, `duplicate_of:${mercury.id}`);
-    assert.ok((getCandidate(db, mercury.id)?.evidence.feeds as string[]).includes("manual"));
+    assert.equal((await getCandidate(db, manual.id))?.status, "rejected");
+    assert.equal((await getCandidate(db, manual.id))?.statusReason, `duplicate_of:${mercury.id}`);
+    assert.ok(((await getCandidate(db, mercury.id))?.evidence.feeds as string[]).includes("manual"));
   });
 
-  test("a new unknown candidate becomes resolved", () => {
-    const db = openDb(":memory:");
-    const manual = insertCandidate(
+  test("a new unknown candidate becomes resolved", async () => {
+    const db = await openTestDb();
+    const manual = await insertCandidate(
       db,
       { name: "Brand New Room", lat: 39.7, lng: -86.1, discoveredFrom: "manual", status: "new" },
       NOW,
     );
-    assert.equal(resolveCandidate(db, manual.id, { now: NOW }).candidate.status, "resolved");
+    assert.equal((await resolveCandidate(db, manual.id, { now: NOW })).candidate.status, "resolved");
   });
 });

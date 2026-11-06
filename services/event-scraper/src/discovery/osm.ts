@@ -214,7 +214,7 @@ export async function discoverOsmArea(
       summary.skipped++;
       continue;
     }
-    const outcome = recordProbe(db, probe, options);
+    const outcome = await recordProbe(db, probe, options);
     summary.outcomes[outcome.kind]++;
     summary.candidateIds.push(outcome.candidate.id);
   }

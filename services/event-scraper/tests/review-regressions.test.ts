@@ -20,9 +20,11 @@ import {
   insertCandidate,
   listCandidates,
   listSourceEvents,
+  one,
   openDb,
   pendingOutbox,
   pruneOutbox,
+  run,
   upsertVenues,
 } from "../src/db.js";
 import { isPrivateAddress, isPrivateHost } from "../src/denylist.js";
@@ -51,6 +53,7 @@ import { parsePriceText } from "../src/validate/price.js";
 import { localToUtc } from "../src/validate/time.js";
 import { type ValidateContext, validateEvent, validateEvents } from "../src/validate/validate.js";
 import { makeCtx, makePage } from "./extract/helpers.js";
+import { openTestDb, testDatabaseEnv } from "./helpers/db.js";
 import { fakeFetch, fixedClock, NOW_MS, politeClient } from "./helpers/discovery.js";
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -101,9 +104,9 @@ function reasons(e: ExtractedEvent, ctx: ValidateContext = CTX): string[] {
   return outcome.reasons;
 }
 
-function venueDb(): { db: Db; source: Source } {
-  const db = openDb(":memory:");
-  upsertVenues(db, [
+async function venueDb(): Promise<{ db: Db; source: Source }> {
+  const db = await openTestDb();
+  await upsertVenues(db, [
     {
       id: "venue-1",
       name: "The Example Room",
@@ -116,7 +119,11 @@ function venueDb(): { db: Db; source: Source } {
       syncedAt: 0,
     },
   ]);
-  const source = addSource(db, { id: "src-1", venueId: "venue-1", kind: "html", url: SOURCE.url, timezone: TZ }, 0);
+  const source = await addSource(
+    db,
+    { id: "src-1", venueId: "venue-1", kind: "html", url: SOURCE.url, timezone: TZ },
+    0,
+  );
   return { db, source };
 }
 
@@ -167,18 +174,18 @@ describe("finding: id/URL identity keys had no start time", () => {
     assert.notEqual(result.valid[0]?.identityKey, result.valid[1]?.identityKey);
   });
 
-  test("a same-day time change of one id event is an update, not new + cancel", () => {
-    const { db, source } = venueDb();
+  test("a same-day time change of one id event is an update, not new + cancel", async () => {
+    const { db, source } = await venueDb();
     const ctx = { ...CTX, source };
     const first = valid(ev({ sourceEventId: "wp-1", start: "2026-11-07T20:00" }), ctx);
-    reconcileSource(db, { source, events: [first], now: NOW });
+    await reconcileSource(db, { source, events: [first], now: NOW });
     const moved = valid(ev({ sourceEventId: "wp-1", start: "2026-11-07T21:00" }), ctx);
-    const r = reconcileSource(db, { source, events: [moved], now: new Date(NOW.getTime() + 3600_000) });
+    const r = await reconcileSource(db, { source, events: [moved], now: new Date(NOW.getTime() + 3600_000) });
     assert.deepEqual(
       r.changes.map((c) => c.kind),
       ["updated"],
     );
-    const stored = listSourceEvents(db, source.id, ["active"]);
+    const stored = await listSourceEvents(db, source.id, ["active"]);
     assert.equal(stored.length, 1);
     assert.equal(stored[0]?.startLocal, "2026-11-07T21:00");
   });
@@ -294,18 +301,18 @@ describe("finding: date-only events were 'missing' on their own day", () => {
     assert.equal(hasStarted({ startUtc: null, startLocal: "2026-11-08" }, NOW, "2026-11-07"), false);
   });
 
-  test("two same-day fetches without a date-only event do not cancel it", () => {
-    const { db, source } = venueDb();
+  test("two same-day fetches without a date-only event do not cancel it", async () => {
+    const { db, source } = await venueDb();
     const ctx = { ...CTX, source };
     const allDay = valid(ev({ title: "All Day Fest", start: "2026-11-07" }), ctx);
     const other = valid(ev({ title: "Other Show", start: "2026-11-09T20:00" }), ctx);
-    reconcileSource(db, { source, events: [allDay, other], now: NOW });
+    await reconcileSource(db, { source, events: [allDay, other], now: NOW });
     const onTheDay = [new Date("2026-11-07T18:00:00Z"), new Date("2026-11-07T21:00:00Z")];
     for (const now of onTheDay) {
-      const r = reconcileSource(db, { source, events: [{ ...other }], now });
+      const r = await reconcileSource(db, { source, events: [{ ...other }], now });
       assert.equal(r.counts.canceled, 0);
     }
-    assert.ok(listSourceEvents(db, source.id, ["active"]).some((e) => e.title === "All Day Fest"));
+    assert.ok((await listSourceEvents(db, source.id, ["active"])).some((e) => e.title === "All Day Fest"));
   });
 });
 
@@ -329,7 +336,7 @@ describe("finding: the Places budget ignored requests made by failed cells", () 
   };
 
   test("every request counts, including ones in cells that fail; the cap holds", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     let calls = 0;
     const places: PlacesClient = {
       textSearch: async (request) => {
@@ -357,11 +364,11 @@ describe("finding: the Places budget ignored requests made by failed cells", () 
     assert.ok(calls <= 42, `made ${calls} requests`);
     assert.equal(summary.placesBudgetExhausted, true);
     // Places returned before a failure in the same cell are kept.
-    assert.ok(listCandidates(db).length >= Math.floor((calls * 2) / 3) - 1);
+    assert.ok((await listCandidates(db)).length >= Math.floor((calls * 2) / 3) - 1);
   });
 
   test("a 403/429 stops the rest of the Places work for the run", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     let calls = 0;
     const places: PlacesClient = {
       textSearch: async () => {
@@ -380,8 +387,8 @@ describe("finding: the Places budget ignored requests made by failed cells", () 
 });
 
 describe("finding: premise ids attached to the first venue blocked later businesses", () => {
-  test("a second business in the same building is not parked in review", () => {
-    const db = openDb(":memory:");
+  test("a second business in the same building is not parked in review", async () => {
+    const db = await openTestDb();
     const premise = place({
       placeId: "PREMISE",
       displayName: "1043 Virginia Ave",
@@ -389,7 +396,7 @@ describe("finding: premise ids attached to the first venue blocked later busines
       lat: 39.75709,
       lng: -86.14,
     });
-    ingestPlaces(
+    await ingestPlaces(
       db,
       [
         place({ placeId: "HIFI", displayName: "The Hi-Fi", types: ["live_music_venue"], lat: 39.757, lng: -86.14 }),
@@ -397,7 +404,7 @@ describe("finding: premise ids attached to the first venue blocked later busines
       ],
       INDY,
     );
-    ingestPlaces(
+    await ingestPlaces(
       db,
       [
         place({
@@ -411,17 +418,17 @@ describe("finding: premise ids attached to the first venue blocked later busines
       ],
       INDY,
     );
-    const brewery = listCandidates(db).find((c) => c.name === "Fountain Square Brewery");
+    const brewery = (await listCandidates(db)).find((c) => c.name === "Fountain Square Brewery");
     assert.ok(brewery);
     assert.notEqual(brewery.status, "needs_review", brewery.statusReason ?? "");
-    assert.notEqual(listCandidates(db).find((c) => c.name === "The Hi-Fi")?.status, "needs_review");
+    assert.notEqual((await listCandidates(db)).find((c) => c.name === "The Hi-Fi")?.status, "needs_review");
   });
 });
 
 describe("finding: social / link-in-bio websites counted as identities", () => {
-  test("a Places listing whose website is the venue's Facebook page still matches the venue", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("a Places listing whose website is the venue's Facebook page still matches the venue", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       {
         id: "v-hifi",
         name: "The Hi-Fi",
@@ -434,7 +441,7 @@ describe("finding: social / link-in-bio websites counted as identities", () => {
         syncedAt: NOW_MS,
       },
     ]);
-    ingestPlaces(
+    await ingestPlaces(
       db,
       [
         place({
@@ -448,7 +455,7 @@ describe("finding: social / link-in-bio websites counted as identities", () => {
       ],
       INDY,
     );
-    const [candidate] = listCandidates(db);
+    const [candidate] = await listCandidates(db);
     assert.equal(candidate?.matchedVenueId, "v-hifi");
     assert.equal(candidate?.statusReason, "matched_venue:geo_name");
   });
@@ -471,16 +478,16 @@ describe("finding: same-domain merging depended on batch order", () => {
     lng: -86.1515,
     websiteUri: "https://www.oldnationalcentre.com/murat",
   });
-  const live = (db: Db) => listCandidates(db).filter((c) => c.status !== "rejected");
+  const live = async (db: Db) => (await listCandidates(db)).filter((c) => c.status !== "rejected");
 
-  test("one batch and two batches give the same single candidate", () => {
-    const together = openDb(":memory:");
-    ingestPlaces(together, [a, b], INDY);
-    const apart = openDb(":memory:");
-    ingestPlaces(apart, [a], INDY);
-    ingestPlaces(apart, [b], INDY);
-    assert.equal(live(together).length, 1);
-    assert.equal(live(apart).length, 1);
+  test("one batch and two batches give the same single candidate", async () => {
+    const together = await openTestDb();
+    await ingestPlaces(together, [a, b], INDY);
+    const apart = await openTestDb();
+    await ingestPlaces(apart, [a], INDY);
+    await ingestPlaces(apart, [b], INDY);
+    assert.equal((await live(together)).length, 1);
+    assert.equal((await live(apart)).length, 1);
   });
 });
 
@@ -508,8 +515,8 @@ describe("finding: prove counted other venues' events", () => {
 
   test("a parent site's events at another room do not promote the candidate", async () => {
     const run = async (location: ExtractedEvent["location"]) => {
-      const db = openDb(":memory:");
-      const candidate = insertCandidate(
+      const db = await openTestDb();
+      const candidate = await insertCandidate(
         db,
         {
           name: "Lobby Bar",
@@ -580,7 +587,7 @@ describe("finding: Overpass runtime errors with HTTP 200 counted as success", ()
   });
 
   test("a failed OSM unit is retried after feedRetryMs, not the refresh interval", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const overpass: OverpassClient = {
       query: async () => {
         throw new Error("Overpass runtime error: Query timed out");
@@ -592,10 +599,8 @@ describe("finding: Overpass runtime errors with HTTP 200 counted as success", ()
       { cities: [city], listings: [], skipProve: true, feedRetryMs: DAY, osmRefreshMs: 30 * DAY },
     );
     assert.equal(summary.units[0]?.ok, false);
-    const job = db.prepare("SELECT run_after FROM jobs WHERE kind='discover_osm' AND status='queued'").get() as {
-      run_after: number;
-    };
-    assert.equal(Number(job.run_after), NOW_MS + DAY);
+    const job = await one(db, "SELECT run_after FROM jobs WHERE kind='discover_osm' AND status='queued'");
+    assert.equal(Number(job?.run_after), NOW_MS + DAY);
   });
 });
 
@@ -631,17 +636,17 @@ describe("finding: Places locationRestriction was ~2x the cell", () => {
 describe("finding: fetch jobs could lose their lease during long politeness waits", () => {
   const page = readFileSync(new URL("./fixtures/extract/jsonld-graph-yoast.html", import.meta.url), "utf8");
 
-  function setup() {
-    const { db, source } = venueDb();
-    db.prepare("UPDATE sources SET enabled=0 WHERE id=?").run(source.id);
+  async function setup() {
+    const { db, source } = await venueDb();
+    await run(db, "UPDATE sources SET enabled=FALSE WHERE id=?", source.id);
     let nowMs = NOW_MS;
     const clock: Clock = { now: () => new Date(nowMs) };
     return { db, clock, advance: (ms: number) => (nowMs += ms) };
   }
 
   test("a long wait renews the lease and the job finishes normally", async () => {
-    const { db, clock, advance } = setup();
-    const source = addSource(db, {
+    const { db, clock, advance } = await setup();
+    const source = await addSource(db, {
       venueId: "venue-1",
       kind: "html",
       url: "https://venue.example/shows/",
@@ -655,26 +660,26 @@ describe("finding: fetch jobs could lose their lease during long politeness wait
     });
     const run = await runOnce({ db, http: politeClient(net.fetchImpl), clock }, { concurrency: 1 });
     assert.equal(run.results[0]?.outcome !== "lease_lost", true);
-    assert.ok(listSourceEvents(db, source.id).length > 0);
-    assert.equal(countJobs(db, { kind: "fetch_source", status: "queued" }), 1);
+    assert.ok((await listSourceEvents(db, source.id)).length > 0);
+    assert.equal(await countJobs(db, { kind: "fetch_source", status: "queued" }), 1);
   });
 
   test("when another worker took the job, this one skips reconcile and does not enqueue a second job", async () => {
-    const { db, clock, advance } = setup();
-    const source = addSource(db, {
+    const { db, clock, advance } = await setup();
+    const source = await addSource(db, {
       venueId: "venue-1",
       kind: "html",
       url: "https://venue.example/shows/",
       timezone: TZ,
     });
     const net = fakeFetch({
-      "https://venue.example/shows/": () => {
+      "https://venue.example/shows/": async () => {
         advance(20 * 60 * 1000);
         // Another worker reclaims the expired lease and finishes the job with its own schedule.
-        const stolen = claimJob(db, { kinds: ["fetch_source"], now: clock.now().getTime(), leaseMs: 60_000 });
+        const stolen = await claimJob(db, { kinds: ["fetch_source"], now: clock.now().getTime(), leaseMs: 60_000 });
         assert.ok(stolen);
-        finishJob(db, stolen.id, stolen.leaseToken as string, clock.now().getTime());
-        enqueueJob(db, "fetch_source", stolen.payload, {
+        await finishJob(db, stolen.id, stolen.leaseToken as string, clock.now().getTime());
+        await enqueueJob(db, "fetch_source", stolen.payload, {
           dedupeKey: stolen.dedupeKey ?? undefined,
           runAfter: clock.now().getTime() + DAY,
           now: clock.now().getTime(),
@@ -684,8 +689,8 @@ describe("finding: fetch jobs could lose their lease during long politeness wait
     });
     const run = await runOnce({ db, http: politeClient(net.fetchImpl), clock }, { concurrency: 1, maxJobs: 1 });
     assert.equal(run.results[0]?.outcome, "lease_lost");
-    assert.equal(listSourceEvents(db, source.id).length, 0, "no reconcile without the lease");
-    assert.equal(countJobs(db, { kind: "fetch_source", status: "queued" }), 1);
+    assert.equal((await listSourceEvents(db, source.id)).length, 0, "no reconcile without the lease");
+    assert.equal(await countJobs(db, { kind: "fetch_source", status: "queued" }), 1);
   });
 });
 
@@ -694,23 +699,23 @@ describe("finding: discovery drained queued units the configuration no longer wa
   const chi = { name: "Chicago", timezone: TZ, bbox: { south: 41.8, west: -87.7, north: 41.9, east: -87.6 } };
 
   test("a removed listing URL is retired and never fetched", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const net = fakeFetch({});
     const http = politeClient(net.fetchImpl);
     const listing = { url: "https://weekly.example/music", city: "Indy", timezone: TZ };
-    scheduleDiscovery(db, {}, { cities: [], listings: [listing] }, NOW_MS);
-    assert.equal(countJobs(db, { kind: "discover_listing", status: "queued" }), 1);
+    await scheduleDiscovery(db, {}, { cities: [], listings: [listing] }, NOW_MS);
+    assert.equal(await countJobs(db, { kind: "discover_listing", status: "queued" }), 1);
     const summary = await runDiscovery({ db, http, clock: fixedClock }, { cities: [], listings: [], skipProve: true });
     assert.equal(summary.retired, 1);
-    assert.equal(countJobs(db, { kind: "discover_listing", status: "queued" }), 0);
+    assert.equal(await countJobs(db, { kind: "discover_listing", status: "queued" }), 0);
     assert.ok(!net.calls.some((c) => c.url.includes("weekly.example")));
   });
 
   test("listings disabled: queued listing units never run", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const net = fakeFetch({});
     const listing = { url: "https://weekly.example/music", city: "Indy", timezone: TZ };
-    scheduleDiscovery(db, {}, { cities: [], listings: [listing] }, NOW_MS);
+    await scheduleDiscovery(db, {}, { cities: [], listings: [listing] }, NOW_MS);
     await runDiscovery(
       { db, http: politeClient(net.fetchImpl), clock: fixedClock },
       { cities: [], listings: [listing], listingsEnabled: false, skipProve: true },
@@ -719,7 +724,7 @@ describe("finding: discovery drained queued units the configuration no longer wa
   });
 
   test("--city only drains that city's units", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const queried: string[] = [];
     const overpass: OverpassClient = {
       query: async (ql) => {
@@ -728,7 +733,7 @@ describe("finding: discovery drained queued units the configuration no longer wa
       },
     };
     const http = politeClient(fakeFetch({}).fetchImpl);
-    scheduleDiscovery(db, { overpass }, { cities: [indy, chi] }, NOW_MS);
+    await scheduleDiscovery(db, { overpass }, { cities: [indy, chi] }, NOW_MS);
     const summary = await runDiscovery(
       { db, http, overpass, clock: fixedClock },
       { cities: [indy, chi], city: "indy", skipProve: true },
@@ -738,7 +743,7 @@ describe("finding: discovery drained queued units the configuration no longer wa
       summary.units.map((u) => u.key),
       ["discover_osm:indy"],
     );
-    assert.equal(countJobs(db, { kind: "discover_osm", status: "queued" }), 2, "Chicago stays queued");
+    assert.equal(await countJobs(db, { kind: "discover_osm", status: "queued" }), 2, "Chicago stays queued");
   });
 });
 
@@ -798,30 +803,33 @@ describe("finding: private-host check missed IPv6 forms and DNS answers", () => 
 });
 
 describe("finding: housekeeping only ran in loop mode; standalone mode filled the outbox", () => {
-  test("runHousekeeping prunes old rows, rate-limits itself, and expires unpublished rows only when publishing is off", () => {
-    const { db, source } = venueDb();
+  test("runHousekeeping prunes old rows, rate-limits itself, and expires unpublished rows only when publishing is off", async () => {
+    const { db, source } = await venueDb();
     const old = NOW_MS - 40 * DAY;
     const e = valid(ev({ start: "2026-11-07T20:00" }), { ...CTX, source, now: new Date(old) });
-    reconcileSource(db, { source, events: [e], now: new Date(old) });
-    assert.equal(pendingOutbox(db).length, 1);
-    const job = enqueueJob(db, "fetch_source", { sourceId: source.id }, { now: old, runAfter: old });
-    const claimed = claimJob(db, { now: old });
-    finishJob(db, claimed?.id ?? job.id, claimed?.leaseToken as string, old);
+    await reconcileSource(db, { source, events: [e], now: new Date(old) });
+    assert.equal((await pendingOutbox(db)).length, 1);
+    const job = await enqueueJob(db, "fetch_source", { sourceId: source.id }, { now: old, runAfter: old });
+    const claimed = await claimJob(db, { now: old });
+    await finishJob(db, claimed?.id ?? job.id, claimed?.leaseToken as string, old);
 
-    const on = runHousekeeping(db, { now: NOW_MS, publishOff: false });
+    const on = await runHousekeeping(db, { now: NOW_MS, publishOff: false });
     assert.equal(on?.jobs, 1);
     assert.equal(on?.outbox, 0, "pending rows are kept while a publisher can still drain them");
-    assert.equal(runHousekeeping(db, { now: NOW_MS + 60_000, publishOff: true }), null, "rate-limited");
-    const off = runHousekeeping(db, { now: NOW_MS + 7 * 60 * 60 * 1000, publishOff: true });
+    assert.equal(await runHousekeeping(db, { now: NOW_MS + 60_000, publishOff: true }), null, "rate-limited");
+    const off = await runHousekeeping(db, { now: NOW_MS + 7 * 60 * 60 * 1000, publishOff: true });
     assert.equal(off?.outbox, 1);
-    assert.equal(pendingOutbox(db).length, 0);
-    assert.equal(pruneOutbox(db, { publishedBefore: NOW_MS }), 0);
+    assert.equal((await pendingOutbox(db)).length, 0);
+    assert.equal(await pruneOutbox(db, { publishedBefore: NOW_MS }), 0);
   });
 
   test("run-once housekeeps, and with EVENT_SCRAPER_PUBLISH=off nothing is queued for publishing", async () => {
     const dir = mkdtempSync(join(tmpdir(), "event-scraper-standalone-"));
+    const databaseEnv = await testDatabaseEnv();
+    const open = async () =>
+      openDb({ url: databaseEnv.EVENT_SCRAPER_DATABASE_URL, schema: databaseEnv.EVENT_SCRAPER_DB_SCHEMA });
     const env = {
-      EVENT_SCRAPER_DB: join(dir, "db.sqlite"),
+      ...databaseEnv,
       EVENT_SCRAPER_DATA_DIR: dir,
       EVENT_SCRAPER_OSM: "0",
       EVENT_SCRAPER_PUBLISH: "off",
@@ -834,11 +842,10 @@ describe("finding: housekeeping only ran in loop mode; standalone mode filled th
       sleep: async () => {},
       llm: null,
       venueSnapshot: null,
-      knownEvents: { query: async () => ({ rows: [] }) },
     };
     const quiet = { stdout: () => {}, stderr: () => {} };
-    const setupDb = openDb(env.EVENT_SCRAPER_DB);
-    upsertVenues(setupDb, [
+    const setupDb = await open();
+    await upsertVenues(setupDb, [
       {
         id: "v1",
         name: "Redline Tavern",
@@ -851,35 +858,38 @@ describe("finding: housekeeping only ran in loop mode; standalone mode filled th
         syncedAt: NOW_MS,
       },
     ]);
-    addSource(setupDb, { venueId: "v1", kind: "html", url: "https://venue.example/shows/", timezone: TZ });
-    setupDb.close();
+    await addSource(setupDb, { venueId: "v1", kind: "html", url: "https://venue.example/shows/", timezone: TZ });
+    await setupDb.close();
     assert.equal(await main(["run-once"], { env, services, ...quiet }), 0);
-    const db = openDb(env.EVENT_SCRAPER_DB);
+    const db = await open();
     try {
-      const sourceEvents = db.prepare("SELECT COUNT(*) AS n FROM events").get() as { n: number };
-      assert.ok(Number(sourceEvents.n) > 0, "events were scraped");
-      assert.equal(pendingOutbox(db).length, 0);
-      assert.equal(getKv(db, HOUSEKEEPING_KEY), String(NOW_MS));
+      const sourceEvents = await one(db, "SELECT COUNT(*) AS n FROM events");
+      assert.ok(Number(sourceEvents?.n) > 0, "events were scraped");
+      assert.equal((await pendingOutbox(db)).length, 0);
+      assert.equal(await getKv(db, HOUSEKEEPING_KEY), String(NOW_MS));
     } finally {
-      db.close();
+      await db.close();
     }
   });
 });
 
 describe("finding: the LLM page cap reset on every runOnce", () => {
-  test("the daily budget is shared by every extractor on one database and resets the next UTC day", () => {
-    const db = openDb(":memory:");
+  test("the daily budget is shared by every extractor on one database and resets the next UTC day", async () => {
+    const db = await openTestDb();
     let nowMs = NOW_MS;
     const clock: Clock = { now: () => new Date(nowMs) };
     const a = dailyLlmBudget(db, 3, clock);
     const b = dailyLlmBudget(db, 3, clock);
-    assert.deepEqual([a.tryConsume(), b.tryConsume(), a.tryConsume(), b.tryConsume()], [true, true, true, false]);
+    assert.deepEqual(
+      [await a.tryConsume(), await b.tryConsume(), await a.tryConsume(), await b.tryConsume()],
+      [true, true, true, false],
+    );
     nowMs += DAY;
-    assert.equal(a.tryConsume(), true);
+    assert.equal(await a.tryConsume(), true);
   });
 
   test("a fresh extractor per run cannot exceed the shared cap", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const llmCalls: number[] = [];
     const ctx = {
       ...makeCtx("https://venue.example/calendar"),
@@ -901,7 +911,7 @@ describe("finding: the LLM page cap reset on every runOnce", () => {
 
 describe("finding: per-host politeness was per process", () => {
   test("two clients on one SQLite file share host slots and Retry-After", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const slept: number[] = [];
     let first = true;
     const net = fakeFetch({

@@ -17,20 +17,18 @@ export interface SeedResult {
   skipped: { noWebsite: number; nonOwnSite: number; hasSource: number; alreadyCandidate: number };
 }
 
-export function seedKnownVenues(db: Db, city: CityConfig, now: number): SeedResult {
+export async function seedKnownVenues(db: Db, city: CityConfig, now: number): Promise<SeedResult> {
   const result: SeedResult = {
     city: city.name,
     inCity: 0,
     seeded: 0,
     skipped: { noWebsite: 0, nonOwnSite: 0, hasSource: 0, alreadyCandidate: 0 },
   };
-  const withSource = new Set(listSources(db, { enabled: true }).map((source) => source.venueId));
+  const withSource = new Set((await listSources(db, { enabled: true })).map((source) => source.venueId));
   const linked = new Set(
-    listCandidates(db)
-      .map((candidate: Candidate) => candidate.matchedVenueId)
-      .filter(Boolean),
+    (await listCandidates(db)).map((candidate: Candidate) => candidate.matchedVenueId).filter(Boolean),
   );
-  for (const venue of listVenues(db)) {
+  for (const venue of await listVenues(db)) {
     if (!inBbox(venue, city.bbox)) continue;
     result.inCity++;
     if (!venue.website) {
@@ -49,7 +47,7 @@ export function seedKnownVenues(db: Db, city: CityConfig, now: number): SeedResu
       result.skipped.alreadyCandidate++;
       continue;
     }
-    const candidate = insertCandidate(
+    const candidate = await insertCandidate(
       db,
       {
         name: venue.name,
@@ -66,7 +64,7 @@ export function seedKnownVenues(db: Db, city: CityConfig, now: number): SeedResu
       },
       now,
     );
-    updateCandidate(db, candidate.id, { matchedVenueId: venue.id, statusReason: "seeded_known_venue" }, now);
+    await updateCandidate(db, candidate.id, { matchedVenueId: venue.id, statusReason: "seeded_known_venue" }, now);
     result.seeded++;
   }
   return result;

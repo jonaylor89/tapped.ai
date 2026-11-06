@@ -6,7 +6,16 @@
  * Promotion never creates production venue profiles; it marks the candidate `promoted` for human review (see
  * export.ts). Proof (sample events, extractor, evidence page sha256) is stored on the candidate.
  */
-import { type Db, dueCandidates, getCandidate, getVenue, normalizeName, putRawPage, updateCandidate } from "../db.js";
+import {
+  all,
+  type Db,
+  dueCandidates,
+  getCandidate,
+  getVenue,
+  normalizeName,
+  putRawPage,
+  updateCandidate,
+} from "../db.js";
 import { isTicketingUrl } from "../denylist.js";
 import { type ExtractionResult, extractEvents, pageFromFetch } from "../extract/index.js";
 import { FetchBlockedError, FetchError } from "../fetch.js";
@@ -93,7 +102,7 @@ const KIND_BY_EXTRACTOR: Record<string, SourceKind> = {
 };
 
 function defaultExtract(options: ProveOptions) {
-  return (page: Page, ctx: ExtractContext) => extractEvents(page, ctx, { fallback: options.fallback ?? null });
+  return async (page: Page, ctx: ExtractContext) => extractEvents(page, ctx, { fallback: options.fallback ?? null });
 }
 
 /** Upcoming = not canceled and starting today or later in the venue's timezone. */
@@ -149,16 +158,23 @@ function errorMessage(error: unknown): string {
   return (error instanceof Error ? error.message : String(error)).slice(0, 200);
 }
 
-function candidateTimezone(db: Db, candidate: Candidate, fallback: string | null | undefined): string | null {
-  const venueTz = candidate.matchedVenueId ? getVenue(db, candidate.matchedVenueId)?.timezone : null;
+async function candidateTimezone(
+  db: Db,
+  candidate: Candidate,
+  fallback: string | null | undefined,
+): Promise<string | null> {
+  const venueTz = candidate.matchedVenueId ? (await getVenue(db, candidate.matchedVenueId))?.timezone : null;
   for (const tz of [candidate.timezone, venueTz, fallback]) if (tz && isValidTimeZone(tz)) return tz;
   return null;
 }
 
-function sharedSourceCandidates(db: Db, candidateId: number, url: string): number[] {
-  const rows = db
-    .prepare("SELECT id FROM venue_candidates WHERE source_url=? AND id<>? ORDER BY id")
-    .all(url, candidateId) as { id: number }[];
+async function sharedSourceCandidates(db: Db, candidateId: number, url: string): Promise<number[]> {
+  const rows = await all(
+    db,
+    "SELECT id FROM venue_candidates WHERE source_url=? AND id<>? ORDER BY id",
+    url,
+    candidateId,
+  );
   return rows.map((row) => Number(row.id));
 }
 
@@ -171,13 +187,19 @@ export async function proveCandidate(db: Db, candidateId: number, options: Prove
   const minEvents = options.minEvents ?? DEFAULT_MIN_PROVEN_EVENTS;
   const retryAfterMs = options.retryAfterMs ?? DEFAULT_RETRY_AFTER_MS;
   const start = clock.now();
-  const candidate = getCandidate(db, candidateId);
+  const candidate = await getCandidate(db, candidateId);
   if (!candidate) throw new Error(`Unknown candidate ${candidateId}`);
 
-  const finish = (status: CandidateStatus, reason: string, attempts: ProveAttempt[], upcoming: number, extra = {}) => {
+  const finish = async (
+    status: CandidateStatus,
+    reason: string,
+    attempts: ProveAttempt[],
+    upcoming: number,
+    extra = {},
+  ) => {
     const at = clock.now().getTime();
-    const current = getCandidate(db, candidateId) as Candidate;
-    updateCandidate(
+    const current = (await getCandidate(db, candidateId)) as Candidate;
+    await updateCandidate(
       db,
       candidateId,
       {
@@ -195,8 +217,8 @@ export async function proveCandidate(db: Db, candidateId: number, options: Prove
     return { candidateId, status, reason, attempts, upcoming };
   };
 
-  const timezone = candidateTimezone(db, candidate, options.defaultTimezone);
-  updateCandidate(
+  const timezone = await candidateTimezone(db, candidate, options.defaultTimezone);
+  await updateCandidate(
     db,
     candidateId,
     { status: "proving", attempts: candidate.attempts + 1, nextAttemptAt: start.getTime() + PROVING_LEASE_MS },
@@ -204,7 +226,8 @@ export async function proveCandidate(db: Db, candidateId: number, options: Prove
   );
   if (!timezone) return finish("no_source", "missing_timezone", [], 0);
 
-  const find = options.findSources ?? ((venue) => findEventSources(venue, { http: options.http, llm: options.llm }));
+  const find =
+    options.findSources ?? (async (venue) => findEventSources(venue, { http: options.http, llm: options.llm }));
   let found: SourceFinderResult;
   try {
     found = await find({ name: candidate.name, website: candidate.website });
@@ -324,20 +347,20 @@ export async function proveCandidate(db: Db, candidateId: number, options: Prove
   }
 
   const { attempt, events, page } = best;
-  const sha = putRawPage(
+  const sha = await putRawPage(
     db,
     { url: page.finalUrl || page.url, contentType: page.contentType, bytes: page.body },
     clock.now().getTime(),
   );
   const sourceUrl = attempt.provenUrl ?? attempt.url;
   const sourceKind = attempt.provenKind ?? attempt.kind;
-  updateCandidate(db, candidateId, { sourceUrl, sourceKind, timezone }, clock.now().getTime());
+  await updateCandidate(db, candidateId, { sourceUrl, sourceKind, timezone }, clock.now().getTime());
   return finish("promoted", `proven:${events.length}_upcoming_events`, attempts, events.length, {
     sourceUrl,
     sourceKind,
     extractor: attempt.extractor,
     evidenceSha256: sha,
-    sharedSourceWith: sharedSourceCandidates(db, candidateId, sourceUrl),
+    sharedSourceWith: await sharedSourceCandidates(db, candidateId, sourceUrl),
     sample: events.slice(0, 10).map((event) => ({
       title: event.title,
       startLocal: event.startLocal,
@@ -368,12 +391,12 @@ export async function runCandidatePipeline(db: Db, options: DiscoveryStepOptions
   const limit = options.limit ?? 20;
   const now = clock.now().getTime();
   let resolved = 0;
-  for (const candidate of dueCandidates(db, ["new"], now, limit)) {
-    resolveCandidate(db, candidate.id, { ...options, now });
+  for (const candidate of await dueCandidates(db, ["new"], now, limit)) {
+    await resolveCandidate(db, candidate.id, { ...options, now });
     resolved++;
   }
   const proved: ProveResult[] = [];
-  for (const candidate of dueCandidates(db, ["resolved", "no_source", "proving"], clock.now().getTime(), limit)) {
+  for (const candidate of await dueCandidates(db, ["resolved", "no_source", "proving"], clock.now().getTime(), limit)) {
     proved.push(await proveCandidate(db, candidate.id, options));
   }
   return { resolved, proved };

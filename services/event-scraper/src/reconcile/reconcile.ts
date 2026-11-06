@@ -20,7 +20,7 @@ import { addDays, dateOf, localDate } from "../validate/time.js";
 import { identityBase } from "./identity.js";
 
 /**
- * Reconciles one successful fetch of a source against its stored snapshot (SQLite).
+ * Reconciles one successful fetch of a source against its stored snapshot (Postgres).
  *
  * - new identity                         -> "new"
  * - known identity, content changed      -> "updated"
@@ -51,7 +51,7 @@ export interface ReconcileOptions {
   /** Queue observations in publish_outbox. Default true. */
   enqueue?: boolean;
   /**
-   * Drop new events that production Postgres already has (`known_events`, see publish/known-events.ts): they are not
+   * Drop new events that production already has (see publish/known-events.ts): they are not
    * stored, reconciled or published. Default true.
    */
   skipKnown?: boolean;
@@ -112,16 +112,20 @@ export function hasStarted(event: Pick<StoredEvent, "startUtc" | "startLocal">, 
  * event and exactly one unmatched incoming event share the key without its time, the incoming event keeps the stored
  * key, so the change is an "updated" (same production identity) instead of a new event plus a later cancellation.
  */
-function adoptMovedTimes(db: Db, sourceId: string, incoming: Map<string, ValidatedEvent>): Map<string, ValidatedEvent> {
+async function adoptMovedTimes(
+  db: Db,
+  sourceId: string,
+  incoming: Map<string, ValidatedEvent>,
+): Promise<Map<string, ValidatedEvent>> {
   const unmatchedIncoming = new Map<string, string[]>();
   for (const [key, event] of incoming) {
     const base = identityBase(key);
-    if (!base || getEventByIdentity(db, sourceId, key)) continue;
+    if (!base || (await getEventByIdentity(db, sourceId, key))) continue;
     unmatchedIncoming.set(base, [...(unmatchedIncoming.get(base) ?? []), event.identityKey]);
   }
   if (!unmatchedIncoming.size) return incoming;
   const unmatchedStored = new Map<string, StoredEvent[]>();
-  for (const stored of listSourceEvents(db, sourceId, ["active", "canceled"])) {
+  for (const stored of await listSourceEvents(db, sourceId, ["active", "canceled"])) {
     const base = identityBase(stored.identityKey);
     if (!base || !unmatchedIncoming.has(base) || incoming.has(stored.identityKey)) continue;
     unmatchedStored.set(base, [...(unmatchedStored.get(base) ?? []), stored]);
@@ -141,7 +145,7 @@ function adoptMovedTimes(db: Db, sourceId: string, incoming: Map<string, Validat
   return out;
 }
 
-export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileResult {
+export async function reconcileSource(db: Db, options: ReconcileOptions): Promise<ReconcileResult> {
   const { source, now } = options;
   const nowMs = now.getTime();
   const cancelAfter = Math.max(1, options.cancelAfterMisses ?? 2);
@@ -151,12 +155,12 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
   const today = localDate(now, source.timezone);
   const result: ReconcileResult = { changes: [], counts: emptyCounts(), zeroResults: false, alert: null };
 
-  return transaction(db, () => {
+  return transaction(db, async () => {
     // 1. Age out past events first so they are never treated as missing.
-    for (const stored of listSourceEvents(db, source.id, ["active", "canceled"])) {
+    for (const stored of await listSourceEvents(db, source.id, ["active", "canceled"])) {
       const tz = stored.data?.timezone || source.timezone;
       if (isPast(stored, localDate(now, tz), grace)) {
-        setEventStatus(db, stored.id, "past", nowMs);
+        await setEventStatus(db, stored.id, "past", nowMs);
         result.counts.expired++;
       }
     }
@@ -164,20 +168,23 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
     // 2. Incoming, de-duplicated by identity (first wins).
     let incoming = new Map<string, ValidatedEvent>();
     for (const event of options.events) if (!incoming.has(event.identityKey)) incoming.set(event.identityKey, event);
-    incoming = adoptMovedTimes(db, source.id, incoming);
+    incoming = await adoptMovedTimes(db, source.id, incoming);
 
-    const state = getFetchState(db, source.id);
-    const active = listSourceEvents(db, source.id, ["active"]);
+    const state = await getFetchState(db, source.id);
+    const active = await listSourceEvents(db, source.id, ["active"]);
     const productiveBefore = state.maxEventCount > 0 || (state.lastEventCount ?? 0) > 0 || active.length > 0;
 
     // 3. Zero results on a productive source: alert, never cancel.
     if (incoming.size === 0) {
       result.zeroResults = true;
       if (options.updateFetchState ?? true) {
-        saveFetchState(db, source.id, { consecutiveZeroResults: state.consecutiveZeroResults + 1, lastEventCount: 0 });
+        await saveFetchState(db, source.id, {
+          consecutiveZeroResults: state.consecutiveZeroResults + 1,
+          lastEventCount: 0,
+        });
       }
       if (productiveBefore) {
-        result.alert = raiseAlert(
+        result.alert = await raiseAlert(
           db,
           {
             kind: "zero_results",
@@ -195,7 +202,7 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
       return result;
     }
 
-    const push = (
+    const push = async (
       kind: ChangeKind,
       stored: StoredEvent,
       before: ValidatedEvent | null,
@@ -204,7 +211,7 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
       result.counts[kind]++;
       let outboxId: number | null = null;
       if (kind !== "unchanged") {
-        recordEventChange(db, {
+        await recordEventChange(db, {
           eventId: stored.id,
           sourceId: stored.sourceId,
           identityKey: stored.identityKey,
@@ -214,7 +221,7 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
           at: nowMs,
         });
         if (enqueue && after) {
-          outboxId = enqueueOutbox(
+          outboxId = await enqueueOutbox(
             db,
             {
               eventId: stored.id,
@@ -232,40 +239,40 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
 
     // 4. Upsert everything seen.
     for (const event of incoming.values()) {
-      const existing = getEventByIdentity(db, source.id, event.identityKey);
+      const existing = await getEventByIdentity(db, source.id, event.identityKey);
       const siteCanceled = event.status === "canceled";
-      if (!existing && skipKnown && findKnownEvent(db, event)) {
+      if (!existing && skipKnown && (await findKnownEvent(db, event))) {
         result.counts.alreadyInProduction++;
         continue;
       }
       if (!existing) {
-        const stored = upsertEvent(db, event, {
+        const stored = await upsertEvent(db, event, {
           status: siteCanceled ? "canceled" : "active",
           now: nowMs,
           changed: true,
         });
-        push("new", stored, null, event);
+        await push("new", stored, null, event);
         continue;
       }
       if (existing.status === "past") {
         // Still listed after its date (validation grace); refresh silently.
-        upsertEvent(db, event, { status: "past", now: nowMs });
+        await upsertEvent(db, event, { status: "past", now: nowMs });
         continue;
       }
       const changed = existing.contentHash !== eventContentHash(event);
       if (siteCanceled) {
-        const stored = upsertEvent(db, event, { status: "canceled", now: nowMs, changed });
-        if (existing.status === "canceled") push(changed ? "updated" : "unchanged", stored, existing.data, event);
-        else push("canceled", stored, existing.data, event);
+        const stored = await upsertEvent(db, event, { status: "canceled", now: nowMs, changed });
+        if (existing.status === "canceled") await push(changed ? "updated" : "unchanged", stored, existing.data, event);
+        else await push("canceled", stored, existing.data, event);
         continue;
       }
       if (existing.status === "canceled") {
-        const stored = upsertEvent(db, event, { status: "active", now: nowMs, changed: true });
-        push("reappeared", stored, existing.data, event);
+        const stored = await upsertEvent(db, event, { status: "active", now: nowMs, changed: true });
+        await push("reappeared", stored, existing.data, event);
         continue;
       }
-      const stored = upsertEvent(db, event, { status: "active", now: nowMs, changed });
-      push(changed ? "updated" : "unchanged", stored, existing.data, event);
+      const stored = await upsertEvent(db, event, { status: "active", now: nowMs, changed });
+      await push(changed ? "updated" : "unchanged", stored, existing.data, event);
     }
 
     // 5. Missing events: only upcoming ones inside the window this fetch covered.
@@ -282,28 +289,28 @@ export function reconcileSource(db: Db, options: ReconcileOptions): ReconcileRes
       const misses = stored.missCount + 1;
       result.counts.missed++;
       if (misses < cancelAfter) {
-        setEventMissCount(db, stored.id, misses);
+        await setEventMissCount(db, stored.id, misses);
         continue;
       }
-      setEventMissCount(db, stored.id, misses);
-      setEventStatus(db, stored.id, "canceled", nowMs);
+      await setEventMissCount(db, stored.id, misses);
+      await setEventStatus(db, stored.id, "canceled", nowMs);
       const canceledEvent: ValidatedEvent = {
         ...stored.data,
         status: "canceled",
         warnings: [...(stored.data.warnings ?? []).filter((w) => w !== "missing_from_source"), "missing_from_source"],
       };
-      push("canceled", { ...stored, status: "canceled" }, stored.data, canceledEvent);
+      await push("canceled", { ...stored, status: "canceled" }, stored.data, canceledEvent);
     }
 
     // 6. Bookkeeping.
     if (options.updateFetchState ?? true) {
-      saveFetchState(db, source.id, {
+      await saveFetchState(db, source.id, {
         consecutiveZeroResults: 0,
         lastEventCount: incoming.size,
         maxEventCount: Math.max(state.maxEventCount, incoming.size),
       });
     }
-    resolveAlerts(db, { kind: "zero_results", sourceId: source.id }, nowMs);
+    await resolveAlerts(db, { kind: "zero_results", sourceId: source.id }, nowMs);
     return result;
   });
 }

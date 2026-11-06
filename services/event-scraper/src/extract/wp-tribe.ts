@@ -231,5 +231,5 @@ export async function extractWpTribe(
 export const wpTribeExtractor: Extractor = {
   name: "wp_tribe",
   canHandle: (page) => looksLikeTribeJson(parseJsonPage(page)),
-  extract: (page, ctx) => extractWpTribe(page, ctx),
+  extract: async (page, ctx) => extractWpTribe(page, ctx),
 };

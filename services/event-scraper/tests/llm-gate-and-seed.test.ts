@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { addSource, getCandidate, listCandidates, openDb, upsertVenues } from "../src/db.js";
+import { addSource, getCandidate, listCandidates, upsertVenues } from "../src/db.js";
 import { seedKnownVenues } from "../src/discovery/seed.js";
 import { countDateMentions, looksLikeEventListing } from "../src/llm/text.js";
 import { createLlmExtractor } from "../src/runner.js";
 import type { ExtractContext, Page, Venue } from "../src/types.js";
+import { openTestDb } from "./helpers/db.js";
 
 describe("LLM gate", () => {
   test("counts distinct date mentions in several formats", () => {
@@ -48,31 +49,31 @@ describe("seed-venues", () => {
     ...extra,
   });
 
-  test("seeds in-city venues with their own site and no source, once", () => {
-    const db = openDb(":memory:");
-    upsertVenues(db, [
+  test("seeds in-city venues with their own site and no source, once", async () => {
+    const db = await openTestDb();
+    await upsertVenues(db, [
       venue("camel", {}),
       venue("outside", { lat: 41.88, lng: -87.63 }),
       venue("nosite", { website: null }),
       venue("social", { website: "https://www.instagram.com/somebar/" }),
       venue("hassource", {}),
     ]);
-    addSource(db, {
+    await addSource(db, {
       venueId: "hassource",
       kind: "html",
       url: "https://hassource.example/events",
       timezone: "America/New_York",
     });
-    const first = seedKnownVenues(db, city, 1_000);
+    const first = await seedKnownVenues(db, city, 1_000);
     assert.equal(first.inCity, 4);
     assert.equal(first.seeded, 1);
     assert.deepEqual(first.skipped, { noWebsite: 1, nonOwnSite: 1, hasSource: 1, alreadyCandidate: 0 });
-    const [seeded] = listCandidates(db);
-    const stored = getCandidate(db, seeded.id);
+    const [seeded] = await listCandidates(db);
+    const stored = await getCandidate(db, seeded.id);
     assert.equal(stored?.status, "resolved");
     assert.equal(stored?.matchedVenueId, "camel");
     assert.equal(stored?.timezone, "America/New_York");
-    assert.equal(seedKnownVenues(db, city, 2_000).seeded, 0, "re-running does not duplicate");
+    assert.equal((await seedKnownVenues(db, city, 2_000)).seeded, 0, "re-running does not duplicate");
   });
 });
 
@@ -127,7 +128,7 @@ describe("LLM auth failures", async () => {
       source: { url: page.url },
     } as unknown as ExtractContext;
     assert.equal(extractor.canHandle(page, ctx), true);
-    await assert.rejects(() => Promise.resolve(extractor.extract(page, ctx)));
+    await assert.rejects(async () => Promise.resolve(await extractor.extract(page, ctx)));
     assert.equal(extractor.canHandle(page, ctx), false);
     assert.ok(calls >= 1);
   });

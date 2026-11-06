@@ -320,7 +320,7 @@ export async function discoverFromListing(
       if (ref.lat < south || ref.lat > north || ref.lng < west || ref.lng > east) continue;
     }
     summary.venues++;
-    const outcome = recordProbe(
+    const outcome = await recordProbe(
       db,
       {
         name: ref.name,

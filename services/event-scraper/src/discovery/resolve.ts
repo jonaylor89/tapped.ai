@@ -17,6 +17,7 @@
  *    named venues, become `needs_review`. Nothing is ever auto-merged on doubt.
  */
 import {
+  all,
   type Db,
   getCandidate,
   getVenue,
@@ -26,6 +27,7 @@ import {
   listSources,
   listVenues,
   normalizeName,
+  one,
   resolvePlaceId,
   transaction,
   updateCandidate,
@@ -380,32 +382,36 @@ interface Owner {
   name: string;
 }
 
-interface Row {
-  [key: string]: unknown;
+async function venuesWithPlaceId(db: Db, placeId: string): Promise<Venue[]> {
+  const rows = await all(db, "SELECT * FROM venues WHERE google_place_id=? ORDER BY id", placeId);
+  const venues: Venue[] = [];
+  for (const row of rows) {
+    const venue = await getVenue(db, String(row.id));
+    if (venue) venues.push(venue);
+  }
+  return venues;
 }
 
-function venuesWithPlaceId(db: Db, placeId: string): Venue[] {
-  const rows = db.prepare("SELECT id FROM venues WHERE google_place_id=? ORDER BY id").all(placeId) as Row[];
-  return rows.map((row) => getVenue(db, String(row.id))).filter((venue): venue is Venue => venue !== null);
-}
-
-function candidateForVenue(db: Db, venueId: string, excludeId?: number): Candidate | null {
-  const row = db
-    .prepare("SELECT id FROM venue_candidates WHERE matched_venue_id=? AND id<>? ORDER BY id LIMIT 1")
-    .get(venueId, excludeId ?? -1) as Row | undefined;
-  return row ? getCandidate(db, Number(row.id)) : null;
+async function candidateForVenue(db: Db, venueId: string, excludeId?: number): Promise<Candidate | null> {
+  const row = await one(
+    db,
+    "SELECT id FROM venue_candidates WHERE matched_venue_id=? AND id<>? ORDER BY id LIMIT 1",
+    venueId,
+    excludeId ?? -1,
+  );
+  return row ? await getCandidate(db, Number(row.id)) : null;
 }
 
 function isDuplicateTombstone(candidate: Candidate): boolean {
   return candidate.status === "rejected" && (candidate.statusReason ?? "").startsWith("duplicate_of:");
 }
 
-function placeOwners(db: Db, placeId: string, excludeCandidateId: number | undefined): Owner[] {
+async function placeOwners(db: Db, placeId: string, excludeCandidateId: number | undefined): Promise<Owner[]> {
   const owners = new Map<string, Owner>();
-  const alias = resolvePlaceId(db, placeId);
+  const alias = await resolvePlaceId(db, placeId);
   if (alias) {
     if (alias.venueId != null) {
-      const venue = getVenue(db, alias.venueId);
+      const venue = await getVenue(db, alias.venueId);
       const candidateId = alias.candidateId !== excludeCandidateId ? alias.candidateId : null;
       owners.set(`v:${alias.venueId}`, {
         venueId: alias.venueId,
@@ -413,13 +419,13 @@ function placeOwners(db: Db, placeId: string, excludeCandidateId: number | undef
         name: venue?.name ?? alias.displayName ?? "",
       });
     } else if (alias.candidateId != null && alias.candidateId !== excludeCandidateId) {
-      const candidate = getCandidate(db, alias.candidateId);
+      const candidate = await getCandidate(db, alias.candidateId);
       if (candidate && !isDuplicateTombstone(candidate)) {
         owners.set(`c:${candidate.id}`, { venueId: null, candidateId: candidate.id, name: candidate.name });
       }
     }
   }
-  for (const venue of venuesWithPlaceId(db, placeId)) {
+  for (const venue of await venuesWithPlaceId(db, placeId)) {
     if (!owners.has(`v:${venue.id}`))
       owners.set(`v:${venue.id}`, { venueId: venue.id, candidateId: null, name: venue.name });
   }
@@ -427,8 +433,8 @@ function placeOwners(db: Db, placeId: string, excludeCandidateId: number | undef
 }
 
 /** True when the stored alias for this id is a geocode result (building / address). */
-function isGeocodeAlias(db: Db, placeId: string): boolean {
-  const alias = resolvePlaceId(db, placeId);
+async function isGeocodeAlias(db: Db, placeId: string): Promise<boolean> {
+  const alias = await resolvePlaceId(db, placeId);
   return alias !== null && alias.types.length > 0 && isGeocodeOnly({ types: alias.types, primaryType: null });
 }
 
@@ -447,7 +453,7 @@ function addressMentionsCity(address: string | null, city: string | null | undef
  * Finds what local entity a probe refers to: by any known place id alias first, then by proximity + name, then
  * (no coordinates) by name within the same city/area. Website domains alone never match.
  */
-export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOptions = {}): IdentityMatch {
+export async function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOptions = {}): Promise<IdentityMatch> {
   const radius = options.radiusMeters ?? DEFAULT_CLUSTER_RADIUS_M;
   const venueRadius = options.venueRadiusMeters ?? 150;
   const stop = [...(options.extraStopWords ?? []), ...(probe.city ? [probe.city] : [])];
@@ -455,14 +461,16 @@ export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOption
   const placeIds = (probe.places ?? []).map((place) => place.placeId);
   // Building / address ids (premise, street_address) are kept as aliases but never decide identity: one building
   // holds several businesses, and the first venue found there must not claim every later one.
-  const identityPlaceIds = (probe.places ?? [])
-    .filter((place) => !isGeocodeOnly({ types: place.types, primaryType: null }) && !isGeocodeAlias(db, place.placeId))
-    .map((place) => place.placeId);
+  const identityPlaceIds: string[] = [];
+  for (const place of probe.places ?? []) {
+    if (isGeocodeOnly({ types: place.types, primaryType: null })) continue;
+    if (!(await isGeocodeAlias(db, place.placeId))) identityPlaceIds.push(place.placeId);
+  }
 
   // 1. Place-id aliases (establishment ids only).
   const owners = new Map<string, Owner>();
   for (const placeId of identityPlaceIds) {
-    for (const owner of placeOwners(db, placeId, exclude)) {
+    for (const owner of await placeOwners(db, placeId, exclude)) {
       owners.set(owner.venueId != null ? `v:${owner.venueId}` : `c:${owner.candidateId}`, owner);
     }
   }
@@ -491,7 +499,7 @@ export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOption
 
   const point = { lat: probe.lat ?? null, lng: probe.lng ?? null };
   const hasPoint = point.lat != null && point.lng != null;
-  const venues = listVenues(db);
+  const venues = await listVenues(db);
 
   // 2. Proximity + name.
   if (hasPoint) {
@@ -527,18 +535,15 @@ export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOption
       return {
         kind: "venue",
         venueId: venue.id,
-        candidateId: candidateForVenue(db, venue.id, exclude)?.id ?? null,
+        candidateId: (await candidateForVenue(db, venue.id, exclude))?.id ?? null,
         via: "geo_name",
       };
     }
 
     // Same rule as in-batch clustering (decidePair): a same-named candidate on the same website may sit up to
     // radius * SAME_DOMAIN_RADIUS_FACTOR away, so the result does not depend on which batch each id arrived in.
-    const nearCandidates = candidatesNearPoint(
-      db,
-      point.lat as number,
-      point.lng as number,
-      radius * SAME_DOMAIN_RADIUS_FACTOR,
+    const nearCandidates = (
+      await candidatesNearPoint(db, point.lat as number, point.lng as number, radius * SAME_DOMAIN_RADIUS_FACTOR)
     ).filter((candidate) => candidate.id !== exclude && !isDuplicateTombstone(candidate));
     const decided = nearCandidates.map((c) => ({
       c,
@@ -612,11 +617,11 @@ export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOption
     return {
       kind: "venue",
       venueId,
-      candidateId: candidateForVenue(db, venueId, exclude)?.id ?? null,
+      candidateId: (await candidateForVenue(db, venueId, exclude))?.id ?? null,
       via: "area_name",
     };
   }
-  const sameCandidates = listCandidates(db).filter(
+  const sameCandidates = (await listCandidates(db)).filter(
     (candidate) =>
       candidate.id !== exclude &&
       !isDuplicateTombstone(candidate) &&
@@ -641,19 +646,25 @@ export function matchIdentity(db: Db, probe: VenueProbe, options: IdentityOption
   return { kind: "none" };
 }
 
-function candidatesNearPoint(db: Db, lat: number, lng: number, meters: number): Candidate[] {
+async function candidatesNearPoint(db: Db, lat: number, lng: number, meters: number): Promise<Candidate[]> {
   const dLat = meters / 111_320;
   const dLng = meters / (111_320 * Math.max(Math.cos((lat * Math.PI) / 180), 0.01));
-  const rows = db
-    .prepare("SELECT id FROM venue_candidates WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? ORDER BY id")
-    .all(lat - dLat, lat + dLat, lng - dLng, lng + dLng) as Row[];
-  return rows
-    .map((row) => getCandidate(db, Number(row.id)))
-    .filter((candidate): candidate is Candidate => {
-      if (!candidate) return false;
-      const distance = distanceOrNull({ lat, lng }, candidate);
-      return distance != null && distance <= meters;
-    });
+  const rows = await all(
+    db,
+    "SELECT id FROM venue_candidates WHERE lat BETWEEN ? AND ? AND lng BETWEEN ? AND ? ORDER BY id",
+    lat - dLat,
+    lat + dLat,
+    lng - dLng,
+    lng + dLng,
+  );
+  const near: Candidate[] = [];
+  for (const row of rows) {
+    const candidate = await getCandidate(db, Number(row.id));
+    if (!candidate) continue;
+    const distance = distanceOrNull({ lat, lng }, candidate);
+    if (distance != null && distance <= meters) near.push(candidate);
+  }
+  return near;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -695,20 +706,20 @@ function cleanWebsite(website: string | null | undefined): string | null {
   return isTicketingUrl(website) ? null : website;
 }
 
-function venueHasEnabledSource(db: Db, venueId: string): boolean {
-  return listSources(db, { venueId }).some((source) => source.enabled);
+async function venueHasEnabledSource(db: Db, venueId: string): Promise<boolean> {
+  return (await listSources(db, { venueId })).some((source) => source.enabled);
 }
 
-function writeAliases(
+async function writeAliases(
   db: Db,
   places: ProbePlace[] | undefined,
   owner: { venueId: string | null; candidateId: number | null },
   now: number,
-): void {
+): Promise<void> {
   if (!places?.length) return;
   const existing = [
-    ...(owner.venueId ? listPlaceAliases(db, { venueId: owner.venueId }) : []),
-    ...(owner.candidateId != null ? listPlaceAliases(db, { candidateId: owner.candidateId }) : []),
+    ...(owner.venueId ? await listPlaceAliases(db, { venueId: owner.venueId }) : []),
+    ...(owner.candidateId != null ? await listPlaceAliases(db, { candidateId: owner.candidateId }) : []),
   ];
   const currentCanonical = existing.find((alias) => alias.isCanonical);
   const proposed = places.find((place) => place.canonical);
@@ -719,14 +730,14 @@ function writeAliases(
       establishmentScore({ types: proposed.types, primaryType: null }) >
         establishmentScore({ types: currentCanonical.types, primaryType: null }));
   for (const place of places) {
-    const prior = resolvePlaceId(db, place.placeId);
+    const prior = await resolvePlaceId(db, place.placeId);
     // Never steal an id owned by another venue or candidate.
     const otherVenue = prior?.venueId != null && prior.venueId !== owner.venueId;
     const otherCandidate =
       prior?.candidateId != null && owner.candidateId != null && prior.candidateId !== owner.candidateId;
     if (otherVenue || otherCandidate) continue;
     const isCanonical = place.canonical ? replaceCanonical : (prior?.isCanonical ?? false) && !replaceCanonical;
-    upsertPlaceAlias(
+    await upsertPlaceAlias(
       db,
       {
         placeId: place.placeId,
@@ -747,13 +758,13 @@ function canonicalPlaceId(probe: VenueProbe): string | null {
   return probe.places?.find((place) => place.canonical)?.placeId ?? null;
 }
 
-function mergeInto(
+async function mergeInto(
   db: Db,
   candidate: Candidate,
   probe: VenueProbe,
   now: number,
   extra: Partial<Candidate> = {},
-): Candidate {
+): Promise<Candidate> {
   const website = cleanWebsite(probe.website);
   const evidence = appendObservation(
     candidate.evidence,
@@ -783,16 +794,17 @@ function mergeInto(
   );
 }
 
-function findOpenReview(db: Db, probe: VenueProbe): Candidate | null {
+async function findOpenReview(db: Db, probe: VenueProbe): Promise<Candidate | null> {
   const canonical = canonicalPlaceId(probe);
-  const rows = db
-    .prepare(
-      `SELECT id FROM venue_candidates WHERE status='needs_review'
-         AND (normalized_name=? OR (primary_place_id IS NOT NULL AND primary_place_id=?)) ORDER BY id`,
-    )
-    .all(normalizeName(probe.name), canonical ?? "") as Row[];
+  const rows = await all(
+    db,
+    `SELECT id FROM venue_candidates WHERE status='needs_review'
+       AND (normalized_name=? OR (primary_place_id IS NOT NULL AND primary_place_id=?)) ORDER BY id`,
+    normalizeName(probe.name),
+    canonical ?? "",
+  );
   for (const row of rows) {
-    const candidate = getCandidate(db, Number(row.id));
+    const candidate = await getCandidate(db, Number(row.id));
     if (!candidate) continue;
     if (canonical && candidate.primaryPlaceId === canonical) return candidate;
     const distance = distanceOrNull(candidate, { lat: probe.lat ?? null, lng: probe.lng ?? null });
@@ -806,19 +818,19 @@ function findOpenReview(db: Db, probe: VenueProbe): Candidate | null {
  * (still a candidate, so its own-site source can be found; rejected when the venue already has a source), creates a
  * new candidate, or parks it as `needs_review`. Place-id aliases are written for every non-conflicting outcome.
  */
-export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions = {}): RecordOutcome {
+export async function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions = {}): Promise<RecordOutcome> {
   const now = options.now ?? Date.now();
-  return transaction(db, () => {
-    const match = matchIdentity(db, probe, options);
+  return transaction(db, async () => {
+    const match = await matchIdentity(db, probe, options);
     switch (match.kind) {
       case "venue": {
-        const existing = match.candidateId != null ? getCandidate(db, match.candidateId) : null;
+        const existing = match.candidateId != null ? await getCandidate(db, match.candidateId) : null;
         let candidate: Candidate;
         if (existing) {
-          candidate = mergeInto(db, existing, probe, now, { matchedVenueId: match.venueId });
+          candidate = await mergeInto(db, existing, probe, now, { matchedVenueId: match.venueId });
         } else {
-          const hasSource = venueHasEnabledSource(db, match.venueId);
-          candidate = insertCandidate(
+          const hasSource = await venueHasEnabledSource(db, match.venueId);
+          candidate = await insertCandidate(
             db,
             {
               name: probe.name,
@@ -826,16 +838,16 @@ export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions 
               city: probe.city ?? null,
               lat: probe.lat ?? null,
               lng: probe.lng ?? null,
-              website: cleanWebsite(probe.website) ?? getVenue(db, match.venueId)?.website ?? null,
+              website: cleanWebsite(probe.website) ?? (await getVenue(db, match.venueId))?.website ?? null,
               primaryPlaceId: canonicalPlaceId(probe),
               discoveredFrom: probe.discoveredFrom,
               evidence: appendObservation({}, probe.discoveredFrom, probe.observationKey, probe.observation, now),
               status: hasSource ? "rejected" : "resolved",
-              timezone: probe.timezone ?? getVenue(db, match.venueId)?.timezone ?? null,
+              timezone: probe.timezone ?? (await getVenue(db, match.venueId))?.timezone ?? null,
             },
             now,
           );
-          candidate = updateCandidate(
+          candidate = await updateCandidate(
             db,
             candidate.id,
             {
@@ -845,13 +857,13 @@ export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions 
             now,
           );
         }
-        writeAliases(db, probe.places, { venueId: match.venueId, candidateId: candidate.id }, now);
+        await writeAliases(db, probe.places, { venueId: match.venueId, candidateId: candidate.id }, now);
         return { kind: "matched_venue", candidate, match };
       }
       case "candidate": {
-        const existing = getCandidate(db, match.candidateId) as Candidate;
-        const candidate = mergeInto(db, existing, probe, now);
-        writeAliases(db, probe.places, { venueId: candidate.matchedVenueId, candidateId: candidate.id }, now);
+        const existing = (await getCandidate(db, match.candidateId)) as Candidate;
+        const candidate = await mergeInto(db, existing, probe, now);
+        await writeAliases(db, probe.places, { venueId: candidate.matchedVenueId, candidateId: candidate.id }, now);
         return { kind: "merged", candidate, match };
       }
       case "conflict": {
@@ -862,16 +874,16 @@ export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions 
           placeIds: match.placeIds,
           probeName: probe.name,
         };
-        const open = findOpenReview(db, probe);
+        const open = await findOpenReview(db, probe);
         if (open) {
-          const candidate = mergeInto(db, open, probe, now);
+          const candidate = await mergeInto(db, open, probe, now);
           return {
             kind: "needs_review",
-            candidate: updateCandidate(db, candidate.id, { evidence: { ...candidate.evidence, conflict } }, now),
+            candidate: await updateCandidate(db, candidate.id, { evidence: { ...candidate.evidence, conflict } }, now),
             match,
           };
         }
-        const candidate = insertCandidate(
+        const candidate = await insertCandidate(
           db,
           {
             name: probe.name,
@@ -894,12 +906,12 @@ export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions 
         // Aliases are deliberately not written: the conflicting ids stay with their current owners.
         return {
           kind: "needs_review",
-          candidate: updateCandidate(db, candidate.id, { statusReason: match.reason }, now),
+          candidate: await updateCandidate(db, candidate.id, { statusReason: match.reason }, now),
           match,
         };
       }
       case "none": {
-        let candidate = insertCandidate(
+        let candidate = await insertCandidate(
           db,
           {
             name: probe.name,
@@ -919,8 +931,8 @@ export function recordProbe(db: Db, probe: VenueProbe, options: IdentityOptions 
           },
           now,
         );
-        candidate = updateCandidate(db, candidate.id, { statusReason: probe.reviewReason ?? "new_venue" }, now);
-        writeAliases(db, probe.places, { venueId: null, candidateId: candidate.id }, now);
+        candidate = await updateCandidate(db, candidate.id, { statusReason: probe.reviewReason ?? "new_venue" }, now);
+        await writeAliases(db, probe.places, { venueId: null, candidateId: candidate.id }, now);
         return { kind: probe.reviewReason ? "needs_review" : "created", candidate, match };
       }
     }
@@ -999,7 +1011,11 @@ export function probeFromCluster(cluster: PlaceCluster, context: PlacesIngestCon
 }
 
 /** Clusters a batch of Places results and records each cluster. Permanently closed places are skipped. */
-export function ingestPlaces(db: Db, places: PlaceResult[], context: PlacesIngestContext = {}): IngestSummary {
+export async function ingestPlaces(
+  db: Db,
+  places: PlaceResult[],
+  context: PlacesIngestContext = {},
+): Promise<IngestSummary> {
   const open = places.filter((place) => place.businessStatus !== "CLOSED_PERMANENTLY");
   const stop = [...(context.extraStopWords ?? []), ...(context.city ? [context.city] : [])];
   const { clusters, discardedGeocode } = clusterPlaces(open, {
@@ -1018,7 +1034,7 @@ export function ingestPlaces(db: Db, places: PlaceResult[], context: PlacesInges
     candidateIds: [],
   };
   for (const cluster of clusters) {
-    const outcome = recordProbe(db, probeFromCluster(cluster, context), context);
+    const outcome = await recordProbe(db, probeFromCluster(cluster, context), context);
     summary.candidateIds.push(outcome.candidate.id);
     if (outcome.kind === "created") summary.created++;
     else if (outcome.kind === "merged") summary.merged++;
@@ -1036,30 +1052,33 @@ export function ingestPlaces(db: Db, places: PlaceResult[], context: PlacesInges
  * Seeds venue_place_ids from the production snapshot's google_place_id column. An id claimed by several venues
  * (rooms in one building sharing the building's id) is NOT assigned to any of them and is reported instead.
  */
-export function syncVenuePlaceAliases(db: Db, now: number = Date.now()): { assigned: number; shared: string[] } {
+export async function syncVenuePlaceAliases(
+  db: Db,
+  now: number = Date.now(),
+): Promise<{ assigned: number; shared: string[] }> {
   const byPlace = new Map<string, Venue[]>();
-  for (const venue of listVenues(db)) {
+  for (const venue of await listVenues(db)) {
     if (!venue.googlePlaceId) continue;
     byPlace.set(venue.googlePlaceId, [...(byPlace.get(venue.googlePlaceId) ?? []), venue]);
   }
   let assigned = 0;
   const shared: string[] = [];
-  transaction(db, () => {
+  await transaction(db, async () => {
     for (const [placeId, venues] of byPlace) {
       if (venues.length > 1) {
         shared.push(placeId);
         continue;
       }
       const venue = venues[0] as Venue;
-      const prior = resolvePlaceId(db, placeId);
+      const prior = await resolvePlaceId(db, placeId);
       if (prior?.venueId === venue.id) continue;
       if (prior?.venueId != null) continue;
       if (prior?.candidateId != null) {
-        const candidate = getCandidate(db, prior.candidateId);
+        const candidate = await getCandidate(db, prior.candidateId);
         if (!candidate || compareNames(candidate.name, venue.name) !== "same") continue;
       }
-      const hasCanonical = listPlaceAliases(db, { venueId: venue.id }).some((alias) => alias.isCanonical);
-      upsertPlaceAlias(
+      const hasCanonical = (await listPlaceAliases(db, { venueId: venue.id })).some((alias) => alias.isCanonical);
+      await upsertPlaceAlias(
         db,
         {
           placeId,
@@ -1083,12 +1102,16 @@ export function syncVenuePlaceAliases(db: Db, now: number = Date.now()): { assig
  * Resolves a candidate in status "new" (e.g. added manually) against venues, aliases and other candidates.
  * Duplicates are folded into the existing candidate and this one becomes a `duplicate_of:<id>` tombstone.
  */
-export function resolveCandidate(db: Db, candidateId: number, options: IdentityOptions = {}): RecordOutcome {
+export async function resolveCandidate(
+  db: Db,
+  candidateId: number,
+  options: IdentityOptions = {},
+): Promise<RecordOutcome> {
   const now = options.now ?? Date.now();
-  return transaction(db, () => {
-    const candidate = getCandidate(db, candidateId);
+  return transaction(db, async () => {
+    const candidate = await getCandidate(db, candidateId);
     if (!candidate) throw new Error(`Unknown candidate ${candidateId}`);
-    const aliases = listPlaceAliases(db, { candidateId });
+    const aliases = await listPlaceAliases(db, { candidateId });
     const probe: VenueProbe = {
       name: candidate.name,
       address: candidate.address,
@@ -1107,14 +1130,14 @@ export function resolveCandidate(db: Db, candidateId: number, options: IdentityO
       })),
       discoveredFrom: candidate.discoveredFrom,
     };
-    const match = matchIdentity(db, probe, { ...options, excludeCandidateId: candidateId });
+    const match = await matchIdentity(db, probe, { ...options, excludeCandidateId: candidateId });
     switch (match.kind) {
       case "venue": {
         if (match.candidateId != null && match.candidateId !== candidateId) {
           return foldDuplicate(db, candidate, match.candidateId, probe, match, now);
         }
-        const hasSource = venueHasEnabledSource(db, match.venueId);
-        const updated = updateCandidate(
+        const hasSource = await venueHasEnabledSource(db, match.venueId);
+        const updated = await updateCandidate(
           db,
           candidateId,
           {
@@ -1124,13 +1147,13 @@ export function resolveCandidate(db: Db, candidateId: number, options: IdentityO
           },
           now,
         );
-        writeAliases(db, probe.places, { venueId: match.venueId, candidateId }, now);
+        await writeAliases(db, probe.places, { venueId: match.venueId, candidateId }, now);
         return { kind: "matched_venue", candidate: updated, match };
       }
       case "candidate":
         return foldDuplicate(db, candidate, match.candidateId, probe, match, now);
       case "conflict": {
-        const updated = updateCandidate(
+        const updated = await updateCandidate(
           db,
           candidateId,
           {
@@ -1146,26 +1169,26 @@ export function resolveCandidate(db: Db, candidateId: number, options: IdentityO
         return { kind: "needs_review", candidate: updated, match };
       }
       case "none": {
-        const updated = updateCandidate(db, candidateId, { status: "resolved", statusReason: "new_venue" }, now);
+        const updated = await updateCandidate(db, candidateId, { status: "resolved", statusReason: "new_venue" }, now);
         return { kind: "created", candidate: updated, match };
       }
     }
   });
 }
 
-function foldDuplicate(
+async function foldDuplicate(
   db: Db,
   duplicate: Candidate,
   targetId: number,
   probe: VenueProbe,
   match: IdentityMatch,
   now: number,
-): RecordOutcome {
-  const target = getCandidate(db, targetId) as Candidate;
+): Promise<RecordOutcome> {
+  const target = (await getCandidate(db, targetId)) as Candidate;
   const observations = Array.isArray(duplicate.evidence.observations)
     ? (duplicate.evidence.observations as Record<string, unknown>[])
     : [];
-  let merged = mergeInto(
+  let merged = await mergeInto(
     db,
     target,
     { ...probe, observation: undefined, observationKey: `candidate:${duplicate.id}` },
@@ -1181,15 +1204,16 @@ function foldDuplicate(
       now,
     );
   }
-  merged = updateCandidate(db, target.id, { evidence }, now);
-  for (const alias of listPlaceAliases(db, { candidateId: duplicate.id })) {
-    upsertPlaceAlias(
+  merged = await updateCandidate(db, target.id, { evidence }, now);
+  for (const alias of await listPlaceAliases(db, { candidateId: duplicate.id })) {
+    await upsertPlaceAlias(
       db,
       {
         placeId: alias.placeId,
         venueId: alias.venueId ?? merged.matchedVenueId,
         candidateId: target.id,
-        isCanonical: alias.isCanonical && !listPlaceAliases(db, { candidateId: target.id }).some((a) => a.isCanonical),
+        isCanonical:
+          alias.isCanonical && !(await listPlaceAliases(db, { candidateId: target.id })).some((a) => a.isCanonical),
         types: alias.types,
         displayName: alias.displayName,
         lat: alias.lat,
@@ -1198,6 +1222,6 @@ function foldDuplicate(
       now,
     );
   }
-  updateCandidate(db, duplicate.id, { status: "rejected", statusReason: `duplicate_of:${target.id}` }, now);
+  await updateCandidate(db, duplicate.id, { status: "rejected", statusReason: `duplicate_of:${target.id}` }, now);
   return { kind: "merged", candidate: merged, match };
 }

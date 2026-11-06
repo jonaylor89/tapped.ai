@@ -10,7 +10,7 @@
  *   `end` and `doors` may additionally be time-only ("HH:mm") meaning "same evening as start"
  *   (validation rolls an end that is earlier than the start over to the next day).
  * - Instants (UTC) are ISO 8601 strings with "Z".
- * - Internal bookkeeping timestamps in SQLite are integer epoch milliseconds.
+ * - Internal bookkeeping timestamps in Postgres are integer epoch milliseconds.
  * - Money is always integer cents.
  */
 
@@ -484,10 +484,10 @@ export interface PublishOutcome {
 
 export interface Publisher {
   readonly name: string;
-  /** Publishes a batch; `evidence` resolves raw page bytes by sha256 from local storage. */
+  /** Publishes a batch; `evidence` resolves raw page bytes by sha256 from the page store. */
   publish(
     items: OutboxItem[],
-    evidence: (sha256: string) => { bytes: Uint8Array; contentType: string | null } | null,
+    evidence: (sha256: string) => Promise<{ bytes: Uint8Array; contentType: string | null } | null>,
   ): Promise<PublishOutcome[]>;
 }
 

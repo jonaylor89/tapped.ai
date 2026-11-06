@@ -3,8 +3,8 @@
 Standalone scraper for live music events (plus comedy, open mic, theater and dance) taken from venues' **own**
 websites, with automated discovery of new venues. It replaces `services/event-crawler`, which is left untouched.
 
-> **Status: field-tested on Richmond, VA (2026-11-03), never published to production.** It runs manually from a
-> laptop only. Publishing to production (`EVENT_SCRAPER_PUBLISH=postgres`) needs the owner's explicit approval. See
+> **Status: field-tested on Richmond, VA (2026-11-03) on SQLite; moved to Postgres afterwards and tested on a local
+> Postgres only. Never published to production.** It runs manually from a laptop only. Publishing to production (`EVENT_SCRAPER_PUBLISH=postgres`) needs the owner's explicit approval. See
 > [Richmond field test](#richmond-field-test-2026-11-03) and [What is not done](#what-is-not-done).
 
 ## Architecture
@@ -15,7 +15,7 @@ websites, with automated discovery of new venues. It replaces `services/event-cr
  venue snapshot  ──read──┤  import-venues ─► venues + venue_place_ids                                                   │
  (JSON file or           │                                                                                              │
   read-only PG view)     │  SCRAPE LOOP (runner.ts)                                                                     │
-                         │   sources ─► fetch_source job (SQLite queue, leases) ─► PoliteHttpClient                      │
+                         │   sources ─► fetch_source job (Postgres queue, leases) ─► PoliteHttpClient                    │
                          │     (robots.txt, per-host politeness, conditional GET, ticketing denylist, raw bytes kept)   │
                          │   ─► extract a LIST of events, cheapest first:                                               │
                          │        iCal ─► WP The Events Calendar JSON ─► Squarespace JSON ─► JSON-LD ─► microdata        │
@@ -30,7 +30,7 @@ websites, with automated discovery of new venues. It replaces `services/event-cr
                          │   ─► find event source on the venue's own site ─► PROVE (≥3 valid upcoming)      │          │
                          │   ─► `promoted` ─► export-candidates (JSON + CSV for human review)               │          │
                          │                                                                                  ▼          │
-                         │   SQLite file (node:sqlite, WAL): sources, fetch_state, raw_pages, jobs, events,  publish    │
+                         │   `scraper` schema (Postgres): sources, fetch_state, raw_pages, jobs, events,  publish      │
                          │   event_changes, alerts, venue_candidates, venue_place_ids, publish_outbox        │          │
                          └──────────────────────────────────────────────────────────────────────────────────┼──────────┘
                                                                                                             │
@@ -41,14 +41,17 @@ websites, with automated discovery of new venues. It replaces `services/event-cr
 
 ### Separation from production
 
-- **All working state is local.** Sources, fetch state and conditional-GET validators, the job queue with leases,
-  event snapshots, alerts, venue candidates, place-id aliases, the publish outbox and the raw page bytes kept as
-  evidence live in one SQLite file (`node:sqlite`, no native deps). **Production Postgres is not the queue.**
-- **Three narrow links.** (1) A read-only venue snapshot pull (`import-venues`), (2) a read-only pull of the events
-  production already has (`import-known-events`, required, see below), and (3) the publish step,
-  which pushes validated observations through the existing producer contract (`captureObservations`, see
-  `platform/SCRAPER_INGESTION.md` "Shared producer contract"). With `EVENT_SCRAPER_PUBLISH=ndjson` (default) or
-  `off`, and `VENUE_SNAPSHOT_FILE` for venues, the scraper runs fully standalone.
+- **Its own schema and role.** Sources, fetch state and conditional-GET validators, the job queue with leases, event
+  snapshots, alerts, venue candidates, place-id aliases and the publish outbox live in a `scraper` schema on the
+  production Postgres server, owned by a `tapped_scraper` role. That role can read the identifying columns of
+  `scraped_events` and the `ingestion_profiles` view, and can't touch anything else (`sql/production-bootstrap.sql`,
+  proven in `tests/postgres-state.test.ts`). Every laptop shares this state.
+- **Raw pages are not in Postgres.** They go to the private scrape bucket (`SCRAPE_R2_*`), with only a pointer in
+  `raw_pages`. Without R2 they stay on the laptop's disk, which is only good for dry runs.
+- **One way in to application data.** Events only reach `scraped_events` through the publish step, using the existing
+  producer contract (`captureObservations`, see `platform/SCRAPER_INGESTION.md` "Shared producer contract") and its own
+  `tapped_ingestion` credentials. With `EVENT_SCRAPER_PUBLISH=ndjson` (default) or `off` nothing reaches them.
+- **It needs the database to run.** If Postgres can't be reached, the run stops; it never scrapes without its state.
 - **No automatic venue creation.** Discovery only promotes candidates for human review.
 
 ### The no-ticketing rule
@@ -87,25 +90,24 @@ name within the same city), so one venue found by several feeds ends up as one c
 
 ## Never re-scraping what production already has
 
-Production Postgres (`scraped_events`) already holds the legacy event-crawler's events (and this scraper's own
-published ones). Before any `run-once`, `loop` or `publish`, the scraper needs a copy of every upcoming production
-event (from two days ago up to three years ahead) in SQLite (`known_events`) that is **less than 24 hours old**. With
-`VENUE_SNAPSHOT_DATABASE_URL` set it refreshes that copy itself (read-only transaction); otherwise run
-`import-known-events --file events.json` first, or the command refuses to run.
+Production's `scraped_events` already holds the legacy event-crawler's events and this scraper's own published ones.
+Every new event is checked against that table live, so there is no copy to go stale. If the table can't be read, the
+run fails rather than continuing unchecked. Calendar pages are still fetched, because that is the only way to see new
+shows, and a page that needs the LLM still costs a page.
 
 - **When scraping:** a newly extracted event that matches a production event is dropped. It isn't stored, reconciled
   or queued, and it's counted as `alreadyInProduction` in the run output.
 - **When publishing:** a queued row that matches another crawler's production event is marked done without being
-  sent. This catches anything queued before the latest sync.
+  sent. This catches anything that reached production after the row was queued.
 - **What counts as a match:** the same venue and the same local start date (within one day, because legacy instants
   are sometimes stored in the wrong zone), plus either matching titles (equal after normalization, or every word of
   the shorter title appears in the longer) or the same event URL. An untitled production event matches its URL only
   on the exact local date.
-- **Offline testing:** `EVENT_SCRAPER_KNOWN_EVENTS=off` skips the requirement, but only when
-  `EVENT_SCRAPER_PUBLISH` is not `postgres`.
+- **Known limit:** the title rule is loose. Two different shows at one venue a day apart can count as the same when
+  one title's words all appear in the other ("Live Music" and "Live Music Night"), which drops a real show.
 
-As of 2026-11-03 the legacy crawler last ran in September 2025. Of its 447k events, 9,009 have a venue and a start in
-that window, and none of the 192 Richmond test events matched one.
+As of 2026-11-03 the legacy crawler last ran in September 2025, and none of the 192 Richmond test events matched a
+production event. Legacy rows stay in place: 333,933 bookings link to them through `booking_imports`.
 
 ## Scrape loop details
 
@@ -122,7 +124,7 @@ that window, and none of the 192 Richmond test events matched one.
   parser never cancels events. Cancellation needs 2 consecutive successful fetches that miss an event; a
   zero-result fetch on a previously productive source raises a `zero_results` alert instead.
 - **LLM fallback** (opt-in, `EVENT_SCRAPER_LLM=1`) runs only when no structured extractor found anything, is capped
-  per UTC day across all runs and processes (`EVENT_SCRAPER_LLM_MAX_PAGES`, counted in SQLite), uses a strict JSON schema with venue timezone + "today" context, and every
+  per UTC day across all runs and processes (`EVENT_SCRAPER_LLM_MAX_PAGES`, counted in Postgres), uses a strict JSON schema with venue timezone + "today" context, and every
   evidence quote must appear verbatim in the page text or the event is rejected.
 
 ## Commands
@@ -133,7 +135,7 @@ From `services/event-scraper` after `pnpm --filter @tapped/postgres-ingestion bu
 | Command | What it does |
 |---------|--------------|
 | `import-venues [--file venues.json]` | Pull the read-only venue snapshot (file, or `VENUE_SNAPSHOT_*`) and register place-id aliases |
-| `import-known-events [--file events.json]` | Pull the upcoming events production already has (file, or `VENUE_SNAPSHOT_DATABASE_URL`); required (< 24h old) before scraping or publishing |
+| `import-sqlite FILE` | One-off: copy an old SQLite state file into the schema. Existing rows win |
 | `add-source --venue ID --url URL [--kind html\|ical\|wp_tribe\|squarespace] [--timezone IANA] [--label TEXT]` | Register a venue's calendar URL (timezone defaults to the venue's) |
 | `add-source --listing --url URL --timezone IANA` | Register a city listing source (not a ticketing site) |
 | `add-source --candidate ID --venue ID` | After review: register a promoted candidate's proven source for an existing venue |
@@ -145,7 +147,7 @@ From `services/event-scraper` after `pnpm --filter @tapped/postgres-ingestion bu
 | `export-candidates [--out DIR] [--status promoted,needs_review]` | Write the human review list (JSON + CSV) |
 | `status` | Sources, jobs, candidates, pending outbox, open alerts |
 
-Global options: `--config FILE` (cities/listings JSON, see `examples/config.example.json`) and `--db FILE`.
+Global options: `--config FILE` (cities/listings JSON, see `examples/config.example.json`).
 
 ### Config file (`EVENT_SCRAPER_CONFIG`)
 
@@ -172,8 +174,10 @@ Only names are listed; never commit values. `examples/event-scraper.env.example`
 
 | Variable | Default | Use |
 |----------|---------|-----|
-| `EVENT_SCRAPER_DATA_DIR` | `./data` | Data directory (SQLite, dry-run NDJSON, review exports) |
-| `EVENT_SCRAPER_DB` | `<data>/event-scraper.sqlite` | SQLite path |
+| `EVENT_SCRAPER_DATA_DIR` | `./data` | Dry-run NDJSON, review exports, raw pages when R2 is not configured |
+| `EVENT_SCRAPER_DATABASE_URL` | required | Postgres as `tapped_scraper`, through the tunnel below |
+| `EVENT_SCRAPER_DB_SCHEMA` | `scraper` | Schema name (tests use throwaway ones) |
+| `EVENT_SCRAPER_DB_CONNECTIONS` | `4` | Connections per process, at most 8. Production allows 30 in total |
 | `EVENT_SCRAPER_CONFIG` | none | Cities / listings / artists JSON |
 | `EVENT_SCRAPER_OSM` / `EVENT_SCRAPER_LISTINGS` | on | Discovery feeds without keys |
 | `EVENT_SCRAPER_PLACES` + `GOOGLE_PLACES_API_KEY` | off | Google Places grid search |
@@ -196,7 +200,8 @@ Publishing and snapshot variables are listed in the next section. Invalid values
 ## Running
 
 The scraper always runs **manually from a laptop** (yours or another laptop on the Tailscale network), never on the
-production VPS or any cloud host. Its SQLite file, raw pages and NDJSON output stay on that laptop. There is no
+production VPS or any cloud host. Its state is shared through Postgres, so any laptop can pick up where another left
+off, and two laptops can run at once without repeating work. There is no
 container, service unit or schedule.
 
 ```bash
@@ -207,8 +212,7 @@ pnpm --filter @tapped/postgres-ingestion build && pnpm --filter @tapped/event-sc
 # each session, from services/event-scraper
 set -a; source ~/.config/tapped/event-scraper.env; set +a     # see examples/event-scraper.env.example
 alias scraper='node --disable-warning=ExperimentalWarning dist/cli.js'
-scraper import-venues --file venues.json   # venue snapshot exported from production (read-only)
-scraper import-known-events --file events.json  # events production already has (read-only); needed every 24h
+scraper import-venues                       # venue snapshot from production's read-only view
 scraper seed-venues --city Richmond         # send known venues through find-source -> prove
 scraper discover --city Richmond            # map feeds -> resolve -> find source -> prove
 scraper export-candidates --out review/     # review promoted / needs_review candidates
@@ -217,11 +221,18 @@ scraper run-once                            # scrape every due source; NDJSON by
 scraper status
 ```
 
-Production is reached only over Tailscale and only for the narrow steps: the read-only venue snapshot, the read-only
-known-events pull and, when `EVENT_SCRAPER_PUBLISH=postgres`, the publish step. Every other command is local.
+Production Postgres has no public port, so reach it through a tunnel over Tailscale first:
 
-`run-once`, `discover` and `loop` may run at the same time on one SQLite file. Per-host politeness slots (including
-Retry-After) and the daily LLM page cap live in SQLite, so the processes share them; robots.txt is cached per process.
+```bash
+ssh -N -o ProxyCommand='tailscale nc %h %p' -L 55433:172.18.0.7:5432 root@tapped-prod   # keep this running
+```
+
+`172.18.0.7` is the Postgres container's address on the Docker network; check it with
+`docker inspect tapped-postgres-1` if the tunnel can't connect.
+
+`run-once`, `discover` and `loop` may run at the same time, on one laptop or several. Jobs are claimed with leases,
+transactions on the schema run one at a time under an advisory lock, and per-host politeness slots (including
+Retry-After) and the daily LLM page cap are shared; robots.txt is cached per process.
 Housekeeping (old jobs, published outbox rows, unreferenced raw pages, counters) runs from every command at most every
 6 hours.
 
@@ -231,17 +242,20 @@ Housekeeping (old jobs, published outbox rows, unreferenced raw pages, counters)
 pnpm --filter @tapped/postgres-ingestion build   # the scraper loads it from dist/ at runtime
 pnpm --filter @tapped/event-scraper typecheck
 pnpm --filter @tapped/event-scraper lint
-pnpm --filter @tapped/event-scraper test          # offline only: fixtures under tests/fixtures
+docker run -d --rm --name tapped-scraper-pg -e POSTGRES_USER=tapped -e POSTGRES_PASSWORD=local-test-only \\
+  -e POSTGRES_DB=scraper_test -p 127.0.0.1:55432:5432 postgis/postgis:17-3.5 -c max_connections=300
+export EVENT_SCRAPER_TEST_DATABASE_URL=postgres://tapped:local-test-only@127.0.0.1:55432/scraper_test
+pnpm --filter @tapped/event-scraper test          # local Postgres and fixtures, no network
 pnpm --filter @tapped/event-scraper build
 ```
 
-Tests never touch the network. Every network dependency (HTTP, Places, Overpass, LLM, Bandsintown, publisher) is an
+Tests never touch the network and only accept a local database; each one gets a throwaway schema. Every network dependency (HTTP, Places, Overpass, LLM, Bandsintown, publisher) is an
 injectable interface in `src/types.ts`; `tests/e2e.test.ts` drives the real CLI over a fake network (two venues, a
 Places + Overpass fixture city) and checks extraction, validation, reconcile, the NDJSON output, place-id clustering
 and promotion. CI runs lint, typecheck and tests in `.github/workflows/node.yml`.
 
-Requires Node 22.17.0 (pinned in CI). `node:sqlite` prints an ExperimentalWarning on Node 22; pass
-`--disable-warning=ExperimentalWarning`.
+Requires Node 22.17.0 (pinned in CI). Only `import-sqlite` uses `node:sqlite`, which prints an ExperimentalWarning on
+Node 22; pass `--disable-warning=ExperimentalWarning`.
 
 ## Layout
 
@@ -252,7 +266,10 @@ Requires Node 22.17.0 (pinned in CI). `node:sqlite` prints an ExperimentalWarnin
 | `src/runner.ts` | Scrape loop: queue, fetch → extract → validate → reconcile, adaptive scheduling, LLM extractor |
 | `src/discovery-runner.ts` | Discovery loop: feed jobs, Places budget, resolve + prove |
 | `src/types.ts` | Shared contract (domain types, extractor + network client interfaces) |
-| `src/db.ts` | SQLite schema, migrations, repositories, leased job queue |
+| `src/db.ts` | Postgres schema, migrations, repositories, leased job queue |
+| `src/pages.ts` | Raw page storage (R2, or disk for dry runs) |
+| `src/import-sqlite.ts` | One-off import of an old SQLite state file |
+| `sql/` | Production bootstrap and rollback, run by an operator |
 | `src/fetch.ts`, `src/denylist.ts`, `src/url.ts` | Polite HTTP client, ticketing denylist, URL helpers |
 | `src/extract/` | Structured extractors and calendar-endpoint discovery |
 | `src/llm/` | OpenAI-compatible client, prompt/schema, page text |
@@ -292,9 +309,8 @@ Bugs the test found, all fixed with regression tests:
 
 ## What is not done
 
-- **Never published to production.** No production credentials are provisioned. `VENUE_SNAPSHOT_DATABASE_URL` should
-  be a separate read-only login with `SELECT` on `ingestion_profiles`; `EVENT_SCRAPER_PUBLISH=postgres` needs the
-  restricted ingestion role and the private R2 scrape bucket.
+- **Never published to production, and the `scraper` schema doesn't exist there yet.** No production credentials are
+  provisioned. Publishing needs the owner's approval, plus `INGESTION_DATABASE_URL` and `SCRAPE_R2_*` on the laptop.
 - **Promoted candidates are not turned into venues.** A human reviews the export, creates the venue in production,
   re-runs `import-venues`, then `add-source --candidate ID --venue ID`.
 - **Source choice still needs review.** In Richmond, one venue's proven source was a sister venue's page on a shared
@@ -307,20 +323,20 @@ Bugs the test found, all fixed with regression tests:
 
 ## Publishing to production
 
-The scraper and production share no queue and no tables. Everything the scraper works on (sources, jobs, snapshots,
-the outbox, evidence bytes) lives in its SQLite file. There are exactly two links to production, and both are optional:
+The scraper shares a server with production but no queue and no writable tables. Everything it works on (sources,
+jobs, snapshots, the outbox) lives in its own schema. It connects to application data in exactly two ways:
 
 1. **Read-only venue snapshot** (`src/publish/venues-snapshot.ts`). `syncVenueSnapshot` copies production venues into
-   the local `venues` table and records each venue's Google place id in `venue_place_ids`. A place id that another
+   the schema's `venues` table and records each venue's Google place id in `venue_place_ids`. A place id that another
    venue already owns is reported as a conflict and left alone, because shared place ids do not prove identity. The
-   Postgres source opens one `BEGIN READ ONLY` transaction, runs `VENUE_SNAPSHOT_SQL` and disconnects. The query reads
-   the `ingestion_profiles` view, which `tapped_ingestion` can already `SELECT`, and returns venue-enabled profiles
+   Postgres source runs `VENUE_SNAPSHOT_SQL` on the scraper's own connection. The query reads the
+   `ingestion_profiles` view, the only part of the profile data `tapped_scraper` can read, and returns venue-enabled profiles
    (`jsonb_typeof(doc->'venueInfo')='object'`) with id, name (`artistName`, else `username`), `venue_website_url`,
    lat/lng and place id from `users.location`/`users.place_id`. Deleted and shadow-banned users are already excluded
    by the view. Production has no venue street address or timezone column, so those stay null; each source row carries
    its own timezone. To run standalone, point `VENUE_SNAPSHOT_FILE` at a JSON array (or `{ "venues": [...] }`) of
    `{id, name, website, lat, lng, placeId, address?, timezone?}`.
-2. **Publish** (`src/publish/publisher.ts`). Reconcile writes changes to the SQLite `publish_outbox`, and
+2. **Publish** (`src/publish/publisher.ts`). Reconcile writes changes to the `publish_outbox` table, and
    `publishOutbox(db, publisher)` drains it:
    - `NdjsonPublisher` (the default dry run) appends the exact envelopes that would be sent to a local NDJSON file,
      with evidence metadata but no page bytes.
@@ -328,7 +344,7 @@ the outbox, evidence bytes) lives in its SQLite file. There are exactly two link
      events from the same fetched page, it first uploads the raw page bytes to the private R2 scrape bucket and verifies
      them, and only then calls `record_scrape_observations`. Envelopes use source `event-scraper` and source key
      `<sourceId>#<identityKey>`. The delivery key is a content-derived hash of source key, capture time and payload,
-     so retries and rebuilt SQLite files dedupe in production. Each envelope also has the actual fetch time as
+     so retries and a rebuilt schema dedupe in production. Each envelope also has the actual fetch time as
      `observedAt`, parser version `event-scraper-v1:<extractor>`, the venue id from the source row (routing
      `resolved`), normalization v2 with `usd_cent` prices, and the original extraction as `data`. Date-only events are
      sent as local midnight with `datePrecision: "date"`. Events from city listing sources have no venue and are not
@@ -344,8 +360,6 @@ the outbox, evidence bytes) lives in its SQLite file. There are exactly two link
 | `EVENT_SCRAPER_DRY_RUN_PATH` | NDJSON output path for the dry run (default `./data/publish/observations-<date>.ndjson`) |
 | `INGESTION_DATABASE_URL` | Restricted `tapped_ingestion` role used by `captureObservations` |
 | `SCRAPE_R2_ACCOUNT_ID`, `SCRAPE_R2_BUCKET`, `SCRAPE_R2_ACCESS_KEY_ID`, `SCRAPE_R2_SECRET_ACCESS_KEY`, `SCRAPE_R2_SESSION_TOKEN` (optional) | Private scrape evidence bucket (never the media bucket) |
-| `VENUE_SNAPSHOT_DATABASE_URL` | Separate read-only connection for the venue snapshot and the known-events pull. The role needs only `SELECT` on `ingestion_profiles` and `scraped_events` |
-| `EVENT_SCRAPER_KNOWN_EVENTS` | `off` skips the known-events requirement for offline tests; ignored when publishing to `postgres` |
 | `VENUE_SNAPSHOT_FILE` | Standalone venue snapshot JSON file. It takes precedence over the database URL |
 
 `@tapped/postgres-ingestion` is loaded at runtime from its `dist/`, so run `pnpm --filter @tapped/postgres-ingestion build`

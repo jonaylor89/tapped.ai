@@ -180,7 +180,7 @@ export async function discoverFromBandsintown(
         summary.outsideAreas++;
         continue;
       }
-      const outcome = recordProbe(
+      const outcome = await recordProbe(
         db,
         {
           name: event.venue.name,

@@ -1,5 +1,5 @@
 /**
- * The slow venue-discovery loop. Each feed unit is a job in the SQLite queue with a dedupe key, re-enqueued after it
+ * The slow venue-discovery loop. Each feed unit is a job in the Postgres queue with a dedupe key, re-enqueued after it
  * runs with that feed's refresh interval, so a unit is searched at most once per interval:
  *   discover_cell        one Google Places grid cell   (budget-capped: Places requests per run)
  *   discover_osm         one city bbox on Overpass
@@ -177,31 +177,37 @@ export function configuredUnits(
  * queued units whose city / listing URL / artist list is no longer configured, so removed feeds stop for good.
  * Kinds whose feature is off (no client, listings disabled) are left alone: they simply never run.
  */
-export function scheduleDiscovery(
+export async function scheduleDiscovery(
   db: Db,
   deps: Pick<DiscoveryDeps, "places" | "overpass" | "bandsintown">,
   options: DiscoveryOptions,
   now: number,
-): { scheduled: number; retired: number } {
+): Promise<{ scheduled: number; retired: number }> {
   const kinds = Object.values(DISCOVERY_JOB_KINDS);
   const all = configuredUnits(deps, options, null);
   let retired = 0;
-  if (deps.overpass) retired += retireJobs(db, DISCOVERY_JOB_KINDS.osm, all.osm.keys(), now);
-  if (deps.places) retired += retireJobs(db, DISCOVERY_JOB_KINDS.places, all.places.keys(), now);
-  if (options.listingsEnabled ?? true) retired += retireJobs(db, DISCOVERY_JOB_KINDS.listing, all.listing.keys(), now);
-  if (deps.bandsintown) retired += retireJobs(db, DISCOVERY_JOB_KINDS.bandsintown, all.bandsintown.keys(), now);
+  if (deps.overpass) retired += await retireJobs(db, DISCOVERY_JOB_KINDS.osm, all.osm.keys(), now);
+  if (deps.places) retired += await retireJobs(db, DISCOVERY_JOB_KINDS.places, all.places.keys(), now);
+  if (options.listingsEnabled ?? true)
+    retired += await retireJobs(db, DISCOVERY_JOB_KINDS.listing, all.listing.keys(), now);
+  if (deps.bandsintown) retired += await retireJobs(db, DISCOVERY_JOB_KINDS.bandsintown, all.bandsintown.keys(), now);
 
-  const before = kinds.reduce((sum, kind) => sum + countJobs(db, { kind }), 0);
-  const wanted = configuredUnits(deps, options);
-  const enqueue = (kind: string, units: Map<string, object>) => {
-    for (const [dedupeKey, payload] of units)
-      enqueueJob(db, kind, payload, { dedupeKey, runAfter: now, now, maxAttempts: 1_000_000 });
+  const total = async () => {
+    let sum = 0;
+    for (const kind of kinds) sum += await countJobs(db, { kind });
+    return sum;
   };
-  enqueue(DISCOVERY_JOB_KINDS.osm, wanted.osm);
-  enqueue(DISCOVERY_JOB_KINDS.places, wanted.places);
-  enqueue(DISCOVERY_JOB_KINDS.listing, wanted.listing);
-  enqueue(DISCOVERY_JOB_KINDS.bandsintown, wanted.bandsintown);
-  return { scheduled: kinds.reduce((sum, kind) => sum + countJobs(db, { kind }), 0) - before, retired };
+  const before = await total();
+  const wanted = configuredUnits(deps, options);
+  const enqueue = async (kind: string, units: Map<string, object>) => {
+    for (const [dedupeKey, payload] of units)
+      await enqueueJob(db, kind, payload, { dedupeKey, runAfter: now, now, maxAttempts: 1_000_000 });
+  };
+  await enqueue(DISCOVERY_JOB_KINDS.osm, wanted.osm);
+  await enqueue(DISCOVERY_JOB_KINDS.places, wanted.places);
+  await enqueue(DISCOVERY_JOB_KINDS.listing, wanted.listing);
+  await enqueue(DISCOVERY_JOB_KINDS.bandsintown, wanted.bandsintown);
+  return { scheduled: (await total()) - before, retired };
 }
 
 /** One discovery pass: feeds (cheapest and owner-preferred first), then resolve + prove. */
@@ -213,7 +219,7 @@ export async function runDiscovery(deps: DiscoveryDeps, options: DiscoveryOption
   const maxPages = Math.min(3, Math.max(1, options.placesMaxPages ?? 3));
   const budget = options.placesBudget ?? 200;
   const retryMs = options.feedRetryMs ?? DAY_MS;
-  const scheduled = scheduleDiscovery(db, deps, options, clock.now().getTime());
+  const scheduled = await scheduleDiscovery(db, deps, options, clock.now().getTime());
   const summary: DiscoveryRunSummary = {
     scheduled: scheduled.scheduled,
     units: [],
@@ -243,7 +249,7 @@ export async function runDiscovery(deps: DiscoveryDeps, options: DiscoveryOption
     if (!units.size) return;
     const keys = [...units.keys()];
     while (canStart()) {
-      const job = claimJob<P>(db, {
+      const job = await claimJob<P>(db, {
         kinds: [kind],
         dedupeKeys: keys,
         leaseMs: 60 * 60 * 1000,
@@ -263,12 +269,12 @@ export async function runDiscovery(deps: DiscoveryDeps, options: DiscoveryOption
         log("discovery_unit_failed", { kind, key, error: unit.message });
       }
       const at = clock.now().getTime();
-      if (!finishJob(db, job.id, token, at)) {
+      if (!(await finishJob(db, job.id, token, at))) {
         // Lease lost (another process reclaimed it): that process reschedules the unit.
         summary.units.push(unit);
         continue;
       }
-      enqueueJob(db, kind, payload, {
+      await enqueueJob(db, kind, payload, {
         dedupeKey: job.dedupeKey,
         runAfter: at + (ok ? refreshMs : retryMs),
         now: at,

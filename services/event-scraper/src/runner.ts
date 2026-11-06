@@ -1,5 +1,5 @@
 /**
- * The scrape loop. Every enabled source has exactly one pending `fetch_source` job in the SQLite queue (dedupe key
+ * The scrape loop. Every enabled source has exactly one pending `fetch_source` job in the Postgres queue (dedupe key
  * `fetch_source:<sourceId>`); a worker leases it, runs fetch -> extract -> validate -> reconcile, then schedules the
  * next fetch with an adaptive delay:
  *   - events changed (new/updated/canceled/reappeared): `productiveIntervalMs` (default ~daily)
@@ -91,7 +91,7 @@ export interface RunnerOptions {
   /** Lease per fetch job. Default 15 min; renewed every third of it while the job runs (politeness waits). */
   leaseMs?: number;
   /**
-   * LLM cost cap: pages sent to the LLM per UTC day, counted in SQLite so every run, loop tick and process on this
+   * LLM cost cap: pages sent to the LLM per UTC day, counted in Postgres so every run, loop tick and process on this
    * database shares it. Default 50.
    */
   llmMaxPages?: number;
@@ -154,18 +154,18 @@ export interface RunSummary {
 
 /** Page budget for the LLM fallback. `tryConsume` reserves one page; false means the cap is reached. */
 export interface LlmBudget {
-  tryConsume(): boolean;
+  tryConsume(): boolean | Promise<boolean>;
 }
 
 export const LLM_PAGES_KEY_PREFIX = "llm_pages:";
 
 /**
- * Daily LLM page cap shared through SQLite (`kv` counter per UTC day), so it holds across runOnce calls, `loop`
+ * Daily LLM page cap shared through Postgres (`kv` counter per UTC day), so it holds across runOnce calls, `loop`
  * ticks, discovery proving and separate processes on the same database.
  */
 export function dailyLlmBudget(db: Db, maxPerDay: number, clock: Clock = systemClock): LlmBudget {
   return {
-    tryConsume() {
+    async tryConsume() {
       const now = clock.now();
       return consumeCounter(db, `${LLM_PAGES_KEY_PREFIX}${now.toISOString().slice(0, 10)}`, maxPerDay, now.getTime());
     },
@@ -174,7 +174,7 @@ export function dailyLlmBudget(db: Db, maxPerDay: number, clock: Clock = systemC
 
 /**
  * Wraps `extractEventsWithLlm` as the fallback Extractor. Pages are charged to `budget` (default: an in-memory cap of
- * `maxPages` for this extractor instance only; the runner and CLI pass the shared daily SQLite budget).
+ * `maxPages` for this extractor instance only; the runner and CLI pass the shared daily budget).
  */
 export function createLlmExtractor(
   options: { maxPages?: number; llm?: LlmExtractOptions; budget?: LlmBudget } = {},
@@ -197,7 +197,7 @@ export function createLlmExtractor(
       return looksLikeEventListing(page.text, page.contentType);
     },
     async extract(page: Page, ctx: ExtractContext) {
-      if (!budget.tryConsume()) {
+      if (!(await budget.tryConsume())) {
         exhausted = true;
         return [];
       }
@@ -238,19 +238,19 @@ function jitter(sourceId: string, delayMs: number): number {
  * Makes sure every enabled source has a pending fetch job. Sources fetched before start at
  * `lastFetchAt + fetchIntervalMs`; new sources start now. Existing pending jobs (and their backoff) are kept.
  */
-export function scheduleSources(db: Db, now: number): number {
-  const before = countJobs(db, { kind: FETCH_JOB });
-  for (const source of listSources(db, { enabled: true })) {
-    const state = getFetchState(db, source.id);
+export async function scheduleSources(db: Db, now: number): Promise<number> {
+  const before = await countJobs(db, { kind: FETCH_JOB });
+  for (const source of await listSources(db, { enabled: true })) {
+    const state = await getFetchState(db, source.id);
     const runAfter = state.lastFetchAt == null ? now : Math.max(now, state.lastFetchAt + source.fetchIntervalMs);
-    enqueueJob<FetchJobPayload>(
+    await enqueueJob<FetchJobPayload>(
       db,
       FETCH_JOB,
       { sourceId: source.id },
       { dedupeKey: fetchJobKey(source.id), runAfter, now, maxAttempts: 1_000_000 },
     );
   }
-  return countJobs(db, { kind: FETCH_JOB }) - before;
+  return (await countJobs(db, { kind: FETCH_JOB })) - before;
 }
 
 /** Next delay from the outcome. Exported for tests. */
@@ -313,7 +313,7 @@ export interface ProcessContext {
    * Renews the job's lease and reports whether this worker still holds it. Checked right before reconcile: if
    * another worker reclaimed the job, this result must not touch the snapshot (one fetch, one observation).
    */
-  holdsLease?: () => boolean;
+  holdsLease?: () => Promise<boolean>;
 }
 
 /** Fetches, extracts, validates and reconciles one source. Returns the outcome and the next delay. */
@@ -325,25 +325,25 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   const startedAt = clock.now().getTime();
   const result = emptyResult(source, "extracted");
 
-  const disable = (kind: "ticketing_blocked" | "other", message: string): SourceRunResult => {
-    setSourceEnabled(db, source.id, false, startedAt);
-    raiseAlert(db, { kind, sourceId: source.id, message, details: { url: source.url } }, startedAt);
-    saveFetchState(db, source.id, { lastFetchAt: startedAt, lastError: message });
+  const disable = async (kind: "ticketing_blocked" | "other", message: string): Promise<SourceRunResult> => {
+    await setSourceEnabled(db, source.id, false, startedAt);
+    await raiseAlert(db, { kind, sourceId: source.id, message, details: { url: source.url } }, startedAt);
+    await saveFetchState(db, source.id, { lastFetchAt: startedAt, lastError: message });
     log("source_disabled", { sourceId: source.id, reason: message });
     return { ...result, outcome: "disabled", message, nextDelayMs: null };
   };
 
-  const failure = (outcome: SourceOutcome, message: string, status: number | null): SourceRunResult => {
-    const state = getFetchState(db, source.id);
+  const failure = async (outcome: SourceOutcome, message: string, status: number | null): Promise<SourceRunResult> => {
+    const state = await getFetchState(db, source.id);
     const failures = state.consecutiveFailures + 1;
-    saveFetchState(db, source.id, {
+    await saveFetchState(db, source.id, {
       lastFetchAt: startedAt,
       lastStatus: status,
       lastError: message,
       consecutiveFailures: failures,
     });
     if (failures >= opts.failureAlertAfter) {
-      raiseAlert(
+      await raiseAlert(
         db,
         { kind: "fetch_failed", sourceId: source.id, message, details: { url: source.url, failures, status } },
         startedAt,
@@ -354,7 +354,7 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
 
   if (isTicketingUrl(source.url)) return disable("ticketing_blocked", "ticketing platform URL; never fetched");
 
-  const state = getFetchState(db, source.id);
+  const state = await getFetchState(db, source.id);
   let fetched: FetchResult;
   try {
     fetched = await http.get({
@@ -369,8 +369,8 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
       if (error.reason === "scheme" || error.reason === "private_host")
         return disable("other", `blocked_${error.reason}`);
       // robots.txt disallows us: respect it, tell a human, and look again in a week.
-      saveFetchState(db, source.id, { lastFetchAt: startedAt, lastError: "robots_disallowed" });
-      raiseAlert(
+      await saveFetchState(db, source.id, { lastFetchAt: startedAt, lastError: "robots_disallowed" });
+      await raiseAlert(
         db,
         { kind: "robots_blocked", sourceId: source.id, message: "robots.txt disallows this URL", details: {} },
         startedAt,
@@ -394,12 +394,12 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
     consecutiveFailures: 0,
     successfulFetches: state.successfulFetches + 1,
   };
-  resolveAlerts(db, { kind: "fetch_failed", sourceId: source.id }, startedAt);
-  resolveAlerts(db, { kind: "robots_blocked", sourceId: source.id }, startedAt);
+  await resolveAlerts(db, { kind: "fetch_failed", sourceId: source.id }, startedAt);
+  await resolveAlerts(db, { kind: "robots_blocked", sourceId: source.id }, startedAt);
 
   const streak = pc.payload.unchangedStreak ?? 0;
   if (fetched.notModified) {
-    saveFetchState(db, source.id, success);
+    await saveFetchState(db, source.id, success);
     return {
       ...result,
       outcome: "not_modified",
@@ -411,14 +411,14 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
     return failure("http_error", `HTTP ${fetched.status}`, fetched.status);
   }
 
-  const sourceSha = putRawPage(
+  const sourceSha = await putRawPage(
     db,
     { sha256: fetched.sha256, url: fetched.finalUrl, contentType: fetched.contentType, bytes: fetched.body },
     startedAt,
   );
   const validators = { etag: fetched.etag, lastModified: fetched.lastModified, contentHash: sourceSha };
   if (state.contentHash === sourceSha && pc.payload.selfContained) {
-    saveFetchState(db, source.id, { ...success, ...validators });
+    await saveFetchState(db, source.id, { ...success, ...validators });
     return {
       ...result,
       outcome: "unchanged_bytes",
@@ -429,7 +429,7 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   }
 
   const now = clock.now();
-  const venue = source.venueId ? getVenue(db, source.venueId) : null;
+  const venue = source.venueId ? await getVenue(db, source.venueId) : null;
   const ctx: ExtractContext = {
     source,
     venue,
@@ -443,8 +443,8 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   try {
     extraction = await extractEvents(page, ctx, { fallback: pc.fallback });
   } catch (error) {
-    saveFetchState(db, source.id, { ...success, ...validators, lastError: `extract: ${errorText(error)}` });
-    raiseAlert(db, { kind: "extract_failed", sourceId: source.id, message: errorText(error) }, startedAt);
+    await saveFetchState(db, source.id, { ...success, ...validators, lastError: `extract: ${errorText(error)}` });
+    await raiseAlert(db, { kind: "extract_failed", sourceId: source.id, message: errorText(error) }, startedAt);
     return {
       ...result,
       outcome: "extract_failed",
@@ -462,21 +462,26 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
       .map((e) => `${e.extractor}: ${e.message}`)
       .join("; ")
       .slice(0, 500);
-    saveFetchState(db, source.id, { ...success, ...validators, contentHash: null, lastError: `extract: ${message}` });
-    raiseAlert(
+    await saveFetchState(db, source.id, {
+      ...success,
+      ...validators,
+      contentHash: null,
+      lastError: `extract: ${message}`,
+    });
+    await raiseAlert(
       db,
       { kind: "extract_failed", sourceId: source.id, message, details: { errors: extraction.errors } },
       startedAt,
     );
     return { ...result, outcome: "extract_failed", message, nextDelayMs: nextDelay("failure", 1, opts) };
   }
-  resolveAlerts(db, { kind: "extract_failed", sourceId: source.id }, startedAt);
+  await resolveAlerts(db, { kind: "extract_failed", sourceId: source.id }, startedAt);
 
   const evidencePage = extraction.page;
   const evidenceSha =
     evidencePage === page
       ? sourceSha
-      : putRawPage(
+      : await putRawPage(
           db,
           {
             url: evidencePage.finalUrl || evidencePage.url,
@@ -505,11 +510,11 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
     }
   }
 
-  if (pc.holdsLease && !pc.holdsLease()) {
+  if (pc.holdsLease && !(await pc.holdsLease())) {
     log("lease_lost", { sourceId: source.id });
     return { ...result, outcome: "lease_lost", message: "lease lost before reconcile", nextDelayMs: null };
   }
-  const reconciled = reconcileSource(db, {
+  const reconciled = await reconcileSource(db, {
     source,
     events: validated.valid,
     now,
@@ -518,7 +523,7 @@ export async function processSource(source: Source, pc: ProcessContext): Promise
   });
   result.reconcile = reconciled.counts;
   result.zeroResults = reconciled.zeroResults;
-  saveFetchState(db, source.id, {
+  await saveFetchState(db, source.id, {
     ...success,
     ...validators,
     lastExtractor: extraction.extractor ?? state.lastExtractor,
@@ -576,7 +581,7 @@ export async function runOnce(deps: RunnerDeps, options: RunnerOptions = {}): Pr
     enqueueOutbox: options.enqueueOutbox ?? true,
   };
   const summary: RunSummary = {
-    scheduled: scheduleSources(db, clock.now().getTime()),
+    scheduled: await scheduleSources(db, clock.now().getTime()),
     processed: 0,
     results: [],
     totals: { extracted: 0, valid: 0, new: 0, updated: 0, canceled: 0, failed: 0 },
@@ -586,27 +591,28 @@ export async function runOnce(deps: RunnerDeps, options: RunnerOptions = {}): Pr
   let claimed = 0;
   const worker = async () => {
     while (claimed < maxJobs) {
-      const job = claimJob<FetchJobPayload>(db, { kinds: [FETCH_JOB], leaseMs, now: clock.now().getTime() });
+      claimed++; // Before the await, so concurrent workers cannot overshoot maxJobs.
+      const job = await claimJob<FetchJobPayload>(db, { kinds: [FETCH_JOB], leaseMs, now: clock.now().getTime() });
       if (!job) return;
-      claimed++;
       await runJob(job);
     }
   };
 
   const runJob = async (job: Job<FetchJobPayload>) => {
     const token = job.leaseToken as string;
-    const source = getSource(db, job.payload.sourceId);
+    const source = await getSource(db, job.payload.sourceId);
     if (!source || !source.enabled) {
-      finishJob(db, job.id, token, clock.now().getTime());
+      await finishJob(db, job.id, token, clock.now().getTime());
       return;
     }
     // Keep the lease alive while the job runs: politeness waits (Crawl-delay, Retry-After) can exceed the lease.
     let leaseLost = false;
-    const renew = () => {
-      if (!leaseLost && !extendLease(db, job.id, token, leaseMs, clock.now().getTime())) leaseLost = true;
+    const renew = async () => {
+      if (!leaseLost && !(await extendLease(db, job.id, token, leaseMs, clock.now().getTime()))) leaseLost = true;
       return !leaseLost;
     };
-    const heartbeat = setInterval(renew, Math.max(1_000, Math.floor(leaseMs / 3)));
+    // A failed renewal (database briefly unreachable) only risks the lease; the holdsLease check before saving decides.
+    const heartbeat = setInterval(() => void renew().catch(() => undefined), Math.max(1_000, Math.floor(leaseMs / 3)));
     heartbeat.unref?.();
     let result: SourceRunResult;
     try {
@@ -621,7 +627,7 @@ export async function runOnce(deps: RunnerDeps, options: RunnerOptions = {}): Pr
       // Unexpected bug: record it, keep the source on a failure backoff instead of losing its schedule.
       log("source_error", { sourceId: source.id, error: errorText(error) });
       result = { ...emptyResult(source, "fetch_failed"), message: errorText(error), nextDelayMs: 6 * HOUR_MS };
-      raiseAlert(
+      await raiseAlert(
         db,
         { kind: "other", sourceId: source.id, message: `runner: ${errorText(error)}` },
         clock.now().getTime(),
@@ -630,9 +636,9 @@ export async function runOnce(deps: RunnerDeps, options: RunnerOptions = {}): Pr
     clearInterval(heartbeat);
     const at = clock.now().getTime();
     // Lease lost: another worker owns this source's job now and schedules it; do not enqueue a second one.
-    const finished = finishJob(db, job.id, token, at);
+    const finished = await finishJob(db, job.id, token, at);
     if (finished && result.nextDelayMs != null) {
-      enqueueJob<FetchJobPayload>(db, FETCH_JOB, nextPayload(job.payload, result), {
+      await enqueueJob<FetchJobPayload>(db, FETCH_JOB, nextPayload(job.payload, result), {
         dedupeKey: fetchJobKey(source.id),
         runAfter: at + result.nextDelayMs + jitter(source.id, result.nextDelayMs),
         maxAttempts: 1_000_000,
@@ -650,7 +656,7 @@ export async function runOnce(deps: RunnerDeps, options: RunnerOptions = {}): Pr
   };
 
   const workers = Math.max(1, options.concurrency ?? 4);
-  await Promise.all(Array.from({ length: workers }, () => worker()));
+  await Promise.all(Array.from({ length: workers }, async () => worker()));
   summary.llmPages = fallback?.pagesUsed() ?? 0;
   summary.results.sort((a, b) => a.sourceId.localeCompare(b.sourceId));
   return summary;

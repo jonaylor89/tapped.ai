@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { listCandidates, openDb, resolvePlaceId } from "../src/db.js";
+import { listCandidates, resolvePlaceId } from "../src/db.js";
 import {
   BandsintownHttpClient,
   createBandsintownClientFromEnv,
@@ -26,6 +26,7 @@ import {
   searchCell,
 } from "../src/discovery/places.js";
 import type { BandsintownClient, OverpassClient, PlacesClient } from "../src/types.js";
+import { openTestDb } from "./helpers/db.js";
 import { fakeFetch, fixedClock, fixtureJson, fixtureText, NOW_MS, politeClient } from "./helpers/discovery.js";
 
 const TZ = "America/Indiana/Indianapolis";
@@ -125,7 +126,7 @@ describe("Google Places (New) client", () => {
   });
 
   test("discoverPlacesCell records clustered candidates", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const { fetchImpl } = placesFetch();
     const client: PlacesClient = new GooglePlacesClient({ apiKey: FAKE_KEY, fetchImpl });
     const summary = await discoverPlacesCell(db, client, CELL, {
@@ -136,7 +137,7 @@ describe("Google Places (New) client", () => {
     assert.equal(summary.requests, 2);
     assert.equal(summary.closed, 1);
     assert.equal(summary.created + summary.needsReview, 6);
-    const mercury = listCandidates(db).find((c) => c.name === "The Mercury Room")!;
+    const mercury = (await listCandidates(db)).find((c) => c.name === "The Mercury Room")!;
     assert.equal(mercury.city, "Indianapolis");
     assert.equal(mercury.timezone, TZ);
     assert.equal(mercury.createdAt, NOW_MS);
@@ -195,20 +196,20 @@ describe("OpenStreetMap Overpass", () => {
   });
 
   test("OSM features merge into existing Places candidates and add new ones", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const { fetchImpl } = placesFetch();
     await discoverPlacesCell(db, new GooglePlacesClient({ apiKey: FAKE_KEY, fetchImpl }), CELL, {
       queries: ["live music venue"],
       sleep: async () => {},
       clock: fixedClock,
     });
-    const before = listCandidates(db).length;
+    const before = (await listCandidates(db)).length;
     const overpass: OverpassClient = { query: async () => parseOverpassResponse(fixtureJson("overpass-indy.json")) };
     const summary = await discoverOsmArea(db, overpass, CELL.bbox, { city: "Indianapolis", timezone: TZ, now: NOW_MS });
     assert.deepEqual(summary.outcomes, { created: 2, merged: 1, matched_venue: 0, needs_review: 0 });
     assert.equal(summary.skipped, 2);
-    assert.equal(listCandidates(db).length, before + 2);
-    const mercury = listCandidates(db).find((c) => c.name === "The Mercury Room")!;
+    assert.equal((await listCandidates(db)).length, before + 2);
+    const mercury = (await listCandidates(db)).find((c) => c.name === "The Mercury Room")!;
     assert.deepEqual(mercury.evidence.feeds, ["google_places", "osm"]);
   });
 });
@@ -259,7 +260,7 @@ describe("city listing feed", () => {
   });
 
   test("discoverFromListing fetches politely and records candidates (name-only venues matched by city)", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const { fetchImpl } = placesFetch();
     await discoverPlacesCell(db, new GooglePlacesClient({ apiKey: FAKE_KEY, fetchImpl }), CELL, {
       queries: ["live music venue"],
@@ -282,14 +283,14 @@ describe("city listing feed", () => {
       "robots.txt consulted",
     );
     assert.ok(!net.calls.some((c) => c.url.includes("ticketmaster")), "never fetches ticketing");
-    const healer = listCandidates(db).find((c) => c.name === "Healer")!;
+    const healer = (await listCandidates(db)).find((c) => c.name === "Healer")!;
     assert.equal(healer.discoveredFrom, "listing");
     assert.equal(healer.website, "https://healerindy.com/");
     assert.equal(healer.timezone, TZ);
   });
 
   test("ticketing listing URLs are refused without any request", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const net = fakeFetch({});
     const summary = await discoverFromListing(db, politeClient(net.fetchImpl), {
       url: "https://www.eventbrite.com/d/in--indianapolis/music--events/",
@@ -298,11 +299,11 @@ describe("city listing feed", () => {
     });
     assert.equal(summary.status, "rejected_ticketing");
     assert.equal(net.calls.length, 0);
-    assert.equal(listCandidates(db).length, 0);
+    assert.equal((await listCandidates(db)).length, 0);
   });
 
   test("a listing that redirects to a ticketing platform is blocked", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const net = fakeFetch({
       "https://city.example/events": () =>
         new Response(null, { status: 302, headers: { location: "https://www.dice.fm/browse/indianapolis" } }),
@@ -357,7 +358,7 @@ describe("Bandsintown (optional)", () => {
   });
 
   test("only venues inside configured areas become candidates; event URLs are evidence only", async () => {
-    const db = openDb(":memory:");
+    const db = await openTestDb();
     const client: BandsintownClient = {
       artistEvents: async () => parseBandsintownEvents(fixtureJson("bandsintown-artist.json")),
     };
@@ -367,10 +368,10 @@ describe("Bandsintown (optional)", () => {
     });
     assert.equal(summary.artists, 2, "names are trimmed and deduped exactly");
     assert.equal(summary.outsideAreas, 2);
-    const healer = listCandidates(db).find((c) => c.name === "Healer")!;
+    const healer = (await listCandidates(db)).find((c) => c.name === "Healer")!;
     assert.equal(healer.discoveredFrom, "bandsintown");
     assert.equal(healer.website, null);
     assert.equal(healer.timezone, TZ);
-    assert.equal(resolvePlaceId(db, "anything"), null);
+    assert.equal(await resolvePlaceId(db, "anything"), null);
   });
 });

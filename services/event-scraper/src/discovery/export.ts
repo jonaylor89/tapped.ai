@@ -42,8 +42,8 @@ function record(value: unknown): Record<string, unknown> {
   return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
 }
 
-function toEntry(db: Db, candidate: Candidate): ReviewEntry {
-  const aliases = listPlaceAliases(db, { candidateId: candidate.id });
+async function toEntry(db: Db, candidate: Candidate): Promise<ReviewEntry> {
+  const aliases = await listPlaceAliases(db, { candidateId: candidate.id });
   const proof = record(candidate.evidence.proof);
   const sample = Array.isArray(proof.sample) ? (proof.sample as Record<string, unknown>[]) : [];
   return {
@@ -62,7 +62,7 @@ function toEntry(db: Db, candidate: Candidate): ReviewEntry {
       ? (candidate.evidence.feeds as string[])
       : [candidate.discoveredFrom],
     matchedVenueId: candidate.matchedVenueId,
-    matchedVenueName: candidate.matchedVenueId ? (getVenue(db, candidate.matchedVenueId)?.name ?? null) : null,
+    matchedVenueName: candidate.matchedVenueId ? ((await getVenue(db, candidate.matchedVenueId))?.name ?? null) : null,
     sourceUrl: candidate.sourceUrl,
     sourceKind: candidate.sourceKind,
     provenEventCount: candidate.provenEventCount,
@@ -82,12 +82,17 @@ function toEntry(db: Db, candidate: Candidate): ReviewEntry {
 }
 
 /** Review entries for the given statuses (default promoted + needs_review), promoted first. */
-export function buildReviewList(db: Db, options: { statuses?: readonly CandidateStatus[] } = {}): ReviewEntry[] {
+export async function buildReviewList(
+  db: Db,
+  options: { statuses?: readonly CandidateStatus[] } = {},
+): Promise<ReviewEntry[]> {
   const statuses = [...(options.statuses ?? DEFAULT_REVIEW_STATUSES)];
   const order = new Map(statuses.map((status, i) => [status, i]));
-  return listCandidates(db, { status: statuses })
-    .map((candidate) => toEntry(db, candidate))
-    .sort((a, b) => (order.get(a.status) ?? 0) - (order.get(b.status) ?? 0) || a.candidateId - b.candidateId);
+  const entries: ReviewEntry[] = [];
+  for (const candidate of await listCandidates(db, { status: statuses })) entries.push(await toEntry(db, candidate));
+  return entries.sort(
+    (a, b) => (order.get(a.status) ?? 0) - (order.get(b.status) ?? 0) || a.candidateId - b.candidateId,
+  );
 }
 
 const CSV_COLUMNS: (keyof ReviewEntry | "sampleTitles")[] = [
@@ -137,12 +142,12 @@ export function reviewListToCsv(entries: ReviewEntry[]): string {
 }
 
 /** Writes `<prefix>.json` and `<prefix>.csv` into `dir` and returns their paths. */
-export function writeReviewList(
+export async function writeReviewList(
   db: Db,
   dir: string,
   options: { statuses?: readonly CandidateStatus[]; prefix?: string; now?: Date } = {},
-): { jsonPath: string; csvPath: string; count: number } {
-  const entries = buildReviewList(db, options);
+): Promise<{ jsonPath: string; csvPath: string; count: number }> {
+  const entries = await buildReviewList(db, options);
   mkdirSync(dir, { recursive: true });
   const prefix = options.prefix ?? `venue-review-${(options.now ?? new Date()).toISOString().slice(0, 10)}`;
   const jsonPath = join(dir, `${prefix}.json`);

@@ -3,7 +3,7 @@
  * - ticketing-domain denylist and private-host block enforced before ANY request (and on every redirect hop)
  * - robots.txt (RFC 9309) fetched, cached and honored, including Crawl-delay
  * - per-host minimum interval between requests (slots reserved synchronously, so concurrent calls queue up; with a
- *   `slotStore` the slots are shared by every process on the same SQLite file)
+ *   `slotStore` the slots are shared by every process and laptop through Postgres)
  * - hostnames resolved before connecting; private / loopback / link-local answers are refused (every hop)
  * - conditional GET (If-None-Match / If-Modified-Since), timeout, max body bytes, capped manual redirects
  * - identifiable User-Agent; raw bytes + sha256 returned for evidence
@@ -72,16 +72,16 @@ export interface HttpClientOptions {
    * fetch is used; none when `fetchImpl` is injected (tests are offline). Pass null to disable.
    */
   resolveHost?: ((hostname: string) => Promise<string[]>) | null;
-  /** Per-host politeness slots shared across processes (SQLite). Default: in-memory, this client only. */
+  /** Per-host politeness slots shared across processes (Postgres). Default: in-memory, this client only. */
   slotStore?: HostSlotStore | null;
 }
 
 /** Shared per-host request slots (see db.ts `hostSlotStore`). */
 export interface HostSlotStore {
   /** Reserves the host's next slot (>= now) and moves its next free slot to slot + interval. */
-  reserve(host: string, now: number, intervalMs: number): number;
+  reserve(host: string, now: number, intervalMs: number): Promise<number>;
   /** Pushes the host's next free slot to at least `until` (Retry-After). */
-  defer(host: string, until: number, now: number): void;
+  defer(host: string, until: number, now: number): Promise<void>;
 }
 
 async function systemResolve(hostname: string): Promise<string[]> {
@@ -413,13 +413,13 @@ export class PoliteHttpClient implements HttpClient {
     return policy;
   }
 
-  /** Waits for this host's next politeness slot. Slots are reserved synchronously so concurrent callers queue. */
+  /** Waits for this host's next politeness slot. Reserving a slot is atomic, so concurrent callers queue. */
   private async acquireSlot(host: string): Promise<void> {
     const now = this.clock.now().getTime();
     const interval = this.hostInterval.get(host) ?? this.minHostIntervalMs;
     let slot: number;
     if (this.slotStore) {
-      slot = this.slotStore.reserve(host, now, interval);
+      slot = await this.slotStore.reserve(host, now, interval);
     } else {
       slot = Math.max(now, this.hostNextSlot.get(host) ?? 0);
       this.hostNextSlot.set(host, slot + interval);
@@ -451,7 +451,7 @@ export class PoliteHttpClient implements HttpClient {
         if (wait !== null) {
           const nowMs = this.clock.now().getTime();
           const until = nowMs + Math.min(wait, this.maxRetryAfterMs);
-          if (this.slotStore) this.slotStore.defer(host, until, nowMs);
+          if (this.slotStore) await this.slotStore.defer(host, until, nowMs);
           else this.hostNextSlot.set(host, Math.max(this.hostNextSlot.get(host) ?? 0, until));
         }
       }

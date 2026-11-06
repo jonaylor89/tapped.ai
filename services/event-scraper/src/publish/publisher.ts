@@ -1,7 +1,7 @@
 /**
  * Publishing: the only write path from the scraper to production.
  *
- * Validated event changes are queued in the local SQLite `publish_outbox` by reconcile. `publishOutbox` drains it
+ * Validated event changes are queued in the scraper schema's `publish_outbox` by reconcile. `publishOutbox` drains it
  * through a `Publisher`:
  * - `NdjsonPublisher` (dry run / standalone): appends the exact envelopes that would be sent to a local NDJSON file.
  * - `PostgresIngestionPublisher`: sends envelopes through `captureObservations` from `@tapped/postgres-ingestion`
@@ -45,7 +45,7 @@ export const ENVELOPE_VERSION = "event-scraper-v1";
 /** captureObservations accepts 1-500 envelopes per evidence object. */
 export const MAX_BATCH = 500;
 
-export type EvidenceLookup = (sha256: string) => { bytes: Uint8Array; contentType: string | null } | null;
+export type EvidenceLookup = (sha256: string) => Promise<{ bytes: Uint8Array; contentType: string | null } | null>;
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Envelope mapping
@@ -148,7 +148,7 @@ export function observationData(item: OutboxItem): Record<string, unknown> {
 
 /**
  * Builds the `captureObservations` envelope for one outbox row. The delivery key is derived from content (source key,
- * capture time, change and payload) rather than the local outbox id, so a retry - or a rebuilt SQLite file - re-sends
+ * capture time, change and payload) rather than the local outbox id, so a retry - or a rebuilt scraper scheme file - re-sends
  * the same delivery and production deduplicates it.
  */
 export function toObservationInput(item: OutboxItem, source: string = OBSERVATION_SOURCE): ObservationInput {
@@ -204,7 +204,7 @@ export class NdjsonPublisher implements Publisher {
       try {
         const envelope = toObservationInput(item, this.source);
         normalizeObservation(envelope);
-        const page = item.evidenceSha256 ? evidence(item.evidenceSha256) : null;
+        const page = item.evidenceSha256 ? await evidence(item.evidenceSha256) : null;
         lines.push(
           JSON.stringify({
             outboxId: item.id,
@@ -304,7 +304,7 @@ export class PostgresIngestionPublisher implements Publisher {
         continue;
       }
       const sha = item.evidenceSha256;
-      if (sha && evidence(sha)) {
+      if (sha && (await evidence(sha))) {
         const group = pageGroups.get(sha) ?? [];
         group.push({ item, input });
         pageGroups.set(sha, group);
@@ -336,7 +336,7 @@ export class PostgresIngestionPublisher implements Publisher {
     };
 
     for (const [sha, entries] of pageGroups) {
-      const page = evidence(sha);
+      const page = await evidence(sha);
       if (!page) continue;
       for (let i = 0; i < entries.length; i += MAX_BATCH)
         await send(
@@ -399,7 +399,7 @@ export async function publishOutbox(
   const now = options.now ?? Date.now;
   const maxAttempts = options.maxAttempts ?? 10;
   const batchSize = Math.max(1, Math.min(options.batchSize ?? 200, 5000));
-  const pending = pendingOutbox(db, options.limit ?? 1000, maxAttempts);
+  const pending = await pendingOutbox(db, options.limit ?? 1000, maxAttempts);
   const result: PublishRunResult = {
     publisher: publisher.name,
     considered: pending.length,
@@ -409,23 +409,29 @@ export async function publishOutbox(
     failed: 0,
     exhausted: 0,
   };
+  // Pages may live in R2 and each is asked for more than once per run.
+  const pages = new Map<string, ReturnType<EvidenceLookup>>();
   const evidence: EvidenceLookup = (sha256) => {
-    const page = getRawPage(db, sha256);
-    return page ? { bytes: page.bytes, contentType: page.contentType } : null;
+    let page = pages.get(sha256);
+    if (!page) {
+      page = getRawPage(db, sha256).then((row) => (row ? { bytes: row.bytes, contentType: row.contentType } : null));
+      pages.set(sha256, page);
+    }
+    return page;
   };
   const failures: { outboxId: number; message: string }[] = [];
 
-  // Queued before the last known-events sync: never send an event another crawler already put in production. Matches
+  // Queued before that event reached production: never send an event another crawler already put in production. Matches
   // of this scraper's own earlier deliveries are sent (idempotent updates of the same production event).
   const duplicates: number[] = [];
-  const toSend = pending.filter((item) => {
-    const known = findKnownEvent(db, item.event);
-    if (!known || known.origin === OBSERVATION_SOURCE) return true;
-    duplicates.push(item.id);
-    return false;
-  });
+  const toSend: OutboxItem[] = [];
+  for (const item of pending) {
+    const known = await findKnownEvent(db, item.event);
+    if (known && known.origin !== OBSERVATION_SOURCE) duplicates.push(item.id);
+    else toSend.push(item);
+  }
   if (duplicates.length) {
-    markOutboxPublished(db, duplicates, now());
+    await markOutboxPublished(db, duplicates, now());
     result.alreadyInProduction = duplicates.length;
   }
 
@@ -448,17 +454,17 @@ export async function publishOutbox(
         else result.published++;
       } else {
         const message = outcome.message ?? "publish_failed";
-        markOutboxFailed(db, item.id, message);
+        await markOutboxFailed(db, item.id, message);
         result.failed++;
         if (item.attempts + 1 >= maxAttempts) result.exhausted++;
         failures.push({ outboxId: item.id, message });
       }
     }
-    if (ok.length) markOutboxPublished(db, ok, now());
+    if (ok.length) await markOutboxPublished(db, ok, now());
   }
 
   if (failures.length) {
-    raiseAlert(
+    await raiseAlert(
       db,
       {
         kind: "publish_failed",
@@ -468,7 +474,7 @@ export async function publishOutbox(
       now(),
     );
   } else if (result.considered > 0) {
-    resolveAlerts(db, { kind: "publish_failed" }, now());
+    await resolveAlerts(db, { kind: "publish_failed" }, now());
   }
   return result;
 }
