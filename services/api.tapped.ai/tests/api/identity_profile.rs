@@ -15,8 +15,7 @@ fn account(uid: &str, email: &str) -> Account {
     }
 }
 #[tokio::test]
-async fn identity_email_changes_enqueue_profile_updates_atomically_without_introductions_or_baseline_replay()
- {
+async fn identity_email_changes_update_the_profile_without_side_effects_or_baseline_replay() {
     let Some((pool, admin, name)) = database().await else {
         return;
     };
@@ -31,14 +30,6 @@ async fn identity_email_changes_enqueue_profile_updates_atomically_without_intro
     capture_account(&pool, &a, uuid::Uuid::new_v4(), false)
         .await
         .unwrap();
-    let jobs: Vec<(String, serde_json::Value)> =
-        sqlx::query_as("SELECT kind,payload FROM external_effect_outbox")
-            .fetch_all(&pool)
-            .await
-            .unwrap();
-    assert_eq!(jobs.len(), 1);
-    assert_eq!(jobs[0].0, "stream_profile");
-    assert_eq!(jobs[0].1, serde_json::json!({"uid":"user","created":false}));
     assert_eq!(
         sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id='user'")
             .fetch_one(&pool)
@@ -67,23 +58,31 @@ async fn identity_email_changes_enqueue_profile_updates_atomically_without_intro
     .await
     .unwrap();
     assert_eq!(
+        sqlx::query_scalar::<_, String>("SELECT email FROM users WHERE id='user'")
+            .fetch_one(&pool)
+            .await
+            .unwrap(),
+        "updated@example.test"
+    );
+    assert_eq!(
         sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM external_effect_outbox WHERE kind='stream_profile'"
+            "SELECT count(*) FROM external_effect_outbox WHERE kind NOT IN ('auth_signup','auth_delete')"
         )
         .fetch_one(&pool)
         .await
         .unwrap(),
-        2
+        0,
+        "no profile sync or welcome messages for an email change"
     );
     cleanup(pool, admin, name).await;
 }
 #[tokio::test]
-async fn failed_profile_queue_capture_rolls_back_identity_and_email_and_skips_inactive_profiles() {
+async fn failed_profile_update_rolls_back_identity_capture_and_skips_inactive_profiles() {
     let Some((pool, admin, name)) = database().await else {
         return;
     };
     sqlx::query("INSERT INTO users(id,username,email,unclaimed,deleted) VALUES('user','user','old@example.test',false,false),('unclaimed','unclaimed','old@example.test',true,false),('deleted','deleted','old@example.test',false,true)").execute(&pool).await.unwrap();
-    sqlx::query("ALTER TABLE external_effect_outbox ADD CONSTRAINT reject_profile_for_test CHECK(kind<>'stream_profile')").execute(&pool).await.unwrap();
+    sqlx::query("ALTER TABLE users ADD CONSTRAINT reject_email_for_test CHECK(email<>'new@example.test') NOT VALID").execute(&pool).await.unwrap();
     assert!(
         capture_account(
             &pool,
@@ -108,6 +107,7 @@ async fn failed_profile_queue_capture_rolls_back_identity_and_email_and_skips_in
             .unwrap(),
         0
     );
+    // Inactive profiles keep their email, so the rejecting constraint is never hit.
     for uid in ["unclaimed", "deleted"] {
         capture_account(
             &pool,
@@ -119,11 +119,11 @@ async fn failed_profile_queue_capture_rolls_back_identity_and_email_and_skips_in
         .unwrap();
     }
     assert_eq!(
-        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM external_effect_outbox")
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM users WHERE email='old@example.test'")
             .fetch_one(&pool)
             .await
             .unwrap(),
-        0
+        3
     );
     cleanup(pool, admin, name).await;
 }

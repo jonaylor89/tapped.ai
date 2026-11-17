@@ -110,9 +110,6 @@ fn worker(pool: sqlx::PgPool, temp: &std::path::Path, apple: &str) -> ProviderWo
         google: GoogleIdentity::new(credentials.to_str().unwrap(), "test-project").unwrap(),
         mail: SqliteMailStore::open(temp.join("mail.sqlite3").to_str().unwrap()).unwrap(),
         client: reqwest::Client::new(),
-        stream_key: String::new(),
-        stream_secret: String::new(),
-        stream_base_url: "https://chat.stream-io-api.com".into(),
         auth_effects: false,
         apns: Some(apns),
     }

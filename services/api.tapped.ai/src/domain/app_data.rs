@@ -968,9 +968,11 @@ pub(super) async fn save(
             .await
             .map_err(db_error)?;
         sqlx::query("INSERT INTO profile_owners(profile_id,auth_uid) SELECT $1,$2 WHERE EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT unclaimed) ON CONFLICT DO NOTHING").bind(id).bind(&user.uid).execute(&mut *tx).await.map_err(db_error)?;
-        crate::domain::external_effects::record_profile(&mut tx, &doc, create)
-            .await
-            .map_err(db_error)?;
+        if create {
+            crate::domain::external_effects::welcome_new_profile(&mut tx, &doc)
+                .await
+                .map_err(db_error)?;
+        }
     }
     if table == "bookings" {
         crate::domain::booking_reminders::schedule(&mut tx, id)

@@ -74,8 +74,6 @@ services:
       FIREBASE_AUTH_EMULATOR_HOST: firebase:9099
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
       # Placeholders: chat tokens, mail bridge and AI composition are not wired to real services.
-      STREAM_KEY: local-stream-key
-      STREAM_SECRET: local-stream-secret
       MAIL_INGRESS_SECRET: local-ingress-secret
       MAIL_API_SECRET: local-api-secret
       OPENAI_API_KEY: local-openai-key
@@ -87,7 +85,6 @@ services:
       SPOTIFY_CLIENT_SECRET: local-spotify-secret
       SPOTIFY_TOKEN_URL: http://stub:8090/api/token
       SPOTIFY_API_BASE_URL: http://stub:8090/v1
-      STREAM_BASE_URL: http://stub:8090
       VENUE_CONTACT_FOUNDER_CC: ""
     volumes:
       - mail-data:/data

@@ -437,9 +437,6 @@ async fn mail_handoff_is_idempotent_and_failed_provider_jobs_remain_retryable() 
         google: GoogleIdentity::new(credentials.to_str().unwrap(), "test-project").unwrap(),
         mail: SqliteMailStore::open(temp.path().join("mail.sqlite3").to_str().unwrap()).unwrap(),
         client: reqwest::Client::new(),
-        stream_key: String::new(),
-        stream_secret: String::new(),
-        stream_base_url: "https://chat.stream-io-api.com".into(),
         auth_effects: false,
         apns: None,
     };

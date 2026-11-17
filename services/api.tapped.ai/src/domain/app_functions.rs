@@ -1,5 +1,4 @@
 use axum::{Json, extract::State, http::StatusCode};
-use jsonwebtoken::{Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use uuid::Uuid;
@@ -7,7 +6,7 @@ use uuid::Uuid;
 use crate::{
     domain::{
         firebase_auth::FirebaseUser,
-        mail_bridge::{EmailThread, QueuedEmail, StreamDelivery, notify_slack},
+        mail_bridge::{EmailThread, QueuedEmail, ServerMessage, notify_slack},
         mail_composer::{ComposeVenueEmail, OpportunityContext},
         models::opportunity::Opportunity,
     },
@@ -15,68 +14,6 @@ use crate::{
     state::AppStateDyn,
 };
 use utoipa::ToSchema;
-
-#[derive(Debug, Serialize, ToSchema)]
-pub struct StreamUserTokenResponse {
-    pub token: String,
-}
-
-/// Generates a Stream user token for the authenticated Firebase account only.
-#[utoipa::path(
-    post,
-    path = "/stream-token",
-    tag = "app",
-    summary = "Mint a Stream chat token for the signed-in user",
-    responses((status = 200, description = "Success", body = StreamUserTokenResponse)),
-    security(("FirebaseAuth" = []))
-)]
-pub async fn stream_user_token(
-    State(state): State<AppStateDyn>,
-    user: FirebaseUser,
-) -> Result<Json<StreamUserTokenResponse>, AppError> {
-    if let Some(pool) = state.postgres.as_ref() {
-        let deleted: bool = sqlx::query_scalar(
-            "SELECT EXISTS(SELECT 1 FROM firebase_identities WHERE uid=$1 AND deleted)",
-        )
-        .bind(&user.uid)
-        .fetch_one(pool)
-        .await
-        .map_err(|_| AppError::from_status(StatusCode::SERVICE_UNAVAILABLE))?;
-        if deleted {
-            return Err(AppError::unauthorized("account deleted"));
-        }
-    }
-    let now = chrono::Utc::now().timestamp();
-    let token = jsonwebtoken::encode(
-        &Header::new(Algorithm::HS256),
-        &serde_json::json!({
-            "user_id": user.uid,
-            "iat": now,
-            "exp": now + 3_600,
-        }),
-        &EncodingKey::from_secret(state.mail.stream_webhook_secret.as_bytes()),
-    )
-    .map_err(|error| AppError::internal("failed to sign Stream token", error))?;
-    Ok(Json(StreamUserTokenResponse { token }))
-}
-
-/// Replaces the extension revocation callable. The UID always comes from Firebase Auth;
-/// acknowledge only after Stream accepted the revocation, not just a queued local mutation.
-#[utoipa::path(post,path = "/stream-token/revoke",tag = "app",summary = "Revoke previously issued Stream tokens",responses((status = 204, description = "Stream accepted revocation")),security(("FirebaseAuth" = [])))]
-pub async fn revoke_stream_user_tokens(
-    State(state): State<AppStateDyn>,
-    user: FirebaseUser,
-) -> Result<StatusCode, AppError> {
-    let before =
-        chrono::DateTime::from_timestamp(chrono::Utc::now().timestamp(), 0).expect("current time");
-    state
-        .mail
-        .stream
-        .revoke_tokens(&user.uid, before)
-        .await
-        .map_err(|_| AppError::from_status(StatusCode::BAD_GATEWAY))?;
-    Ok(StatusCode::NO_CONTENT)
-}
 
 #[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
@@ -194,7 +131,7 @@ pub async fn notify_venue_of_interested_opportunities(
         let existing = state
             .mail
             .store
-            .thread_for_stream(&user.uid, &venue_id)
+            .thread_for_pair(&user.uid, &venue_id)
             .await
             .map_err(|error| AppError::internal("mail store", error))?;
         if existing.is_none()
@@ -202,8 +139,8 @@ pub async fn notify_venue_of_interested_opportunities(
         {
             if let Err(error) = state
                 .mail
-                .stream
-                .send_message(&StreamDelivery {
+                .messages
+                .send_message(&ServerMessage {
                     event_id: format!("venue-auto-reply:{}:{}", user.uid, venue_id),
                     thread_id: String::new(),
                     sender_id: venue_id.clone(),
@@ -315,8 +252,8 @@ pub async fn notify_venue_of_interested_opportunities(
             && is_new_thread
             && let Err(error) = state
                 .mail
-                .stream
-                .send_message(&StreamDelivery {
+                .messages
+                .send_message(&ServerMessage {
                     event_id: format!("venue-contact:{}:{}", user.uid, venue_id),
                     thread_id: String::new(),
                     sender_id: user.uid.clone(),
@@ -326,7 +263,7 @@ pub async fn notify_venue_of_interested_opportunities(
                 })
                 .await
         {
-            tracing::warn!(?error, "failed to mirror venue contact to Stream");
+            tracing::warn!(?error, "failed to mirror venue contact into messages");
         }
         if queued {
             notify_slack(
@@ -348,7 +285,7 @@ mod tests {
     use crate::{
         data::{database::Database, search::MockSearch},
         domain::{
-            mail_bridge::{InMemoryMailStore, MailBridge, StreamGateway},
+            mail_bridge::{InMemoryMailStore, MailBridge, MessageGateway},
             models::{
                 booking::{Booking, BookingStatus},
                 review::Review,
@@ -364,12 +301,12 @@ mod tests {
     };
 
     #[derive(Default)]
-    struct RecordingStream {
-        deliveries: Mutex<Vec<StreamDelivery>>,
+    struct RecordingMessages {
+        deliveries: Mutex<Vec<ServerMessage>>,
     }
     #[async_trait]
-    impl StreamGateway for RecordingStream {
-        async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
+    impl MessageGateway for RecordingMessages {
+        async fn send_message(&self, delivery: &ServerMessage) -> anyhow::Result<()> {
             self.deliveries.lock().unwrap().push(delivery.clone());
             Ok(())
         }
@@ -459,9 +396,9 @@ mod tests {
             reference_event_id: Some("event-1".into()),
         }
     }
-    fn state() -> (AppStateDyn, Arc<InMemoryMailStore>, Arc<RecordingStream>) {
+    fn state() -> (AppStateDyn, Arc<InMemoryMailStore>, Arc<RecordingMessages>) {
         let store = Arc::new(InMemoryMailStore::default());
-        let stream = Arc::new(RecordingStream::default());
+        let messages = Arc::new(RecordingMessages::default());
         let database = TestDatabase {
             users: HashMap::from([
                 ("artist".into(), user("artist", "the-band", false, None)),
@@ -596,8 +533,7 @@ mod tests {
                 dm_hub: Default::default(),
                 mail: MailBridge {
                     store: store.clone(),
-                    stream: stream.clone(),
-                    stream_webhook_secret: "stream-secret".into(),
+                    messages: messages.clone(),
                     ingress_secret: String::new(),
                     service_secret: String::new(),
                     booking_domain: "booking.tapped.ai".into(),
@@ -607,7 +543,7 @@ mod tests {
                 },
             },
             store,
-            stream,
+            messages,
         )
     }
     fn artist() -> FirebaseUser {
@@ -618,21 +554,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn stream_token_uses_authenticated_firebase_uid() {
-        let (state, _, _) = state();
-        let Json(response) = stream_user_token(State(state), artist()).await.unwrap();
-        let token = jsonwebtoken::decode::<serde_json::Value>(
-            &response.token,
-            &jsonwebtoken::DecodingKey::from_secret(b"stream-secret"),
-            &jsonwebtoken::Validation::new(Algorithm::HS256),
-        )
-        .unwrap();
-        assert_eq!(token.claims["user_id"], "artist");
-    }
-
-    #[tokio::test]
     async fn notification_groups_and_skips_invalid_opportunities() {
-        let (state, store, stream) = state();
+        let (state, store, messages) = state();
         let Json(response) = notify_venue_of_interested_opportunities(
             State(state),
             artist(),
@@ -658,7 +581,7 @@ mod tests {
         assert!(queued[0].text_body.contains("Saturday showcase"));
         assert!(queued[0].text_body.contains("other act"));
         assert_eq!(queued[0].cc, ["founder@tapped.ai"]);
-        let deliveries = stream.deliveries.lock().unwrap();
+        let deliveries = messages.deliveries.lock().unwrap();
         assert_eq!(deliveries.len(), 1);
         assert!(deliveries[0].frozen);
     }
@@ -691,8 +614,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn venue_auto_reply_uses_a_frozen_stream_message_instead_of_email() {
-        let (state, store, stream) = state();
+    async fn venue_auto_reply_uses_a_frozen_direct_message_instead_of_email() {
+        let (state, store, messages) = state();
         let Json(response) = notify_venue_of_interested_opportunities(
             State(state),
             artist(),
@@ -705,7 +628,7 @@ mod tests {
         .unwrap();
         assert_eq!(response.venues_notified, 0);
         assert!(store.outbound().is_empty());
-        let deliveries = stream.deliveries.lock().unwrap();
+        let deliveries = messages.deliveries.lock().unwrap();
         assert_eq!(deliveries.len(), 1);
         assert_eq!(deliveries[0].sender_id, "venue-auto");
         assert!(deliveries[0].frozen);

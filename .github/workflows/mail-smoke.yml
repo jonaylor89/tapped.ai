@@ -6,7 +6,7 @@ on:
     types: [mail-deployed]
 
 jobs:
-  stream-email-round-trip:
+  message-email-round-trip:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -23,6 +23,4 @@ jobs:
           FIREBASE_TEST_PASSWORD: ${{ secrets.FIREBASE_TEST_PASSWORD }}
           MAIL_SMOKE_IMAP_USERNAME: ${{ secrets.MAIL_SMOKE_IMAP_USERNAME }}
           MAIL_SMOKE_IMAP_PASSWORD: ${{ secrets.MAIL_SMOKE_IMAP_PASSWORD }}
-          STREAM_KEY: ${{ secrets.STREAM_KEY }}
-          STREAM_SECRET: ${{ secrets.STREAM_SECRET }}
         run: python3 services/mail-gateway/tools/mail_deployment_smoke.py

@@ -27,5 +27,3 @@ mod read_model_performance;
 mod request_id;
 pub mod root;
 mod spotify_oauth;
-mod stream_profiles;
-mod stream_tokens;

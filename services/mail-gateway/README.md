@@ -1,6 +1,6 @@
-# Tapped Stream ↔ email bridge
+# Tapped direct message ↔ email bridge
 
-The Rust API owns email-thread business logic, Stream synchronization, idempotency, and the durable SQLite inbox/outbox. Email transport differs by environment:
+The Rust API owns email-thread business logic, delivery of email replies as direct messages (Postgres), idempotency, and the durable SQLite inbox/outbox. Email transport differs by environment:
 
 - **Production:** Postmark sends outbound mail and posts parsed inbound replies to the Rust API.
 - **Local development:** Haraka accepts inbound SMTP and Postfix receives outbound SMTP from the worker.
@@ -23,8 +23,6 @@ Configure the API with:
 FIREBASE_PROJECT_ID
 DATABASE_URL
 REDIS_URL
-STREAM_KEY
-STREAM_SECRET
 MAIL_INGRESS_SECRET       # random password used for Postmark inbound webhook Basic auth
 MAIL_API_SECRET           # random HMAC secret for signed internal mail endpoints
 MAIL_STORE_PATH=/data/tapped-mail.sqlite3
@@ -55,8 +53,6 @@ Required local variables are listed in `.env.example`-style form below:
 FIREBASE_PROJECT_ID
 DATABASE_URL
 REDIS_URL
-STREAM_KEY
-STREAM_SECRET
 MAIL_INGRESS_SECRET
 MAIL_API_SECRET
 OPENAI_API_KEY
@@ -90,6 +86,6 @@ Administrative/smoke requests identify themselves with descriptive User-Agent he
 
 - [ ] Upgrade the Postmark account to a tier entitled to inbound processing, then configure its webhook with Basic authentication at `/webhooks/postmark/inbound`; do not change the existing MX records.
 - [ ] Run **Post-deploy mail smoke** manually. IMAP is used only by this optional end-to-end deliverability test, not by production infrastructure.
-- [ ] Verify app → Postmark → recipient, recipient reply → Postmark webhook → Stream, Stream follow-up → Postmark, duplicate webhook retries, and attachment handling.
+- [ ] Verify app → Postmark → recipient, recipient reply → Postmark webhook → direct message, in-app follow-up → Postmark, duplicate webhook retries, and attachment handling.
 
 Keep the actual Postmark server token under `POSTMARK_SERVER_TOKEN`; never reuse it as `MAIL_API_SECRET`.

@@ -102,11 +102,6 @@ pub struct PostOptions {
     pub set_frozen: Option<bool>,
     /// Push the other members' devices.
     pub push: bool,
-    /// Import only: keep the original timestamp.
-    pub created_at: Option<DateTime<Utc>>,
-    pub legacy_stream_id: Option<String>,
-    /// Import only: no realtime event (clients resync on their next connect).
-    pub notify: bool,
 }
 
 impl PostOptions {
@@ -115,9 +110,6 @@ impl PostOptions {
             enforce_frozen: true,
             set_frozen: None,
             push: true,
-            created_at: None,
-            legacy_stream_id: None,
-            notify: true,
         }
     }
 
@@ -271,6 +263,64 @@ pub async fn ensure_direct(
     Ok(id)
 }
 
+/// Stable message ID for a server-authored message, so a retried delivery (webhook, email
+/// redelivery, worker retry) is stored once.
+pub fn server_message_id(key: &str) -> Uuid {
+    let digest = Sha256::digest(format!("server-message:{key}").as_bytes());
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&digest[..16]);
+    uuid::Builder::from_random_bytes(bytes).into_uuid()
+}
+
+/// A message Tapped posts on someone's behalf: venue auto-replies and email mirrors, inbound
+/// email replies, founder welcome messages.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ServerMessage {
+    /// Idempotency key (see `server_message_id`).
+    pub event_id: String,
+    /// Mail-store bookkeeping only (the email thread an inbound reply belongs to).
+    #[serde(default)]
+    pub thread_id: String,
+    pub sender_id: String,
+    pub receiver_id: String,
+    pub text: String,
+    /// The conversation's frozen state after this message (only Tapped may post while frozen).
+    #[serde(default)]
+    pub frozen: bool,
+}
+
+/// Opens the pair's conversation if needed and posts `message` into it, bypassing `frozen`.
+/// Text over the message limit (long email replies) is cut rather than rejected, so a redelivery
+/// cannot fail forever on content.
+pub async fn post_server_message(
+    tx: &mut Transaction<'_, Postgres>,
+    message: &ServerMessage,
+) -> DmResult<Posted> {
+    let conversation_id = ensure_direct(tx, &message.sender_id, &message.receiver_id).await?;
+    let text = match message.text.char_indices().nth(MAX_MESSAGE_CHARS) {
+        Some((cut, _)) => {
+            let kept: String = message.text[..cut]
+                .chars()
+                .take(MAX_MESSAGE_CHARS - 1)
+                .collect();
+            format!("{kept}…")
+        }
+        None => message.text.clone(),
+    };
+    post(
+        tx,
+        &NewMessage {
+            id: server_message_id(&message.event_id),
+            conversation_id,
+            author_id: message.sender_id.clone(),
+            text,
+            attachments: vec![],
+        },
+        &PostOptions::server(message.frozen),
+    )
+    .await
+}
+
 /// Stores a message. Serialized per conversation by the row lock, which makes `seq` gap-free.
 pub async fn post(
     tx: &mut Transaction<'_, Postgres>,
@@ -334,8 +384,8 @@ pub async fn post(
     let seq: i64 = row.try_get("last_seq")?;
     let stored = decode_message(
         &sqlx::query(concat!(
-            "INSERT INTO messages(id,conversation_id,seq,author_id,body,attachments,created_at,legacy_stream_id)
-             VALUES($1,$2,$3,$4,$5,$6,coalesce($7,now()),$8) RETURNING ",
+            "INSERT INTO messages(id,conversation_id,seq,author_id,body,attachments)
+             VALUES($1,$2,$3,$4,$5,$6) RETURNING ",
             message_columns!()
         ))
         .bind(message.id)
@@ -344,12 +394,10 @@ pub async fn post(
         .bind(&message.author_id)
         .bind(&message.text)
         .bind(serde_json::to_value(&message.attachments).unwrap_or_else(|_| json!([])))
-        .bind(options.created_at)
-        .bind(options.legacy_stream_id.as_deref())
         .fetch_one(&mut **tx)
         .await?,
     )?;
-    // Imports can insert out of time order; the newest message stays the preview.
+    // The newest message stays the preview even if a concurrent send commits first.
     sqlx::query(
         "UPDATE conversations SET last_message_id=$2,last_message_at=$3
          WHERE id=$1 AND (last_message_at IS NULL OR last_message_at<=$3)",
@@ -377,11 +425,9 @@ pub async fn post(
         .filter(|(id, deleted)| id != &message.author_id && !deleted)
         .map(|(id, _)| id)
         .collect();
-    if options.notify {
-        let mut everyone = recipients.clone();
-        everyone.push(message.author_id.clone());
-        notify(tx, "message", message.conversation_id, seq, &everyone).await?;
-    }
+    let mut everyone = recipients.clone();
+    everyone.push(message.author_id.clone());
+    notify(tx, "message", message.conversation_id, seq, &everyone).await?;
     if options.push {
         enqueue_pushes(tx, &stored, &recipients).await?;
     }
