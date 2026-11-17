@@ -947,84 +947,26 @@ pub async fn stream_before_message(
     else {
         return accepted();
     };
-    let text = payload
-        .message
-        .text
-        .clone()
-        .filter(|text| !text.trim().is_empty())
-        .unwrap_or_else(|| "(attachment)".into());
-    let thread = match state
-        .mail
-        .store
-        .thread_for_stream(&payload.user.id, &receiver.user.id)
-        .await
-    {
-        Ok(thread) => thread,
-        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error").into_response(),
-    };
+    let text = payload.message.text.clone().unwrap_or_default();
     let attachments = payload
         .message
         .attachments
         .into_iter()
         .filter_map(|item| item.image_url)
         .collect();
-    let message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
-    let (email, venue_contact) = if let Some(thread) = thread {
-        (
-            QueuedEmail {
-                event_id: format!("stream:{}", payload.message.id),
-                thread_id: thread.id,
-                from: format!(
-                    "{}@{}",
-                    thread.performer_username, state.mail.booking_domain
-                ),
-                to: thread.recipients,
-                cc: vec![],
-                subject: thread.subject,
-                text_body: text,
-                html_body: None,
-                message_id,
-                in_reply_to: thread.latest_message_id.clone(),
-                references: thread.latest_message_id,
-                attachments,
-                encoded_attachments: vec![],
-            },
-            true,
-        )
-    } else {
-        let recipient = match state.database.get_user_by_id(&receiver.user.id).await {
-            Ok(user) if user.wants_direct_message_email() => user,
-            _ => return accepted(),
-        };
-        let name = state
-            .database
-            .get_user_by_id(&payload.user.id)
-            .await
-            .ok()
-            .map(|user| user.display_name().to_owned())
-            .unwrap_or_else(|| "someone".into());
-        (
-            QueuedEmail {
-                event_id: format!("stream-dm:{}:{}", payload.message.id, receiver.user.id),
-                thread_id: format!("dm:{}:{}", payload.user.id, receiver.user.id),
-                from: "no-reply@tapped.ai".into(),
-                to: vec![recipient.email],
-                cc: vec![],
-                subject: format!("new message from {name}"),
-                text_body: text,
-                html_body: None,
-                message_id,
-                in_reply_to: String::new(),
-                references: String::new(),
-                attachments,
-                encoded_attachments: vec![],
-            },
-            false,
-        )
-    };
-    match state.mail.store.enqueue_outbound(email).await {
-        Ok(inserted) => {
-            if inserted && venue_contact {
+    match bridge_direct_message(
+        &state,
+        "stream",
+        &payload.message.id,
+        &payload.user.id,
+        &receiver.user.id,
+        &text,
+        attachments,
+    )
+    .await
+    {
+        Ok(bridged) => {
+            if bridged == Bridged::VenueThread {
                 notify_slack(
                     state.mail.slack_webhook_url.as_deref(),
                     "new venue contact email",
@@ -1035,6 +977,142 @@ pub async fn stream_before_message(
             accepted()
         }
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "store error").into_response(),
+    }
+}
+
+/// How a direct message reached email, if at all.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Bridged {
+    /// The receiver is a venue contacted by email: the message continues that email thread.
+    VenueThread,
+    /// The receiver opted into direct message emails and got a notification email.
+    Notification,
+    None,
+}
+
+/// The email a member-sent direct message turns into, decided before the message is stored.
+#[derive(Debug, Clone)]
+pub struct BridgePlan {
+    pub receiver_id: String,
+    pub kind: Bridged,
+    email: QueuedEmail,
+}
+
+/// Mirrors a member-sent direct message to email (plan, then enqueue). Idempotent per
+/// `(source, message_id)`. Server deliveries (email replies, mirrors) never call this.
+pub async fn bridge_direct_message(
+    state: &AppStateDyn,
+    source: &str,
+    message_id: &str,
+    sender_id: &str,
+    receiver_id: &str,
+    text: &str,
+    attachments: Vec<String>,
+) -> anyhow::Result<Bridged> {
+    match plan_direct_message_email(
+        state,
+        source,
+        message_id,
+        sender_id,
+        receiver_id,
+        text,
+        attachments,
+    )
+    .await?
+    {
+        Some(plan) => enqueue_bridged(state, plan).await,
+        None => Ok(Bridged::None),
+    }
+}
+
+/// Reads only (mail store thread, receiver preferences), so callers can do it before opening the
+/// transaction that stores the message and keep that transaction to a single connection.
+pub async fn plan_direct_message_email(
+    state: &AppStateDyn,
+    source: &str,
+    message_id: &str,
+    sender_id: &str,
+    receiver_id: &str,
+    text: &str,
+    attachments: Vec<String>,
+) -> anyhow::Result<Option<BridgePlan>> {
+    let text = if text.trim().is_empty() {
+        "(attachment)".to_owned()
+    } else {
+        text.to_owned()
+    };
+    let thread = state
+        .mail
+        .store
+        .thread_for_stream(sender_id, receiver_id)
+        .await?;
+    let email_message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
+    let (email, kind) = if let Some(thread) = thread {
+        (
+            QueuedEmail {
+                event_id: format!("{source}:{message_id}"),
+                thread_id: thread.id,
+                from: format!(
+                    "{}@{}",
+                    thread.performer_username, state.mail.booking_domain
+                ),
+                to: thread.recipients,
+                cc: vec![],
+                subject: thread.subject,
+                text_body: text,
+                html_body: None,
+                message_id: email_message_id,
+                in_reply_to: thread.latest_message_id.clone(),
+                references: thread.latest_message_id,
+                attachments,
+                encoded_attachments: vec![],
+            },
+            Bridged::VenueThread,
+        )
+    } else {
+        let recipient = match state.database.get_user_by_id(receiver_id).await {
+            Ok(user) if user.wants_direct_message_email() => user,
+            _ => return Ok(None),
+        };
+        let name = state
+            .database
+            .get_user_by_id(sender_id)
+            .await
+            .ok()
+            .map(|user| user.display_name().to_owned())
+            .unwrap_or_else(|| "someone".into());
+        (
+            QueuedEmail {
+                event_id: format!("{source}-dm:{message_id}:{receiver_id}"),
+                thread_id: format!("dm:{sender_id}:{receiver_id}"),
+                from: "no-reply@tapped.ai".into(),
+                to: vec![recipient.email],
+                cc: vec![],
+                subject: format!("new message from {name}"),
+                text_body: text,
+                html_body: None,
+                message_id: email_message_id,
+                in_reply_to: String::new(),
+                references: String::new(),
+                attachments,
+                encoded_attachments: vec![],
+            },
+            Bridged::Notification,
+        )
+    };
+    Ok(Some(BridgePlan {
+        receiver_id: receiver_id.to_owned(),
+        kind,
+        email,
+    }))
+}
+
+/// `Bridged::None` when this message was already bridged (a retry): nothing new to announce.
+pub async fn enqueue_bridged(state: &AppStateDyn, plan: BridgePlan) -> anyhow::Result<Bridged> {
+    if state.mail.store.enqueue_outbound(plan.email).await? {
+        Ok(plan.kind)
+    } else {
+        Ok(Bridged::None)
     }
 }
 

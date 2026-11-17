@@ -23,6 +23,8 @@ enum DeepLink: Hashable, Sendable {
     case gigs(GigFilter?)
     /// `com.intheloopstudio://share_profile?qr=1` (custom scheme only)
     case shareProfile(showsQR: Bool)
+    /// Direct message push (`conversationId` in the APNs payload); no URL form.
+    case conversation(conversationId: String)
 
     static let hosts: Set<String> = [
         "app.tapped.ai", "tapped.ai", "www.tapped.ai", "tappednetwork.page.link", "intheloopstudio.page.link",
@@ -115,6 +117,8 @@ struct NotificationPayload: Sendable, Equatable {
             } else {
                 self.init()
             }
+        } else if let conversationId = string("conversationId") {
+            self.init(link: .conversation(conversationId: conversationId))
         } else if let bookingId = string("bookingId") {
             self.init(link: .booking(bookingId: bookingId))
         } else if let opportunityId = string("opportunityId") {

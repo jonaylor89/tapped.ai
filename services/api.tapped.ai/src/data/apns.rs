@@ -91,11 +91,7 @@ impl Apns {
             .header("apns-topic", &self.topic)
             .header("apns-push-type", "alert")
             .header("apns-priority", "10")
-            .json(&json!({
-                "aps": {"alert": {"title": payload["title"], "body": payload["body"]}, "sound": "default"},
-                "activityId": payload["activityId"],
-                "bookingId": payload["bookingId"],
-            }))
+            .json(&notification(payload))
             .send()
             .await
             .map_err(|_| anyhow!("APNs network error"))?;
@@ -113,5 +109,44 @@ impl Apns {
             }
             _ => Err(anyhow!("APNs HTTP {status}")),
         }
+    }
+}
+
+/// The APNs body for an outbox `push` payload: an activity (`activityId`/`bookingId`) or a direct
+/// message (`conversationId`/`messageId`, threaded per conversation in Notification Center).
+fn notification(payload: &Value) -> Value {
+    let mut aps =
+        json!({"alert": {"title": payload["title"], "body": payload["body"]}, "sound": "default"});
+    let mut body = json!({});
+    if let Some(conversation) = payload["conversationId"].as_str() {
+        aps["thread-id"] = json!(conversation);
+        body["conversationId"] = json!(conversation);
+        body["messageId"] = payload["messageId"].clone();
+    } else {
+        body["activityId"] = payload["activityId"].clone();
+        body["bookingId"] = payload["bookingId"].clone();
+    }
+    body["aps"] = aps;
+    body
+}
+
+#[cfg(test)]
+mod notification_tests {
+    use super::*;
+
+    #[test]
+    fn direct_messages_thread_per_conversation_and_activities_keep_their_shape() {
+        let dm = notification(
+            &json!({"title":"Alice","body":"hey","conversationId":"c1","messageId":"m1"}),
+        );
+        assert_eq!(dm["aps"]["thread-id"], "c1");
+        assert_eq!(dm["conversationId"], "c1");
+        assert_eq!(dm["messageId"], "m1");
+        assert!(dm.get("activityId").is_none());
+        let activity =
+            notification(&json!({"title":"t","body":"b","activityId":"a1","bookingId":"b1"}));
+        assert_eq!(activity["activityId"], "a1");
+        assert_eq!(activity["bookingId"], "b1");
+        assert!(activity["aps"].get("thread-id").is_none());
     }
 }

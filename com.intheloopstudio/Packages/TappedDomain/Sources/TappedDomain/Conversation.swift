@@ -1,8 +1,8 @@
 import Foundation
 
-/// A 1:1 or group chat as shown in the channel list. Backend-agnostic (Stream today, Firestore later).
+/// A 1:1 conversation as shown in the conversation list (Tapped API direct messages).
 public struct Conversation: Sendable, Hashable, Identifiable {
-    /// Backend channel id (Stream `cid`, e.g. `messaging:!members-…`).
+    /// Tapped API conversation id (a UUID string).
     public var id: String
     public var name: String
     public var imageURL: URL?
@@ -10,6 +10,8 @@ public struct Conversation: Sendable, Hashable, Identifiable {
     public var lastMessageText: String?
     public var lastMessageAt: Date?
     public var unreadCount: Int
+    /// Only Tapped can post, e.g. an unclaimed venue contacted by email that has not replied yet.
+    public var isFrozen: Bool
 
     public init(
         id: String,
@@ -18,7 +20,8 @@ public struct Conversation: Sendable, Hashable, Identifiable {
         memberIds: [String] = [],
         lastMessageText: String? = nil,
         lastMessageAt: Date? = nil,
-        unreadCount: Int = 0
+        unreadCount: Int = 0,
+        isFrozen: Bool = false
     ) {
         self.id = id
         self.name = name
@@ -27,6 +30,7 @@ public struct Conversation: Sendable, Hashable, Identifiable {
         self.lastMessageText = lastMessageText
         self.lastMessageAt = lastMessageAt
         self.unreadCount = unreadCount
+        self.isFrozen = isFrozen
     }
 }
 
@@ -71,8 +75,9 @@ public struct ConversationMessage: Sendable, Hashable, Identifiable {
 }
 
 public extension Samples {
+    /// Stable sample id for the 1:1 conversation between `a` and `b` (mocks and previews only).
     static func directConversationId(_ a: String, _ b: String) -> String {
-        "messaging:!members-" + [a, b].sorted().joined(separator: "-")
+        "dm-" + [a, b].sorted().joined(separator: "-")
     }
 
     /// Chat timestamps are relative ("15 min ago"), so they must never be in the future.

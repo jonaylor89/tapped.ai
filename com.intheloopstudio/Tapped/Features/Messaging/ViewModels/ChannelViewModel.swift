@@ -1,9 +1,10 @@
 import Foundation
 import Observation
+import Synchronization
 import TappedData
 import TappedDomain
 
-/// Stream channel page: watches one conversation, sends messages, marks it read.
+/// One conversation: watches its messages, sends, marks it read.
 @Observable
 @MainActor
 final class ChannelViewModel {
@@ -35,9 +36,12 @@ final class ChannelViewModel {
         self.conversationId = conversationId
     }
 
-    var title: String { conversation?.name ?? Route.streamChannel(channelId: conversationId).title }
+    var title: String { conversation?.name ?? Route.conversation(conversationId: conversationId).title }
 
-    var canSend: Bool { !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending }
+    var canSend: Bool { !isFrozen && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending }
+
+    /// Only Tapped can post (an unclaimed venue that has not replied to the performer's email yet).
+    var isFrozen: Bool { conversation?.isFrozen ?? false }
 
     /// Consecutive incoming messages from the same author only label the first.
     func showsAuthor(at index: Int) -> Bool {
@@ -67,6 +71,8 @@ final class ChannelViewModel {
         do {
             for try await messages in chat.messagesObserver(conversationId: conversationId) {
                 self.messages = messages
+                // Cheap (served from the chat store); keeps the name and frozen state current.
+                if let latest = try? await chat.conversation(id: conversationId) { conversation = latest }
                 phase = .loaded
                 if isFirst, !unreadOnOpen { readThroughId = latestIncomingId }
                 isFirst = false
@@ -82,6 +88,7 @@ final class ChannelViewModel {
     /// Read receipts only go out while the channel is on screen and the app is in the foreground.
     func setActive(_ active: Bool) async {
         isActive = active
+        if active { ActiveConversation.set(conversationId) } else { ActiveConversation.clear(conversationId) }
         await markReadIfNeeded()
     }
 
@@ -127,5 +134,25 @@ final class ChannelViewModel {
             ErrorReporting.record(error: error)
             draft = text
         }
+    }
+}
+
+
+/// The conversation currently on screen in the foreground, so its own pushes are not shown as
+/// banners (`AppDelegate.userNotificationCenter(_:willPresent:)` reads it off the main actor).
+enum ActiveConversation {
+    private static let current = Mutex<String?>(nil)
+
+    static func set(_ conversationId: String?) {
+        current.withLock { $0 = conversationId }
+    }
+
+    /// Clears only if `conversationId` is still the active one (a newer screen may have taken over).
+    static func clear(_ conversationId: String) {
+        current.withLock { if $0 == conversationId { $0 = nil } }
+    }
+
+    static func isShowing(_ conversationId: String) -> Bool {
+        current.withLock { $0 == conversationId }
     }
 }

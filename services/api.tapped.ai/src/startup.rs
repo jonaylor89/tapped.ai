@@ -59,6 +59,8 @@ pub struct Application {
     server: Serve<TcpListener, Router, Router>,
     founder_worker: Option<tokio::task::JoinHandle<()>>,
     reminder_worker: Option<tokio::task::JoinHandle<()>>,
+    dm_hub: crate::domain::direct_messages::Hub,
+    dm_listener: Option<tokio::task::JoinHandle<()>>,
 }
 
 impl Application {
@@ -142,7 +144,10 @@ impl Application {
             spotify: Arc::new(SpotifyHttp::new(spotify_client_id, spotify_client_secret)),
             postgres: Some(postgres),
             media: crate::domain::uploads::MediaUploads::from_env(),
+            dm_hub: Default::default(),
         };
+        let dm_hub = state.dm_hub.clone();
+        let dm_listener = Some(dm_hub.spawn_listener(postgres_for_listener(&state)));
 
         let founder_transport = state
             .mail
@@ -171,6 +176,8 @@ impl Application {
             server,
             founder_worker,
             reminder_worker,
+            dm_hub,
+            dm_listener,
         })
     }
 
@@ -180,12 +187,15 @@ impl Application {
         )?;
         let port = listener.local_addr()?.port();
 
+        let dm_hub = state.dm_hub.clone();
         let server = run(listener, state).await?;
         Ok(Self {
             port,
             server,
             founder_worker: None,
             reminder_worker: None,
+            dm_hub,
+            dm_listener: None,
         })
     }
 
@@ -196,7 +206,19 @@ impl Application {
     /// Serves until SIGTERM/SIGINT, then stops accepting connections and lets in-flight
     /// requests finish.
     pub async fn run_until_stopped(self) -> Result<(), std::io::Error> {
-        let result = self.server.with_graceful_shutdown(shutdown_signal()).await;
+        let dm_hub = self.dm_hub.clone();
+        // SSE streams never finish on their own; end them so in-flight requests can drain.
+        let result = self
+            .server
+            .with_graceful_shutdown(async move {
+                shutdown_signal().await;
+                dm_hub.close();
+            })
+            .await;
+        if let Some(listener) = self.dm_listener {
+            listener.abort();
+            let _ = listener.await;
+        }
         if let Some(worker) = self.founder_worker {
             worker.abort();
             let _ = worker.await;
@@ -261,7 +283,8 @@ async fn handle_timeout(error: BoxError) -> AppError {
 /// The full app and its OpenAPI document, generated from the routes registered here.
 pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<OpenApi>) {
     use crate::domain::{
-        app_data, app_functions, health, places, public_docs, public_map, public_profile, spotify,
+        app_data, app_functions, direct_messages, health, places, public_docs, public_map,
+        public_profile, spotify,
     };
 
     let app_v1_authenticated = OpenApiRouter::new()
@@ -304,6 +327,14 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .route("/device-token", post(app_data::register_token))
         .route("/uploads", post(crate::domain::uploads::create))
         .route("/venue-email-threads", post(create_email_thread))
+        .routes(routes!(direct_messages::http::inbox))
+        .routes(routes!(direct_messages::http::open_direct))
+        .routes(routes!(direct_messages::http::get_conversation))
+        .routes(routes!(
+            direct_messages::http::list_messages,
+            direct_messages::http::send_message
+        ))
+        .routes(routes!(direct_messages::http::mark_read))
         .routes(routes!(app_functions::revoke_stream_user_tokens))
         .routes(routes!(app_functions::stream_user_token))
         .routes(routes!(places::get_place_photo))
@@ -378,6 +409,17 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .merge(crate::domain::mcp::router(state.clone(), rate_limits))
         .merge(docs_routes(&api));
 
+    // Long-lived SSE: outside the request timeout below, but with the same auth.
+    let realtime = Router::new()
+        .route(
+            "/app/v1/conversations/events",
+            get(direct_messages::http::events),
+        )
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            verify_firebase_token,
+        ));
+
     let api = Arc::new(api);
     // Layers run outermost-last: request ID -> trace -> catch panics -> JSON error bodies ->
     // timeout -> app.
@@ -388,6 +430,7 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
                 .layer(HandleErrorLayer::new(handle_timeout))
                 .timeout(REQUEST_TIMEOUT),
         )
+        .merge(realtime)
         .layer(middleware::map_response(json_error_bodies))
         .layer(CatchPanicLayer::custom(panic_response))
         .layer(
@@ -450,6 +493,10 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         .with_state(state);
 
     (router, api)
+}
+
+fn postgres_for_listener(state: &AppStateDyn) -> sqlx::PgPool {
+    state.postgres.clone().expect("production Postgres pool")
 }
 
 fn public_get_cors() -> CorsLayer {

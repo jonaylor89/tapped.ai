@@ -157,6 +157,7 @@ mod tests {
             spotify: Arc::new(MockSpotify),
             postgres: None,
             media: None,
+            dm_hub: Default::default(),
         }
     }
 

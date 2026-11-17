@@ -42,6 +42,7 @@ pub fn mock_state() -> AppStateDyn {
         spotify: std::sync::Arc::new(tapped_api_rs::data::spotify::MockSpotify),
         postgres: None,
         media: None,
+        dm_hub: Default::default(),
     }
 }
 

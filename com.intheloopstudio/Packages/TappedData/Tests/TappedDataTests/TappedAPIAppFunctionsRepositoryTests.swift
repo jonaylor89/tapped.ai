@@ -6,17 +6,6 @@ import Testing
 struct TappedAPIAppFunctionsRepositoryTests {
     private let baseURL = URL(string: "https://api.example.com/base/")!
 
-    @Test func streamTokenRequestUsesBearerAuthentication() async throws {
-        let repository = TappedAPIStreamTokenRepository(baseURL: baseURL, idToken: { "firebase-token" })
-        let request = try await repository.makeRequest()
-
-        #expect(request.url == URL(string: "https://api.example.com/base/app/v1/stream-token"))
-        #expect(request.httpMethod == "POST")
-        #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer firebase-token")
-        #expect(UUID(uuidString: request.value(forHTTPHeaderField: "X-Request-Id") ?? "") != nil)
-        #expect(request.httpBody == nil)
-    }
-
     @Test func opportunityNotificationRequestSerializesOnlySupportedFields() async throws {
         let repository = TappedAPIOpportunityNotificationRepository(baseURL: baseURL, idToken: { "firebase-token" })
         let request = try await repository.makeRequest(.init(opportunityIds: ["op-1", "op-2"], note: "Available Friday"))
@@ -34,10 +23,8 @@ struct TappedAPIAppFunctionsRepositoryTests {
     }
 
     @Test func repositoriesRejectMissingFirebaseToken() async {
-        let stream = TappedAPIStreamTokenRepository(baseURL: baseURL, idToken: { nil })
         let notifications = TappedAPIOpportunityNotificationRepository(baseURL: baseURL, idToken: { nil })
 
-        await #expect(throws: TappedAPIError.notSignedIn) { _ = try await stream.makeRequest() }
         await #expect(throws: TappedAPIError.notSignedIn) {
             _ = try await notifications.makeRequest(.init(opportunityIds: ["op-1"], note: ""))
         }

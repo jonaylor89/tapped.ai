@@ -593,6 +593,7 @@ mod tests {
                 spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
                 postgres: None,
                 media: None,
+                dm_hub: Default::default(),
                 mail: MailBridge {
                     store: store.clone(),
                     stream: stream.clone(),

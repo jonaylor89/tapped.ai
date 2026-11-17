@@ -2,6 +2,7 @@ mod apns_push;
 pub mod auth;
 mod booking_emails;
 mod booking_reminders;
+mod direct_messages;
 mod external_effects;
 mod founder_notifications;
 pub mod hardening;

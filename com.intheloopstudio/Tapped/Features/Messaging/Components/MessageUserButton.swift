@@ -29,7 +29,7 @@ struct MessageUserButton: View {
         defer { isLoading = false }
         do {
             let conversationId = try await dependencies.chat.createDirectConversation(with: userId)
-            router.push(.streamChannel(channelId: conversationId))
+            router.push(.conversation(conversationId: conversationId))
         } catch {
             ErrorReporting.record(error: error)
             failed = true

@@ -66,7 +66,7 @@ struct PerformerDelightsTests {
 
     @Test func applyReusesOpportunityApplication() async throws {
         let database = MockDatabaseRepository()
-        let opportunityId = try #require(Samples.opportunities.first { $0.endTime > .now }?.id)
+        let opportunityId = try #require(Samples.opportunities.first { $0.endTime > Samples.referenceDate }?.id)
         let outcome = await router(database).handle(response("APPLY", category: NotificationCategories.newGig, ["opportunityId": opportunityId]))
         #expect(outcome == .applied(opportunityId: opportunityId))
         #expect(try await database.isUserAppliedForOpportunity(opportunityId: opportunityId, userId: Samples.performer.id))
@@ -74,7 +74,7 @@ struct PerformerDelightsTests {
 
     @Test func subscriberCanApplyWithoutLegacyQuota() async throws {
         let database = MockDatabaseRepository(defaultOpportunityQuota: 0)
-        let opportunityId = try #require(Samples.opportunities.first { $0.endTime > .now }?.id)
+        let opportunityId = try #require(Samples.opportunities.first { $0.endTime > Samples.referenceDate }?.id)
         let outcome = await router(database).handle(response("APPLY", category: NotificationCategories.newGig, ["opportunityId": opportunityId]))
         #expect(outcome == .applied(opportunityId: opportunityId))
     }

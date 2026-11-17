@@ -1017,6 +1017,378 @@
         ]
       }
     },
+    "/app/v1/conversations": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "The signed-in user's conversations that have messages, most recent first.",
+        "operationId": "inbox",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "`nextCursor` from the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/conversations/direct": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Returns the 1:1 conversation with `userId`, creating it if needed.",
+        "operationId": "open_direct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenDirect"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such user"
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/conversations/{id}": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "operationId": "get_conversation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Conversation"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not a member"
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/conversations/{id}/messages": {
+      "get": {
+        "tags": [
+          "messages"
+        ],
+        "operationId": "list_messages",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "Messages before this `seq` (default: the newest page).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "description": "Messages after this `seq`, oldest first (gap fill after a reconnect).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "summary": "Sends a message. Recipients get a realtime event and an APNs push; a venue reached through an\nemail thread (or a member who opted into DM emails) also gets the message by email.",
+        "operationId": "send_message",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendMessage"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Already sent (retry)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Sent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Message"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Frozen conversation or reused message ID"
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
+    "/app/v1/conversations/{id}/read": {
+      "post": {
+        "tags": [
+          "messages"
+        ],
+        "operationId": "mark_read",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MarkRead"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "The error body every route returns: `{ \"error\", \"error_id\", \"error_details\"? }`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppError"
+                },
+                "example": {
+                  "error": "some error happened",
+                  "error_id": "00000000-0000-0000-0000-000000000000"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "FirebaseAuth": []
+          }
+        ]
+      }
+    },
     "/app/v1/stream-token/revoke": {
       "post": {
         "tags": [
@@ -2451,6 +2823,21 @@
           }
         }
       },
+      "Attachment": {
+        "type": "object",
+        "required": [
+          "type",
+          "url"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          }
+        }
+      },
       "AutocompletePrediction": {
         "type": "object",
         "required": [
@@ -2563,6 +2950,68 @@
                 }
               }
             }
+          }
+        }
+      },
+      "Conversation": {
+        "type": "object",
+        "description": "One conversation as seen by one member.",
+        "required": [
+          "id",
+          "members",
+          "frozen",
+          "createdAt",
+          "lastSeq",
+          "lastReadSeq",
+          "unreadCount"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Member"
+            }
+          },
+          "frozen": {
+            "type": "boolean",
+            "description": "Only the server can post (e.g. an unclaimed venue that has not replied by email yet)."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeq": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastReadSeq": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastMessage": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/Message"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lastMessageAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -2768,6 +3217,32 @@
           }
         }
       },
+      "InboxResponse": {
+        "type": "object",
+        "required": [
+          "conversations",
+          "unreadTotal"
+        ],
+        "properties": {
+          "conversations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Conversation"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unreadTotal": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unread messages across every conversation (the app badge)."
+          }
+        }
+      },
       "Location": {
         "type": "object",
         "required": [
@@ -2858,6 +3333,112 @@
           }
         }
       },
+      "MarkRead": {
+        "type": "object",
+        "properties": {
+          "throughSeq": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "description": "Read through this `seq` (default: the newest message)."
+          }
+        }
+      },
+      "Member": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "username",
+          "deleted"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string",
+            "description": "Artist name, else username, else the ID."
+          },
+          "username": {
+            "type": "string"
+          },
+          "imageUrl": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "deleted": {
+            "type": "boolean"
+          }
+        }
+      },
+      "Message": {
+        "type": "object",
+        "required": [
+          "id",
+          "conversationId",
+          "seq",
+          "authorId",
+          "text",
+          "attachments",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "seq": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Gap-free per conversation; clients order by it and detect missed events with it."
+          },
+          "authorId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Attachment"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "MessagesResponse": {
+        "type": "object",
+        "required": [
+          "messages",
+          "hasMore"
+        ],
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Message"
+            },
+            "description": "Ascending `seq`."
+          },
+          "hasMore": {
+            "type": "boolean",
+            "description": "More messages exist in the requested direction."
+          }
+        }
+      },
       "NotifyVenueOfInterestedOpportunities": {
         "type": "object",
         "required": [
@@ -2884,6 +3465,17 @@
           "venues_notified": {
             "type": "integer",
             "minimum": 0
+          }
+        }
+      },
+      "OpenDirect": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "string"
           }
         }
       },
@@ -3013,6 +3605,23 @@
           "relatedUsers": {
             "type": "array",
             "items": {}
+          }
+        }
+      },
+      "ReadResponse": {
+        "type": "object",
+        "required": [
+          "lastReadSeq",
+          "unreadTotal"
+        ],
+        "properties": {
+          "lastReadSeq": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unreadTotal": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -3266,6 +3875,23 @@
           }
         },
         "additionalProperties": false
+      },
+      "SendMessage": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Client-generated; resending the same ID returns the stored message instead of a duplicate."
+          },
+          "text": {
+            "type": "string"
+          }
+        }
       },
       "SocialFollowing": {
         "type": "object",

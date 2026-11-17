@@ -27,7 +27,7 @@ struct ChannelListView: View {
                 .padding(GlassMetrics.edgeInset)
             case .loaded:
                 List(model.conversations) { conversation in
-                    NavigationLink(value: Route.streamChannel(channelId: conversation.id)) {
+                    NavigationLink(value: Route.conversation(conversationId: conversation.id)) {
                         ConversationRow(conversation: conversation)
                     }
                     .listRowBackground(Color.clear)

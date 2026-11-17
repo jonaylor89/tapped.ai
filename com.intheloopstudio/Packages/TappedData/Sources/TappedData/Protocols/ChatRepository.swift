@@ -1,8 +1,8 @@
 import Foundation
 import TappedDomain
 
-/// `lib/data/stream_repository.dart`. Messaging backend behind a protocol so Stream can later be
-/// swapped for Firestore without touching the messaging UI.
+/// Direct messaging behind a protocol: `TappedChatRepository` (Tapped API) live,
+/// `MockChatRepository` for mocks, previews and tests.
 public protocol ChatRepository: Sendable {
     /// Connects `user` to the chat backend. No-op when that user is already connected.
     func connectUser(_ user: UserModel) async throws

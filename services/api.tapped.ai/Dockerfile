@@ -26,7 +26,7 @@ FROM debian:bookworm-slim
 LABEL io.tapped.datastore="postgres"
 LABEL io.tapped.schema_epoch="20261024010000"
 # Keep in sync with the highest embedded migration; deployment rejects older bundles.
-LABEL io.tapped.migration_bundle="20261030000000"
+LABEL io.tapped.migration_bundle="20261117100000"
 
 # Run as "app" user. The uid is fixed so the deploy can chown the mail volume and credentials.
 RUN useradd -u 10001 -ms /bin/bash app && mkdir /data && chown app:app /data
@@ -43,6 +43,7 @@ RUN apt-get update && apt-get install -y libssl-dev ca-certificates && \
 COPY --from=builder /tapped-api-rs/target/release/tapped-api-rs /usr/local/bin/tapped-api-rs
 COPY --from=builder /tapped-api-rs/target/release/mail_worker /usr/local/bin/mail_worker
 COPY --from=builder /tapped-api-rs/target/release/identity_worker /usr/local/bin/identity_worker
+COPY --from=builder /tapped-api-rs/target/release/dm_import /usr/local/bin/dm_import
 
 # Set environment variables
 ENV RUST_LOG=info

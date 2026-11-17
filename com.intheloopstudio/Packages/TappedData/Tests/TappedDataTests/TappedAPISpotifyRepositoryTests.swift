@@ -19,7 +19,7 @@ struct TappedAPISpotifyRepositoryTests {
         "",
         "https://open.spotify.com/track/4Z8W4fKeB5YxbusRsdQVPb",
         "https://example.com/artist/4Z8W4fKeB5YxbusRsdQVPb",
-        "../stream-token",
+        "../device-token",
         "nova waves",
     ])
     func rejectsOtherInput(input: String) {

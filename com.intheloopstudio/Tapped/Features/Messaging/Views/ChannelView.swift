@@ -3,7 +3,7 @@ import TappedData
 import TappedDomain
 import TappedUI
 
-/// `StreamChannelPage`: message history + floating glass composer.
+/// One conversation: message history + floating glass composer.
 struct ChannelView: View {
     @State private var model: ChannelViewModel
     @Environment(\.scenePhase) private var scenePhase
@@ -44,8 +44,17 @@ struct ChannelView: View {
         }
         .safeAreaInset(edge: .bottom) {
             if model.phase == .loaded {
-                MessageComposer(text: $model.draft, canSend: model.canSend) {
-                    Task { await model.send() }
+                if model.isFrozen {
+                    Text("they haven't joined tapped yet. you can reply here once they answer your email.")
+                        .font(TappedTypography.bodySm)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(GlassMetrics.edgeInset)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    MessageComposer(text: $model.draft, canSend: model.canSend) {
+                        Task { await model.send() }
+                    }
                 }
             }
         }

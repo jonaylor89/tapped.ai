@@ -121,7 +121,7 @@ final class ShellNavigator {
         case .bookings, .booking, .bookingConfirmation, .requestToPerform, .requestToPerformConfirmation, .bookingHistory,
              .addPastBooking, .createBooking, .serviceSelection, .service, .addCollaborators:
             Destination(tab: .bookings, detent: .large)
-        case .messagingChannelList, .streamChannel, .videoCall:
+        case .messagingChannelList, .conversation, .videoCall:
             Destination(tab: .messages, detent: .large)
         case .settings, .activities, .tasks, .shareProfile, .createService, .admin:
             Destination(tab: .profile, detent: .large)
