@@ -80,4 +80,6 @@ pub struct AppStateDyn {
     pub postgres: Option<sqlx::PgPool>,
     /// R2 media uploads; `None` answers `POST /app/v1/uploads` with 503.
     pub media: Option<crate::domain::uploads::MediaUploads>,
+    /// SSE connections for direct message events; fed by the Postgres listener in production.
+    pub dm_hub: crate::domain::direct_messages::Hub,
 }

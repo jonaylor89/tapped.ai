@@ -28,7 +28,7 @@ enum Route: Hashable {
     case forgotPassword
     case signUp
     case onboarding
-    case streamChannel(channelId: String)
+    case conversation(conversationId: String)
     case messagingChannelList
     case service(Service, serviceUser: UserModel?)
     case videoCall
@@ -70,7 +70,7 @@ enum Route: Hashable {
         case .forgotPassword: "forgot password"
         case .signUp: "sign up"
         case .onboarding: "onboarding"
-        case .streamChannel: "messages"
+        case .conversation: "messages"
         case .messagingChannelList: "messages"
         case .service: "service"
         case .videoCall: "video call"
@@ -103,7 +103,7 @@ enum Route: Hashable {
         case .search, .advancedSearch, .gigSearch, .opportunity, .interestedUsers, .reviews, .locationForm,
              .opportunities, .opportunityFeed: 4
         case .onboarding: 5
-        case .paywall, .streamChannel, .messagingChannelList, .videoCall, .admin: 6
+        case .paywall, .conversation, .messagingChannelList, .videoCall, .admin: 6
         }
     }
 }

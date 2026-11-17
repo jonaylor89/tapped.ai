@@ -327,6 +327,7 @@ mod tests {
             spotify: std::sync::Arc::new(crate::data::spotify::MockSpotify),
             postgres: None,
             media: None,
+            dm_hub: Default::default(),
         }
     }
 

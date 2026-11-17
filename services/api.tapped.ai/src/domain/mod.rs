@@ -6,6 +6,7 @@ pub mod auth_lifecycle;
 pub mod booking_reminders;
 pub mod commands;
 pub mod controller;
+pub mod direct_messages;
 pub mod external_effects;
 pub mod feedback;
 pub mod firebase_auth;

@@ -15,8 +15,8 @@ public enum APNsDeviceToken {
     public static var value: String? { current.withLock { $0 } }
 }
 
-/// Permission, APNs registration and badge plumbing. The Rust identity worker delivers straight to APNs.
-/// Stream Chat `addDevice` is owned by the messaging session (session 6).
+/// Permission, APNs registration and badge plumbing. The Rust identity worker delivers straight to APNs,
+/// including direct message pushes (`conversationId` in the payload).
 public struct APNsNotificationRepository: NotificationRepository {
     static let platform = "ios"
     /// Matches the `aps-environment` entitlement: Debug signs with development, Release with production.

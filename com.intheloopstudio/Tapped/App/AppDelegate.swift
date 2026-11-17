@@ -41,7 +41,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .badge, .sound]
+        // The conversation on screen already shows the message live.
+        let conversationId = notification.request.content.userInfo["conversationId"] as? String
+        if let conversationId, ActiveConversation.isShowing(conversationId) { return [] }
+        return [.banner, .list, .badge, .sound]
     }
 
     // The async variant returns to UIKit off the main thread, which crashes on a banner tap.

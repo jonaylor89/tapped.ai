@@ -80,6 +80,8 @@ struct DeepLinkResolver {
             case let .gigs(filter?):
                 let feed = try await database.getOpportunityFeedByUserId(currentUser.id, limit: 100, lastOpportunityId: nil)
                 return Resolution(route: .opportunities(filter.apply(feed, now: .now)))
+            case let .conversation(conversationId):
+                return Resolution(route: .conversation(conversationId: conversationId))
             case let .shareProfile(showsQR):
                 await MainActor.run { ShareProfileQRRequest.isPending = showsQR }
                 return Resolution(route: .shareProfile(userId: currentUser.id, user: currentUser))

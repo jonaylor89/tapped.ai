@@ -47,8 +47,8 @@ struct RouteDestination: View {
             if let currentUser { SettingsView(dependencies: dependencies, currentUser: currentUser) }
         case .messagingChannelList:
             ChannelListView(dependencies: dependencies)
-        case let .streamChannel(channelId):
-            ChannelView(dependencies: dependencies, conversationId: channelId)
+        case let .conversation(conversationId):
+            ChannelView(dependencies: dependencies, conversationId: conversationId)
         case .videoCall:
             VideoCallView()
         case .admin:

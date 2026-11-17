@@ -38,7 +38,7 @@ struct ShellNavigatorTests {
         #expect(destination(.createBooking(requesteeId: venue.id, service: nil, requesteeStripeConnectedAccountId: nil)) == large(.bookings))
 
         #expect(destination(.messagingChannelList) == large(.messages))
-        #expect(destination(.streamChannel(channelId: "c")) == large(.messages))
+        #expect(destination(.conversation(conversationId: "c")) == large(.messages))
 
         #expect(destination(.profile(userId: me.id, user: me)) == large(.profile))
         #expect(destination(.reviews(userId: me.id)) == large(.profile))
@@ -70,8 +70,8 @@ struct ShellNavigatorTests {
         navigator.open(.messagingChannelList)
         #expect(navigator.tab == .messages)
         #expect(navigator.messages.isAtRoot)
-        navigator.open(path: [.messagingChannelList, .streamChannel(channelId: "c")])
-        #expect(navigator.messages.path == [.streamChannel(channelId: "c")])
+        navigator.open(path: [.messagingChannelList, .conversation(conversationId: "c")])
+        #expect(navigator.messages.path == [.conversation(conversationId: "c")])
         navigator.open(.profile(userId: me.id, user: me))
         #expect(navigator.tab == .profile)
         #expect(navigator.profile.isAtRoot)

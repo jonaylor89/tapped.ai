@@ -77,11 +77,7 @@ public struct Dependencies: Sendable {
             analytics: PostHogAnalytics(),
             remoteConfig: TappedAPIRemoteConfigRepository(baseURL: config.tappedAPIURL),
             notifications: APNsNotificationRepository(baseURL: config.tappedAPIURL),
-            chat: StreamChatRepository(
-                apiKey: config.streamAPIKey,
-                baseURL: config.streamBaseURL,
-                tokenProvider: TappedAPIStreamTokenRepository(baseURL: config.tappedAPIURL).fetch
-            ),
+            chat: TappedChatRepository(transport: TappedAPIChatTransport(baseURL: config.tappedAPIURL)),
             storage: TappedAPIStorageRepository(baseURL: config.tappedAPIURL),
             venueOutreach: TappedAPIVenueOutreachRepository(baseURL: config.tappedAPIURL),
             opportunityNotifications: TappedAPIOpportunityNotificationRepository(baseURL: config.tappedAPIURL),
