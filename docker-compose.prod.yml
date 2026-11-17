@@ -51,8 +51,6 @@ services:
       # postgres://tapped:<POSTGRES_PASSWORD>@postgres:5432/tapped; Postgres is skipped when empty.
       DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required for the Postgres-only API}
       REDIS_URL: redis://redis:6379/0
-      STREAM_KEY: ${STREAM_KEY}
-      STREAM_SECRET: ${STREAM_SECRET}
       MAIL_INGRESS_SECRET: ${MAIL_INGRESS_SECRET}
       MAIL_API_SECRET: ${MAIL_API_SECRET}
       # Auth hooks sign callbacks; all provider business logic lives in Rust.
@@ -114,8 +112,6 @@ services:
       FIREBASE_PROJECT_ID: ${FIREBASE_PROJECT_ID}
       IDENTITY_CREDENTIALS_FILE: /run/secrets/identity.json
       MAIL_STORE_PATH: /data/tapped-mail.sqlite3
-      STREAM_KEY: ${STREAM_KEY}
-      STREAM_SECRET: ${STREAM_SECRET}
       AUTH_EFFECTS_ENABLED: ${AUTH_EFFECTS_ENABLED:-0}
       # Direct APNs for iOS builds without FirebaseMessaging. Unset = APNs pushes stay queued.
       APNS_KEY_FILE: ${APNS_KEY_FILE:-}

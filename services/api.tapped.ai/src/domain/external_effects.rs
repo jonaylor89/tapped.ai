@@ -48,35 +48,71 @@ pub fn booking_email_recipients(booking: &Value, profiles: &[Value]) -> Vec<(Str
     .collect()
 }
 
-/// Called under the identity/profile lock. Auth-only email changes must propagate to Stream
-/// in the same transaction, without replaying profile-creation welcome messages.
+/// Called under the identity/profile lock: keeps the profile email in step with Auth.
 pub async fn update_identity_email(
     tx: &mut Transaction<'_, Postgres>,
     uid: &str,
     email: &str,
 ) -> Result<(), sqlx::Error> {
-    let changed:Option<String>=sqlx::query_scalar("UPDATE users SET email=$2 WHERE id=$1 AND NOT unclaimed AND NOT deleted AND email IS DISTINCT FROM $2 RETURNING id")
-        .bind(uid).bind(email).fetch_optional(&mut **tx).await?;
-    if changed.is_some() {
-        record_profile(tx, &json!({"id":uid}), false).await?;
-    }
+    sqlx::query("UPDATE users SET email=$2 WHERE id=$1 AND NOT unclaimed AND NOT deleted AND email IS DISTINCT FROM $2")
+        .bind(uid).bind(email).execute(&mut **tx).await?;
     Ok(())
 }
 
-pub async fn record_profile(
+/// The founders' automatic welcome messages, in order per founder.
+const WELCOME_MESSAGES: [(&str, &[&str]); 2] = [
+    (
+        "8yYVxpQ7cURSzNfBsaBGF7A7kkv2",
+        &[
+            "welcome to tapped!",
+            "I work with the engineering team so if you have any ideas on how to make the app better lemme know and I can send it to them",
+        ],
+    ),
+    (
+        "n4zIL6bOuPTqRC3dtsl6gyEBPQl1",
+        &["welcome to the app! how did you find out about us?"],
+    ),
+];
+
+/// Welcomes a newly created, claimed profile with direct messages from the founders, in the
+/// transaction that creates it. Stable message IDs make a replayed creation a no-op.
+pub async fn welcome_new_profile(
     tx: &mut Transaction<'_, Postgres>,
     doc: &Value,
-    created: bool,
 ) -> Result<(), sqlx::Error> {
-    let uid = doc["id"].as_str().unwrap_or_default();
-    // Read the current authoritative profile when delivering, not a stale update snapshot.
-    enqueue(
-        tx,
-        &format!("profile:{}", uuid::Uuid::new_v4()),
-        "stream_profile",
-        json!({"uid":uid,"created":created}),
-    )
-    .await
+    use crate::domain::direct_messages::store::{DmError, ServerMessage, post_server_message};
+    let Some(uid) = doc["id"].as_str() else {
+        return Ok(());
+    };
+    if doc["unclaimed"] == true || doc["deleted"] == true {
+        return Ok(());
+    }
+    for (sender, messages) in WELCOME_MESSAGES {
+        let active: bool =
+            sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND NOT deleted)")
+                .bind(sender)
+                .fetch_one(&mut **tx)
+                .await?;
+        if sender == uid || !active {
+            continue;
+        }
+        for (index, text) in messages.iter().enumerate() {
+            let message = ServerMessage {
+                event_id: format!("welcome:{sender}:{uid}:{index}"),
+                thread_id: String::new(),
+                sender_id: sender.into(),
+                receiver_id: uid.into(),
+                text: (*text).into(),
+                frozen: false,
+            };
+            match post_server_message(tx, &message).await {
+                Ok(_) => {}
+                Err(DmError::Database(error)) => return Err(error),
+                Err(error) => return Err(sqlx::Error::Protocol(error.to_string())),
+            }
+        }
+    }
+    Ok(())
 }
 
 pub async fn record_booking_emails(

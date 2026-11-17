@@ -161,158 +161,11 @@ pub struct ProviderWorker {
     pub google: GoogleIdentity,
     pub mail: SqliteMailStore,
     pub client: reqwest::Client,
-    pub stream_key: String,
-    pub stream_secret: String,
-    /// Trusted deployment/test endpoint, never derived from an application request.
-    pub stream_base_url: String,
     pub auth_effects: bool,
     /// Unset until the APNs key is provisioned; APNs pushes stay queued for retry meanwhile.
     pub apns: Option<Apns>,
 }
 impl ProviderWorker {
-    fn stream_request(
-        &self,
-        method: reqwest::Method,
-        path: &str,
-    ) -> Result<reqwest::RequestBuilder> {
-        let now = chrono::Utc::now().timestamp();
-        let token = jsonwebtoken::encode(
-            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
-            &json!({"server":true,"iat":now,"exp":now+120}),
-            &jsonwebtoken::EncodingKey::from_secret(self.stream_secret.as_bytes()),
-        )
-        .map_err(|_| anyhow!("Stream signing failed"))?;
-        Ok(self
-            .client
-            .request(
-                method,
-                format!("{}{path}", self.stream_base_url.trim_end_matches('/')),
-            )
-            .query(&[("api_key", &self.stream_key)])
-            .header("Stream-Auth-Type", "jwt")
-            .bearer_auth(token))
-    }
-    async fn stream_upsert(&self, uid: &str, profile: Value) -> Result<()> {
-        let mut user = profile;
-        user["id"] = json!(uid);
-        let r = self
-            .stream_request(reqwest::Method::POST, "/users")?
-            .json(&json!({"users":{uid:user}}))
-            .send()
-            .await
-            .map_err(|_| anyhow!("Stream network error"))?;
-        ensure!(
-            r.status().is_success(),
-            "Stream upsert HTTP {}",
-            r.status().as_u16()
-        );
-        Ok(())
-    }
-    async fn introductions(&self, uid: &str) -> Result<()> {
-        // Preserve the existing automatic founder welcome DMs. Stable IDs deduplicate retries.
-        for (sender, messages) in [
-            (
-                "8yYVxpQ7cURSzNfBsaBGF7A7kkv2",
-                vec![
-                    "welcome to tapped!",
-                    "I work with the engineering team so if you have any ideas on how to make the app better lemme know and I can send it to them",
-                ],
-            ),
-            (
-                "n4zIL6bOuPTqRC3dtsl6gyEBPQl1",
-                vec!["welcome to the app! how did you find out about us?"],
-            ),
-        ] {
-            if sender == uid {
-                continue;
-            }
-            let r = self
-                .stream_request(reqwest::Method::POST, "/channels/messaging/query")?
-                .json(&json!({"data":{"members":[sender,uid],"created_by_id":sender},"state":true}))
-                .send()
-                .await
-                .map_err(|_| anyhow!("Stream welcome channel network error"))?;
-            ensure!(
-                r.status().is_success(),
-                "Stream welcome channel HTTP {}",
-                r.status().as_u16()
-            );
-            let channel: Value = r
-                .json()
-                .await
-                .map_err(|_| anyhow!("invalid Stream channel response"))?;
-            let channel_id = channel["channel"]["id"]
-                .as_str()
-                .ok_or_else(|| anyhow!("missing Stream channel id"))?;
-            for (index, text) in messages.into_iter().enumerate() {
-                use sha2::{Digest, Sha256};
-                let id = hex::encode(Sha256::digest(
-                    format!("welcome:{sender}:{uid}:{index}").as_bytes(),
-                ));
-                let r = self
-                    .stream_request(
-                        reqwest::Method::POST,
-                        &format!("/channels/messaging/{channel_id}/message"),
-                    )?
-                    .json(&json!({"message":{"id":id,"text":text,"user_id":sender}}))
-                    .send()
-                    .await
-                    .map_err(|_| anyhow!("Stream welcome message network error"))?;
-                ensure!(
-                    r.status().is_success() || r.status().as_u16() == 409,
-                    "Stream welcome message HTTP {}",
-                    r.status().as_u16()
-                );
-            }
-        }
-        Ok(())
-    }
-    async fn stream_delete(&self, uid: &str) -> Result<()> {
-        // UID encoding prevents custom Auth IDs from changing the path/query.
-        let mut url = reqwest::Url::parse("https://chat.stream-io-api.com/users/")?;
-        url.path_segments_mut()
-            .map_err(|_| anyhow!("invalid Stream path"))?
-            .pop_if_empty()
-            .push(uid);
-        let r = self
-            .stream_request(reqwest::Method::DELETE, url.path())?
-            .send()
-            .await
-            .map_err(|_| anyhow!("Stream network error"))?;
-        if r.status() == reqwest::StatusCode::NOT_FOUND {
-            // Routing 404s are not proof of deletion. Confirm absence (or a real tombstone)
-            // through the canonical, authenticated query-users endpoint before acknowledging.
-            let snapshot: Value = self
-                .stream_request(reqwest::Method::GET, "/users")?
-                .query(&[(
-                    "payload",
-                    json!({"filter_conditions":{"id":uid},"sort":[],"presence":false,"limit":1})
-                        .to_string(),
-                )])
-                .send()
-                .await?
-                .error_for_status()?
-                .json()
-                .await?;
-            let users = snapshot["users"]
-                .as_array()
-                .ok_or_else(|| anyhow!("invalid Stream absence response"))?;
-            ensure!(
-                users.iter().all(|user| user["id"].as_str() == Some(uid)
-                    && user["deleted_at"]
-                        .as_str()
-                        .is_some_and(|value| chrono::DateTime::parse_from_rfc3339(value).is_ok())),
-                "Stream deletion not confirmed"
-            );
-        } else {
-            ensure!(
-                r.status().is_success(),
-                "Stream delete HTTP {}",
-                r.status().as_u16()
-            );
-        }
-        Ok(())
-    }
     async fn slack_auth(&self, id: &str, kind: &str, a: &Account) -> Result<()> {
         if a.email.ends_with("@tapped.ai") {
             return Ok(());
@@ -384,7 +237,6 @@ impl ProviderWorker {
         // profile edits. Serialize provider writes themselves and read current state after locking.
         let uid = match kind {
             "auth_signup" | "auth_delete" => payload["localId"].as_str(),
-            "stream_profile" => payload["uid"].as_str(),
             _ => None,
         };
         if let Some(uid) = uid {
@@ -395,7 +247,7 @@ impl ProviderWorker {
             .bind(uid)
             .fetch_one(&mut *guard)
             .await?;
-            ensure!(locked, "Stream identity delivery already in progress");
+            ensure!(locked, "identity delivery already in progress");
             let result = self.deliver_locked(id, kind, payload).await;
             // Transaction-scoped locks also release on cancellation/panic, without a leaked
             // session lock returning to the pool. A failed lock/commit leaves the job retryable.
@@ -415,14 +267,6 @@ impl ProviderWorker {
                     return Ok(());
                 }
                 self.slack_auth(id, kind, &a).await?;
-                let doc: Option<Value> =
-                    sqlx::query_scalar("SELECT doc FROM api_users WHERE id=$1")
-                        .bind(&a.local_id)
-                        .fetch_optional(&self.pool)
-                        .await?;
-                let user=doc.map(|doc|json!({"email":doc["email"],"name":doc["artistName"],"username":doc["username"],"image":doc["profilePicture"]}))
-                    .unwrap_or_else(||json!({"email":a.email,"name":if a.display_name.is_empty(){&a.local_id}else{&a.display_name},"username":a.local_id}));
-                self.stream_upsert(&a.local_id, user).await?;
                 if !a.email.is_empty() && !a.email.ends_with("@tapped.ai") {
                     self.send_mail(&format!("welcome:{id}"), &a.email, "welcome")
                         .await?;
@@ -440,28 +284,6 @@ impl ProviderWorker {
                     return Ok(());
                 }
                 self.slack_auth(id, kind, &a).await?;
-                self.stream_delete(&a.local_id).await?;
-            }
-            "stream_profile" => {
-                let uid = payload["uid"]
-                    .as_str()
-                    .ok_or_else(|| anyhow!("invalid profile effect"))?;
-                let doc: Option<Value> =
-                    sqlx::query_scalar("SELECT doc FROM api_users WHERE id=$1")
-                        .bind(uid)
-                        .fetch_optional(&self.pool)
-                        .await?;
-                match doc {
-                    Some(doc) if doc["deleted"] != true && doc["unclaimed"] != true => {
-                        self.stream_upsert(uid,json!({"name":doc["artistName"],"username":doc["username"],"email":doc["email"],"image":doc["profilePicture"]})).await?;
-                        if payload["created"] == true {
-                            self.introductions(uid).await?;
-                        }
-                    }
-                    Some(doc) if doc["deleted"] == true => self.stream_delete(uid).await?,
-                    None => self.stream_delete(uid).await?,
-                    _ => {}
-                }
             }
             "mail" => {
                 self.send_mail(

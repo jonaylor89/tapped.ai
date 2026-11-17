@@ -96,16 +96,7 @@ impl EmailMessage {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct StreamDelivery {
-    pub event_id: String,
-    pub thread_id: String,
-    pub sender_id: String,
-    pub receiver_id: String,
-    pub text: String,
-    #[serde(default)]
-    pub frozen: bool,
-}
+pub use crate::domain::direct_messages::store::ServerMessage;
 
 #[async_trait]
 pub trait MailStore: Send + Sync {
@@ -115,7 +106,7 @@ pub trait MailStore: Send + Sync {
         thread: EmailThread,
         email: QueuedEmail,
     ) -> anyhow::Result<bool>;
-    async fn thread_for_stream(
+    async fn thread_for_pair(
         &self,
         performer_id: &str,
         venue_id: &str,
@@ -131,7 +122,7 @@ pub trait MailStore: Send + Sync {
         &self,
         message_id: &str,
         raw: &[u8],
-        delivery: &StreamDelivery,
+        delivery: &ServerMessage,
     ) -> anyhow::Result<bool>;
     async fn mark_inbound_delivered(&self, message_id: &str) -> anyhow::Result<()>;
     async fn mark_inbound_failed(&self, message_id: &str) -> anyhow::Result<()>;
@@ -147,23 +138,17 @@ pub trait MailStore: Send + Sync {
     }
 }
 
+/// Posts server-authored direct messages (venue auto-replies and email mirrors, inbound email
+/// replies). Idempotent per `ServerMessage::event_id`.
 #[async_trait]
-pub trait StreamGateway: Send + Sync {
-    async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()>;
-    async fn revoke_tokens(
-        &self,
-        _uid: &str,
-        _before: chrono::DateTime<Utc>,
-    ) -> anyhow::Result<()> {
-        anyhow::bail!("Stream token revocation not configured")
-    }
+pub trait MessageGateway: Send + Sync {
+    async fn send_message(&self, message: &ServerMessage) -> anyhow::Result<()>;
 }
 
 #[derive(Clone)]
 pub struct MailBridge {
     pub store: Arc<dyn MailStore>,
-    pub stream: Arc<dyn StreamGateway>,
-    pub stream_webhook_secret: String,
+    pub messages: Arc<dyn MessageGateway>,
     pub ingress_secret: String,
     pub service_secret: String,
     pub booking_domain: String,
@@ -176,8 +161,7 @@ impl MailBridge {
     pub fn disabled() -> Self {
         Self {
             store: Arc::new(InMemoryMailStore::default()),
-            stream: Arc::new(NoopStreamGateway),
-            stream_webhook_secret: "disabled".into(),
+            messages: Arc::new(NoopMessageGateway),
             ingress_secret: "disabled".into(),
             service_secret: "disabled".into(),
             booking_domain: "booking.tapped.ai".into(),
@@ -192,7 +176,7 @@ impl MailBridge {
 struct MemoryState {
     threads: Vec<EmailThread>,
     outbound: Vec<QueuedEmail>,
-    inbound: HashMap<String, (String, StreamDelivery)>,
+    inbound: HashMap<String, (String, ServerMessage)>,
     messages: Vec<EmailMessage>,
     orphans: Vec<(Vec<u8>, String)>,
 }
@@ -255,7 +239,7 @@ impl MailStore for InMemoryMailStore {
         Ok(true)
     }
 
-    async fn thread_for_stream(
+    async fn thread_for_pair(
         &self,
         performer_id: &str,
         venue_id: &str,
@@ -332,7 +316,7 @@ impl MailStore for InMemoryMailStore {
         &self,
         message_id: &str,
         _raw: &[u8],
-        _delivery: &StreamDelivery,
+        _delivery: &ServerMessage,
     ) -> anyhow::Result<bool> {
         let mut state = self.state.lock().unwrap();
         match state
@@ -607,7 +591,7 @@ impl MailStore for SqliteMailStore {
         Ok(inserted)
     }
 
-    async fn thread_for_stream(
+    async fn thread_for_pair(
         &self,
         performer_id: &str,
         venue_id: &str,
@@ -697,7 +681,7 @@ impl MailStore for SqliteMailStore {
         &self,
         message_id: &str,
         raw: &[u8],
-        delivery: &StreamDelivery,
+        delivery: &ServerMessage,
     ) -> anyhow::Result<bool> {
         let mut connection = self.connection.lock().unwrap();
         let transaction = connection.transaction()?;
@@ -766,124 +750,28 @@ impl MailStore for SqliteMailStore {
     }
 }
 
-pub struct StreamHttpGateway {
-    client: reqwest::Client,
-    api_key: String,
-    server_token: String,
-    base_url: String,
-}
-
-impl StreamHttpGateway {
-    /// Trusted local/provider-test endpoint override; never derived from a client request.
-    pub fn with_base_url(mut self, base_url: String) -> Self {
-        self.base_url = base_url;
-        self
-    }
-    pub fn new(api_key: String, secret: &str) -> anyhow::Result<Self> {
-        let server_token = jsonwebtoken::encode(
-            &jsonwebtoken::Header::new(jsonwebtoken::Algorithm::HS256),
-            &serde_json::json!({ "server": true }),
-            &jsonwebtoken::EncodingKey::from_secret(secret.as_bytes()),
-        )?;
-        Ok(Self {
-            client: crate::http::client(),
-            api_key,
-            server_token,
-            // Local stacks point this at a stub.
-            base_url: std::env::var("STREAM_BASE_URL")
-                .unwrap_or_else(|_| "https://chat.stream-io-api.com".into()),
-        })
-    }
+/// The live gateway: messages land in Postgres like member-sent ones (push + realtime included).
+pub struct PostgresMessageGateway {
+    pub pool: sqlx::PgPool,
 }
 
 #[async_trait]
-impl StreamGateway for StreamHttpGateway {
-    #[tracing::instrument(skip_all, fields(dependency = "stream", otel.kind = "client", server.address = "chat.stream-io-api.com"))]
-    async fn revoke_tokens(&self, uid: &str, before: chrono::DateTime<Utc>) -> anyhow::Result<()> {
-        let response=self.client.patch(format!("{}/users",self.base_url))
-            .query(&[("api_key",&self.api_key)]).header("Authorization",&self.server_token).header("Stream-Auth-Type","jwt")
-            .json(&serde_json::json!({"users":[{"id":uid,"set":{"revoke_tokens_issued_before":before.to_rfc3339()}}]}))
-            .send().await.map_err(|_|anyhow::anyhow!("Stream revocation network error"))?;
-        anyhow::ensure!(
-            response.status().is_success(),
-            "Stream revocation HTTP {}",
-            response.status().as_u16()
-        );
-        Ok(())
-    }
-    #[tracing::instrument(skip_all, fields(dependency = "stream", otel.kind = "client", server.address = "chat.stream-io-api.com"))]
-    async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
-        let query = self.client.post(format!("{}/channels/messaging/query", self.base_url))
-            .query(&[("api_key", &self.api_key)])
-            .header("Authorization", &self.server_token)
-            .json(&serde_json::json!({
-                "data": { "members": [delivery.sender_id.clone(), delivery.receiver_id.clone()], "created_by_id": delivery.sender_id },
-                "state": true,
-            }))
-            .send().await?.error_for_status()?;
-        let response: serde_json::Value = query.json().await?;
-        let channel_id = response
-            .pointer("/channel/id")
-            .and_then(|value| value.as_str())
-            .or_else(|| {
-                response
-                    .pointer("/channels/0/channel/id")
-                    .and_then(|value| value.as_str())
-            })
-            .ok_or_else(|| anyhow::anyhow!("Stream did not return a channel id"))?;
-        self.client.post(format!("{}/channels/messaging/{}/message", self.base_url, channel_id))
-            .query(&[("api_key", &self.api_key)])
-            .header("Authorization", &self.server_token)
-            .json(&serde_json::json!({ "message": { "text": delivery.text, "user_id": delivery.sender_id } }))
-            .send().await?.error_for_status()?;
-        self.client
-            .patch(format!(
-                "{}/channels/messaging/{}",
-                self.base_url, channel_id
-            ))
-            .query(&[("api_key", &self.api_key)])
-            .header("Authorization", &self.server_token)
-            .json(&serde_json::json!({ "set": { "frozen": delivery.frozen } }))
-            .send()
-            .await?
-            .error_for_status()?;
+impl MessageGateway for PostgresMessageGateway {
+    async fn send_message(&self, message: &ServerMessage) -> anyhow::Result<()> {
+        let mut tx = self.pool.begin().await?;
+        crate::domain::direct_messages::store::post_server_message(&mut tx, message).await?;
+        tx.commit().await?;
         Ok(())
     }
 }
 
-pub struct NoopStreamGateway;
+/// Without Postgres there is nowhere to deliver; fail so callers keep their retry state.
+pub struct NoopMessageGateway;
 #[async_trait]
-impl StreamGateway for NoopStreamGateway {
-    async fn send_message(&self, _delivery: &StreamDelivery) -> anyhow::Result<()> {
-        Ok(())
+impl MessageGateway for NoopMessageGateway {
+    async fn send_message(&self, _message: &ServerMessage) -> anyhow::Result<()> {
+        anyhow::bail!("direct messages need Postgres")
     }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct StreamUser {
-    pub id: String,
-    pub username: Option<String>,
-}
-#[derive(Debug, Deserialize)]
-pub struct StreamMember {
-    pub user: StreamUser,
-}
-#[derive(Debug, Deserialize)]
-pub struct StreamAttachment {
-    pub image_url: Option<String>,
-}
-#[derive(Debug, Deserialize)]
-pub struct StreamMessage {
-    pub id: String,
-    pub text: Option<String>,
-    #[serde(default)]
-    pub attachments: Vec<StreamAttachment>,
-}
-#[derive(Debug, Deserialize)]
-pub struct StreamWebhook {
-    pub user: StreamUser,
-    pub message: StreamMessage,
-    pub members: Vec<StreamMember>,
 }
 
 #[tracing::instrument(skip_all, fields(dependency = "slack", otel.kind = "client", server.address = "hooks.slack.com"))]
@@ -918,68 +806,6 @@ fn valid_signature(secret: &str, content: &[u8], provided: &str) -> bool {
     mac.verify_slice(&signature).is_ok()
 }
 
-pub async fn stream_before_message(
-    State(state): State<AppStateDyn>,
-    headers: HeaderMap,
-    body: Bytes,
-) -> axum::response::Response {
-    let signature = headers
-        .get("x-signature")
-        .and_then(|value| value.to_str().ok())
-        .unwrap_or_default();
-    if !valid_signature(&state.mail.stream_webhook_secret, &body, signature) {
-        return (StatusCode::UNAUTHORIZED, "invalid signature").into_response();
-    }
-    let original: serde_json::Value = match serde_json::from_slice(&body) {
-        Ok(value) => value,
-        Err(_) => return (StatusCode::BAD_REQUEST, "invalid payload").into_response(),
-    };
-    let payload: StreamWebhook = match serde_json::from_value(original.clone()) {
-        Ok(value) => value,
-        Err(_) => return (StatusCode::BAD_REQUEST, "invalid payload").into_response(),
-    };
-    // Stream requires JSON containing the whole original message. Plain text success rejects chat.
-    let accepted = || Json(serde_json::json!({"message": original["message"]})).into_response();
-    let Some(receiver) = payload
-        .members
-        .iter()
-        .find(|member| member.user.id != payload.user.id)
-    else {
-        return accepted();
-    };
-    let text = payload.message.text.clone().unwrap_or_default();
-    let attachments = payload
-        .message
-        .attachments
-        .into_iter()
-        .filter_map(|item| item.image_url)
-        .collect();
-    match bridge_direct_message(
-        &state,
-        "stream",
-        &payload.message.id,
-        &payload.user.id,
-        &receiver.user.id,
-        &text,
-        attachments,
-    )
-    .await
-    {
-        Ok(bridged) => {
-            if bridged == Bridged::VenueThread {
-                notify_slack(
-                    state.mail.slack_webhook_url.as_deref(),
-                    "new venue contact email",
-                    &format!("{} => {}", payload.user.id, receiver.user.id),
-                )
-                .await;
-            }
-            accepted()
-        }
-        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR, "store error").into_response(),
-    }
-}
-
 /// How a direct message reached email, if at all.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Bridged {
@@ -996,33 +822,6 @@ pub struct BridgePlan {
     pub receiver_id: String,
     pub kind: Bridged,
     email: QueuedEmail,
-}
-
-/// Mirrors a member-sent direct message to email (plan, then enqueue). Idempotent per
-/// `(source, message_id)`. Server deliveries (email replies, mirrors) never call this.
-pub async fn bridge_direct_message(
-    state: &AppStateDyn,
-    source: &str,
-    message_id: &str,
-    sender_id: &str,
-    receiver_id: &str,
-    text: &str,
-    attachments: Vec<String>,
-) -> anyhow::Result<Bridged> {
-    match plan_direct_message_email(
-        state,
-        source,
-        message_id,
-        sender_id,
-        receiver_id,
-        text,
-        attachments,
-    )
-    .await?
-    {
-        Some(plan) => enqueue_bridged(state, plan).await,
-        None => Ok(Bridged::None),
-    }
 }
 
 /// Reads only (mail store thread, receiver preferences), so callers can do it before opening the
@@ -1044,7 +843,7 @@ pub async fn plan_direct_message_email(
     let thread = state
         .mail
         .store
-        .thread_for_stream(sender_id, receiver_id)
+        .thread_for_pair(sender_id, receiver_id)
         .await?;
     let email_message_id = format!("<{}@{}>", Uuid::new_v4(), state.mail.booking_domain);
     let (email, kind) = if let Some(thread) = thread {
@@ -1253,12 +1052,16 @@ async fn deliver_inbound(
         }
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
     };
-    let delivery = StreamDelivery {
+    let delivery = ServerMessage {
         event_id: format!("email:{message_id}"),
         thread_id: thread.id.clone(),
         sender_id: thread.venue_id,
         receiver_id: thread.performer_id,
-        text: text.trim().to_owned(),
+        // Attachment-only replies still reach the performer (and unfreeze the conversation).
+        text: match text.trim() {
+            "" => "(replied by email without text)".to_owned(),
+            text => text.to_owned(),
+        },
         frozen: false,
     };
     let is_new = match state
@@ -1271,9 +1074,10 @@ async fn deliver_inbound(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR, "store error"),
     };
     if is_new {
-        if state.mail.stream.send_message(&delivery).await.is_err() {
+        if let Err(error) = state.mail.messages.send_message(&delivery).await {
+            tracing::warn!(?error, "failed to deliver email reply as a direct message");
             let _ = state.mail.store.mark_inbound_failed(&message_id).await;
-            return (StatusCode::SERVICE_UNAVAILABLE, "stream unavailable");
+            return (StatusCode::SERVICE_UNAVAILABLE, "messages unavailable");
         }
         if state
             .mail
@@ -1652,7 +1456,7 @@ pub async fn create_email_thread(
     let existing = match state
         .mail
         .store
-        .thread_for_stream(&user.uid, &command.venue_id)
+        .thread_for_pair(&user.uid, &command.venue_id)
         .await
     {
         Ok(thread) => thread,

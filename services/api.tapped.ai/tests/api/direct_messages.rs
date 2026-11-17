@@ -3,7 +3,6 @@ use super::{
     external_effects::{cleanup, database},
     helpers::{mock_state, spawn_app_with_state},
 };
-use async_trait::async_trait;
 use axum::{
     Json,
     extract::{Path, Query, State},
@@ -11,21 +10,24 @@ use axum::{
     response::IntoResponse,
 };
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
-use chrono::{DateTime, Duration, Utc};
+use chrono::Utc;
 use serde_json::{Value, json};
 use sqlx::PgPool;
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 use tapped_api_rs::{
     data::pg_database::PostgresDatabase,
     domain::{
         direct_messages::{
             Hub,
             http::{self, InboxQuery, MarkRead, MessagesQuery, OpenDirect, SendMessage},
-            import::{self, StreamChannelState, StreamMessage, StreamSource},
-            store::{self, NewMessage, PostOptions},
+            store::{self, NewMessage, PostOptions, ServerMessage},
         },
+        external_effects::welcome_new_profile,
         firebase_auth::FirebaseUser,
-        mail_bridge::{EmailThread, InMemoryMailStore, MailBridge, MailStore},
+        mail_bridge::{
+            EmailThread, InMemoryMailStore, MailBridge, MailStore, MessageGateway,
+            PostgresMessageGateway,
+        },
     },
     state::AppStateDyn,
 };
@@ -628,195 +630,116 @@ async fn realtime_events_reach_connected_members_over_sse() {
     cleanup(pool, admin, name).await;
 }
 
-#[derive(Default)]
-struct FakeStream {
-    channels: Vec<Value>,
-    messages: HashMap<String, Vec<Value>>,
-}
-
-#[async_trait]
-impl StreamSource for FakeStream {
-    async fn channels(
-        &self,
-        since: Option<DateTime<Utc>>,
-        limit: usize,
-    ) -> anyhow::Result<Vec<StreamChannelState>> {
-        let mut channels: Vec<StreamChannelState> = self
-            .channels
-            .iter()
-            .map(|channel| serde_json::from_value(channel.clone()).unwrap())
-            .filter(|channel: &StreamChannelState| {
-                since.is_none_or(|since| channel.channel.created_at >= since)
-            })
-            .collect();
-        channels.sort_by_key(|channel| channel.channel.created_at);
-        channels.truncate(limit);
-        Ok(channels)
+fn server_message(event: &str, from: &str, to: &str, text: &str, frozen: bool) -> ServerMessage {
+    ServerMessage {
+        event_id: event.into(),
+        thread_id: String::new(),
+        sender_id: from.into(),
+        receiver_id: to.into(),
+        text: text.into(),
+        frozen,
     }
-
-    async fn messages(
-        &self,
-        cid: &str,
-        before_id: Option<&str>,
-        limit: usize,
-    ) -> anyhow::Result<Vec<StreamMessage>> {
-        let all: Vec<StreamMessage> = self
-            .messages
-            .get(cid)
-            .cloned()
-            .unwrap_or_default()
-            .into_iter()
-            .map(|m| serde_json::from_value(m).unwrap())
-            .collect();
-        let end = before_id.map_or(all.len(), |id| all.iter().position(|m| m.id == id).unwrap());
-        Ok(all[end.saturating_sub(limit)..end].to_vec())
-    }
-}
-
-fn stream_message(id: &str, user: &str, text: &str, at: DateTime<Utc>) -> Value {
-    json!({"id": id, "text": text, "type": "regular", "user": {"id": user}, "created_at": at})
 }
 
 #[tokio::test]
-async fn stream_import_is_idempotent_and_preserves_order_reads_and_freezes() {
+async fn server_messages_freeze_and_thaw_venue_conversations_and_deduplicate_retries() {
     let Some((pool, admin, name)) = database().await else {
         return;
     };
-    users(&pool, &["ana", "ben", "venue"]).await;
-    let t0 = DateTime::parse_from_rfc3339("2026-03-01T12:00:00Z")
-        .unwrap()
-        .with_timezone(&Utc);
-    let mut source = FakeStream {
-        channels: vec![
-            json!({"channel": {"cid": "messaging:!members-ab", "created_at": t0, "created_by": {"id": "ana"}},
-               "members": [{"user_id": "ana"}, {"user_id": "ben"}],
-               "read": [{"user": {"id": "ben"}, "last_read": t0 + Duration::minutes(2)}]}),
-            json!({"channel": {"cid": "messaging:!members-av", "created_at": t0 + Duration::hours(1), "frozen": true},
-               "members": [{"user_id": "ana"}, {"user_id": "venue"}]}),
-            json!({"channel": {"cid": "messaging:!members-ghost", "created_at": t0 + Duration::hours(2)},
-               "members": [{"user_id": "ana"}, {"user_id": "ghost"}]}),
-            // Two formal members, but others post to it: a community room, not a DM.
-            json!({"channel": {"cid": "messaging:community", "created_at": t0 + Duration::hours(3)},
-               "members": [{"user_id": "ben"}, {"user_id": "venue"}]}),
-        ],
-        messages: HashMap::new(),
-    };
-    // More than one Stream page (300) so pagination is exercised.
-    let mut history: Vec<Value> = (0..305)
-        .map(|i| {
-            stream_message(
-                &format!("s{i:03}"),
-                if i % 3 == 0 { "ben" } else { "ana" },
-                &format!("message {i}"),
-                t0 + Duration::minutes(i),
-            )
-        })
-        .collect();
-    history.push(json!({"id": "deleted", "text": "", "type": "deleted", "user": {"id": "ana"}, "created_at": t0 + Duration::days(1), "deleted_at": t0 + Duration::days(1)}));
-    history.push(json!({"id": "photo", "text": "", "type": "regular", "user": {"id": "ben"}, "created_at": t0 + Duration::days(2),
-                        "attachments": [{"type": "image", "image_url": "https://cdn.example.test/p.jpg"}]}));
-    source
-        .messages
-        .insert("messaging:!members-ab".into(), history);
-    source.messages.insert(
-        "messaging:!members-av".into(),
-        vec![stream_message(
-            "v1",
-            "ana",
-            "venue contact",
-            t0 + Duration::hours(1),
-        )],
-    );
-
-    source.messages.insert(
-        "messaging:community".into(),
-        vec![
-            stream_message("c1", "ben", "anyone free friday?", t0 + Duration::hours(3)),
-            stream_message("c2", "ana", "me!", t0 + Duration::hours(4)),
-        ],
-    );
-
-    let dry = import::run(&pool, &source, true).await.unwrap();
-    assert_eq!(dry.messages_imported, 307);
-    let count: i64 = sqlx::query_scalar("SELECT count(*) FROM messages")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-    assert_eq!(count, 0, "a dry run writes nothing");
-
-    let first = import::run(&pool, &source, false).await.unwrap();
-    assert_eq!(first.channels_seen, 4);
-    assert_eq!(first.channels_imported, 2);
-    assert_eq!(first.channels_skipped["unknown_member"], 1);
-    assert_eq!(first.channels_skipped["community"], 1);
-    let community: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM conversations WHERE legacy_stream_cid='messaging:community'",
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(community, 0);
-    assert_eq!(first.messages_imported, 307);
-    assert_eq!(first.messages_skipped["deleted"], 1);
-
-    let second = import::run(&pool, &source, false).await.unwrap();
-    assert_eq!(
-        second.messages_imported, 0,
-        "re-running imports nothing new"
-    );
-    assert_eq!(second.messages_existing, 307);
-
+    users(&pool, &["artist", "venue"]).await;
     let (state, _) = state(&pool);
-    let ben = inbox(&state, "ben").await;
-    let ab = &ben.conversations[0];
-    assert_eq!(ab.last_seq, 306);
-    assert_eq!(
-        ab.last_message.as_ref().unwrap().attachments[0].url,
-        "https://cdn.example.test/p.jpg"
+    let gateway = PostgresMessageGateway { pool: pool.clone() };
+
+    // The venue's auto-reply arrives first and freezes the conversation: the venue is not on
+    // tapped, so the performer has to wait for an email answer.
+    let auto_reply = server_message(
+        "venue-auto-reply:artist:venue",
+        "venue",
+        "artist",
+        "we book via email",
+        true,
     );
-    // Ben read through minute 2 (seq 3), then sent s003 (seq 4) and later messages: reading
-    // advances with each of his sends, so only messages after his last one are unread.
-    let ben_last_sent: i64 = sqlx::query_scalar(
-        "SELECT max(seq) FROM messages WHERE conversation_id=$1 AND author_id='ben'",
-    )
-    .bind(ab.id)
-    .fetch_one(&pool)
-    .await
-    .unwrap();
-    assert_eq!(ab.unread_count, 306 - ben_last_sent);
-    let ordered: Vec<String> = sqlx::query_scalar(
-        "SELECT legacy_stream_id FROM messages WHERE conversation_id=$1 ORDER BY seq LIMIT 3",
-    )
-    .bind(ab.id)
-    .fetch_all(&pool)
-    .await
-    .unwrap();
-    assert_eq!(ordered, vec!["s000", "s001", "s002"]);
-    let venue = inbox(&state, "venue").await;
-    assert!(venue.conversations[0].frozen);
-    let pushes: i64 = sqlx::query_scalar("SELECT count(*) FROM external_effect_outbox")
-        .fetch_one(&pool)
+    gateway.send_message(&auto_reply).await.unwrap();
+    gateway.send_message(&auto_reply).await.unwrap();
+    let conversation = inbox(&state, "artist").await.conversations.remove(0);
+    assert!(conversation.frozen);
+    assert_eq!(
+        conversation.last_seq, 1,
+        "a retried delivery is stored once"
+    );
+    assert_eq!(conversation.unread_count, 1);
+    let (status, _) = send(&state, "artist", conversation.id, Uuid::new_v4(), "hello?").await;
+    assert_eq!(
+        status,
+        StatusCode::CONFLICT,
+        "members cannot post while frozen"
+    );
+
+    // The venue answers the email: the reply lands as their message and opens the conversation.
+    let long_reply = "yes! ".repeat(2_000);
+    gateway
+        .send_message(&server_message(
+            "email:<reply@venue>",
+            "venue",
+            "artist",
+            &long_reply,
+            false,
+        ))
         .await
         .unwrap();
-    assert_eq!(pushes, 0, "imports never notify anyone");
-
-    // A delta after new Stream messages appends them after the existing history.
-    source
-        .messages
-        .get_mut("messaging:!members-av")
-        .unwrap()
-        .push(stream_message(
-            "v2",
-            "venue",
-            "we replied",
-            t0 + Duration::hours(3),
-        ));
-    let delta = import::run(&pool, &source, false).await.unwrap();
-    assert_eq!(delta.messages_imported, 1);
-    let venue = inbox(&state, "venue").await;
+    let conversation = inbox(&state, "artist").await.conversations.remove(0);
+    assert!(!conversation.frozen);
+    let reply = conversation.last_message.unwrap();
     assert_eq!(
-        venue.conversations[0].last_message.as_ref().unwrap().text,
-        "we replied"
+        reply.text.chars().count(),
+        store::MAX_MESSAGE_CHARS,
+        "long email replies are cut, not lost"
     );
+    assert!(reply.text.ends_with('…'));
+    let (status, _) = send(
+        &state,
+        "artist",
+        conversation.id,
+        Uuid::new_v4(),
+        "see you friday",
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    cleanup(pool, admin, name).await;
+}
+
+#[tokio::test]
+async fn new_profiles_are_welcomed_by_the_founders_once() {
+    let Some((pool, admin, name)) = database().await else {
+        return;
+    };
+    // Only one founder account exists here: missing founders are skipped, not fatal.
+    users(&pool, &["8yYVxpQ7cURSzNfBsaBGF7A7kkv2", "newbie", "ghost"]).await;
+    let (state, _) = state(&pool);
+    for _ in 0..2 {
+        let mut tx = pool.begin().await.unwrap();
+        welcome_new_profile(&mut tx, &json!({"id": "newbie"}))
+            .await
+            .unwrap();
+        welcome_new_profile(&mut tx, &json!({"id": "ghost", "unclaimed": true}))
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    }
+    let welcome = inbox(&state, "newbie").await.conversations;
+    assert_eq!(welcome.len(), 1);
+    assert_eq!(
+        welcome[0].last_seq, 2,
+        "replaying the creation does not repeat the welcome"
+    );
+    assert_eq!(welcome[0].unread_count, 2);
+    assert!(!welcome[0].frozen);
+    assert!(inbox(&state, "ghost").await.conversations.is_empty());
+    let pushes: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM external_effect_outbox WHERE kind='push'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert_eq!(pushes, 0, "no devices registered yet");
     cleanup(pool, admin, name).await;
 }

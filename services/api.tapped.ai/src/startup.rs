@@ -8,8 +8,8 @@ use crate::{
         firebase_auth::verify_firebase_token,
         founder_notifications::{SlackWebhook, run_worker as run_founder_worker},
         mail_bridge::{
-            MailBridge, SqliteMailStore, StreamHttpGateway, create_email_thread,
-            enqueue_service_email, inbound_email, postmark_inbound_email, stream_before_message,
+            MailBridge, PostgresMessageGateway, SqliteMailStore, create_email_thread,
+            enqueue_service_email, inbound_email, postmark_inbound_email,
         },
         mail_composer::OpenAiEmailComposer,
     },
@@ -89,18 +89,14 @@ impl Application {
 
         let mail_store_path =
             std::env::var("MAIL_STORE_PATH").unwrap_or_else(|_| "tapped-mail.sqlite3".into());
-        let stream_secret = std::env::var("STREAM_SECRET").wrap_err("STREAM_SECRET is required")?;
-        let stream_key = std::env::var("STREAM_KEY").wrap_err("STREAM_KEY is required")?;
         let mail = MailBridge {
             store: Arc::new(
                 SqliteMailStore::open(&mail_store_path)
                     .map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?,
             ),
-            stream: Arc::new(
-                StreamHttpGateway::new(stream_key, &stream_secret)
-                    .map_err(|error| color_eyre::eyre::eyre!(error.to_string()))?,
-            ),
-            stream_webhook_secret: stream_secret,
+            messages: Arc::new(PostgresMessageGateway {
+                pool: postgres.clone(),
+            }),
             ingress_secret: std::env::var("MAIL_INGRESS_SECRET")
                 .wrap_err("MAIL_INGRESS_SECRET is required")?,
             service_secret: std::env::var("MAIL_API_SECRET")
@@ -335,8 +331,6 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
             direct_messages::http::send_message
         ))
         .routes(routes!(direct_messages::http::mark_read))
-        .routes(routes!(app_functions::revoke_stream_user_tokens))
-        .routes(routes!(app_functions::stream_user_token))
         .routes(routes!(places::get_place_photo))
         .routes(routes!(places::reverse_geocode))
         .routes(routes!(places::get_locality_place))
@@ -391,10 +385,6 @@ pub fn api_router(state: AppStateDyn, rate_limits: &RateLimits) -> (Router, Arc<
         )
         .route("/swagger/json", get(serve_docs))
         .route("/", get(root))
-        .route(
-            "/webhooks/stream/before-message",
-            post(stream_before_message),
-        )
         .route(
             "/webhooks/firebase/auth",
             post(crate::domain::auth_lifecycle::webhook),

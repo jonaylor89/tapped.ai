@@ -95,19 +95,13 @@ unless the API has `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY
 
 ## Not emulated
 
-- Google Places, Geocoding, OpenAI, Spotify and Stream Chat are served by `stub.py` on `:8090`
-  (stdlib Python: a few fixed Richmond places such as "The Bluebird", a canned email body, two
-  Spotify artists such as `4Z8W4fKeB5YxbusRsdQVPb`, and an in-memory Stream Chat with WebSocket
-  events). The API points at it with `GOOGLE_PLACES_BASE_URL`, `GOOGLE_GEOCODE_URL`,
-  `OPENAI_CHAT_COMPLETIONS_URL`, `SPOTIFY_TOKEN_URL`, `SPOTIFY_API_BASE_URL` (plus any
-  `SPOTIFY_CLIENT_ID`/`SECRET`) and `STREAM_BASE_URL`. Chat state resets when the stub restarts.
-- The Stream iOS SDK only speaks https/wss, so the stub also listens with TLS on `:8443`. Create and
-  trust the cert, run the stub with it, and point the app at it:
-
-  ```sh
-  platform/local/stream-cert.sh <udid>   # writes platform/local/.certs, trusts it in the simulator
-  STUB_TLS_CERT=platform/local/.certs/stub.pem STUB_TLS_KEY=platform/local/.certs/stub-key.pem \
-    python3 platform/local/stub.py
-  # app: TAPPED_STREAM_BASE_URL=https://localhost:8443 (env or `defaults write`, as above)
-  ```
-- Push notifications: use `xcrun simctl push` with a payload file.
+- Google Places, Geocoding, OpenAI and Spotify are served by `stub.py` on `:8090` (stdlib Python: a
+  few fixed Richmond places such as "The Bluebird", a canned email body and two Spotify artists such
+  as `4Z8W4fKeB5YxbusRsdQVPb`). The API points at it with `GOOGLE_PLACES_BASE_URL`,
+  `GOOGLE_GEOCODE_URL`, `OPENAI_CHAT_COMPLETIONS_URL`, `SPOTIFY_TOKEN_URL` and `SPOTIFY_API_BASE_URL`
+  (plus any `SPOTIFY_CLIENT_ID`/`SECRET`).
+- Direct messages are real: the local API serves them from Postgres, and `seed.sql` creates three
+  conversations for `local-alice` (one unread from `local-bluebird`, and a frozen one with
+  `local-capital`, an unclaimed venue awaiting an email reply).
+- Push notifications: use `xcrun simctl push` with a payload file (a DM push carries
+  `{"conversationId": "00000000-0000-4000-8000-0000000000c1"}` and opens that conversation).

@@ -44,14 +44,12 @@ them at the local API and web app.
 
 ## Identity/provider worker
 
-`identity_worker` uses transaction-scoped per-UID locks to serialize Stream signup,
-profile and deletion calls independently of Auth/API mutation locks. Configure a
-Postgres pool with at least two connections (the worker currently uses five): a
-provider-lock transaction stays open while current state is read through the pool.
-Contended/failed jobs remain retryable; provider/database delivery is not exactly-once.
-
-The default Stream endpoint is `https://chat.stream-io-api.com`. `STREAM_BASE_URL`
-is an optional trusted deployment/test override; never derive it from request input.
+`identity_worker` uses transaction-scoped per-UID locks to serialize signup and deletion side
+effects (Slack, welcome email) independently of Auth/API mutation locks. Configure a Postgres pool
+with at least two connections (the worker currently uses five): a lock transaction stays open while
+current state is read through the pool. Contended/failed jobs remain retryable; delivery is not
+exactly-once. Founder welcome direct messages are not a worker job: they are posted in the
+transaction that creates the profile.
 
 Push goes per device token: `device_tokens.provider='apns'` rows (current iOS builds)
 are sent directly to APNs, `'fcm'` rows (builds before the APNs cutover) still go through
@@ -63,7 +61,7 @@ a key, APNs pushes stay queued in the outbox and retry. 410/`BadDeviceToken` pru
 
 ## Direct messages
 
-In-house replacement for Stream Chat (`src/domain/direct_messages`). Postgres is the only store:
+Direct messages (`src/domain/direct_messages`; they replaced Stream Chat). Postgres is the only store:
 
 | Table | Role |
 | --- | --- |
@@ -95,30 +93,11 @@ and is closed on shutdown so deploys drain. A connection that falls 256 events b
 dropped instead of blocking others. Nothing is replayed: clients resync on `ready`/`resync` and
 fill `seq` gaps with `?after=`.
 
-### Importing Stream history (`dm_import`)
+### Stream history
 
-`dm_import` copies every Stream `messaging` channel into these tables. It is idempotent and
-resumable: conversations upsert on `legacy_stream_cid` (or the member pair), messages on
-`legacy_stream_id`, read cursors only move forward, and each channel commits on its own. It skips
-deleted, system and thread-only messages; channels whose members are not in `users`; and
-community channels (two formal members that others post to, such as `tapped-promoter-chat`). The
-JSON summary counts every skip. Imports send no pushes or realtime events. The API container
-already has `DATABASE_URL` and the Stream keys:
-
-```sh
-tailscale ssh root@tapped-prod docker exec tapped-api-1 dm_import --dry-run
-tailscale ssh root@tapped-prod docker exec tapped-api-1 dm_import
-```
-
-### Cutover
-
-Old app builds talk to Stream directly, so the switch happens in two deploys:
-
-1. Deploy this API (DM endpoints added; the Stream token, webhook and server-side Stream sends
-   still serve old builds). Run `dm_import --dry-run`, check the skip counts, then `dm_import`.
-2. Ship the iOS build that uses `TappedChatRepository` (it never talks to Stream).
-3. Once that build is live, set `app_config.ios_minimum_app_version` to it so old builds stop
-   writing to Stream, deploy the "retire Stream" change, and run `dm_import` again to pick up
-   messages sent on Stream since step 1 (they are appended after existing history).
-4. Compare `SELECT count(*) FROM messages WHERE legacy_stream_id IS NOT NULL` with the importer
-   summary, then remove `STREAM_KEY`/`STREAM_SECRET` and delete the Stream app.
+Conversations and messages from Stream Chat were imported once on 2026-11-18, before the app had
+live users: 2,655 conversations and 7,609 messages. `legacy_stream_cid` and `legacy_stream_id`
+record where each came from. The one-off importer was deleted afterwards; it is in the history of
+`src/domain/direct_messages/import.rs`. It skipped deleted, system and thread-only messages,
+channels whose members had no `users` row, group channels, and the `tapped-promoter-chat`
+community room.

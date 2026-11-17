@@ -1,10 +1,7 @@
 #!/usr/bin/env python3
-"""Post-deploy Stream ↔ email smoke test using real Firebase, SMTP, IMAP, and Stream services."""
+"""Post-deploy direct message ↔ email smoke test using real Firebase, SMTP, IMAP and the Tapped API."""
 
-import base64
 import email
-import hashlib
-import hmac
 import imaplib
 import json
 import os
@@ -25,24 +22,17 @@ def required(name: str) -> str:
     return value
 
 
-def request_json(url: str, payload: dict, headers: dict[str, str] | None = None) -> dict:
+def request_json(url: str, payload: dict | None, headers: dict[str, str] | None = None) -> dict:
+    """POSTs `payload` as JSON, or GETs when it is None."""
     request = urllib.request.Request(
         url,
-        data=json.dumps(payload, separators=(",", ":")).encode(),
+        data=None if payload is None else json.dumps(payload, separators=(",", ":")).encode(),
         headers={"content-type": "application/json", "User-Agent": "Tapped-Mail-Deployment-Smoke/1.0", **(headers or {})},
-        method="POST",
+        method="GET" if payload is None else "POST",
     )
     with urllib.request.urlopen(request, timeout=30) as response:
         body = response.read()
         return json.loads(body) if body else {}
-
-
-def stream_token(secret: str) -> str:
-    encode = lambda value: base64.urlsafe_b64encode(value).rstrip(b"=")
-    header = encode(b'{"alg":"HS256","typ":"JWT"}')
-    payload = encode(b'{"server":true}')
-    signature = encode(hmac.new(secret.encode(), header + b"." + payload, hashlib.sha256).digest())
-    return b".".join((header, payload, signature)).decode()
 
 
 def wait_for_email(host: str, username: str, password: str, marker: str, timeout: int) -> tuple[str, str]:
@@ -81,15 +71,14 @@ def send_reply(host: str, port: int, sender: str, recipient: str, parent_id: str
         smtp.send_message(message)
 
 
-def stream_has_message(api_key: str, secret: str, performer_id: str, venue_id: str, marker: str) -> bool:
-    query = urllib.parse.urlencode({"api_key": api_key})
-    response = request_json(
-        f"https://chat.stream-io-api.com/channels/messaging/query?{query}",
-        {"data": {"members": [performer_id, venue_id], "created_by_id": venue_id}, "state": True},
-        {"Authorization": stream_token(secret)},
+def reply_reached_messages(api_url: str, id_token: str, venue_id: str, marker: str) -> bool:
+    """The venue's email reply shows up in the performer's conversation with the venue."""
+    auth = {"Authorization": f"Bearer {id_token}"}
+    conversation = request_json(f"{api_url}/app/v1/conversations/direct", {"userId": venue_id}, auth)
+    page = request_json(f"{api_url}/app/v1/conversations/{conversation['id']}/messages?limit=20", None, auth)
+    return any(
+        message.get("text") == marker and message.get("authorId") == venue_id for message in page.get("messages", [])
     )
-    messages = response.get("messages") or response.get("channel", {}).get("messages") or []
-    return any(message.get("text") == marker for message in messages)
 
 
 def main() -> None:
@@ -103,15 +92,12 @@ def main() -> None:
     imap_password = required("MAIL_SMOKE_IMAP_PASSWORD")
     smtp_host = required("MAIL_SMOKE_SMTP_HOST")
     smtp_port = int(os.environ.get("MAIL_SMOKE_SMTP_PORT") or "25")
-    stream_key = required("STREAM_KEY")
-    stream_secret = required("STREAM_SECRET")
     timeout = int(os.environ.get("MAIL_SMOKE_TIMEOUT_SECONDS", "180"))
 
     auth = request_json(
         f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={urllib.parse.quote(web_api_key)}",
         {"email": test_email, "password": test_password, "returnSecureToken": True},
     )
-    performer_id = auth["localId"]
     marker = f"mail-smoke-{uuid.uuid4()}"
     subject = f"deployed mail smoke {marker}"
     request_json(
@@ -125,11 +111,11 @@ def main() -> None:
 
     deadline = time.time() + timeout
     while time.time() < deadline:
-        if stream_has_message(stream_key, stream_secret, performer_id, venue_id, marker):
+        if reply_reached_messages(api_url, auth["idToken"], venue_id, marker):
             print(json.dumps({"status": "passed", "marker": marker}))
             return
         time.sleep(5)
-    raise TimeoutError(f"Stream message {marker!r} did not arrive within {timeout}s")
+    raise TimeoutError(f"direct message {marker!r} did not arrive within {timeout}s")
 
 
 if __name__ == "__main__":

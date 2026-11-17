@@ -15,8 +15,9 @@ use tapped_api_rs::{
     domain::{
         firebase_auth::FirebaseUser,
         mail_bridge::{
-            CreateEmailThread, EmailThread, InMemoryMailStore, MailBridge, MailStore, QueuedEmail,
-            SqliteMailStore, StreamDelivery, StreamGateway, create_email_thread,
+            Bridged, CreateEmailThread, EmailThread, InMemoryMailStore, MailBridge, MailStore,
+            MessageGateway, QueuedEmail, ServerMessage, SqliteMailStore, create_email_thread,
+            enqueue_bridged, plan_direct_message_email,
         },
         mail_composer::StaticEmailComposer,
         models::{booking::Booking, opportunity::Opportunity, review::Review, user::UserModel},
@@ -88,14 +89,14 @@ impl Database for ThreadDatabase {
 }
 
 #[derive(Default)]
-struct RecordingStream {
-    deliveries: Mutex<Vec<StreamDelivery>>,
+struct RecordingMessages {
+    deliveries: Mutex<Vec<ServerMessage>>,
     failures_remaining: AtomicUsize,
 }
 
 #[async_trait]
-impl StreamGateway for RecordingStream {
-    async fn send_message(&self, delivery: &StreamDelivery) -> anyhow::Result<()> {
+impl MessageGateway for RecordingMessages {
+    async fn send_message(&self, delivery: &ServerMessage) -> anyhow::Result<()> {
         if self
             .failures_remaining
             .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |remaining| {
@@ -103,7 +104,7 @@ impl StreamGateway for RecordingStream {
             })
             .is_ok()
         {
-            anyhow::bail!("temporary Stream failure");
+            anyhow::bail!("temporary Postgres failure");
         }
         self.deliveries.lock().unwrap().push(delivery.clone());
         Ok(())
@@ -119,7 +120,8 @@ fn sign(secret: &str, body: &[u8]) -> String {
 async fn test_app() -> (
     super::helpers::TestApp,
     Arc<InMemoryMailStore>,
-    Arc<RecordingStream>,
+    Arc<RecordingMessages>,
+    AppStateDyn,
 ) {
     let store = Arc::new(InMemoryMailStore::default());
     store
@@ -134,7 +136,7 @@ async fn test_app() -> (
         })
         .await
         .unwrap();
-    let stream = Arc::new(RecordingStream::default());
+    let messages = Arc::new(RecordingMessages::default());
     let state = AppStateDyn {
         database: Arc::new(MockDatabase),
         search: Arc::new(MockSearch),
@@ -150,8 +152,7 @@ async fn test_app() -> (
         dm_hub: Default::default(),
         mail: MailBridge {
             store: store.clone(),
-            stream: stream.clone(),
-            stream_webhook_secret: "stream-secret".into(),
+            messages: messages.clone(),
             ingress_secret: "ingress-secret".into(),
             service_secret: "service-secret".into(),
             booking_domain: "booking.tapped.ai".into(),
@@ -160,23 +161,36 @@ async fn test_app() -> (
             slack_webhook_url: None,
         },
     };
-    (spawn_app_with_state(state).await, store, stream)
+    (
+        spawn_app_with_state(state.clone()).await,
+        store,
+        messages,
+        state,
+    )
 }
 
-fn stream_payload() -> Vec<u8> {
-    serde_json::to_vec(&serde_json::json!({
-        "user": {"id": "artist-1", "username": "the-band"},
-        "members": [
-            {"user": {"id": "artist-1", "username": "the-band"}},
-            {"user": {"id": "venue-1", "username": "venue"}}
-        ],
-        "message": {
-            "id": "stream-message-1",
-            "text": "Could we play next Friday?",
-            "attachments": [{"image_url": "https://cdn.example/poster.jpg"}]
-        }
-    }))
+/// What `POST /conversations/{id}/messages` does for a DM to a venue with an email thread.
+async fn artist_messages_venue(
+    state: &AppStateDyn,
+    message_id: &str,
+    text: &str,
+    attachments: Vec<String>,
+) -> Bridged {
+    match plan_direct_message_email(
+        state,
+        "dm",
+        message_id,
+        "artist-1",
+        "venue-1",
+        text,
+        attachments,
+    )
+    .await
     .unwrap()
+    {
+        Some(plan) => enqueue_bridged(state, plan).await.unwrap(),
+        None => Bridged::None,
+    }
 }
 
 #[tokio::test]
@@ -274,7 +288,7 @@ async fn existing_thread_id_cannot_be_reassigned_to_another_performer() {
     );
     assert!(
         store
-            .thread_for_stream("artist-2", "venue")
+            .thread_for_pair("artist-2", "venue")
             .await
             .unwrap()
             .is_none()
@@ -300,8 +314,7 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
         dm_hub: Default::default(),
         mail: MailBridge {
             store: store.clone(),
-            stream: Arc::new(RecordingStream::default()),
-            stream_webhook_secret: "stream-secret".into(),
+            messages: Arc::new(RecordingMessages::default()),
             ingress_secret: "ingress-secret".into(),
             service_secret: "service-secret".into(),
             booking_domain: "booking.tapped.ai".into(),
@@ -344,7 +357,7 @@ async fn repeated_venue_request_appends_to_the_existing_email_thread() {
 
 #[tokio::test]
 async fn creating_email_thread_requires_firebase_authentication() {
-    let (app, store, _) = test_app().await;
+    let (app, store, _, _) = test_app().await;
     let response = app
         .api_client
         .post(format!("{}/app/v1/venue-email-threads", app.address))
@@ -361,7 +374,7 @@ async fn creating_email_thread_requires_firebase_authentication() {
 
 #[tokio::test]
 async fn app_function_routes_require_firebase_authentication() {
-    let (app, store, _) = test_app().await;
+    let (app, store, _, _) = test_app().await;
     for path in [
         "spotify/artists/4Z8W4fKeB5YxbusRsdQVPb",
         "spotify/artists/4Z8W4fKeB5YxbusRsdQVPb/top-tracks",
@@ -374,13 +387,10 @@ async fn app_function_routes_require_firebase_authentication() {
             .unwrap();
         assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
     }
-    for (path, body) in [
-        ("stream-token", serde_json::json!({})),
-        (
-            "opportunity-venue-notifications",
-            serde_json::json!({ "opportunityIds": ["op-1"], "note": "hello" }),
-        ),
-    ] {
+    for (path, body) in [(
+        "opportunity-venue-notifications",
+        serde_json::json!({ "opportunityIds": ["op-1"], "note": "hello" }),
+    )] {
         let response = app
             .api_client
             .post(format!("{}/app/v1/{path}", app.address))
@@ -394,21 +404,20 @@ async fn app_function_routes_require_firebase_authentication() {
 }
 
 #[tokio::test]
-async fn stream_message_is_queued_as_a_threaded_email() {
-    let (app, store, _) = test_app().await;
-    let body = stream_payload();
-    let response = app
-        .api_client
-        .post(format!("{}/webhooks/stream/before-message", app.address))
-        .header("x-signature", sign("stream-secret", &body))
-        .body(body)
-        .send()
-        .await
-        .unwrap();
-
-    assert_eq!(response.status(), reqwest::StatusCode::OK);
+async fn direct_message_to_a_venue_continues_its_email_thread_once() {
+    let (_app, store, _, state) = test_app().await;
+    for _ in 0..2 {
+        artist_messages_venue(
+            &state,
+            "message-1",
+            "Could we play next Friday?",
+            vec!["https://cdn.example/poster.jpg".into()],
+        )
+        .await;
+    }
     let queued = store.outbound();
-    assert_eq!(queued.len(), 1);
+    assert_eq!(queued.len(), 1, "a retried message is emailed once");
+    assert_eq!(queued[0].event_id, "dm:message-1");
     assert_eq!(queued[0].from, "the-band@booking.tapped.ai");
     assert_eq!(queued[0].to, vec!["bookings@venue.example"]);
     assert_eq!(queued[0].in_reply_to, "<initial@booking.tapped.ai>");
@@ -420,26 +429,8 @@ async fn stream_message_is_queued_as_a_threaded_email() {
 }
 
 #[tokio::test]
-async fn duplicate_stream_webhook_does_not_queue_duplicate_email() {
-    let (app, store, _) = test_app().await;
-    let body = stream_payload();
-    for _ in 0..2 {
-        let response = app
-            .api_client
-            .post(format!("{}/webhooks/stream/before-message", app.address))
-            .header("x-signature", sign("stream-secret", &body))
-            .body(body.clone())
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), reqwest::StatusCode::OK);
-    }
-    assert_eq!(store.outbound().len(), 1);
-}
-
-#[tokio::test]
 async fn signed_service_email_is_queued_without_postmark() {
-    let (app, store, _) = test_app().await;
+    let (app, store, _, _) = test_app().await;
     let body = serde_json::to_vec(&serde_json::json!({
         "From": "no-reply@tapped.ai", "To": "fan@example.com", "Subject": "Welcome",
         "HtmlBody": "<strong>Hello</strong>", "MessageStream": "outbound",
@@ -469,55 +460,26 @@ async fn signed_service_email_is_queued_without_postmark() {
 }
 
 #[tokio::test]
-async fn stream_success_echoes_original_json_and_supports_attachment_only_messages() {
-    let (app, _, _) = test_app().await;
-    for venue in [true, false] {
-        let mut payload: serde_json::Value = serde_json::from_slice(&stream_payload()).unwrap();
-        payload["message"]["customData"] = serde_json::json!({"must":"survive"});
-        payload["message"]["text"] = serde_json::Value::Null;
-        if !venue {
-            payload["members"][1]["user"]["id"] = serde_json::json!("no-email-thread");
-        }
-        let body = serde_json::to_vec(&payload).unwrap();
-        let response = reqwest::Client::new()
-            .post(format!("{}/webhooks/stream/before-message", app.address))
-            .header("x-signature", sign("stream-secret", &body))
-            .body(body)
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(response.status(), reqwest::StatusCode::OK);
-        let response: serde_json::Value = response.json().await.unwrap();
-        assert_eq!(response["message"], payload["message"]);
-    }
+async fn attachment_only_direct_messages_still_reach_the_venue() {
+    let (_app, store, _, state) = test_app().await;
+    let bridged = artist_messages_venue(
+        &state,
+        "message-2",
+        "",
+        vec!["https://cdn.example/poster.jpg".into()],
+    )
+    .await;
+    assert_eq!(bridged, Bridged::VenueThread);
+    assert_eq!(
+        store.outbound()[0].text_body.lines().next(),
+        Some("(attachment)")
+    );
 }
 
 #[tokio::test]
-async fn invalid_stream_signature_is_rejected() {
-    let (app, store, _) = test_app().await;
-    let response = app
-        .api_client
-        .post(format!("{}/webhooks/stream/before-message", app.address))
-        .header("x-signature", "bad")
-        .body(stream_payload())
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
-    assert!(store.outbound().is_empty());
-}
-
-#[tokio::test]
-async fn email_reply_is_delivered_to_stream_exactly_once() {
-    let (app, store, stream) = test_app().await;
-    let stream_body = stream_payload();
-    app.api_client
-        .post(format!("{}/webhooks/stream/before-message", app.address))
-        .header("x-signature", sign("stream-secret", &stream_body))
-        .body(stream_body)
-        .send()
-        .await
-        .unwrap();
+async fn email_reply_becomes_a_direct_message_exactly_once() {
+    let (app, store, messages, state) = test_app().await;
+    artist_messages_venue(&state, "message-1", "Could we play next Friday?", vec![]).await;
     let outbound_message_id = store.outbound()[0].message_id.clone();
 
     let raw_email = format!(
@@ -539,7 +501,7 @@ async fn email_reply_is_delivered_to_stream_exactly_once() {
         assert_eq!(response.status(), reqwest::StatusCode::OK);
     }
 
-    let deliveries = stream.deliveries.lock().unwrap();
+    let deliveries = messages.deliveries.lock().unwrap();
     assert_eq!(deliveries.len(), 1);
     assert_eq!(deliveries[0].sender_id, "venue-1");
     assert_eq!(deliveries[0].receiver_id, "artist-1");
@@ -547,16 +509,9 @@ async fn email_reply_is_delivered_to_stream_exactly_once() {
 }
 
 #[tokio::test]
-async fn authenticated_postmark_reply_is_delivered_to_stream() {
-    let (app, store, stream) = test_app().await;
-    let stream_body = stream_payload();
-    app.api_client
-        .post(format!("{}/webhooks/stream/before-message", app.address))
-        .header("x-signature", sign("stream-secret", &stream_body))
-        .body(stream_body)
-        .send()
-        .await
-        .unwrap();
+async fn authenticated_postmark_reply_becomes_a_direct_message() {
+    let (app, store, messages, state) = test_app().await;
+    artist_messages_venue(&state, "message-1", "Could we play next Friday?", vec![]).await;
     let parent = store.outbound()[0].message_id.clone();
     let payload = serde_json::json!({
         "From": "Booker <bookings@venue.example>",
@@ -585,7 +540,7 @@ async fn authenticated_postmark_reply_is_delivered_to_stream() {
         .unwrap();
 
     assert_eq!(response.status(), reqwest::StatusCode::OK);
-    let deliveries = stream.deliveries.lock().unwrap();
+    let deliveries = messages.deliveries.lock().unwrap();
     assert_eq!(deliveries.len(), 1);
     assert_eq!(deliveries[0].text, "Yes, Friday works.");
     assert_eq!(deliveries[0].sender_id, "venue-1");
@@ -593,7 +548,7 @@ async fn authenticated_postmark_reply_is_delivered_to_stream() {
 
 #[tokio::test]
 async fn postmark_inbound_requires_basic_authentication() {
-    let (app, _, stream) = test_app().await;
+    let (app, _, messages, _) = test_app().await;
     let response = app
         .api_client
         .post(format!("{}/webhooks/postmark/inbound", app.address))
@@ -602,12 +557,12 @@ async fn postmark_inbound_requires_basic_authentication() {
         .await
         .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
-    assert!(stream.deliveries.lock().unwrap().is_empty());
+    assert!(messages.deliveries.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn postmark_acknowledges_and_persists_unknown_threads() {
-    let (app, store, stream) = test_app().await;
+    let (app, store, messages, _) = test_app().await;
     let authorization = format!("Basic {}", STANDARD.encode("postmark:ingress-secret"));
     let response = app
         .api_client
@@ -626,13 +581,13 @@ async fn postmark_acknowledges_and_persists_unknown_threads() {
         .await
         .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
-    assert!(stream.deliveries.lock().unwrap().is_empty());
+    assert!(messages.deliveries.lock().unwrap().is_empty());
     assert_eq!(store.orphan_count(), 1);
 }
 
 #[tokio::test]
 async fn signed_smtp_envelope_recipient_takes_precedence_over_to_header() {
-    let (app, _, stream) = test_app().await;
+    let (app, _, messages, _) = test_app().await;
     let raw = b"From: venue@example.com\r\nTo: somebody-else@example.com\r\nMessage-ID: <envelope@venue.example>\r\nIn-Reply-To: <initial@booking.tapped.ai>\r\n\r\nEnvelope routed".to_vec();
     let timestamp = chrono::Utc::now().timestamp().to_string();
     let envelope = "the-band@booking.tapped.ai";
@@ -655,27 +610,23 @@ async fn signed_smtp_envelope_recipient_takes_precedence_over_to_header() {
         .await
         .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::OK);
-    assert_eq!(stream.deliveries.lock().unwrap()[0].text, "Envelope routed");
+    assert_eq!(
+        messages.deliveries.lock().unwrap()[0].text,
+        "Envelope routed"
+    );
 }
 
 #[tokio::test]
-async fn failed_stream_delivery_is_retried_without_losing_email() {
-    let (app, store, stream) = test_app().await;
-    let stream_body = stream_payload();
-    app.api_client
-        .post(format!("{}/webhooks/stream/before-message", app.address))
-        .header("x-signature", sign("stream-secret", &stream_body))
-        .body(stream_body)
-        .send()
-        .await
-        .unwrap();
+async fn failed_message_delivery_is_retried_without_losing_email() {
+    let (app, store, messages, state) = test_app().await;
+    artist_messages_venue(&state, "message-1", "Could we play next Friday?", vec![]).await;
     let parent = store.outbound()[0].message_id.clone();
     let raw = format!(
         "From: Booker <bookings@venue.example>\r\nTo: the-band@booking.tapped.ai\r\nMessage-ID: <retry@venue.example>\r\nIn-Reply-To: {parent}\r\n\r\nRetry me"
     ).into_bytes();
     let timestamp = chrono::Utc::now().timestamp().to_string();
     let signed = [timestamp.as_bytes(), b".", b"", b".", raw.as_slice()].concat();
-    stream.failures_remaining.store(1, Ordering::SeqCst);
+    messages.failures_remaining.store(1, Ordering::SeqCst);
 
     let first = app
         .api_client
@@ -698,12 +649,12 @@ async fn failed_stream_delivery_is_retried_without_losing_email() {
         .await
         .unwrap();
     assert_eq!(second.status(), reqwest::StatusCode::OK);
-    assert_eq!(stream.deliveries.lock().unwrap().len(), 1);
+    assert_eq!(messages.deliveries.lock().unwrap().len(), 1);
 }
 
 #[tokio::test]
 async fn stale_or_invalid_ingress_signatures_are_rejected() {
-    let (app, _, stream) = test_app().await;
+    let (app, _, messages, _) = test_app().await;
     let raw = b"From: x@example.com\r\nTo: the-band@booking.tapped.ai\r\nMessage-ID: <x@example.com>\r\nIn-Reply-To: <initial@booking.tapped.ai>\r\n\r\nHello".to_vec();
     let stale = (chrono::Utc::now().timestamp() - 301).to_string();
     let stale_signed = [stale.as_bytes(), b".", b"", b".", raw.as_slice()].concat();
@@ -729,12 +680,12 @@ async fn stale_or_invalid_ingress_signatures_are_rejected() {
         .await
         .unwrap();
     assert_eq!(invalid_response.status(), reqwest::StatusCode::UNAUTHORIZED);
-    assert!(stream.deliveries.lock().unwrap().is_empty());
+    assert!(messages.deliveries.lock().unwrap().is_empty());
 }
 
 #[tokio::test]
 async fn inbound_email_with_unknown_thread_is_persisted_but_not_delivered() {
-    let (app, store, stream) = test_app().await;
+    let (app, store, messages, _) = test_app().await;
     let raw_email = b"From: x@example.com\r\nTo: the-band@booking.tapped.ai\r\nMessage-ID: <unknown@example.com>\r\nIn-Reply-To: <missing@booking.tapped.ai>\r\n\r\nHello".to_vec();
     let timestamp = chrono::Utc::now().timestamp().to_string();
     let signed = [timestamp.as_bytes(), b".", b"", b".", raw_email.as_slice()].concat();
@@ -748,6 +699,6 @@ async fn inbound_email_with_unknown_thread_is_persisted_but_not_delivered() {
         .await
         .unwrap();
     assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
-    assert!(stream.deliveries.lock().unwrap().is_empty());
+    assert!(messages.deliveries.lock().unwrap().is_empty());
     assert_eq!(store.orphan_count(), 1);
 }
