@@ -100,12 +100,14 @@ fill `seq` gaps with `?after=`.
 `dm_import` copies every Stream `messaging` channel into these tables. It is idempotent and
 resumable: conversations upsert on `legacy_stream_cid` (or the member pair), messages on
 `legacy_stream_id`, read cursors only move forward, and each channel commits on its own. It skips
-deleted, system and thread-only messages, and channels whose members are not in `users`; the JSON
-summary counts every skip. Imports send no pushes or realtime events.
+deleted, system and thread-only messages; channels whose members are not in `users`; and
+community channels (two formal members that others post to, such as `tapped-promoter-chat`). The
+JSON summary counts every skip. Imports send no pushes or realtime events. The API container
+already has `DATABASE_URL` and the Stream keys:
 
 ```sh
-docker compose -f docker-compose.prod.yml run --rm -e STREAM_KEY -e STREAM_SECRET api dm_import --dry-run
-docker compose -f docker-compose.prod.yml run --rm -e STREAM_KEY -e STREAM_SECRET api dm_import
+tailscale ssh root@tapped-prod docker exec tapped-api-1 dm_import --dry-run
+tailscale ssh root@tapped-prod docker exec tapped-api-1 dm_import
 ```
 
 ### Cutover

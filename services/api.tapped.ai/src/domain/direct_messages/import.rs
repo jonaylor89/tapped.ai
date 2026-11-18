@@ -348,6 +348,17 @@ async fn import_channel(
             .cmp(&b.created_at)
             .then_with(|| a.id.cmp(&b.id))
     });
+    // A channel with two formal members that others post to (a community room such as
+    // `messaging:tapped-promoter-chat`) is not a private conversation: importing it would make
+    // the two members' public posts look like a DM between them.
+    if history.iter().any(|message| {
+        message.deleted_at.is_none()
+            && matches!(message.kind.as_str(), "regular" | "reply")
+            && !member_ids.contains(&message.user.id)
+    }) {
+        stats.skip_channel("community");
+        return Ok(());
+    }
 
     let mut tx = pool.begin().await?;
     let (low, high) = (&member_ids[0], &member_ids[1]);
