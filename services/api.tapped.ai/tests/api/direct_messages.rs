@@ -695,6 +695,9 @@ async fn stream_import_is_idempotent_and_preserves_order_reads_and_freezes() {
                "members": [{"user_id": "ana"}, {"user_id": "venue"}]}),
             json!({"channel": {"cid": "messaging:!members-ghost", "created_at": t0 + Duration::hours(2)},
                "members": [{"user_id": "ana"}, {"user_id": "ghost"}]}),
+            // Two formal members, but others post to it: a community room, not a DM.
+            json!({"channel": {"cid": "messaging:community", "created_at": t0 + Duration::hours(3)},
+               "members": [{"user_id": "ben"}, {"user_id": "venue"}]}),
         ],
         messages: HashMap::new(),
     };
@@ -725,6 +728,14 @@ async fn stream_import_is_idempotent_and_preserves_order_reads_and_freezes() {
         )],
     );
 
+    source.messages.insert(
+        "messaging:community".into(),
+        vec![
+            stream_message("c1", "ben", "anyone free friday?", t0 + Duration::hours(3)),
+            stream_message("c2", "ana", "me!", t0 + Duration::hours(4)),
+        ],
+    );
+
     let dry = import::run(&pool, &source, true).await.unwrap();
     assert_eq!(dry.messages_imported, 307);
     let count: i64 = sqlx::query_scalar("SELECT count(*) FROM messages")
@@ -734,9 +745,17 @@ async fn stream_import_is_idempotent_and_preserves_order_reads_and_freezes() {
     assert_eq!(count, 0, "a dry run writes nothing");
 
     let first = import::run(&pool, &source, false).await.unwrap();
-    assert_eq!(first.channels_seen, 3);
+    assert_eq!(first.channels_seen, 4);
     assert_eq!(first.channels_imported, 2);
     assert_eq!(first.channels_skipped["unknown_member"], 1);
+    assert_eq!(first.channels_skipped["community"], 1);
+    let community: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM conversations WHERE legacy_stream_cid='messaging:community'",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(community, 0);
     assert_eq!(first.messages_imported, 307);
     assert_eq!(first.messages_skipped["deleted"], 1);
 
